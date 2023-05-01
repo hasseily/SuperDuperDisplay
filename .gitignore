@@ -33,6 +33,5 @@
 /.vs
 /Debug
 
-# ini files
-*.ini
+# imgui
 /imgui.ini
