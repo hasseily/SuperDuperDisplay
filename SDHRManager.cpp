@@ -773,7 +773,7 @@ void SDHRManager::DrawWindowsIntoScreenImage(GLuint textureid)
 #endif
 				// Where's the pixel?
 				int64_t screen_offset = ((_SDHR_WIDTH * screen_y) + (screen_x));
-				cpubuffer[screen_offset] = pixel_color_rgba;
+				// cpubuffer[screen_offset] = pixel_color_rgba;
 				glTexSubImage2D(GL_TEXTURE_2D, 0, screen_x, screen_y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &pixel_color_rgba);
 			}
 		}

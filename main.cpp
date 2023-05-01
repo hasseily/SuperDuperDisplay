@@ -130,6 +130,10 @@ int main(int, char**)
     image_struct.texture_id = image_textures[0];
     sdhrManager->SetSDHRImage(image_struct);
 
+    // Initialize it to zero
+	glBindTexture(GL_TEXTURE_2D, image_struct.texture_id);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_struct.width, image_struct.height, 0, GL_RGBA, GL_UNSIGNED_INT, 0);
+
 	// Run the network thread that will update the internal state as well as the apple 2 memory
 	std::thread thread_server(socket_server_thread, _SERVER_PORT, &bShouldTerminateNetworking);
 
@@ -180,7 +184,8 @@ int main(int, char**)
 			ImGui::Text("size = %d x %d", image_struct.width, image_struct.height);
             if (sdhrManager->threadState == THREADCOMM_e::COMMAND_PROCESSED)
             {
-                sdhrManager->DrawWindowsIntoScreenImage();
+				sdhrManager->threadState = THREADCOMM_e::MAIN_LOCK;
+                sdhrManager->DrawWindowsIntoScreenImage(image_struct.texture_id);
                 sdhrManager->threadState = THREADCOMM_e::IDLE;
             }
 			ImGui::Image((void*)(intptr_t)image_struct.texture_id, ImVec2(image_struct.width, image_struct.height));
@@ -195,6 +200,8 @@ int main(int, char**)
 		}
 
 		// 3. Show a test window with tileset data
+        // XXX: DISABLED - Need to also enable setting cpubuffer[screen_offset]
+        // in SDHRManager for it to work
         if (0)
 		{
 			ImGui::Begin("Temp CPU Buffer Technique");
