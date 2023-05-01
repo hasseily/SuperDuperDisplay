@@ -32,3 +32,6 @@
 *.app
 /.vs
 /Debug
+
+#imgui
+imgui.ini
