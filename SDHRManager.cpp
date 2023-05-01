@@ -146,7 +146,7 @@ void SDHRManager::ImageAsset::ExtractTile(SDHRManager* owner, uint32_t* tile_p, 
 		return;
 	}
 
-	// Extracting from RGBA to RGBA. Now rewriring of channels necessary
+	// Extracting from RGBA to RGBA. No rewriring of channels necessary
 	uint32_t* data32 = reinterpret_cast<uint32_t*>(data);
 	for (uint64_t y = 0; y < tile_ydim; ++y) {
 		uint64_t source_yoffset = (ysource + y) * image_xcount;
@@ -232,6 +232,8 @@ void SDHRManager::Initialize()
 	*tileset_records = {};
 	*windows = {};
 
+	cpubuffer = (uint32_t*)malloc(640 * 360 * 4);
+
 	command_buffer.clear();
 	command_buffer.reserve(64 * 1024);
 
@@ -261,6 +263,7 @@ SDHRManager::~SDHRManager()
 			free(windows[i].tile_indexes);
 		}
 	}
+	free(cpubuffer);
 	delete[] a2mem;
 }
 
@@ -736,16 +739,17 @@ void SDHRManager::DrawWindowsIntoScreenImage()
 				}
 				*/
 
+				// std::cout << std::dec << screen_x << "," << screen_y << " >> " << std::hex << pixel_color_rgba << std::endl;
 				// Where's the pixel?
-				// int64_t screen_offset = ((framebuffer->stride * screen_y / 4) + (screen_x));
-				// fbmap[screen_offset] = pixel_color_rgba;
-				glTexSubImage2D(GL_TEXTURE_2D, 0, screen_x, screen_y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &pixel_color_rgba);
+				int64_t screen_offset = ((640 * screen_y) + (screen_x));
+				cpubuffer[screen_offset] = pixel_color_rgba;
+				// glTexSubImage2D(GL_TEXTURE_2D, 0, screen_x, screen_y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &pixel_color_rgba);
 			}
 		}
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 32 * 16, 8 * 16, GL_RGBA, GL_UNSIGNED_BYTE, tileset_records[0].tile_data);
 
 		std::cout << "Drew into buffer window " << window_index << std::endl;
 	}
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 640, 360, 0, GL_RGBA, GL_UNSIGNED_BYTE, cpubuffer);
 	auto t2 = high_resolution_clock::now();
 	duration<double, std::milli> ms_double = t2 - t1;
 	std::cout << "DrawWindowsIntoBuffer() duration: " << ms_double.count() << "ms\n";

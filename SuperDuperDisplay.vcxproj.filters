@@ -60,7 +60,6 @@
     <ClInclude Include="imgui\imgui\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="my_imgui_config.h" />
     <ClInclude Include="stb_image.h">
       <Filter>sources</Filter>
     </ClInclude>
@@ -71,6 +70,9 @@
       <Filter>sources</Filter>
     </ClInclude>
     <ClInclude Include="imgui_memory_editor.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="my_imgui_config.h">
       <Filter>sources</Filter>
     </ClInclude>
   </ItemGroup>

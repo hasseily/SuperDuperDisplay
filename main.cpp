@@ -186,21 +186,20 @@ int main(int, char**)
 #if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
 			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 #endif
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 32 * 16, 8 * 16, 0, GL_RGBA, GL_UNSIGNED_BYTE, sdhrManager->GetTilesetRecordData(0));
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 640, 360, 0, GL_RGBA, GL_UNSIGNED_BYTE, sdhrManager->cpubuffer);
 			GLenum err;
 			while ((err = glGetError()) != GL_NO_ERROR) {
 				std::cerr << "OpenGL error: " << err << std::endl;
 			}
-			ImGui::Text("size = %d x %d", 32*16, 8*16);
-			ImGui::Image((void*)(intptr_t)image_textures[1], ImVec2(32 * 16, 8 * 16));
+			ImGui::Text("size = %d x %d", 640, 360);
+			ImGui::Image((void*)(intptr_t)image_textures[1], ImVec2(640, 360));
 			ImGui::End();
 		}
 
         // 4. Show a memory editor
-		if (sdhrManager->GetTilesetRecordData(0) != NULL)
         {
             static MemoryEditor mem_edit_1;
-            mem_edit_1.DrawWindow("Memory Editor", sdhrManager->GetTilesetRecordData(0), 32 * 16 * 8 * 16);
+            mem_edit_1.DrawWindow("Memory Editor", sdhrManager->cpubuffer, 640*360*4);
         }
 
 		// Rendering

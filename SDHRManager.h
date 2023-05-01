@@ -67,6 +67,7 @@ public:
 	void DrawWindowsIntoScreenImage();
 	uint32_t ARGB555_to_ARGB888(uint16_t argb555);
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 memory pointer
+	uint32_t* cpubuffer;
 
 	void SetSDHRImage(sdhr_image simage) { screen_image = simage; };
 	sdhr_image GetSDHRImage() { return screen_image; };
