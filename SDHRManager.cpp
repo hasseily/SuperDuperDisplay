@@ -762,11 +762,10 @@ void SDHRManager::DrawWindowsIntoScreenImage(GLuint textureid)
 				TilesetRecord* t = tileset_records + w->tilesets[entry_index];
 				uint64_t tile_index = w->tile_indexes[entry_index];
 				pixel_color_rgba = t->tile_data[tile_index * t->xdim * t->ydim + tile_yoffset * t->xdim + tile_xoffset];
-				/*
-				if ((pixel_color_rgba & 0x0000FF) == 0) {
-					continue; // zero alpha, don'd draw
+
+				if ((pixel_color_rgba & 0xFF000000) == 0) {
+					continue; // zero alpha, don't draw
 				}
-				*/
 
 #ifdef DEBUG
 				// std::cout << std::dec << screen_x << "," << screen_y << " >> " << std::hex << pixel_color_rgba << std::endl;

@@ -123,6 +123,7 @@ int main(int, char**)
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 	// Create an image texture in which we'll copy the generated pixels
+    // Also create a second texture to which we'll copy the temp CPU buffer
     auto sdhrManager = SDHRManager::GetInstance();
 	GLuint image_textures[2];
 	glGenTextures(2, image_textures);
@@ -132,7 +133,7 @@ int main(int, char**)
 
     // Initialize it to zero
 	glBindTexture(GL_TEXTURE_2D, image_struct.texture_id);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_struct.width, image_struct.height, 0, GL_RGBA, GL_UNSIGNED_INT, 0);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_struct.width, image_struct.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
 	std::thread thread_server(socket_server_thread, _SERVER_PORT, &bShouldTerminateNetworking);
@@ -178,7 +179,7 @@ int main(int, char**)
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
 
-		// 2. Show a window with the SDHR Output
+		// 2. Show a window with the SDHR Output from a glTexSubImage2D pixel copy
 		{
 			ImGui::Begin("glTexSubImage2D Technique (1 pixel at a time)");
 			ImGui::Text("size = %d x %d", image_struct.width, image_struct.height);
@@ -199,11 +200,9 @@ int main(int, char**)
 			ImGui::End();
 		}
 
-		// 3. Show a test window with tileset data
-        // XXX: DISABLED - Need to also enable setting cpubuffer[screen_offset]
-        // in SDHRManager for it to work
-        if (0)
+		// 3. Show a test window using the cpubuffer
 		{
+            ImGui::SetNextWindowPos(ImVec2(600, 400), ImGuiCond_FirstUseEver);
 			ImGui::Begin("Temp CPU Buffer Technique");
 			glBindTexture(GL_TEXTURE_2D, image_textures[1]);
 
