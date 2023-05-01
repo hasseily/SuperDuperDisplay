@@ -168,7 +168,7 @@ int main(int, char**)
 
 		// 2. Show a window with the SDHR Output
 		{
-			ImGui::Begin("SDHR Window");
+			ImGui::Begin("glTexSubImage2D Technique (1 pixel at a time)");
 			ImGui::Text("size = %d x %d", image_struct.width, image_struct.height);
             if (sdhrManager->threadState == THREADCOMM_e::COMMAND_PROCESSED)
             {
@@ -185,7 +185,7 @@ int main(int, char**)
 
 		// 3. Show a test window with tileset data
 		{
-			ImGui::Begin("Tileset 0 Window");
+			ImGui::Begin("Temp CPU Buffer Technique");
 			glBindTexture(GL_TEXTURE_2D, image_textures[1]);
 
 			// Setup filtering parameters for display
