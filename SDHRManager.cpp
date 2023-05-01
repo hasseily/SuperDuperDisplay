@@ -699,9 +699,6 @@ bool SDHRManager::ProcessCommands(void)
 		}
 		p += message_length - 3;
 	}
-	command_buffer.clear();
-	// we're ready to draw
-	DrawWindowsIntoScreenImage();
 	return true;
 }
 

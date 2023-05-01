@@ -169,8 +169,13 @@ int main(int, char**)
 		// 2. Show a window with the SDHR Output
 		{
 			ImGui::Begin("SDHR Window");
-			ImGui::Text("size = %d x %d (CURRENTLY DISABLED)", image_struct.width, image_struct.height);
-			// ImGui::Image((void*)(intptr_t)image_struct.texture_id, ImVec2(image_struct.width, image_struct.height));
+			ImGui::Text("size = %d x %d", image_struct.width, image_struct.height);
+            if (sdhrManager->threadState == THREADCOMM_e::COMMAND_PROCESSED)
+            {
+                sdhrManager->DrawWindowsIntoScreenImage();
+                sdhrManager->threadState = THREADCOMM_e::IDLE;
+            }
+			ImGui::Image((void*)(intptr_t)image_struct.texture_id, ImVec2(image_struct.width, image_struct.height));
 
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 			// ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
@@ -193,13 +198,13 @@ int main(int, char**)
 #if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
 			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 #endif
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 640, 360, 0, GL_RGBA, GL_UNSIGNED_BYTE, sdhrManager->cpubuffer);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _SDHR_WIDTH, _SDHR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, sdhrManager->cpubuffer);
 			GLenum err;
 			while ((err = glGetError()) != GL_NO_ERROR) {
 				std::cerr << "OpenGL error: " << err << std::endl;
 			}
-			ImGui::Text("size = %d x %d", 640, 360);
-			ImGui::Image((void*)(intptr_t)image_textures[1], ImVec2(640, 360));
+			ImGui::Text("size = %d x %d", _SDHR_WIDTH, _SDHR_HEIGHT);
+			ImGui::Image((void*)(intptr_t)image_textures[1], ImVec2(_SDHR_WIDTH, _SDHR_HEIGHT));
 			ImGui::End();
 		}
 
@@ -207,7 +212,7 @@ int main(int, char**)
         if (show_memory_window)
         {
             static MemoryEditor mem_edit_1;
-            mem_edit_1.DrawWindow("Memory Editor", sdhrManager->cpubuffer, 640*360*4);
+            mem_edit_1.DrawWindow("Memory Editor", sdhrManager->cpubuffer, _SDHR_WIDTH * _SDHR_HEIGHT *4);
         }
 
 		// Rendering

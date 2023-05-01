@@ -16,6 +16,14 @@
 #define _SDHR_WIDTH  640
 #define _SDHR_HEIGHT 360
 
+enum THREADCOMM_e
+{
+	IDLE = 0,			// SDHR data and OpenGL are in sync
+	SOCKET_LOCK,		// Socket thread is updating the SDHR data
+	COMMAND_PROCESSED,	// Socket thread has processed a command batch, waiting for Main thread to work
+	MAIN_LOCK			// Main thread is updating OpenGL textures
+};
+
 enum SDHRCtrl_e
 {
 	SDHR_CTRL_DISABLE = 0,
@@ -68,6 +76,7 @@ public:
 	uint32_t ARGB555_to_ARGB888(uint16_t argb555);
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 memory pointer
 	uint32_t* cpubuffer;
+	THREADCOMM_e threadState;
 
 	void SetSDHRImage(sdhr_image simage) { screen_image = simage; };
 	sdhr_image GetSDHRImage() { return screen_image; };
@@ -204,5 +213,4 @@ private:
 	ImageAsset image_assets[256];
 	TilesetRecord tileset_records[256];
 	Window windows[256];
-	bool isUpdatingCpuBuffer = false;	// set to true when the thread is updating cpubuffer
 };

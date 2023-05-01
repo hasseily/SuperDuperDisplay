@@ -140,17 +140,24 @@ int socket_server_thread(uint16_t port)
 						At this point we have a complete set of commands to process.
 						Some more data may be in the kernel socket receive buffer, but we don't care.
 						They'll be processed in the next batch.
-						Continue processing commands until the framebuffer is flipped. Once the framebuffer
-						has flipped, run the framebuffer drawing with the current state and schedule a flip.
-						Rince and repeat.
+						Wait for the main thread to finish displaying the current state, then process
+						the commands.
 						*/
+
+						while (sdhrMgr->threadState != THREADCOMM_e::IDLE)
+						{
+							// wait for main thread to draw the changes
+						}
+
 #ifdef DEBUG
 						// std::cout << "CONTROL: Process SDHR" << std::endl;
 #endif
+						sdhrMgr->threadState = THREADCOMM_e::SOCKET_LOCK;
 						bool processingSucceeded = sdhrMgr->ProcessCommands();
 						// Whether or not the processing worked, clear the buffer. If the processing failed,
 						// the data was corrupt and shouldn't be reprocessed
 						sdhrMgr->ClearBuffer();
+						sdhrMgr->threadState = THREADCOMM_e::COMMAND_PROCESSED;
 						if (processingSucceeded && sdhrMgr->IsSdhrEnabled())
 						{
 							// We have processed some commands.
