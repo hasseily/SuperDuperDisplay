@@ -181,26 +181,22 @@ int main(int, char**)
 		// 3. Show a test window with tileset data
 		{
 			ImGui::Begin("Tileset 0 Window");
+			glBindTexture(GL_TEXTURE_2D, image_textures[1]);
 
-			if (!sdhrManager->GetIsUpdatingCpuBuffer())
-			{
-				glBindTexture(GL_TEXTURE_2D, image_textures[1]);
-	
-				// Setup filtering parameters for display
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
-	
-				// Upload pixels into texture
-	#if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
-				glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-	#endif
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 640, 360, 0, GL_RGBA, GL_UNSIGNED_BYTE, sdhrManager->cpubuffer);
-				GLenum err;
-				while ((err = glGetError()) != GL_NO_ERROR) {
-					std::cerr << "OpenGL error: " << err << std::endl;
-				}
+			// Setup filtering parameters for display
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
+
+			// Upload pixels into texture
+#if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+#endif
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 640, 360, 0, GL_RGBA, GL_UNSIGNED_BYTE, sdhrManager->cpubuffer);
+			GLenum err;
+			while ((err = glGetError()) != GL_NO_ERROR) {
+				std::cerr << "OpenGL error: " << err << std::endl;
 			}
 			ImGui::Text("size = %d x %d", 640, 360);
 			ImGui::Image((void*)(intptr_t)image_textures[1], ImVec2(640, 360));
