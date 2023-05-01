@@ -100,5 +100,5 @@ clean:
 debug: 	CONFIGFLAGS += -g3 -O0 -DDEBUG -D_DEBUGTIMINGS
 debug:	$(EXE)
 
-release: 	CONFIGFLAGS += -g3 -Os -DNDEBUG
+release: 	CONFIGFLAGS += -Os -DNDEBUG
 release:	$(EXE)
