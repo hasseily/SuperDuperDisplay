@@ -186,7 +186,7 @@ int main(int, char**)
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 			// ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
 			ImGui::Checkbox("Memory Window", &show_memory_window);      // Edit bools storing our window open/close state
-            ImGui::Button()
+            done = ImGui::Button("Quit App (ALT-F4");
 			ImGui::End();
 		}
 
