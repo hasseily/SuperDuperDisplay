@@ -237,6 +237,5 @@ bool socket_unblock_accept(uint16_t port)
 #else
 	close(client_socket);
 #endif
-	WSACleanup();
 	return true;
 }
