@@ -179,24 +179,29 @@ int main(int, char**)
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
 
+		if (sdhrManager->threadState == THREADCOMM_e::COMMAND_PROCESSED)
+		{
+			sdhrManager->threadState = THREADCOMM_e::MAIN_LOCK;
+			sdhrManager->DrawWindowsIntoScreenImage(image_struct.texture_id);
+			sdhrManager->threadState = THREADCOMM_e::IDLE;
+		}
+
 		// 2. Show a window with the SDHR Output from a glTexSubImage2D pixel copy
 		{
 			ImGui::Begin("glTexSubImage2D Technique (1 pixel at a time)");
-			ImGui::Text("size = %d x %d", image_struct.width, image_struct.height);
-            if (sdhrManager->threadState == THREADCOMM_e::COMMAND_PROCESSED)
-            {
-				sdhrManager->threadState = THREADCOMM_e::MAIN_LOCK;
-                sdhrManager->DrawWindowsIntoScreenImage(image_struct.texture_id);
-                sdhrManager->threadState = THREADCOMM_e::IDLE;
-            }
-			ImGui::Image((void*)(intptr_t)image_struct.texture_id, ImVec2(image_struct.width, image_struct.height));
+            sdhrManager->shouldUseSubImage2D = !ImGui::IsWindowCollapsed();
+			if (!ImGui::IsWindowCollapsed())
+			{
+				ImGui::Text("size = %d x %d", image_struct.width, image_struct.height);
+				ImGui::Image((void*)(intptr_t)image_struct.texture_id, ImVec2(image_struct.width, image_struct.height));
 
-			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-			// ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-			ImGui::Checkbox("Memory Window", &show_memory_window);      // Edit bools storing our window open/close state
-            did_press_quit = ImGui::Button("Quit App (Alt-F4)");
-            if (did_press_quit)
-                done = true;
+				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+				// ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+				ImGui::Checkbox("Memory Window", &show_memory_window);      // Edit bools storing our window open/close state
+				did_press_quit = ImGui::Button("Quit App (Alt-F4)");
+				if (did_press_quit)
+					done = true;
+            }
 			ImGui::End();
 		}
 
@@ -204,25 +209,31 @@ int main(int, char**)
 		{
             ImGui::SetNextWindowPos(ImVec2(600, 400), ImGuiCond_FirstUseEver);
 			ImGui::Begin("Temp CPU Buffer Technique");
-			glBindTexture(GL_TEXTURE_2D, image_textures[1]);
+            sdhrManager->shouldUseCpuBuffer = !ImGui::IsWindowCollapsed();
+            if (!ImGui::IsWindowCollapsed())
+            {
+				glBindTexture(GL_TEXTURE_2D, image_textures[1]);
 
-			// Setup filtering parameters for display
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
+				// Setup filtering parameters for display
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
 
-			// Upload pixels into texture
+				// Upload pixels into texture
 #if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 #endif
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _SDHR_WIDTH, _SDHR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, sdhrManager->cpubuffer);
-			GLenum err;
-			while ((err = glGetError()) != GL_NO_ERROR) {
-				std::cerr << "OpenGL error: " << err << std::endl;
-			}
-			ImGui::Text("size = %d x %d", _SDHR_WIDTH, _SDHR_HEIGHT);
-			ImGui::Image((void*)(intptr_t)image_textures[1], ImVec2(_SDHR_WIDTH, _SDHR_HEIGHT));
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _SDHR_WIDTH, _SDHR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, sdhrManager->cpubuffer);
+				GLenum err;
+				while ((err = glGetError()) != GL_NO_ERROR) {
+					std::cerr << "OpenGL error: " << err << std::endl;
+				}
+				ImGui::Text("size = %d x %d", _SDHR_WIDTH, _SDHR_HEIGHT);
+				ImGui::Image((void*)(intptr_t)image_textures[1], ImVec2(_SDHR_WIDTH, _SDHR_HEIGHT));
+				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+            }
+
 			ImGui::End();
 		}
 

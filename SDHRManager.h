@@ -76,6 +76,8 @@ public:
 	uint32_t ARGB555_to_ARGB888(uint16_t argb555);
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 memory pointer
 	uint32_t* cpubuffer;
+	bool shouldUseCpuBuffer = false;	// Disables the temp cpu buffer
+	bool shouldUseSubImage2D = true;	// Disables the pixel-by-pixel subimage2d upload
 	THREADCOMM_e threadState;
 
 	void SetSDHRImage(sdhr_image simage) { screen_image = simage; };
