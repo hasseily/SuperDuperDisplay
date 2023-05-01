@@ -65,6 +65,7 @@ public:
 	void ClearBuffer();
 	bool ProcessCommands(void);
 	void DrawWindowsIntoScreenImage();
+	bool GetIsUpdatingCpuBuffer() { return isUpdatingCpuBuffer; };
 	uint32_t ARGB555_to_ARGB888(uint16_t argb555);
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 memory pointer
 	uint32_t* cpubuffer;
@@ -204,4 +205,5 @@ private:
 	ImageAsset image_assets[256];
 	TilesetRecord tileset_records[256];
 	Window windows[256];
+	bool isUpdatingCpuBuffer = false;	// set to true when the thread is updating cpubuffer
 };

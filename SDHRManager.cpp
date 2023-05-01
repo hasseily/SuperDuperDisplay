@@ -728,6 +728,7 @@ void SDHRManager::DrawWindowsIntoScreenImage()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
 
+	isUpdatingCpuBuffer = true;
 	// Draw the windows into the bound texture
 	uint32_t pixel_color_rgba = 0;
 	for (uint16_t window_index = 0; window_index < 256; ++window_index) {
@@ -791,4 +792,5 @@ void SDHRManager::DrawWindowsIntoScreenImage()
 	std::cout << "DrawWindowsIntoBuffer() duration: " << ms_double.count() << "ms\n";
 	std::cout << "Framebuffer write: " << ms_double2.count() << "ms\n";
 #endif
+	isUpdatingCpuBuffer = false;
 }
