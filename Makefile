@@ -51,7 +51,7 @@ endif
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-	LIBS += $(LINUX_GL_LIBS) -llibz.a -ldl `sdl2-config --libs`
+	LIBS += $(LINUX_GL_LIBS) -l:libz.a -ldl `sdl2-config --libs`
 
 	CXXFLAGS += `sdl2-config --cflags`
 	CFLAGS = $(CXXFLAGS)
