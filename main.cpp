@@ -155,6 +155,12 @@ int main(int, char**)
                 done = true;
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
                 done = true;
+            if (event.key.keysym.sym == SDLK_F4) {  // Quit on Alt-F4
+                auto state = SDL_GetKeyboardState(NULL);
+                if (state[SDL_SCANCODE_LALT]) {
+                    done = true;
+                }
+            }
         }
 
 		// Start the Dear ImGui frame
@@ -180,6 +186,7 @@ int main(int, char**)
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 			// ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
 			ImGui::Checkbox("Memory Window", &show_memory_window);      // Edit bools storing our window open/close state
+            ImGui::Button()
 			ImGui::End();
 		}
 
