@@ -72,7 +72,7 @@ public:
 	void AddPacketDataToBuffer(uint8_t data);
 	void ClearBuffer();
 	bool ProcessCommands(void);
-	void DrawWindowsIntoScreenImage();
+	void DrawWindowsIntoScreenImage(GLuint textureid);
 	uint32_t ARGB555_to_ARGB888(uint16_t argb555);
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 memory pointer
 	uint32_t* cpubuffer;

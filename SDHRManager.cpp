@@ -702,7 +702,7 @@ bool SDHRManager::ProcessCommands(void)
 	return true;
 }
 
-void SDHRManager::DrawWindowsIntoScreenImage()
+void SDHRManager::DrawWindowsIntoScreenImage(GLuint textureid)
 {
 #ifdef _DEBUGTIMINGS
 	using std::chrono::high_resolution_clock;
@@ -718,7 +718,7 @@ void SDHRManager::DrawWindowsIntoScreenImage()
 	// std::cout << "Entered DrawWindowsIntoScreenImage" << std::endl;
 #endif
 
-	glBindTexture(GL_TEXTURE_2D, screen_image.texture_id);
+	glBindTexture(GL_TEXTURE_2D, textureid);
 	// Setup filtering parameters for display
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
