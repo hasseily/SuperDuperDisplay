@@ -204,27 +204,29 @@ bool socket_unblock_accept(uint16_t port)
 	struct sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
-	server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	server_addr.sin_addr.s_addr = INADDR_ANY;
 
 	auto client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 #ifdef __NETWORKING_WINDOWS__
 	if (client_socket == INVALID_SOCKET) {
+		std::cerr << "Error creating socket: " << WSAGetLastError() << std::endl;
 		WSACleanup();
 #else
 	if (client_socket == -1) {
+		std::cerr << "Error creating socket!" << std::endl;
 #endif
-		std::cerr << "Error creating socket: " << WSAGetLastError() << std::endl;
 		return false;
 	}
 #ifdef __NETWORKING_WINDOWS__
 	if (connect(client_socket, (SOCKADDR*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
 		closesocket(client_socket);
+		std::cerr << "Error connecting to server: " << WSAGetLastError() << std::endl;
 		WSACleanup();
 #else
 	if (connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
 		close(client_socket);
+		std::cerr << "Error connecting to server!" << std::endl;
 #endif
-		std::cerr << "Error connecting to server: " << WSAGetLastError() << std::endl;
 		return false;
 	}
 	// Do nothing, we've already unblocked the server's accept()
