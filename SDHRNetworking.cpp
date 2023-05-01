@@ -44,7 +44,7 @@ ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_a
 	return ENET_RES::OK;
 }
 
-int socket_server_thread(uint16_t port)
+int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 {
 	// commands socket and descriptors
 	__SOCKET server_fd, client_fd;
@@ -61,7 +61,7 @@ int socket_server_thread(uint16_t port)
 	auto sdhrMgr = SDHRManager::GetInstance();
 	uint8_t* a2mem = sdhrMgr->GetApple2MemPtr();
 
-	while (true) {
+	while (!(*shouldTerminateNetworking)) {
 		std::cout << "Waiting for connection..." << std::endl;
 
 		// Here the thread will block waiting for a connection
@@ -81,7 +81,7 @@ int socket_server_thread(uint16_t port)
 
 		std::cout << "Client connected" << std::endl;
 
-		if (bShouldTerminateNetworking)
+		if ((*shouldTerminateNetworking))
 			break;
 
 		SDHRPacket packet;
@@ -219,7 +219,11 @@ bool socket_unblock_accept(uint16_t port)
 	struct sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
-	server_addr.sin_addr.s_addr = INADDR_ANY;
+#ifdef __NETWORKING_WINDOWS__
+	InetPton(AF_INET, ("127.0.0.1"), &server_addr.sin_addr.s_addr);
+#else
+	inet_pton(AF_INET, ("127.0.0.1"), &server_addr.sin_addr.s_addr);
+#endif
 
 	auto client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 #ifdef __NETWORKING_WINDOWS__

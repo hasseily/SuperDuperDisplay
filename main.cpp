@@ -116,8 +116,10 @@ int main(int, char**)
     //IM_ASSERT(font != nullptr);
 
     // Our state
+	bool bShouldTerminateNetworking = false;
     bool show_demo_window = false;
 	bool show_memory_window = false;
+    bool did_press_quit = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 	// Create an image texture in which we'll copy the generated pixels
@@ -129,7 +131,7 @@ int main(int, char**)
     sdhrManager->SetSDHRImage(image_struct);
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
-	std::thread thread_server(socket_server_thread, _SERVER_PORT);
+	std::thread thread_server(socket_server_thread, _SERVER_PORT, &bShouldTerminateNetworking);
 
     // Main loop
     bool done = false;
@@ -186,11 +188,14 @@ int main(int, char**)
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 			// ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
 			ImGui::Checkbox("Memory Window", &show_memory_window);      // Edit bools storing our window open/close state
-            done = ImGui::Button("Quit App (ALT-F4");
+            did_press_quit = ImGui::Button("Quit App (Alt-F4)");
+            if (did_press_quit)
+                done = true;
 			ImGui::End();
 		}
 
 		// 3. Show a test window with tileset data
+        if (0)
 		{
 			ImGui::Begin("Temp CPU Buffer Technique");
 			glBindTexture(GL_TEXTURE_2D, image_textures[1]);

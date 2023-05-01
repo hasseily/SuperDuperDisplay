@@ -234,7 +234,7 @@ void SDHRManager::Initialize()
 	*tileset_records = {};
 	*windows = {};
 
-	cpubuffer = (uint32_t*)malloc(640 * 360 * 4);
+	cpubuffer = (uint32_t*)malloc(_SDHR_WIDTH * _SDHR_HEIGHT * 4);
 
 	command_buffer.clear();
 	command_buffer.reserve(64 * 1024);
@@ -772,7 +772,7 @@ void SDHRManager::DrawWindowsIntoScreenImage()
 				// std::cout << std::dec << screen_x << "," << screen_y << " >> " << std::hex << pixel_color_rgba << std::endl;
 #endif
 				// Where's the pixel?
-				int64_t screen_offset = ((640 * screen_y) + (screen_x));
+				int64_t screen_offset = ((_SDHR_WIDTH * screen_y) + (screen_x));
 				cpubuffer[screen_offset] = pixel_color_rgba;
 				glTexSubImage2D(GL_TEXTURE_2D, 0, screen_x, screen_y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &pixel_color_rgba);
 			}

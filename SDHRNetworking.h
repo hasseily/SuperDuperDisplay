@@ -48,9 +48,6 @@ enum class ENET_RES
 // It loops infinitely and waits for packets
 // It instantly updates memory, and only updates
 // other data when a PROCESS_COMMAND packet arrives
-int socket_server_thread(uint16_t port);
+int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking);
 
-// set this to true to terminate the networking thread
-// and then call socket_unblock_accept()
-static bool bShouldTerminateNetworking = false;
 bool socket_unblock_accept(uint16_t port);
