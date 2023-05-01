@@ -23,6 +23,7 @@ typedef SOCKET        __SOCKET;
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 typedef int        __SOCKET;
 #endif
