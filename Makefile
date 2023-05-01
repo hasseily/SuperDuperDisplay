@@ -28,7 +28,7 @@ LINUX_GL_LIBS = -lGL
 
 CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 CXXFLAGS += -g -Wall -Wformat
-DEBUGFLAGS =
+CONFIGFLAGS =
 LIBS =
 
 ##---------------------------------------------------------------------
@@ -80,22 +80,25 @@ endif
 ##---------------------------------------------------------------------
 
 %.o:%.cpp
-	$(CXX) $(CXXFLAGS) $(DEBUGFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(CONFIGFLAGS) -c -o $@ $<
 
 %.o:$(IMGUI_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) $(DEBUGFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(CONFIGFLAGS) -c -o $@ $<
 
 %.o:$(IMGUI_DIR)/backends/%.cpp
-	$(CXX) $(CXXFLAGS) $(DEBUGFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(CONFIGFLAGS) -c -o $@ $<
 
 all: $(EXE)
 	@echo Build complete for $(ECHO_MESSAGE)
 
 $(EXE): $(OBJS)
-	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(CONFIGFLAGS) $(LIBS)
 
 clean:
 	rm -f $(EXE) $(OBJS)
 
-debug: 	DEBUGFLAGS += -g3 -O0
+debug: 	CONFIGFLAGS += -g3 -O0 -DDEBUG -D_DEBUGTIMINGS
 debug:	$(EXE)
+
+release: 	CONFIGFLAGS += -g3 -Os -DNDEBUG
+release:	$(EXE)

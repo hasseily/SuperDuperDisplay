@@ -68,12 +68,17 @@ int main(int, char**)
     SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
 #endif
 
+#ifdef DEBUG
+#define _MAINWINDOWNAME "Super Duper Display (DEBUG)"
+#else
+#define _MAINWINDOWNAME "Super Duper Display"
+#endif
     // Create window with graphics context
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* window = SDL_CreateWindow("Super Duper Display", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    SDL_Window* window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
@@ -112,6 +117,7 @@ int main(int, char**)
 
     // Our state
     bool show_demo_window = false;
+	bool show_memory_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 	// Create an image texture in which we'll copy the generated pixels
@@ -163,11 +169,12 @@ int main(int, char**)
 		// 2. Show a window with the SDHR Output
 		{
 			ImGui::Begin("SDHR Window");
-			ImGui::Text("size = %d x %d", image_struct.width, image_struct.height);
-			ImGui::Image((void*)(intptr_t)image_struct.texture_id, ImVec2(image_struct.width, image_struct.height));
+			ImGui::Text("size = %d x %d (CURRENTLY DISABLED)", image_struct.width, image_struct.height);
+			// ImGui::Image((void*)(intptr_t)image_struct.texture_id, ImVec2(image_struct.width, image_struct.height));
 
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 			// ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+			ImGui::Checkbox("Memory Window", &show_memory_window);      // Edit bools storing our window open/close state
 			ImGui::End();
 		}
 
@@ -197,6 +204,7 @@ int main(int, char**)
 		}
 
         // 4. Show a memory editor
+        if (show_memory_window)
         {
             static MemoryEditor mem_edit_1;
             mem_edit_1.DrawWindow("Memory Editor", sdhrManager->cpubuffer, 640*360*4);

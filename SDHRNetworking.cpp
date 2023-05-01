@@ -117,15 +117,21 @@ int socket_server_thread(uint16_t port)
 					switch (_ctrl)
 					{
 					case SDHR_CTRL_DISABLE:
+#ifdef DEBUG
 						std::cout << "CONTROL: Disable SDHR" << std::endl;
+#endif
 						sdhrMgr->ToggleSdhr(false);
 						break;
 					case SDHR_CTRL_ENABLE:
+#ifdef DEBUG
 						std::cout << "CONTROL: Enable SDHR" << std::endl;
+#endif
 						sdhrMgr->ToggleSdhr(true);
 						break;
 					case SDHR_CTRL_RESET:
+#ifdef DEBUG
 						std::cout << "CONTROL: Reset SDHR" << std::endl;
+#endif
 						sdhrMgr->ResetSdhr();
 						break;
 					case SDHR_CTRL_PROCESS:
@@ -138,7 +144,9 @@ int socket_server_thread(uint16_t port)
 						has flipped, run the framebuffer drawing with the current state and schedule a flip.
 						Rince and repeat.
 						*/
+#ifdef DEBUG
 						// std::cout << "CONTROL: Process SDHR" << std::endl;
+#endif
 						bool processingSucceeded = sdhrMgr->ProcessCommands();
 						// Whether or not the processing worked, clear the buffer. If the processing failed,
 						// the data was corrupt and shouldn't be reprocessed
@@ -173,13 +181,13 @@ int socket_server_thread(uint16_t port)
 			std::cerr << "Error receiving data" << std::endl;
 		}
 
-		std::cerr << "Client Closing" << std::endl;
+		std::cout << "Client Closing" << std::endl;
 #ifdef __NETWORKING_WINDOWS__
 		closesocket(client_fd);
 #else
 		close(client_fd);
 #endif
-		std::cerr << "    Client Closed" << std::endl;
+		std::cout << "    Client Closed" << std::endl;
 	}
 #ifdef __NETWORKING_WINDOWS__
 	closesocket(server_fd);
