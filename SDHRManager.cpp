@@ -614,6 +614,13 @@ bool SDHRManager::ProcessCommands(void)
 				CommandError("invalid window for tile shift");
 				return false;
 			}
+
+			r->tile_xbegin += cmd->x_dir;
+			r->tile_ybegin += cmd->y_dir;
+
+			r->tile_xbegin %= r->tile_xcount;
+			r->tile_ybegin %= r->tile_ycount;
+#if 0
 			if (cmd->x_dir == -1) {
 				for (uint64_t y_index = 0; y_index < r->tile_ycount; ++y_index) {
 					uint64_t line_offset = y_index * r->tile_xcount;
@@ -652,6 +659,7 @@ bool SDHRManager::ProcessCommands(void)
 					}
 				}
 			}
+#endif
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_SHIFT_TILES: Success! " 
 				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->x_dir << ';' << (uint32_t)cmd->y_dir << std::endl;
