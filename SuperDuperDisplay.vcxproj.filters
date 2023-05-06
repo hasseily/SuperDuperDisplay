@@ -84,5 +84,6 @@
     <None Include="imgui\imgui\misc\debuggers\imgui.natvis">
       <Filter>imgui</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
