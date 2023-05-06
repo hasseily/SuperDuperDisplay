@@ -18,6 +18,10 @@
 #else
 #include <SDL_opengl.h>
 #endif
+#define GL2_PROTOTYPES 1
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
+#include <GLES2/gl2platform.h>
 
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
@@ -138,6 +142,106 @@ int main(int, char**)
 	// Run the network thread that will update the internal state as well as the apple 2 memory
 	std::thread thread_server(socket_server_thread, _SERVER_PORT, &bShouldTerminateNetworking);
 
+	typedef struct
+	{
+		float x;
+		float y;
+	} vector2;
+
+	typedef struct
+	{
+		float x;
+		float y;
+		float z;
+	} vector3;
+
+	typedef struct
+	{
+		vector3 position;
+		vector2 textureCoordinate;
+	} vertex;
+
+#define CUBE_TRIANGLE_COUNT 12
+	vertex cube[CUBE_TRIANGLE_COUNT * 3];
+
+	const char* vertexSource = R"glsl(
+attribute vec4 position;                // vertex position attribute
+attribute vec2 texCoord;                // vertex texture coordinate attribute
+ 
+uniform mat4 modelView;                 // shader modelview matrix uniform
+uniform mat4 projection;                // shader projection matrix uniform
+ 
+varying vec2 texCoordVar;               // vertex texture coordinate varying
+ 
+void main()
+{
+    vec4 p = modelView * position;      // transform vertex position with modelview matrix
+    gl_Position = projection * p;       // project the transformed position and write it to gl_Position
+    texCoordVar = texCoord;             // assign the texture coordinate attribute to its varying
+}
+)glsl";
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, 1, &vertexSource, NULL);
+    glCompileShader(vertexShader);
+
+
+	const char* fragmentSource = R"glsl(
+precision mediump float;        // set default precision for floats to medium
+ 
+uniform sampler2D texture;      // shader texture uniform
+ 
+varying vec2 texCoordVar;       // fragment texture coordinate varying
+ 
+void main()
+{
+    // sample the texture at the interpolated texture coordinate
+    // and write it to gl_FragColor 
+    gl_FragColor = texture2D( texture, texCoordVar);
+}
+)glsl";
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
+	glCompileShader(fragmentShader);
+
+	GLuint shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+    glUseProgram(shaderProgram);
+	// enable and send vertex position attribute data
+    GLuint positionIndex = 0;
+	glEnableVertexAttribArray(positionIndex);
+	glVertexAttribPointer(positionIndex, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), &cube[0].position);
+
+	// enable and send vertex texture coordinate attribute data
+	GLuint textureCoordIndex = 1;
+	glEnableVertexAttribArray(textureCoordIndex);
+	glVertexAttribPointer(textureCoordIndex, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), &cube[0].textureCoordinate);
+
+    // Create uniforms
+	GLfloat modelViewMatrix[] = {
+	0.5f, 0.0f, 0.0f, 0.00f,
+		0.0f, 0.5f, 0.0f, 0.00f,
+		0.0f, 0.0f, 0.5f, 0.00f,
+		0.25f, 0.5f, 0.75f, 1.0f,
+    };
+	GLfloat projectionMatrix[] = {
+0.5f, 0.0f, 0.0f, 0.00f,
+	0.0f, 0.5f, 0.0f, 0.00f,
+	0.0f, 0.0f, 0.5f, 0.00f,
+	0.25f, 0.5f, 0.75f, 1.0f,
+	};
+	
+    GLuint modelViewLocation = glGetUniformLocation(shaderProgram, "modelView");
+    GLuint projectionLocation = glGetUniformLocation(shaderProgram, "projection");
+    GLuint textureLocation = glGetUniformLocation(shaderProgram, "texture");
+
+	// set uniforms
+	glUniformMatrix4fv(modelViewLocation, 1, GL_FALSE, modelViewMatrix);       // set modelView matrix
+	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, projectionMatrix);     // set projection matrix
+	glUniform1i(textureLocation, 0);                                           // set texture unit to sample
+
+
     // Main loop
     bool done = false;
 #ifdef __EMSCRIPTEN__
@@ -244,12 +348,22 @@ int main(int, char**)
             mem_edit_1.DrawWindow("Memory Editor", sdhrManager->cpubuffer, _SDHR_WIDTH * _SDHR_HEIGHT *4);
         }
 
+
+        //ImVec2 window_pos = ImGui::GetWindowPos();
+        //ImVec2 window_size = ImGui::GetWindowSize();
+        //ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
+        //ImGui::GetBackgroundDrawList()->AddCircle(window_center, window_size.x * 0.6f, IM_COL32(255, 0, 0, 200), 0, 10 + 4);
+        //ImGui::GetForegroundDrawList()->AddCircle(window_center, window_size.y * 0.6f, IM_COL32(0, 255, 0, 200), 0, 10);
+        //auto _txtstr = "DRAWING a string!!!!";
+        //ImGui::GetForegroundDrawList()->AddText(window_center, IM_COL32(100, 100, 0, 255), _txtstr);
+
 		// Rendering
 		ImGui::Render();
 		glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
 		glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
 		glClear(GL_COLOR_BUFFER_BIT);
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		glDrawArrays(GL_TRIANGLES, 0, CUBE_TRIANGLE_COUNT * 3);
 		SDL_GL_SwapWindow(window);
 
     }
