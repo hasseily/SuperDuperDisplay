@@ -10,7 +10,10 @@
 #   brew install sdl2
 #   brew install zlib
 # MSYS2:
-#   pacman -S mingw-w64-x86_64-SDL2
+#	pacman -S gcc
+#	pacman -S autotools
+#	pacman -S make
+#   pacman -S mingw-w64-ucrt-x86_64-SDL2
 #   pacman -S mingw-w64-ucrt-x86_64-zlib
 #
 
