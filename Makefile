@@ -75,6 +75,7 @@ ifeq ($(OS), Windows_NT)
     LIBS += -llibz -lgdi32 -lopengl32 -limm32 -lWs2_32 `pkg-config --static --libs sdl2`
 
     CXXFLAGS += `pkg-config --cflags sdl2`
+	CXXFLAGS += -I/ucrt64/include/
     CFLAGS = $(CXXFLAGS)
 endif
 

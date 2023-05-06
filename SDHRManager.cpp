@@ -243,9 +243,8 @@ void SDHRManager::Initialize()
 	// Whenever memory is written from the Apple2
 	// in the main bank between $200 and $BFFF it will
 	// be sent through the socket and this buffer will be updated
-	if (a2mem == NULL)
-		a2mem = new uint8_t[0xbfff];	// anything below $200 is unused
-	memset(a2mem, 0, 0xbfff);
+	a2mem = new uint8_t[0xc000];	// anything below $200 is unused
+	memset(a2mem, 0, 0xc000);
 
 }
 
