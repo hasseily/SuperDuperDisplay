@@ -6,7 +6,6 @@
 #define _SERVER_PORT 8080
 
 #define IMGUI_USER_CONFIG "../../my_imgui_config.h"
-
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_opengl3.h"
@@ -20,6 +19,7 @@
 #include <GLES2/gl2ext.h>
 #include <GLES2/gl2platform.h>
 #else
+#include <GL/glew.h>
 #include <SDL_opengl.h>
 #endif
 
@@ -102,6 +102,13 @@ int main(int, char**)
     ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
+	GLenum err = glewInit();
+	if (GLEW_OK != err)
+	{
+		/* Problem: glewInit failed, something is seriously wrong. */
+		fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
+	}
+
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
     // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
@@ -183,7 +190,9 @@ void main()
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexSource, NULL);
     glCompileShader(vertexShader);
-
+    while ((err = glGetError()) != GL_NO_ERROR) {
+        std::cerr << "OpenGL error compiling vertex shader: " << err << std::endl;
+    }
 
 	const char* fragmentSource = R"glsl(
 precision mediump float;        // set default precision for floats to medium
@@ -202,34 +211,46 @@ void main()
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
 	glCompileShader(fragmentShader);
+	while ((err = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error compiling fragment shader: " << err << std::endl;
+	}
 
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, fragmentShader);
     glLinkProgram(shaderProgram);
     glUseProgram(shaderProgram);
+	while ((err = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error at glUseProgram: " << err << std::endl;
+	}
 	// enable and send vertex position attribute data
     GLuint positionIndex = 0;
 	glEnableVertexAttribArray(positionIndex);
 	glVertexAttribPointer(positionIndex, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), &cube[0].position);
+	while ((err = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error at vertex attributes: " << err << std::endl;
+	}
 
 	// enable and send vertex texture coordinate attribute data
 	GLuint textureCoordIndex = 1;
 	glEnableVertexAttribArray(textureCoordIndex);
 	glVertexAttribPointer(textureCoordIndex, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), &cube[0].textureCoordinate);
+	while ((err = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error at texture attributes: " << err << std::endl;
+	}
 
     // Create uniforms
 	GLfloat modelViewMatrix[] = {
-	0.5f, 0.0f, 0.0f, 0.00f,
+	    0.5f, 0.0f, 0.0f, 0.00f,
 		0.0f, 0.5f, 0.0f, 0.00f,
 		0.0f, 0.0f, 0.5f, 0.00f,
 		0.25f, 0.5f, 0.75f, 1.0f,
-    };
+	};
 	GLfloat projectionMatrix[] = {
-0.5f, 0.0f, 0.0f, 0.00f,
-	0.0f, 0.5f, 0.0f, 0.00f,
-	0.0f, 0.0f, 0.5f, 0.00f,
-	0.25f, 0.5f, 0.75f, 1.0f,
+		0.5f, 0.0f, 0.0f, 0.00f,
+		0.0f, 0.5f, 0.0f, 0.00f,
+		0.0f, 0.0f, 0.5f, 0.00f,
+		0.25f, 0.5f, 0.75f, 1.0f,
 	};
 	
     GLuint modelViewLocation = glGetUniformLocation(shaderProgram, "modelView");
@@ -240,7 +261,9 @@ void main()
 	glUniformMatrix4fv(modelViewLocation, 1, GL_FALSE, modelViewMatrix);       // set modelView matrix
 	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, projectionMatrix);     // set projection matrix
 	glUniform1i(textureLocation, 0);                                           // set texture unit to sample
-
+	while ((err = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error at set uniforms: " << err << std::endl;
+	}
 
     // Main loop
     bool done = false;
