@@ -35,8 +35,8 @@ private:
 		Initialize();
 	}
 
-	const GLint WIDTH = 800;
-	const GLint HEIGHT = 600;
+	const GLint WIDTH = 640;
+	const GLint HEIGHT = 360;
 
 	GLuint VAO;
 	GLuint VBO;
