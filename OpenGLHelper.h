@@ -46,7 +46,6 @@ private:
 	GLuint shader;
 
 	const char* vertex_shader_code = R"*(
-#version 110
 
 layout (location = 0) in vec3 pos;
 
@@ -57,7 +56,6 @@ void main()
 )*";
 
 	const char* fragment_shader_code = R"*(
-#version 110
 
 void main()
 {
