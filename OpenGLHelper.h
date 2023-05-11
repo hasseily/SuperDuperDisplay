@@ -1,7 +1,8 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
-#include <GL\glew.h>
+#include "camera.h"
+#include "common.h"
 
 class OpenGLHelper
 {
@@ -14,7 +15,9 @@ public:
 		return s_instance;
 	}
 	~OpenGLHelper();
-	void create_triangle();
+	unsigned int load_texture(unsigned char* data, int width, int height, int nrComponents);			// new texture
+	void load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID);	// replace texture
+	void create_vertices();
 	void add_shader(GLuint program, const char* shader_code, GLenum type);
 	void create_shaders();
 	void create_framebuffer();
@@ -35,34 +38,61 @@ private:
 		Initialize();
 	}
 
-	const GLint WIDTH = 640;
-	const GLint HEIGHT = 360;
-
+	GLuint texture_id;
 	GLuint VAO;
 	GLuint VBO;
 	GLuint FBO;
 	GLuint RBO;
-	GLuint texture_id;
-	GLuint shader;
+	GLuint shaderProgram;
+
+	// settings
+	const unsigned int SCR_WIDTH = 640;
+	const unsigned int SCR_HEIGHT = 360;
+
+	// camera
+	Camera camera;
+	float lastX = (float)SCR_WIDTH / 2.0;
+	float lastY = (float)SCR_HEIGHT / 2.0;
+	bool firstMouse = true;
+
+	// timing
+	float deltaTime = 0.0f;
+	float lastFrame = 0.0f;
 
 	const char* vertex_shader_code = R"*(
+#version 330 core
+layout (location = 0) in vec2 aPos;
+layout (location = 1) in vec2 aTexCoord;
+layout (location = 2) in int aTexIdx;       // texture index (max 16)
 
-layout (location = 0) in vec3 pos;
+// the meshIndex is the index of the window for z-depth
+uniform int meshIndex;
+
+out vec2 vTexCoord;
+out int vTexIdx;
 
 void main()
 {
-	gl_Position = vec4(0.9*pos.x, 0.9*pos.y, 0.5*pos.z, 1.0);
+    vTexCoord = aTexCoord;
+    vTexIdx = aTexIdx;
+    gl_Position = vec4(aPos, meshIndex / 256.0, 1.0); 
 }
 )*";
 
 	const char* fragment_shader_code = R"*(
+#version 330 core
+
+uniform sampler2D tilesTexture[16];
+in vec2 vTexCoord;
+flat in int vTexIdx;    // the texture is the same for all pixels in the triangle
+
+out vec4 fragColor;
 
 void main()
 {
-	gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+    fragColor = texture(tilesTexture[vTexIdx], vTexCoord);
 }
 )*";
 
 
 };
-

@@ -10,18 +10,8 @@
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_memory_editor.h"
-#include <stdio.h>
 #include <SDL.h>
-#if defined(IMGUI_IMPL_OPENGL_ES2)
-#include <SDL_opengles2.h>
-#define GL2_PROTOTYPES 1
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
-#include <GLES2/gl2platform.h>
-#else
-#include <GL/glew.h>
-#include <SDL_opengl.h>
-#endif
+
 
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
@@ -30,6 +20,12 @@
 
 #include <cstring>
 #include <thread>
+
+#include "common.h"
+#include "shader.h"
+#include "camera.h"
+#include "mosaicmesh.h"
+
 #include "SDHRNetworking.h"
 #include "SDHRManager.h"
 #include "OpenGLHelper.h"
@@ -103,11 +99,9 @@ int main(int, char**)
     ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-	GLenum err = glewInit();
-	if (GLEW_OK != err)
-	{
-		/* Problem: glewInit failed, something is seriously wrong. */
-		fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
+	if (!gladLoadGL()) {
+		std::cout << "Failed to initialize OpenGL context" << std::endl;
+		return -1;
 	}
 
     // Load Fonts
@@ -134,28 +128,16 @@ int main(int, char**)
     bool did_press_quit = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-	// Create an image texture in which we'll copy the generated pixels
-    // Also create a second texture to which we'll copy the temp CPU buffer
     auto sdhrManager = SDHRManager::GetInstance();
-	GLuint image_textures[2];
-	glGenTextures(2, image_textures);
-    sdhr_image image_struct = sdhr_image();
-    image_struct.texture_id = image_textures[0];
-    sdhrManager->SetSDHRImage(image_struct);
-
-    // Initialize it to zero
-	glBindTexture(GL_TEXTURE_2D, image_struct.texture_id);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_struct.width, image_struct.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-
-	// Run the network thread that will update the internal state as well as the apple 2 memory
-	std::thread thread_server(socket_server_thread, _SERVER_PORT, &bShouldTerminateNetworking);
 
 	glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
 	auto glhelper = OpenGLHelper::GetInstance();
-	glhelper->create_triangle();
+	glhelper->create_vertices();
 	glhelper->create_shaders();
 	glhelper->create_framebuffer();
 
+	// Run the network thread that will update the internal state as well as the apple 2 memory
+	std::thread thread_server(socket_server_thread, _SERVER_PORT, &bShouldTerminateNetworking);
 
     // Main loop
     bool done = false;
@@ -198,22 +180,10 @@ int main(int, char**)
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
 
-		if (sdhrManager->threadState == THREADCOMM_e::COMMAND_PROCESSED)
 		{
-			sdhrManager->threadState = THREADCOMM_e::MAIN_LOCK;
-			sdhrManager->DrawWindowsIntoScreenImage(image_struct.texture_id);
-			sdhrManager->threadState = THREADCOMM_e::IDLE;
-		}
-
-		// 2. Show a window with the SDHR Output from a glTexSubImage2D pixel copy
-		{
-			ImGui::Begin("glTexSubImage2D Technique (1 pixel at a time)");
-            sdhrManager->shouldUseSubImage2D = !ImGui::IsWindowCollapsed();
+			ImGui::Begin("Super Duper Display Options");
 			if (!ImGui::IsWindowCollapsed())
 			{
-				ImGui::Text("size = %d x %d", image_struct.width, image_struct.height);
-				ImGui::Image((void*)(intptr_t)image_struct.texture_id, ImVec2(image_struct.width, image_struct.height));
-
 				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 				// ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
 				ImGui::Checkbox("Memory Window", &show_memory_window);      // Edit bools storing our window open/close state
@@ -224,39 +194,7 @@ int main(int, char**)
 			ImGui::End();
 		}
 
-		// 3. Show a test window using the cpubuffer
-		{
-            ImGui::SetNextWindowPos(ImVec2(600, 400), ImGuiCond_FirstUseEver);
-			ImGui::Begin("Temp CPU Buffer Technique");
-            sdhrManager->shouldUseCpuBuffer = !ImGui::IsWindowCollapsed();
-            if (!ImGui::IsWindowCollapsed())
-            {
-				glBindTexture(GL_TEXTURE_2D, image_textures[1]);
-
-				// Setup filtering parameters for display
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
-
-				// Upload pixels into texture
-#if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
-				glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-#endif
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _SDHR_WIDTH, _SDHR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, sdhrManager->cpubuffer);
-				GLenum err3;
-				while ((err3 = glGetError()) != GL_NO_ERROR) {
-					std::cerr << "OpenGL error: " << err3 << std::endl;
-				}
-				ImGui::Text("size = %d x %d", _SDHR_WIDTH, _SDHR_HEIGHT);
-				ImGui::Image((void*)(intptr_t)image_textures[1], ImVec2(_SDHR_WIDTH, _SDHR_HEIGHT));
-				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-            }
-
-			ImGui::End();
-		}
-
-        // 4. Show a memory editor
+        // Show a memory editor
         if (show_memory_window)
         {
             static MemoryEditor mem_edit_1;
@@ -293,7 +231,13 @@ int main(int, char**)
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
-		OpenGLHelper::GetInstance()->render();
+
+        if (sdhrManager->threadState == THREADCOMM_e::COMMAND_PROCESSED)
+        {
+			sdhrManager->threadState = THREADCOMM_e::MAIN_LOCK;
+			OpenGLHelper::GetInstance()->render();
+			sdhrManager->threadState = THREADCOMM_e::IDLE;
+        }
 
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		SDL_GL_SwapWindow(window);

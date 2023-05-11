@@ -3,10 +3,9 @@
 #include <iostream>
 #include <string>
 
-#include <GL\glew.h>
-
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
+
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 OpenGLHelper* OpenGLHelper::s_instance;
@@ -17,7 +16,12 @@ OpenGLHelper* OpenGLHelper::s_instance;
 
 void OpenGLHelper::Initialize()
 {
-
+	camera = Camera(glm::vec3(0.0f, 0.0f, 3.0f));
+	lastX = (float)SCR_WIDTH / 2.0;
+	lastY = (float)SCR_HEIGHT / 2.0;
+	firstMouse = true;
+	deltaTime = 0.0f;
+	lastFrame = 0.0f;
 }
 
 OpenGLHelper::~OpenGLHelper()
@@ -31,12 +35,52 @@ OpenGLHelper::~OpenGLHelper()
 // Methods
 //////////////////////////////////////////////////////////////////////////
 
-void OpenGLHelper::create_triangle()
+unsigned int OpenGLHelper::load_texture(unsigned char* data, int width, int height, int nrComponents)
 {
-	GLfloat vertices[] = {
-		-0.5f, -0.5f, 0.0f, // 1. vertex x, y, z
-		0.5f, -0.5f, 0.0f, // 2. vertex ...
-		0.0f, 0.5f, 0.0f // etc... 
+	unsigned int textureID;
+	glGenTextures(1, &textureID);
+
+	load_texture(data, width, height, nrComponents, textureID);
+	return textureID;
+}
+
+void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID)
+{
+	GLenum format = GL_RGBA;
+	if (nrComponents == 1)
+		format = GL_RED;
+	else if (nrComponents == 3)
+		format = GL_RGB;
+	else if (nrComponents == 4)
+		format = GL_RGBA;
+
+	glBindTexture(GL_TEXTURE_2D, textureID);
+	// TODO: Check if glGetError() == GL_OUT_OF_MEMORY !!!
+	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+
+	// NOTE: May need to generate mipmaps in case we want to allow zooming in-out
+	// glGenerateMipmap(GL_TEXTURE_2D);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+}
+
+void OpenGLHelper::create_vertices()
+{
+	// TODO: Create vertices from the window command
+	// Assign the texture id to each vertex as well
+
+	float quadVertices[] = { // vertex attributes for a quad
+		// positions   // texCoords
+		-0.4f,  0.4f,  0.0f, 0.4f,
+		-0.4f, -0.4f,  0.0f, 0.0f,
+		 0.4f, -0.4f,  0.4f, 0.0f,
+
+		-0.4f,  0.4f,  0.0f, 0.4f,
+		 0.4f, -0.4f,  0.4f, 0.0f,
+		 0.4f,  0.4f,  0.4f, 0.4f
 	};
 
 	glGenVertexArrays(1, &VAO);
@@ -44,13 +88,15 @@ void OpenGLHelper::create_triangle()
 
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
 	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+
 }
 
 void OpenGLHelper::add_shader(GLuint program, const char* shader_code, GLenum type)
@@ -81,30 +127,31 @@ void OpenGLHelper::add_shader(GLuint program, const char* shader_code, GLenum ty
 
 void OpenGLHelper::create_shaders()
 {
-	shader = glCreateProgram();
-	if (!shader) {
+	shaderProgram = glCreateProgram();
+	if (!shaderProgram) {
 		std::cout << "Error creating shader program!\n";
 		exit(1);
 	}
 
-	add_shader(shader, vertex_shader_code, GL_VERTEX_SHADER);
-	add_shader(shader, fragment_shader_code, GL_FRAGMENT_SHADER);
+	// TODO: Use file-based shader code!
+	add_shader(shaderProgram, vertex_shader_code, GL_VERTEX_SHADER);
+	add_shader(shaderProgram, fragment_shader_code, GL_FRAGMENT_SHADER);
 
 	GLint result = 0;
 	GLchar log[1024] = { 0 };
 
-	glLinkProgram(shader);
-	glGetProgramiv(shader, GL_LINK_STATUS, &result);
+	glLinkProgram(shaderProgram);
+	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &result);
 	if (!result) {
-		glGetProgramInfoLog(shader, sizeof(log), NULL, log);
+		glGetProgramInfoLog(shaderProgram, sizeof(log), NULL, log);
 		std::cout << "Error linking program:\n" << log << '\n';
 		return;
 	}
 
-	glValidateProgram(shader);
-	glGetProgramiv(shader, GL_VALIDATE_STATUS, &result);
+	glValidateProgram(shaderProgram);
+	glGetProgramiv(shaderProgram, GL_VALIDATE_STATUS, &result);
 	if (!result) {
-		glGetProgramInfoLog(shader, sizeof(log), NULL, log);
+		glGetProgramInfoLog(shaderProgram, sizeof(log), NULL, log);
 		std::cout << "Error validating program:\n" << log << '\n';
 		return;
 	}
@@ -117,14 +164,14 @@ void OpenGLHelper::create_framebuffer()
 
 	glGenTextures(1, &texture_id);
 	glBindTexture(GL_TEXTURE_2D, texture_id);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_WIDTH, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture_id, 0);
 
 	glGenRenderbuffers(1, &RBO);
 	glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_WIDTH);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -160,8 +207,9 @@ void OpenGLHelper::rescale_framebuffer(float width, float height)
 
 void OpenGLHelper::render()
 {
+	// TODO: Loop through all the meshes and draw them
 	bind_framebuffer();
-	glUseProgram(shader);
+	glUseProgram(shaderProgram);
 	glBindVertexArray(VAO);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	glBindVertexArray(0);
