@@ -19,9 +19,11 @@
 #include "glm/gtc/matrix_transform.hpp"
 
 #include "shader.h"
-
+#include "OpenGLHelper.h"
 #include <string>
 #include <vector>
+
+
 using namespace std;
 
 struct TileTex {				// Tile texture starting coordinates
@@ -78,31 +80,13 @@ public:
 	void Draw(Shader& shader)
 	{
 		// bind all 16 textures at once
+		// TODO: Do the binding at the start of rendering all the window meshes
+		//			It'll be more efficent than binding at every draw of each mesh
 		
-		// bind appropriate textures
-		unsigned int diffuseNr = 1;
-		unsigned int specularNr = 1;
-		unsigned int normalNr = 1;
-		unsigned int heightNr = 1;
-		for (unsigned int i = 0; i < textures.size(); i++)
-		{
-			glActiveTexture(GL_TEXTURE0 + i); // active proper texture unit before binding
-			// retrieve texture number (the N in diffuse_textureN)
-			string number;
-			string name = textures[i].type;
-			if (name == "texture_diffuse")
-				number = std::to_string(diffuseNr++);
-			else if (name == "texture_specular")
-				number = std::to_string(specularNr++); // transfer unsigned int to string
-			else if (name == "texture_normal")
-				number = std::to_string(normalNr++); // transfer unsigned int to string
-			else if (name == "texture_height")
-				number = std::to_string(heightNr++); // transfer unsigned int to string
-
-			// now set the sampler to the correct texture unit
-			glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
-			// and finally bind the texture
-			glBindTexture(GL_TEXTURE_2D, textures[i].id);
+		auto oglh = OpenGLHelper::GetInstance();
+		auto vti = oglh->v_texture_ids;
+		for (unsigned int i = 0; i < vti.size(); i++) {
+			glBindTexture(GL_TEXTURE_2D, vti.at(i));
 		}
 
 		// draw mesh

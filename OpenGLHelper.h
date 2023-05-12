@@ -1,8 +1,13 @@
 #pragma once
+#ifndef OPENGLHELPER_H
+#define OPENGLHELPER_H
 #include <stdint.h>
 #include <stddef.h>
 #include "camera.h"
 #include "common.h"
+#include <vector>
+
+#define _SDHR_MAX_TEXTURES 16		// Max # of image assets available
 
 class OpenGLHelper
 {
@@ -26,6 +31,9 @@ public:
 	void rescale_framebuffer(float width, float height);
 	GLuint get_texture_id() { return texture_id; };
 	void render();
+
+	// The created texture ids (max is _SDHR_MAX_TEXTURES)
+	std::vector<GLuint>v_texture_ids;
 private:
 //////////////////////////////////////////////////////////////////////////
 // Singleton pattern
@@ -96,3 +104,4 @@ void main()
 
 
 };
+#endif // OPENGLHELPER_H

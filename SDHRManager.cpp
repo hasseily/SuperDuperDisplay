@@ -129,9 +129,14 @@ void SDHRManager::ImageAsset::AssignByFilename(SDHRManager* owner, const char* f
 		oglHelper->load_texture(data, width, height, channels, tex_id);
 	else
 		tex_id = oglHelper->load_texture(data, width, height, channels);
+	stbi_image_free(data);
+	if (tex_id == UINT_MAX)
+	{
+		std::cerr << "ERROR: Could not bind new texture!" << '\n';
+		return;
+	}
 	image_xcount = width;
 	image_ycount = height;
-	stbi_image_free(data);
 }
 
 void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* buffer, uint64_t size) {
@@ -148,9 +153,14 @@ void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* 
 		oglHelper->load_texture(data, width, height, channels, tex_id);
 	else
 		tex_id = oglHelper->load_texture(data, width, height, channels);
+	stbi_image_free(data);
+	if (tex_id == UINT_MAX)
+	{
+		std::cerr << "ERROR: Could not bind new texture!" << '\n';
+		return;
+	}
 	image_xcount = width;
 	image_ycount = height;
-	stbi_image_free(data);
 }
 
 //////////////////////////////////////////////////////////////////////////

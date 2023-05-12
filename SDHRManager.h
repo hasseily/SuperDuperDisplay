@@ -13,8 +13,6 @@
 #define _SDHR_WIDTH  640
 #define _SDHR_HEIGHT 360
 
-#define _SDHR_MAX_TEXTURES 16		// Max # of image assets available
-
 enum THREADCOMM_e
 {
 	IDLE = 0,			// SDHR data and OpenGL are in sync

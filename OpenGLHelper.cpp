@@ -37,8 +37,14 @@ OpenGLHelper::~OpenGLHelper()
 
 unsigned int OpenGLHelper::load_texture(unsigned char* data, int width, int height, int nrComponents)
 {
+	if (v_texture_ids.size() >= _SDHR_MAX_TEXTURES)
+	{
+		std::cerr << "ERROR: Already at max textures! Cannot create new texture" << '\n';
+		return UINT_MAX;
+	}
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
+	v_texture_ids.push_back(textureID);
 
 	load_texture(data, width, height, nrComponents, textureID);
 	return textureID;
@@ -65,6 +71,7 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void OpenGLHelper::create_vertices()
@@ -118,7 +125,7 @@ void OpenGLHelper::add_shader(GLuint program, const char* shader_code, GLenum ty
 	glGetShaderiv(current_shader, GL_COMPILE_STATUS, &result);
 	if (!result) {
 		glGetShaderInfoLog(current_shader, sizeof(log), NULL, log);
-		std::cout << "Error compiling " << type << " shader: " << log << "\n";
+		std::cerr << "Error compiling " << type << " shader: " << log << "\n";
 		return;
 	}
 
@@ -129,7 +136,7 @@ void OpenGLHelper::create_shaders()
 {
 	shaderProgram = glCreateProgram();
 	if (!shaderProgram) {
-		std::cout << "Error creating shader program!\n";
+		std::cerr << "Error creating shader program!\n";
 		exit(1);
 	}
 
@@ -144,7 +151,7 @@ void OpenGLHelper::create_shaders()
 	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &result);
 	if (!result) {
 		glGetProgramInfoLog(shaderProgram, sizeof(log), NULL, log);
-		std::cout << "Error linking program:\n" << log << '\n';
+		std::cerr << "Error linking program:\n" << log << '\n';
 		return;
 	}
 
@@ -152,7 +159,7 @@ void OpenGLHelper::create_shaders()
 	glGetProgramiv(shaderProgram, GL_VALIDATE_STATUS, &result);
 	if (!result) {
 		glGetProgramInfoLog(shaderProgram, sizeof(log), NULL, log);
-		std::cout << "Error validating program:\n" << log << '\n';
+		std::cerr << "Error validating program:\n" << log << '\n';
 		return;
 	}
 }
@@ -175,7 +182,7 @@ void OpenGLHelper::create_framebuffer()
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!\n";
+		std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!\n";
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glBindTexture(GL_TEXTURE_2D, 0);

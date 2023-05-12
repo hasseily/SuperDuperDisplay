@@ -14,6 +14,9 @@
     <Filter Include="shaders">
       <UniqueIdentifier>{bc77d915-ea34-4b87-a05c-219375cb07e2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="assets">
+      <UniqueIdentifier>{a0ff60f3-4a53-4ffe-946c-9bd8770d7e17}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -115,5 +118,10 @@
     <None Include="shaders\sdhr_tr.frag">
       <Filter>shaders</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Texture_Default.png">
+      <Filter>assets</Filter>
+    </Image>
   </ItemGroup>
 </Project>
