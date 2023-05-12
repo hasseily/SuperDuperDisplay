@@ -155,6 +155,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="glad\glad.c" />
     <ClCompile Include="imgui\imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui\imgui_demo.cpp" />
     <ClCompile Include="imgui\imgui\imgui_draw.cpp" />
@@ -163,6 +164,7 @@
     <ClCompile Include="imgui\imgui\backends\imgui_impl_sdl2.cpp" />
     <ClCompile Include="imgui\imgui\backends\imgui_impl_opengl3.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MosaicMesh.cpp" />
     <ClCompile Include="OpenGLHelper.cpp" />
     <ClCompile Include="SDHRManager.cpp" />
     <ClCompile Include="SDHRNetworking.cpp" />
@@ -170,6 +172,8 @@
   <ItemGroup>
     <ClInclude Include="camera.h" />
     <ClInclude Include="common.h" />
+    <ClInclude Include="glad\glad.h" />
+    <ClInclude Include="glad\khrplatform.h" />
     <ClInclude Include="imgui_memory_editor.h" />
     <ClInclude Include="imgui\imgui\imconfig.h" />
     <ClInclude Include="imgui\imgui\imgui.h" />
@@ -177,7 +181,7 @@
     <ClInclude Include="imgui\imgui\backends\imgui_impl_sdl2.h" />
     <ClInclude Include="imgui\imgui\backends\imgui_impl_opengl3.h" />
     <ClInclude Include="imgui\imgui\backends\imgui_impl_opengl3_loader.h" />
-    <ClInclude Include="mosaicmesh.h" />
+    <ClInclude Include="MosaicMesh.h" />
     <ClInclude Include="my_imgui_config.h" />
     <ClInclude Include="OpenGLHelper.h" />
     <ClInclude Include="SDHRManager.h" />

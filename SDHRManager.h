@@ -2,13 +2,16 @@
 // List of commands and their structs
 
 #pragma once
+#ifndef SDHRMANAGER_H
+#define SDHRMANAGER_H
 
 #include <stdint.h>
 #include <stddef.h>
 #include <vector>
 
 #include "common.h"
-#include "mosaicmesh.h"
+#include "OpenGLHelper.h"
+#include "MosaicMesh.h"
 
 #define _SDHR_WIDTH  640
 #define _SDHR_HEIGHT 360
@@ -71,7 +74,7 @@ public:
 		void AssignByMemory(SDHRManager* owner, const uint8_t* buffer, uint64_t size);
 
 		// image assets are full 32-bit bitmap files, uploaded from PNG
-		uint64_t image_xcount = 0;	// width and height of asset
+		uint64_t image_xcount = 0;	// width and height of asset in pixels
 		uint64_t image_ycount = 0;
 		GLuint tex_id = UINT_MAX;	// Texture ID on the GPU that holds the image data
 		ImageAsset()
@@ -81,14 +84,20 @@ public:
 		{}	// Do nothing in constructor
 	};
 
+	struct TileTex {				// Tile texture starting coordinates
+		uint32_t upos;					// U (x) starting position
+		uint32_t vpos;					// V (y) starting position
+		// TODO: Add flags (inverted, mirrored, ...)
+	};
+
 	struct TilesetRecord {			// A single tileset
-		GLuint tex_id;					// texture id of the image asset
+		uint8_t asset_index;			// index of the image asset
 		uint64_t xdim;					// Width of tiles in this tileset
 		uint64_t ydim;					// Height of tiles in this tileset
 		uint64_t num_entries;
 		TileTex* tile_data = NULL;		// list of tile texture starting coordinates
 		TilesetRecord()
-			: tex_id(UINT_MAX)
+			: asset_index(UINT_MAX)
 			, xdim(0)
 			, ydim(0)
 			, num_entries(0)
@@ -109,8 +118,7 @@ public:
 		uint64_t tile_ydim;
 		uint64_t tile_xcount;    // xy dimension, in tiles, of the tile array
 		uint64_t tile_ycount;
-		uint8_t* tileset_indexes = NULL;
-		uint8_t* tile_indexes = NULL;
+		MosaicMesh* mesh;
 		Window()
 			: enabled(0), black_or_wrap(false)
 			, screen_xcount(0), screen_ycount(0)
@@ -118,7 +126,6 @@ public:
 			, tile_xbegin(0), tile_ybegin(0)
 			, tile_xdim(0), tile_ydim(0)
 			, tile_xcount(0), tile_ycount(0)
-			, tileset_indexes(), tile_indexes()
 		{}
 	};
 
@@ -143,10 +150,10 @@ public:
 	void AddPacketDataToBuffer(uint8_t data);
 	void ClearBuffer();
 	bool ProcessCommands(void);
-	void DrawWindowsIntoScreenImage(GLuint textureid);
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 memory pointer
 
-	uint8_t* GetTilesetRecordData(uint8_t index) { return reinterpret_cast<uint8_t*>(tileset_records[index].tile_data); };
+	TileTex* GetTilesetRecordData(uint8_t tileset_index) { return tileset_records[tileset_index].tile_data; };
+	TileTex GetTilesetTileTex(uint8_t tileset_index, uint8_t tile_index) { return tileset_records[tileset_index].tile_data[tile_index]; };
 
 	void ToggleSdhr(bool value) {
 		m_bEnabled = value;
@@ -196,7 +203,7 @@ private:
 	}
 
 	void DefineTileset(uint8_t tileset_index, uint16_t num_entries, uint8_t xdim, uint8_t ydim,
-		ImageAsset* asset, uint8_t* offsets);
+		uint8_t asset_index, uint8_t* offsets);
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -214,3 +221,4 @@ private:
 	char error_str[256];
 	uint8_t uploaded_data_region[256 * 256 * 256];
 };
+#endif // SDHRMANAGER_H

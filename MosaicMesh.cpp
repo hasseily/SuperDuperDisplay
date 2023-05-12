@@ -1,0 +1,120 @@
+#include "MosaicMesh.h"
+
+#include "glm/gtc/matrix_transform.hpp"
+#include "OpenGLHelper.h"
+#include "SDHRManager.h"
+
+MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile_xdim, uint64_t tile_ydim, uint8_t win_index) {
+	this->vertices.reserve(tile_xcount * tile_ycount * 6);	// total # of unique vertices
+
+	auto sdhrm = SDHRManager::GetInstance();
+	size_t t_idx = 0;	// 1D tile index
+	cols = tile_xcount;	// number of columns
+	rows = tile_ycount;	// number of rows
+	auto pw = tile_xdim;	// pixel width
+	auto ph = tile_ydim;	// pixel height
+
+	// This is a default vertex that we'll use as base to insert into vertices later
+	// Because push_back() makes a copy, it's faster not to recreate the vertex every time
+	auto _v = Vertex({
+					glm::vec3(0, 0, 0),	// vertex position (z is the reverse window index)
+					glm::vec2(0, 0),	// UV (not set yet, waiting for SDHR_CMD_UPDATE_WINDOW...)
+					(uint8_t)0			// Texture index (not set yet, waiting for SDHR_CMD_UPDATE_WINDOW...)
+		});
+
+	// Create all the vertices for each tile
+	for (size_t j = 0; j < rows; j++)
+	{
+		for (size_t i = 0; i < cols; i++)
+		{
+			// First triangle
+			_v.Position = glm::vec3((float)i / cols, (float)j / rows, 256 - win_index);	// top left
+			this->vertices.push_back(_v);
+			_v.Position = glm::vec3((float)(i + 1) / cols, (float)j / rows, 256 - win_index);	// top right
+			this->vertices.push_back(_v);
+			_v.Position = glm::vec3((float)i / cols, (float)(j + 1) / rows, 256 - win_index);	// bottom left
+			this->vertices.push_back(_v);
+			// Second triangle
+			_v.Position = glm::vec3((float)i / cols, (float)(j + 1) / rows, 256 - win_index);	// bottom left
+			this->vertices.push_back(_v);
+			_v.Position = glm::vec3((float)(i + 1) / cols, (float)j / rows, 256 - win_index);	// top right
+			this->vertices.push_back(_v);
+			_v.Position = glm::vec3((float)(i + 1) / cols, (float)(j + 1) / rows, 256 - win_index);	// bottom right
+			this->vertices.push_back(_v);
+			++t_idx;
+		}
+	};
+	// create buffers/arrays
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+
+	updateMesh();
+}
+
+void MosaicMesh::UpdateMosaicUV(uint64_t xpos, uint64_t ypos, uint64_t u, uint64_t v, uint8_t texture_index)
+{
+	UpdateMosaicUV(xpos + ypos * cols, u, v, texture_index);
+}
+
+void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, uint8_t texture_index)
+{
+	// Update the UV data of all the vertices of a single mosaic tile
+	const auto ia = SDHRManager::GetInstance()->image_assets[texture_index];
+	auto _idx = mosaic_index * 6;	// index of the first vertex of the mosaic tile
+	for (size_t i = 0; i < 6; i++)
+	{
+		auto& _v = this->vertices.at(_idx + i);		// reference to the vertex. Update in place
+		_v.TexCoords = glm::vec2((float)u / ia.image_xcount, (float)v / ia.image_ycount);
+		_v.TexIndex = texture_index;
+	}
+	bNeedsGPUUpdate = true;
+}
+
+// render the mesh
+void MosaicMesh::Draw(Shader& shader)
+{
+	// bind all 16 textures at once to GL_TEXTURE0... GL_TEXTURE16
+	// TODO: Do the binding at the start of rendering all the window meshes
+	//			It'll be more efficent than binding at every draw of each mesh
+
+	updateMesh();
+	auto oglh = OpenGLHelper::GetInstance();
+	auto vti = oglh->v_texture_ids;
+	for (unsigned int i = 0; i < vti.size(); i++) {
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_2D, vti.at(i));
+	}
+
+	// draw mesh
+	glBindVertexArray(VAO);
+	glDrawArrays(GL_TRIANGLES, 0, this->vertices.size());
+	glBindVertexArray(0);
+
+	// always good practice to set everything back to defaults once configured.
+	glActiveTexture(GL_TEXTURE0);
+}
+
+void MosaicMesh::updateMesh()
+{
+	if (!bNeedsGPUUpdate)
+		return;				// mesh doesn't need updating on the GPU
+	glBindVertexArray(VAO);
+	// load data into vertex buffers
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
+
+	// set the vertex attribute pointers
+	// vertex Positions: position 0, size 3
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+	// vertex texture coords: position 1, size 2
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
+	// vertex texture index: position 2, size 1
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 1, GL_BYTE, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexIndex));
+
+	// reset the binding
+	glBindVertexArray(0);
+	bNeedsGPUUpdate = false;
+}

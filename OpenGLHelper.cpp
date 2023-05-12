@@ -50,6 +50,7 @@ unsigned int OpenGLHelper::load_texture(unsigned char* data, int width, int heig
 	return textureID;
 }
 
+// This method loads the texture data into the texture specified at textureID
 void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID)
 {
 	GLenum format = GL_RGBA;

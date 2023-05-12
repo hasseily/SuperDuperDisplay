@@ -266,11 +266,8 @@ SDHRManager::~SDHRManager()
 		if (tileset_records[i].tile_data) {
 			free(tileset_records[i].tile_data);
 		}
-		if (windows[i].tileset_indexes) {
-			free(windows[i].tileset_indexes);
-		}
-		if (windows[i].tile_indexes) {
-			free(windows[i].tile_indexes);
+		if (windows[i].mesh) {
+			delete windows[i].mesh;
 		}
 	}
 	free(cpubuffer);
@@ -312,13 +309,13 @@ uint8_t* SDHRManager::GetApple2MemPtr()
 // The tileset data is kept in the CPU's memory while waiting for window data
 // Once window data comes in, the tileset data is used to allocate the UVs to each vertex
 void SDHRManager::DefineTileset(uint8_t tileset_index, uint16_t num_entries, uint8_t xdim, uint8_t ydim,
-	ImageAsset* asset, uint8_t* offsets) {
+	uint8_t asset_index, uint8_t* offsets) {
 	TilesetRecord* r = tileset_records + tileset_index;
 	if (r->tile_data) {
 		free(r->tile_data);
 	}
 	*r = {};
-	r->tex_id = asset->tex_id;
+	r->asset_index = asset_index;
 	r->xdim = xdim;
 	r->ydim = ydim;
 	r->num_entries = num_entries;
@@ -438,8 +435,7 @@ bool SDHRManager::ProcessCommands(void)
 			if (cmd->block_count * 512 < required_data_size) {
 				CommandError("Insufficient data space for tileset");
 			}
-			ImageAsset* asset = image_assets + cmd->asset_index;
-			DefineTileset(cmd->tileset_index, num_entries, cmd->xdim, cmd->ydim, asset, uploaded_data_region);
+			DefineTileset(cmd->tileset_index, num_entries, cmd->xdim, cmd->ydim, cmd->asset_index, uploaded_data_region);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_DEFINE_TILESET: Success! " << (uint32_t)cmd->tileset_index << ';'<< (uint32_t)num_entries << std::endl;
 #endif
@@ -457,8 +453,7 @@ bool SDHRManager::ProcessCommands(void)
 				CommandError("DefineTilesetImmediate data size mismatch");
 				return false;
 			}
-			ImageAsset* asset = image_assets + cmd->asset_index;
-			DefineTileset(cmd->tileset_index, num_entries, cmd->xdim, cmd->ydim, asset, cmd->data);
+			DefineTileset(cmd->tileset_index, num_entries, cmd->xdim, cmd->ydim, cmd->asset_index, cmd->data);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_DEFINE_TILESET_IMMEDIATE: Success! " << (uint32_t)cmd->tileset_index << ';' << (uint32_t)num_entries << std::endl;
 #endif
@@ -486,14 +481,10 @@ bool SDHRManager::ProcessCommands(void)
 			r->tile_ydim = cmd->tile_ydim;
 			r->tile_xcount = cmd->tile_xcount;
 			r->tile_ycount = cmd->tile_ycount;
-			if (r->tileset_indexes) {
-				free(r->tileset_indexes);
+			if (r->mesh) {
+				delete r->mesh;
 			}
-			r->tileset_indexes = (uint8_t*)malloc(r->tile_xcount * r->tile_ycount);
-			if (r->tile_indexes) {
-				free(r->tile_indexes);
-			}
-			r->tile_indexes = (uint8_t*)malloc(r->tile_xcount * r->tile_ycount);
+			r->mesh = new MosaicMesh(r->tile_xcount, r->tile_ycount, r->tile_xdim, r->tile_ydim, cmd->window_index);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_DEFINE_WINDOW: Success! " 
 				<< cmd->window_index << ';' << (uint32_t)r->tile_xcount << ';' << (uint32_t)r->tile_ycount << std::endl;
@@ -512,23 +503,28 @@ bool SDHRManager::ProcessCommands(void)
 				return false;
 			}
 			if (!CheckCommandLength(p, end, cmd_sz + cmd->data_length)) return false;
-			// TODO: here generate the vertices!
 			// Allocate to each vertex:
-			//	absolute x, y position (based on _.count and _.dim) -- starts at 0,0 on the top left
-			//  textureId of the image asset used in the tileset
 			//  u, v coordinates of the texture (based on the tileset's tile index)
+			//  textureId of the image asset used in the tileset
 			uint8_t* sp = p + cmd_sz;
+			auto mesh = r->mesh;
 			for (uint64_t i = 0; i < cmd->data_length / 2; ++i) {
 				uint8_t tileset_index = sp[i * 2];
 				uint8_t tile_index = sp[i * 2 + 1];
-				if (tileset_records[tileset_index].xdim != r->tile_xdim ||
-					tileset_records[tileset_index].ydim != r->tile_ydim ||
-					tileset_records[tileset_index].num_entries <= tile_index) {
+				const TilesetRecord tr = tileset_records[tileset_index];
+				if (tr.xdim != r->tile_xdim ||
+					tr.ydim != r->tile_ydim ||
+					tr.num_entries <= tile_index) {
 					CommandError("invalid tile specification");
 					return false;
 				}
-				r->tileset_indexes[i] = tileset_index;
-				r->tile_indexes[i] = tile_index;
+				mesh->UpdateMosaicUV(i,
+					tr.tile_data[tile_index].upos, tr.tile_data[tile_index].vpos,
+					tileset_records[tileset_index].asset_index);
+				// TODO: UVs and texture are applied on which vertices given there are indexes? XXX
+				// REMOVE INDEX BUFFERS. DUPLICATE VERTICES INSTEAD!!!
+				mesh->vertices[i].TexCoords = glm::vec2(tr.tile_data[tile_index].upos, tr.tile_data[tile_index].vpos);
+				mesh->vertices[i].TexIndex = tileset_records[tileset_index].asset_index;
 			}
 			p += cmd->data_length;
 #ifdef DEBUG
@@ -547,25 +543,26 @@ bool SDHRManager::ProcessCommands(void)
 			if (s.length() != r->tile_xcount * r->tile_ycount * 2) {
 				CommandError("UploadWindowSetUpload data insufficient to define window tiles");
 			}
-			// TODO: here generate the vertices! (same as SDHR_CMD_UPDATE_WINDOW_SET_IMMEDIATE)
-			// Allocate to each vertex:
-			//	absolute x, y position (based on _.count and _.dim) -- starts at 0,0 on the top left
-			//  textureId of the image asset used in the tileset
+			//  Allocate to each vertex:
 			//  u, v coordinates of the texture (based on the tileset's tile index)
+			//  textureId of the image asset used in the tileset
 			uint8_t* sp = (uint8_t*)s.c_str();
+			auto mesh = r->mesh;
 			for (uint64_t tile_y = 0; tile_y < r->tile_ycount; ++tile_y) {
 				uint64_t line_offset = (uint64_t)tile_y * r->tile_xcount;
 				for (uint64_t tile_x = 0; tile_x < r->tile_xcount; ++tile_x) {
 					uint8_t tileset_index = *sp++;
 					uint8_t tile_index = *sp++;
-					if (tileset_records[tileset_index].xdim != r->tile_xdim ||
-						tileset_records[tileset_index].ydim != r->tile_ydim ||
-						tileset_records[tileset_index].num_entries <= tile_index) {
+					const TilesetRecord tr = tileset_records[tileset_index];
+					if (tr.xdim != r->tile_xdim ||
+						tr.ydim != r->tile_ydim ||
+						tr.num_entries <= tile_index) {
 						CommandError("invalid tile specification");
 						return false;
 					}
-					r->tileset_indexes[line_offset + tile_x] = tileset_index;
-					r->tile_indexes[line_offset + tile_x] = tile_index;
+					mesh->UpdateMosaicUV(tile_x, tile_y,
+						tr.tile_data[tile_index].upos, tr.tile_data[tile_index].vpos,
+						tileset_records[tileset_index].asset_index);
 				}
 			}
 #ifdef DEBUG
@@ -712,97 +709,4 @@ bool SDHRManager::ProcessCommands(void)
 		p += message_length - 3;
 	}
 	return true;
-}
-
-// TODO: Delete this method
-void SDHRManager::DrawWindowsIntoScreenImage(GLuint textureid)
-{
-#ifdef _DEBUGTIMINGS
-	using std::chrono::high_resolution_clock;
-	using std::chrono::duration_cast;
-	using std::chrono::duration;
-	using std::chrono::milliseconds;
-
-	duration<double, std::milli> ms_double2;
-	auto t1 = high_resolution_clock::now();
-#endif
-
-#ifdef DEBUG
-	// std::cout << "Entered DrawWindowsIntoScreenImage" << std::endl;
-#endif
-
-	glBindTexture(GL_TEXTURE_2D, textureid);
-	// Setup filtering parameters for display
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
-
-	// Draw the windows into the bound texture
-	uint32_t pixel_color_rgba = 0;
-	for (uint16_t window_index = 0; window_index < 256; ++window_index) {
-		Window* w = windows + window_index;
-		if (!w->enabled) {
-			continue;
-		}
-
-#if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
-		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-#endif
-
-		for (int64_t tile_y = w->tile_ybegin; tile_y < w->tile_ybegin + (int64_t)w->screen_ycount; ++tile_y) {
-			int64_t adj_tile_y = tile_y;
-			int64_t tile_yspan = (int64_t)w->tile_ycount * w->tile_ydim;
-			while (adj_tile_y < 0) adj_tile_y += tile_yspan;
-			while (adj_tile_y >= tile_yspan) adj_tile_y -= tile_yspan;
-			uint64_t tile_yindex = adj_tile_y / w->tile_ydim;
-			uint64_t tile_yoffset = adj_tile_y % w->tile_ydim;
-			for (int64_t tile_x = w->tile_xbegin; tile_x < w->tile_xbegin + (int64_t)w->screen_xcount; ++tile_x) {
-				// check if destination pixel is offscreen
-				int64_t screen_y = tile_y + w->screen_ybegin - w->tile_ybegin;
-				int64_t screen_x = tile_x + w->screen_xbegin - w->tile_xbegin;
-				if (screen_x < 0 || screen_y < 0 || screen_x > screen_xcount || screen_y > screen_ycount) {
-					// destination pixel is offscreen, do not draw
-					continue;
-				}
-				int64_t adj_tile_x = tile_x;
-				int64_t tile_xspan = (int64_t)w->tile_xcount * w->tile_xdim;
-				while (adj_tile_x < 0) adj_tile_x += tile_xspan;
-				while (adj_tile_x >= tile_xspan) adj_tile_x -= tile_xspan;
-				uint64_t tile_xindex = adj_tile_x / w->tile_xdim;
-				uint64_t tile_xoffset = adj_tile_x % w->tile_xdim;
-				uint64_t entry_index = tile_yindex * w->tile_xcount + tile_xindex;
-				TilesetRecord* t = tileset_records + w->tileset_indexes[entry_index];
-				uint64_t tile_index = w->tile_indexes[entry_index];
-				pixel_color_rgba = t->tile_data[tile_index * t->xdim * t->ydim + tile_yoffset * t->xdim + tile_xoffset];
-
-				if ((pixel_color_rgba & 0xFF000000) == 0) {
-					continue; // zero alpha, don't draw
-				}
-
-#ifdef DEBUG
-				// std::cout << std::dec << screen_x << "," << screen_y << " >> " << std::hex << pixel_color_rgba << std::endl;
-#endif
-				// Where's the pixel?
-				if (shouldUseCpuBuffer)
-				{
-					int64_t screen_offset = ((_SDHR_WIDTH * screen_y) + (screen_x));
-					cpubuffer[screen_offset] = pixel_color_rgba;
-				}
-				if (shouldUseSubImage2D)
-					glTexSubImage2D(GL_TEXTURE_2D, 0, screen_x, screen_y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &pixel_color_rgba);
-			}
-		}
-
-#ifdef DEBUG
-		std::cout << "Drew into buffer window " << window_index << std::endl;
-#endif
-	}
-
-#ifdef _DEBUGTIMINGS
-	auto t2 = high_resolution_clock::now();
-	duration<double, std::milli> ms_double = t2 - t1;
-	std::cout << "DrawWindowsIntoBuffer() duration: " << ms_double.count() << "ms\n";
-	std::cout << "Framebuffer write: " << ms_double2.count() << "ms\n";
-#endif
 }

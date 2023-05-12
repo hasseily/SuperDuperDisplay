@@ -24,7 +24,7 @@
 #include "common.h"
 #include "shader.h"
 #include "camera.h"
-#include "mosaicmesh.h"
+#include "MosaicMesh.h"
 
 #include "SDHRNetworking.h"
 #include "SDHRManager.h"

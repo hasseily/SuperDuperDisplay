@@ -17,6 +17,9 @@
     <Filter Include="assets">
       <UniqueIdentifier>{a0ff60f3-4a53-4ffe-946c-9bd8770d7e17}</UniqueIdentifier>
     </Filter>
+    <Filter Include="glad">
+      <UniqueIdentifier>{c076ead4-8be1-43cd-b5cd-5b6d1e4e6d81}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -51,6 +54,12 @@
     </ClCompile>
     <ClCompile Include="OpenGLHelper.cpp">
       <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="MosaicMesh.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="glad\glad.c">
+      <Filter>glad</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -99,8 +108,14 @@
     <ClInclude Include="SDHRManager.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="mosaicmesh.h">
+    <ClInclude Include="MosaicMesh.h">
       <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="glad\glad.h">
+      <Filter>glad</Filter>
+    </ClInclude>
+    <ClInclude Include="glad\khrplatform.h">
+      <Filter>glad</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
