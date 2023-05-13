@@ -139,7 +139,7 @@ void SDHRManager::ImageAsset::AssignByFilename(SDHRManager* owner, const char* f
 	image_ycount = height;
 }
 
-void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* buffer, uint64_t size) {
+void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* buffer, int size) {
 	int width;
 	int height;
 	int channels;
@@ -191,7 +191,7 @@ int upload_inflate(const char* source, uint64_t size, std::ostream& dest) {
 		uint64_t bytes_to_read = std::min((uint64_t)CHUNK, size - bytes_read);
 		memcpy(in, source + bytes_read, bytes_to_read);
 		bytes_read += bytes_to_read;
-		strm.avail_in = bytes_to_read;
+		strm.avail_in = (unsigned int)bytes_to_read;
 		if (strm.avail_in == 0)
 			break;
 		strm.next_in = in;
@@ -236,7 +236,8 @@ void SDHRManager::Initialize()
 	*tileset_records = {};
 	*windows = {};
 
-	cpubuffer = (uint32_t*)malloc(_SDHR_WIDTH * _SDHR_HEIGHT * 4);
+	if (cpubuffer == NULL)
+		cpubuffer = (uint32_t*)malloc(_SDHR_WIDTH * _SDHR_HEIGHT * 4);
 
 	command_buffer.clear();
 	command_buffer.reserve(64 * 1024);
@@ -245,14 +246,15 @@ void SDHRManager::Initialize()
 	// Whenever memory is written from the Apple2
 	// in the main bank between $200 and $BFFF it will
 	// be sent through the socket and this buffer will be updated
-	a2mem = new uint8_t[0xc000];	// anything below $200 is unused
+	if (a2mem == NULL)
+		a2mem = new uint8_t[0xc000];	// anything below $200 is unused
 	memset(a2mem, 0, 0xc000);
 
 	oglHelper = OpenGLHelper::GetInstance();
 
 	// Assign to the GPU the default pink image to all 16 image assets
 	// because the shaders expect 16 textures
-
+	oglHelper->clear_textures();
 	for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++)
 	{
 		image_assets[i].AssignByFilename(this, "Texture_Default.png");
@@ -262,7 +264,6 @@ void SDHRManager::Initialize()
 SDHRManager::~SDHRManager()
 {
 	for (uint16_t i = 0; i < 256; ++i) {
-		// TODO: Clear GPU image texture assets
 		if (tileset_records[i].tile_data) {
 			free(tileset_records[i].tile_data);
 		}
@@ -270,6 +271,7 @@ SDHRManager::~SDHRManager()
 			delete windows[i].mesh;
 		}
 	}
+	oglHelper->clear_textures();
 	free(cpubuffer);
 	delete[] a2mem;
 }
@@ -285,7 +287,7 @@ void SDHRManager::ClearBuffer()
 }
 
 void SDHRManager::CommandError(const char* err) {
-	strcpy(error_str, err);
+	strcpy_s(error_str, err);
 	error_flag = true;
 	std::cerr << "Command Error: " << error_str << std::endl;
 }
@@ -308,7 +310,7 @@ uint8_t* SDHRManager::GetApple2MemPtr()
 // Define a tileset from the SDHR_CMD_DEFINE_TILESET commands
 // The tileset data is kept in the CPU's memory while waiting for window data
 // Once window data comes in, the tileset data is used to allocate the UVs to each vertex
-void SDHRManager::DefineTileset(uint8_t tileset_index, uint16_t num_entries, uint8_t xdim, uint8_t ydim,
+void SDHRManager::DefineTileset(uint8_t tileset_index, uint16_t num_entries, uint16_t xdim, uint16_t ydim,
 	uint8_t asset_index, uint8_t* offsets) {
 	TilesetRecord* r = tileset_records + tileset_index;
 	if (r->tile_data) {
@@ -327,9 +329,9 @@ void SDHRManager::DefineTileset(uint8_t tileset_index, uint16_t num_entries, uin
 	uint8_t* offset_p = offsets;
 	TileTex* tex_p = r->tile_data;
 	for (uint64_t i = 0; i < num_entries; ++i) {
-		uint64_t xoffset = *((uint16_t*)offset_p);
+		uint32_t xoffset = *((uint16_t*)offset_p);
 		offset_p += 2;
-		uint64_t yoffset = *((uint16_t*)offset_p);
+		uint32_t yoffset = *((uint16_t*)offset_p);
 		offset_p += 2;
 		tex_p->upos = xoffset * xdim;
 		tex_p->vpos = yoffset * ydim;
@@ -374,9 +376,9 @@ bool SDHRManager::ProcessCommands(void)
 		if (!CheckCommandLength(p, end, message_length)) return false;
 		p += 2;
 		// Command ID (1 byte)
-		uint8_t cmd = *p++;
+		uint8_t _cmd = *p++;
 		// Command data (variable)
-		switch (cmd) {
+		switch (_cmd) {
 		case SDHR_CMD_UPLOAD_DATA: {
 			// 
 			if (!CheckCommandLength(p, end, sizeof(UploadDataCmd))) return false;
@@ -403,7 +405,7 @@ bool SDHRManager::ProcessCommands(void)
 			if (!CheckCommandLength(p, end, sizeof(DefineImageAssetCmd))) return false;
 			DefineImageAssetCmd* cmd = (DefineImageAssetCmd*)p;
 			uint64_t upload_start_addr = 0;
-			uint64_t upload_data_size = (uint64_t)cmd->block_count * 512;
+			int upload_data_size = (int)cmd->block_count * 512;
 
 			ImageAsset* r = image_assets + cmd->asset_index;
 
@@ -549,7 +551,7 @@ bool SDHRManager::ProcessCommands(void)
 			uint8_t* sp = (uint8_t*)s.c_str();
 			auto mesh = r->mesh;
 			for (uint64_t tile_y = 0; tile_y < r->tile_ycount; ++tile_y) {
-				uint64_t line_offset = (uint64_t)tile_y * r->tile_xcount;
+				// uint64_t line_offset = (uint64_t)tile_y * r->tile_xcount;
 				for (uint64_t tile_x = 0; tile_x < r->tile_xcount; ++tile_x) {
 					uint8_t tileset_index = *sp++;
 					uint8_t tile_index = *sp++;

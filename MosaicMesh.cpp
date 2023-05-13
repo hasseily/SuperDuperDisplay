@@ -7,12 +7,9 @@
 MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile_xdim, uint64_t tile_ydim, uint8_t win_index) {
 	this->vertices.reserve(tile_xcount * tile_ycount * 6);	// total # of unique vertices
 
-	auto sdhrm = SDHRManager::GetInstance();
 	size_t t_idx = 0;	// 1D tile index
 	cols = tile_xcount;	// number of columns
 	rows = tile_ycount;	// number of rows
-	auto pw = tile_xdim;	// pixel width
-	auto ph = tile_ydim;	// pixel height
 
 	// This is a default vertex that we'll use as base to insert into vertices later
 	// Because push_back() makes a copy, it's faster not to recreate the vertex every time
@@ -23,23 +20,25 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 		});
 
 	// Create all the vertices for each tile
+	float fcols = (float)cols;
+	float frows = (float)rows;
 	for (size_t j = 0; j < rows; j++)
 	{
 		for (size_t i = 0; i < cols; i++)
 		{
 			// First triangle
-			_v.Position = glm::vec3((float)i / cols, (float)j / rows, 256 - win_index);	// top left
+			_v.Position = glm::vec3(tile_xdim * i / fcols, tile_ydim * j / frows, 256 - win_index);	// top left
 			this->vertices.push_back(_v);
-			_v.Position = glm::vec3((float)(i + 1) / cols, (float)j / rows, 256 - win_index);	// top right
+			_v.Position = glm::vec3(tile_xdim * (i + 1) / fcols, tile_ydim * j / frows, 256 - win_index);	// top right
 			this->vertices.push_back(_v);
-			_v.Position = glm::vec3((float)i / cols, (float)(j + 1) / rows, 256 - win_index);	// bottom left
+			_v.Position = glm::vec3(tile_xdim * i / fcols, tile_ydim * (j + 1) / frows, 256 - win_index);	// bottom left
 			this->vertices.push_back(_v);
 			// Second triangle
-			_v.Position = glm::vec3((float)i / cols, (float)(j + 1) / rows, 256 - win_index);	// bottom left
+			_v.Position = glm::vec3(tile_xdim * i / fcols, tile_ydim * (j + 1) / frows, 256 - win_index);	// bottom left
 			this->vertices.push_back(_v);
-			_v.Position = glm::vec3((float)(i + 1) / cols, (float)j / rows, 256 - win_index);	// top right
+			_v.Position = glm::vec3(tile_xdim * (i + 1) / fcols, tile_ydim * j / frows, 256 - win_index);	// top right
 			this->vertices.push_back(_v);
-			_v.Position = glm::vec3((float)(i + 1) / cols, (float)(j + 1) / rows, 256 - win_index);	// bottom right
+			_v.Position = glm::vec3(tile_xdim * (i + 1) / fcols, tile_ydim * (j + 1) / frows, 256 - win_index);	// bottom right
 			this->vertices.push_back(_v);
 			++t_idx;
 		}
@@ -87,7 +86,7 @@ void MosaicMesh::Draw(Shader& shader)
 
 	// draw mesh
 	glBindVertexArray(VAO);
-	glDrawArrays(GL_TRIANGLES, 0, this->vertices.size());
+	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glBindVertexArray(0);
 
 	// always good practice to set everything back to defaults once configured.

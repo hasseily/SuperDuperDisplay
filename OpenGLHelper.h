@@ -22,13 +22,14 @@ public:
 	~OpenGLHelper();
 	unsigned int load_texture(unsigned char* data, int width, int height, int nrComponents);			// new texture
 	void load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID);	// replace texture
+	void clear_textures();
 	void create_vertices();
 	void add_shader(GLuint program, const char* shader_code, GLenum type);
 	void create_shaders();
 	void create_framebuffer();
 	void bind_framebuffer();
 	void unbind_framebuffer();
-	void rescale_framebuffer(float width, float height);
+	void rescale_framebuffer(uint32_t width, uint32_t height);
 	GLuint get_texture_id() { return texture_id; };
 	void render();
 
@@ -59,8 +60,8 @@ private:
 
 	// camera
 	Camera camera;
-	float lastX = (float)SCR_WIDTH / 2.0;
-	float lastY = (float)SCR_HEIGHT / 2.0;
+	float lastX = (float)SCR_WIDTH / 2.0f;
+	float lastY = (float)SCR_HEIGHT / 2.0f;
 	bool firstMouse = true;
 
 	// timing

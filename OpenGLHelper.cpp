@@ -17,8 +17,8 @@ OpenGLHelper* OpenGLHelper::s_instance;
 void OpenGLHelper::Initialize()
 {
 	camera = Camera(glm::vec3(0.0f, 0.0f, 3.0f));
-	lastX = (float)SCR_WIDTH / 2.0;
-	lastY = (float)SCR_HEIGHT / 2.0;
+	lastX = (float)SCR_WIDTH / 2.0f;
+	lastY = (float)SCR_HEIGHT / 2.0f;
 	firstMouse = true;
 	deltaTime = 0.0f;
 	lastFrame = 0.0f;
@@ -75,6 +75,11 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void OpenGLHelper::clear_textures()
+{
+	v_texture_ids.clear();
+}
+
 void OpenGLHelper::create_vertices()
 {
 	// TODO: Create vertices from the window command
@@ -115,7 +120,7 @@ void OpenGLHelper::add_shader(GLuint program, const char* shader_code, GLenum ty
 	code[0] = shader_code;
 
 	GLint code_length[1];
-	code_length[0] = strlen(shader_code);
+	code_length[0] = (int)strlen(shader_code);
 
 	glShaderSource(current_shader, 1, code, code_length);
 	glCompileShader(current_shader);
@@ -200,7 +205,7 @@ void OpenGLHelper::unbind_framebuffer()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void OpenGLHelper::rescale_framebuffer(float width, float height)
+void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 {
 	glBindTexture(GL_TEXTURE_2D, texture_id);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);

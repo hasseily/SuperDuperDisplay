@@ -3,8 +3,8 @@
 #define COMMON_H
 
 #include <stdio.h>
-#include "glad/glad.h"
 
+#include "glad/glad.h"
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>
 #define GL2_PROTOTYPES 1

@@ -67,11 +67,14 @@ public:
 // state structs
 //////////////////////////////////////////////////////////////////////////
 
+	// NOTE:	Anything labled "id" is an internal identifier by the GPU
+	//			Anything labled "index" is an actual array or vector index used by the code
+	
 	// An image asset is a texture with its metadata (width, height)
 	// The actual texture data is in the GPU memory
 	struct ImageAsset {
 		void AssignByFilename(SDHRManager* owner, const char* filename);
-		void AssignByMemory(SDHRManager* owner, const uint8_t* buffer, uint64_t size);
+		void AssignByMemory(SDHRManager* owner, const uint8_t* buffer, int size);
 
 		// image assets are full 32-bit bitmap files, uploaded from PNG
 		uint64_t image_xcount = 0;	// width and height of asset in pixels
@@ -92,12 +95,12 @@ public:
 
 	struct TilesetRecord {			// A single tileset
 		uint8_t asset_index;			// index of the image asset
-		uint64_t xdim;					// Width of tiles in this tileset
-		uint64_t ydim;					// Height of tiles in this tileset
+		uint16_t xdim;					// Width of tiles in this tileset
+		uint16_t ydim;					// Height of tiles in this tileset
 		uint64_t num_entries;
 		TileTex* tile_data = NULL;		// list of tile texture starting coordinates
 		TilesetRecord()
-			: asset_index(UINT_MAX)
+			: asset_index(0)
 			, xdim(0)
 			, ydim(0)
 			, num_entries(0)
@@ -202,7 +205,7 @@ private:
 		return true;
 	}
 
-	void DefineTileset(uint8_t tileset_index, uint16_t num_entries, uint8_t xdim, uint8_t ydim,
+	void DefineTileset(uint8_t tileset_index, uint16_t num_entries, uint16_t xdim, uint16_t ydim,
 		uint8_t asset_index, uint8_t* offsets);
 
 

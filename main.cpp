@@ -137,7 +137,7 @@ int main(int, char**)
 	glhelper->create_framebuffer();
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
-	std::thread thread_server(socket_server_thread, _SERVER_PORT, &bShouldTerminateNetworking);
+	std::thread thread_server(socket_server_thread, (uint16_t)_SERVER_PORT, &bShouldTerminateNetworking);
 
     // Main loop
     bool done = false;
@@ -204,15 +204,16 @@ int main(int, char**)
 		{
             // Display the OpenGLHelper framebuffer in the background of the main window
             // so we don't need to create an ImGui window. It'll fill the full background
-			const float window_width = ImGui::GetContentRegionAvail().x;
-			const float window_height = ImGui::GetContentRegionAvail().y;
+			
+            // const float window_width = ImGui::GetContentRegionAvail().x;
+			// const float window_height = ImGui::GetContentRegionAvail().y;
 
-			OpenGLHelper::GetInstance()->rescale_framebuffer((int)io.DisplaySize.x, (int)io.DisplaySize.y);
+			OpenGLHelper::GetInstance()->rescale_framebuffer((uint32_t)io.DisplaySize.x, (uint32_t)io.DisplaySize.y);
 
             ImGui::GetBackgroundDrawList()->AddImage(
 				(void*)OpenGLHelper::GetInstance()->get_texture_id(),
 				ImVec2(0, 0),
-				ImVec2((int)io.DisplaySize.x, (int)io.DisplaySize.y),
+				ImVec2(io.DisplaySize.x, io.DisplaySize.y),
 				ImVec2(0, 1),
 				ImVec2(1, 0)
 			);
