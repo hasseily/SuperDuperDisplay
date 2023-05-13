@@ -38,8 +38,8 @@ public:
 	vector<Vertex> vertices;
 	uint64_t cols = 0;			// # of mosaic tiles horizontally
 	uint64_t rows = 0;			// # of mosaic tiles vertically
-	unsigned int VAO;
-	Shader* shaderProgram;				// Shader program for the mesh. Starts with a default shader
+	unsigned int VAO = UINT_MAX;
+	Shader* shaderProgram = NULL;		// Shader program for the mesh. Starts with a default shader
 
 	MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile_xdim, uint64_t tile_ydim, uint8_t win_index);
 	MosaicMesh() = delete; // Disallow default constructor
@@ -52,7 +52,7 @@ public:
 
 private:
 	// render data
-	unsigned int VBO;       // Vertex Buffer Object (holds vertices)
+	unsigned int VBO = UINT_MAX;       // Vertex Buffer Object (holds vertices)
 
 	bool bNeedsGPUUpdate = true;	// the mesh data was updated, it needs to be pushed to the GPU
 

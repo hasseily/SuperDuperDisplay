@@ -121,7 +121,7 @@ public:
 		uint64_t tile_ydim;
 		uint64_t tile_xcount;    // xy dimension, in tiles, of the tile array
 		uint64_t tile_ycount;
-		MosaicMesh* mesh;
+		MosaicMesh* mesh = NULL;
 		Window()
 			: enabled(0), black_or_wrap(false)
 			, screen_xcount(0), screen_ycount(0)

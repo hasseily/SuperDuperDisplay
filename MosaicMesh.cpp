@@ -43,11 +43,8 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 			++t_idx;
 		}
 	};
-	// create buffers/arrays
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
 
-	updateMesh();
+	bNeedsGPUUpdate = true;
 }
 
 // Update the UV data of all the vertices of a single mosaic tile (using xy positioning)
@@ -72,11 +69,19 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 
 // Anytime the underlying mesh data is changed, it needs to be updated on the GPU
 // This method takes care of sending over both vertex buffers and attributes
+// // NOTE: This (and any methods with OpenGL calls) must be called from the main thread
 // TODO: Allow for only attributes to be sent over when the vertices don't change
 void MosaicMesh::updateMesh()
 {
 	if (!bNeedsGPUUpdate)
 		return;				// mesh doesn't need updating on the GPU
+
+	// create buffers/arrays
+	if (VAO == UINT_MAX)
+		glGenVertexArrays(1, &VAO);
+	if (VBO == UINT_MAX)
+		glGenBuffers(1, &VBO);
+
 	glBindVertexArray(VAO);
 	// load data into vertex buffers
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -99,6 +104,7 @@ void MosaicMesh::updateMesh()
 }
 
 // render the mesh
+// NOTE: This (and any methods with OpenGL calls) must be called from the main thread
 // NOTE: It assumes the textures have been already bound to GL_TEXTURE0... GL_TEXTURE16
 void MosaicMesh::Draw()
 {

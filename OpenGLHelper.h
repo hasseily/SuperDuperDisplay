@@ -55,8 +55,8 @@ private:
 	}
 
 	GLuint texture_id;
-	GLuint VAO;
-	GLuint VBO;
+//	GLuint VAO;	// for testing
+//	GLuint VBO;	// for testing
 	GLuint FBO;
 	GLuint RBO;
 

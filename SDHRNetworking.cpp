@@ -1,8 +1,6 @@
 #include "SDHRNetworking.h"
 #include "SDHRManager.h"
 
-#define DEBUG 1
-
 ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_addr)
 {
 #ifdef __NETWORKING_WINDOWS__
