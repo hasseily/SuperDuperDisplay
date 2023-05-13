@@ -38,6 +38,7 @@ public:
 	vector<Vertex> vertices;
 	uint64_t cols = 0;			// # of mosaic tiles horizontally
 	uint64_t rows = 0;			// # of mosaic tiles vertically
+
 	unsigned int VAO = UINT_MAX;
 	Shader* shaderProgram = NULL;		// Shader program for the mesh. Starts with a default shader
 
@@ -47,12 +48,16 @@ public:
 	void UpdateMosaicUV(uint64_t xpos, uint64_t ypos, uint64_t u, uint64_t v, uint8_t texture_index);
 	void UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, uint8_t texture_index);
 
+	void SetWorldCoordinates(int32_t x, int32_t y);
+
 	// render the mesh
 	void Draw();
 
 private:
 	// render data
 	unsigned int VBO = UINT_MAX;       // Vertex Buffer Object (holds vertices)
+	float world_x = 0.f;		// top-left position in the world space
+	float world_y = 0.f;		// which is also the view (camera) space
 
 	bool bNeedsGPUUpdate = true;	// the mesh data was updated, it needs to be pushed to the GPU
 

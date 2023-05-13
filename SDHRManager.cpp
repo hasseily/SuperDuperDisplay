@@ -506,6 +506,9 @@ bool SDHRManager::ProcessCommands(void)
 			}
 			r->mesh = new MosaicMesh(r->tile_xcount, r->tile_ycount, r->tile_xdim, r->tile_ydim, cmd->window_index);
 			r->mesh->shaderProgram = &defaultWindowShaderProgram;
+			// Calculate the position of the mesh with respect to the screen top-left 0,0
+			r->mesh->SetWorldCoordinates(r->screen_xbegin - r->tile_xbegin, r->screen_ybegin - r->tile_ybegin);
+
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_DEFINE_WINDOW: Success! " 
 				<< cmd->window_index << ';' << (uint32_t)r->tile_xcount << ';' << (uint32_t)r->tile_ycount << std::endl;
@@ -542,8 +545,7 @@ bool SDHRManager::ProcessCommands(void)
 				mesh->UpdateMosaicUV(i,
 					tr.tile_data[tile_index].upos, tr.tile_data[tile_index].vpos,
 					tileset_records[tileset_index].asset_index);
-				// TODO: UVs and texture are applied on which vertices given there are indexes? XXX
-				// REMOVE INDEX BUFFERS. DUPLICATE VERTICES INSTEAD!!!
+				// Set the textures and their coordinates
 				mesh->vertices[i].TexCoords = glm::vec2(tr.tile_data[tile_index].upos, tr.tile_data[tile_index].vpos);
 				mesh->vertices[i].TexIndex = tileset_records[tileset_index].asset_index;
 			}
@@ -682,6 +684,8 @@ bool SDHRManager::ProcessCommands(void)
 				}
 			}
 #endif
+			// Calculate the position of the mesh with respect to the screen top-left 0,0
+			r->mesh->SetWorldCoordinates(r->screen_xbegin - r->tile_xbegin, r->screen_ybegin - r->tile_ybegin);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_SHIFT_TILES: Success! " 
 				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->x_dir << ';' << (uint32_t)cmd->y_dir << std::endl;
@@ -693,6 +697,7 @@ bool SDHRManager::ProcessCommands(void)
 			Window* r = windows + cmd->window_index;
 			r->screen_xbegin = cmd->screen_xbegin;
 			r->screen_ybegin = cmd->screen_ybegin;
+			// Here we don't change the mesh world_x/y because it's only the window that moves around the screen
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_SET_WINDOW_POSITION: Success! "
 				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->screen_xbegin << ';' << (uint32_t)cmd->screen_ybegin << std::endl;
@@ -704,6 +709,8 @@ bool SDHRManager::ProcessCommands(void)
 			Window* r = windows + cmd->window_index;
 			r->tile_xbegin = cmd->tile_xbegin;
 			r->tile_ybegin = cmd->tile_ybegin;
+			// Calculate the position of the mesh with respect to the screen top-left 0,0
+			r->mesh->SetWorldCoordinates(r->screen_xbegin - r->tile_xbegin, r->screen_ybegin - r->tile_ybegin);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_ADJUST_WINDOW_VIEW: Success! "
 				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->tile_xbegin << ';' << (uint32_t)cmd->tile_ybegin << std::endl;

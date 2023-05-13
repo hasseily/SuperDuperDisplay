@@ -6,6 +6,8 @@ layout (location = 2) in int aTexIdx;       // texture index (max 16)
 out vec2 vTexCoord;
 out int vTexIdx;
 
+uniform mat4 transform; // Transform from model to world space
+
 void main()
 {
     vTexCoord = aTexCoord;

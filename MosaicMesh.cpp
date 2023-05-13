@@ -1,6 +1,7 @@
 #include "MosaicMesh.h"
 
 #include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
 #include "OpenGLHelper.h"
 #include "SDHRManager.h"
 
@@ -67,6 +68,12 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 	bNeedsGPUUpdate = true;
 }
 
+void MosaicMesh::SetWorldCoordinates(int32_t x, int32_t y)
+{
+	this->world_x = x;
+	this->world_y = y;
+}
+
 // Anytime the underlying mesh data is changed, it needs to be updated on the GPU
 // This method takes care of sending over both vertex buffers and attributes
 // // NOTE: This (and any methods with OpenGL calls) must be called from the main thread
@@ -112,6 +119,9 @@ void MosaicMesh::Draw()
 
 	glUseProgram(shaderProgram->ID);
 	glBindVertexArray(VAO);
+	glm::mat4 trans = glm::mat4(1.0f);
+	trans = glm::translate(trans, glm::vec3(world_x, world_y, 0.0f));
+	shaderProgram->setMat4("transform", trans);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glBindVertexArray(0);
 }
