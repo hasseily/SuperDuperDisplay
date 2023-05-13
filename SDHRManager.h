@@ -186,6 +186,8 @@ private:
 	static SDHRManager* s_instance;
 	SDHRManager()
 	{
+		cpubuffer = (uint32_t*)malloc(_SDHR_WIDTH * _SDHR_HEIGHT * 4);
+		a2mem = new uint8_t[0xc000];	// anything below $200 is unused
 		Initialize();
 	}
 
