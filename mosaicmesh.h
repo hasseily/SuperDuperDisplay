@@ -39,6 +39,7 @@ public:
 	uint64_t cols = 0;			// # of mosaic tiles horizontally
 	uint64_t rows = 0;			// # of mosaic tiles vertically
 	unsigned int VAO;
+	Shader* shaderProgram;				// Shader program for the mesh. Starts with a default shader
 
 	MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile_xdim, uint64_t tile_ydim, uint8_t win_index);
 	MosaicMesh() = delete; // Disallow default constructor
@@ -47,7 +48,7 @@ public:
 	void UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, uint8_t texture_index);
 
 	// render the mesh
-	void Draw(Shader& shader);
+	void Draw();
 
 private:
 	// render data

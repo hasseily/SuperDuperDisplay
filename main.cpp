@@ -132,8 +132,6 @@ int main(int, char**)
 
 	glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
 	auto glhelper = OpenGLHelper::GetInstance();
-	glhelper->create_vertices();
-	glhelper->create_shaders();
 	glhelper->create_framebuffer();
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
@@ -236,7 +234,7 @@ int main(int, char**)
         if (sdhrManager->threadState == THREADCOMM_e::COMMAND_PROCESSED)
         {
 			sdhrManager->threadState = THREADCOMM_e::MAIN_LOCK;
-			OpenGLHelper::GetInstance()->render();
+            sdhrManager->Render();
 			sdhrManager->threadState = THREADCOMM_e::IDLE;
         }
 

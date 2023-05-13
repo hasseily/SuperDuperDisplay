@@ -194,8 +194,8 @@
     <None Include="imgui\imgui\misc\debuggers\imgui.natvis" />
     <None Include="packages.config" />
     <None Include="README.md" />
-    <None Include="shaders\sdhr_tr.frag" />
-    <None Include="shaders\sdhr_tr.vert" />
+    <None Include="shaders\sdhr_window_tr.frag" />
+    <None Include="shaders\sdhr_window_tr.vert" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Texture_Default.png">

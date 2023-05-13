@@ -127,10 +127,10 @@
       <Filter>imgui</Filter>
     </None>
     <None Include="packages.config" />
-    <None Include="shaders\sdhr_tr.vert">
+    <None Include="shaders\sdhr_window_tr.vert">
       <Filter>shaders</Filter>
     </None>
-    <None Include="shaders\sdhr_tr.frag">
+    <None Include="shaders\sdhr_window_tr.frag">
       <Filter>shaders</Filter>
     </None>
   </ItemGroup>

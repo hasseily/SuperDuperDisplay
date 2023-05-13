@@ -145,6 +145,7 @@ public:
 	ImageAsset image_assets[_SDHR_MAX_TEXTURES];
 	TilesetRecord tileset_records[256];
 	Window windows[256];
+	Shader defaultWindowShaderProgram = Shader("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
@@ -154,6 +155,8 @@ public:
 	void ClearBuffer();
 	bool ProcessCommands(void);
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 memory pointer
+
+	void Render();	// render everything SDHR related
 
 	TileTex* GetTilesetRecordData(uint8_t tileset_index) { return tileset_records[tileset_index].tile_data; };
 	TileTex GetTilesetTileTex(uint8_t tileset_index, uint8_t tile_index) { return tileset_records[tileset_index].tile_data[tile_index]; };

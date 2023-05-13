@@ -80,6 +80,8 @@ void OpenGLHelper::clear_textures()
 	v_texture_ids.clear();
 }
 
+// TODO: testing, remove
+/*
 void OpenGLHelper::create_vertices()
 {
 	// TODO: Create vertices from the window command
@@ -111,64 +113,7 @@ void OpenGLHelper::create_vertices()
 	glBindVertexArray(0);
 
 }
-
-void OpenGLHelper::add_shader(GLuint program, const char* shader_code, GLenum type)
-{
-	GLuint current_shader = glCreateShader(type);
-
-	const GLchar* code[1];
-	code[0] = shader_code;
-
-	GLint code_length[1];
-	code_length[0] = (int)strlen(shader_code);
-
-	glShaderSource(current_shader, 1, code, code_length);
-	glCompileShader(current_shader);
-
-	GLint result = 0;
-	GLchar log[1024] = { 0 };
-
-	glGetShaderiv(current_shader, GL_COMPILE_STATUS, &result);
-	if (!result) {
-		glGetShaderInfoLog(current_shader, sizeof(log), NULL, log);
-		std::cerr << "Error compiling " << type << " shader: " << log << "\n";
-		return;
-	}
-
-	glAttachShader(program, current_shader);
-}
-
-void OpenGLHelper::create_shaders()
-{
-	shaderProgram = glCreateProgram();
-	if (!shaderProgram) {
-		std::cerr << "Error creating shader program!\n";
-		exit(1);
-	}
-
-	// TODO: Use file-based shader code!
-	add_shader(shaderProgram, vertex_shader_code, GL_VERTEX_SHADER);
-	add_shader(shaderProgram, fragment_shader_code, GL_FRAGMENT_SHADER);
-
-	GLint result = 0;
-	GLchar log[1024] = { 0 };
-
-	glLinkProgram(shaderProgram);
-	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &result);
-	if (!result) {
-		glGetProgramInfoLog(shaderProgram, sizeof(log), NULL, log);
-		std::cerr << "Error linking program:\n" << log << '\n';
-		return;
-	}
-
-	glValidateProgram(shaderProgram);
-	glGetProgramiv(shaderProgram, GL_VALIDATE_STATUS, &result);
-	if (!result) {
-		glGetProgramInfoLog(shaderProgram, sizeof(log), NULL, log);
-		std::cerr << "Error validating program:\n" << log << '\n';
-		return;
-	}
-}
+*/
 
 void OpenGLHelper::create_framebuffer()
 {
@@ -218,15 +163,34 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
 }
 
-void OpenGLHelper::render()
+void OpenGLHelper::setup_sdhr_render()
 {
-	// TODO: Loop through all the meshes and draw them
 	bind_framebuffer();
-	glUseProgram(shaderProgram);
-	glBindVertexArray(VAO);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
-	glBindVertexArray(0);
+
+	// Bind all 16 textures at once to GL_TEXTURE0... GL_TEXTURE16
+	// All the meshes will be able to use them
+
+	auto vti = this->v_texture_ids;
+	for (unsigned int i = 0; i < vti.size(); i++) {
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_2D, vti.at(i));
+	}
+}
+
+void OpenGLHelper::cleanup_sdhr_render()
+{
+	glActiveTexture(GL_TEXTURE0);
 	glUseProgram(0);
 	unbind_framebuffer();
 }
+
+// TODO: testing, remove
+/*
+void OpenGLHelper::render()
+{
+	glBindVertexArray(VAO);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+	glBindVertexArray(0);
+}
+*/
 

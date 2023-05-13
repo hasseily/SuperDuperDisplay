@@ -310,6 +310,21 @@ uint8_t* SDHRManager::GetApple2MemPtr()
 	return a2mem;
 }
 
+// Render all window meshes and whatever else SDHR related
+void SDHRManager::Render()
+{
+	auto oglh = OpenGLHelper::GetInstance();
+	oglh->setup_sdhr_render();
+	for each (auto& _w in this->windows) {
+		if (_w.enabled) {
+			if (_w.mesh) {
+				_w.mesh->Draw();
+			}
+		}
+	}
+	oglh->cleanup_sdhr_render();
+}
+
 // Define a tileset from the SDHR_CMD_DEFINE_TILESET commands
 // The tileset data is kept in the CPU's memory while waiting for window data
 // Once window data comes in, the tileset data is used to allocate the UVs to each vertex
@@ -490,6 +505,7 @@ bool SDHRManager::ProcessCommands(void)
 				delete r->mesh;
 			}
 			r->mesh = new MosaicMesh(r->tile_xcount, r->tile_ycount, r->tile_xdim, r->tile_ydim, cmd->window_index);
+			r->mesh->shaderProgram = &defaultWindowShaderProgram;
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_DEFINE_WINDOW: Success! " 
 				<< cmd->window_index << ';' << (uint32_t)r->tile_xcount << ';' << (uint32_t)r->tile_ycount << std::endl;

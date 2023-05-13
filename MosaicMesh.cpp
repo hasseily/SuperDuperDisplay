@@ -50,14 +50,15 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 	updateMesh();
 }
 
+// Update the UV data of all the vertices of a single mosaic tile (using xy positioning)
 void MosaicMesh::UpdateMosaicUV(uint64_t xpos, uint64_t ypos, uint64_t u, uint64_t v, uint8_t texture_index)
 {
 	UpdateMosaicUV(xpos + ypos * cols, u, v, texture_index);
 }
 
+// Update the UV data of all the vertices of a single mosaic tile (using index positioning)
 void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, uint8_t texture_index)
 {
-	// Update the UV data of all the vertices of a single mosaic tile
 	const auto ia = SDHRManager::GetInstance()->image_assets[texture_index];
 	auto _idx = mosaic_index * 6;	// index of the first vertex of the mosaic tile
 	for (size_t i = 0; i < 6; i++)
@@ -69,30 +70,9 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 	bNeedsGPUUpdate = true;
 }
 
-// render the mesh
-void MosaicMesh::Draw(Shader& shader)
-{
-	// bind all 16 textures at once to GL_TEXTURE0... GL_TEXTURE16
-	// TODO: Do the binding at the start of rendering all the window meshes
-	//			It'll be more efficent than binding at every draw of each mesh
-
-	updateMesh();
-	auto oglh = OpenGLHelper::GetInstance();
-	auto vti = oglh->v_texture_ids;
-	for (unsigned int i = 0; i < vti.size(); i++) {
-		glActiveTexture(GL_TEXTURE0 + i);
-		glBindTexture(GL_TEXTURE_2D, vti.at(i));
-	}
-
-	// draw mesh
-	glBindVertexArray(VAO);
-	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
-	glBindVertexArray(0);
-
-	// always good practice to set everything back to defaults once configured.
-	glActiveTexture(GL_TEXTURE0);
-}
-
+// Anytime the underlying mesh data is changed, it needs to be updated on the GPU
+// This method takes care of sending over both vertex buffers and attributes
+// TODO: Allow for only attributes to be sent over when the vertices don't change
 void MosaicMesh::updateMesh()
 {
 	if (!bNeedsGPUUpdate)
@@ -116,4 +96,16 @@ void MosaicMesh::updateMesh()
 	// reset the binding
 	glBindVertexArray(0);
 	bNeedsGPUUpdate = false;
+}
+
+// render the mesh
+// NOTE: It assumes the textures have been already bound to GL_TEXTURE0... GL_TEXTURE16
+void MosaicMesh::Draw()
+{
+	updateMesh();
+
+	glUseProgram(shaderProgram->ID);
+	glBindVertexArray(VAO);
+	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
+	glBindVertexArray(0);
 }
