@@ -172,8 +172,14 @@ int upload_inflate(const char* source, uint64_t size, std::ostream& dest) {
 	int ret;
 	unsigned have;
 	z_stream strm;
-	unsigned char in[CHUNK];
-	unsigned char out[CHUNK];
+	unsigned char* in; //[CHUNK] ;
+	unsigned char* out; //[CHUNK] ;
+	in = (unsigned char*)malloc(CHUNK);
+	if (in == NULL)
+		return Z_MEM_ERROR;
+	out = (unsigned char*)malloc(CHUNK);
+	if (out == NULL)
+		return Z_MEM_ERROR;
 
 	/* allocate inflate state */
 	strm.zalloc = Z_NULL;
@@ -219,6 +225,8 @@ int upload_inflate(const char* source, uint64_t size, std::ostream& dest) {
 
 	/* clean up and return */
 	(void)inflateEnd(&strm);
+	free(in);
+	free(out);
 	return ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
 }
 
