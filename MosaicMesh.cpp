@@ -22,23 +22,24 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 	// Create all the vertices for each tile
 	float fcols = (float)cols;
 	float frows = (float)rows;
+	float z_val = 1.f - (win_index / 256.f);	// z-value. 0 is closest to camera, 1 is furthest.
 	for (size_t j = 0; j < rows; j++)
 	{
 		for (size_t i = 0; i < cols; i++)
 		{
 			// First triangle
-			_v.Position = glm::vec3(tile_xdim * i / fcols, tile_ydim * j / frows, 256 - win_index);	// top left
+			_v.Position = glm::vec3(tile_xdim * i, tile_ydim * j, z_val);	// top left
 			this->vertices.push_back(_v);
-			_v.Position = glm::vec3(tile_xdim * (i + 1) / fcols, tile_ydim * j / frows, 256 - win_index);	// top right
+			_v.Position = glm::vec3(tile_xdim * (i + 1), tile_ydim * j, z_val);	// top right
 			this->vertices.push_back(_v);
-			_v.Position = glm::vec3(tile_xdim * i / fcols, tile_ydim * (j + 1) / frows, 256 - win_index);	// bottom left
+			_v.Position = glm::vec3(tile_xdim * i, tile_ydim * (j + 1), z_val);	// bottom left
 			this->vertices.push_back(_v);
 			// Second triangle
-			_v.Position = glm::vec3(tile_xdim * i / fcols, tile_ydim * (j + 1) / frows, 256 - win_index);	// bottom left
+			_v.Position = glm::vec3(tile_xdim * i, tile_ydim * (j + 1), z_val);	// bottom left
 			this->vertices.push_back(_v);
-			_v.Position = glm::vec3(tile_xdim * (i + 1) / fcols, tile_ydim * j / frows, 256 - win_index);	// top right
+			_v.Position = glm::vec3(tile_xdim * (i + 1), tile_ydim * j, z_val);	// top right
 			this->vertices.push_back(_v);
-			_v.Position = glm::vec3(tile_xdim * (i + 1) / fcols, tile_ydim * (j + 1) / frows, 256 - win_index);	// bottom right
+			_v.Position = glm::vec3(tile_xdim * (i + 1), tile_ydim * (j + 1), z_val);	// bottom right
 			this->vertices.push_back(_v);
 			++t_idx;
 		}
@@ -115,13 +116,14 @@ void MosaicMesh::updateMesh()
 // render the mesh
 // NOTE: This (and any methods with OpenGL calls) must be called from the main thread
 // NOTE: It assumes the textures have been already bound to GL_TEXTURE0... GL_TEXTURE16
-void MosaicMesh::Draw()
+void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 {
 	updateMesh();
 
 	glUseProgram(shaderProgram->ID);
 	glBindVertexArray(VAO);
-	shaderProgram->setMat4("transform",this->mat_trans);
+	glm::mat4 mat_final = mat_proj * mat_camera * this->mat_trans;
+	shaderProgram->setMat4("transform",mat_final);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glBindVertexArray(0);
 }

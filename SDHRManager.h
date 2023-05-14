@@ -15,6 +15,8 @@
 
 #define _SDHR_WIDTH  640
 #define _SDHR_HEIGHT 360
+#define _SDHR_WIDTH_F  640.f
+#define _SDHR_HEIGHT_F 360.f
 
 enum THREADCOMM_e
 {
@@ -64,7 +66,7 @@ class SDHRManager
 public:
 
 //////////////////////////////////////////////////////////////////////////
-// state structs
+// SDHR state structs
 //////////////////////////////////////////////////////////////////////////
 
 	// NOTE:	Anything labled "id" is an internal identifier by the GPU
@@ -145,7 +147,16 @@ public:
 	ImageAsset image_assets[_SDHR_MAX_TEXTURES];
 	TilesetRecord tileset_records[256];
 	Window windows[256];
-	Shader defaultWindowShaderProgram = Shader("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");;
+	// The standard default shader for the windows and their mosaics
+	Shader defaultWindowShaderProgram = Shader("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");
+	// World -> View matrix transform based on the camera position
+	glm::mat4 mat_camera = glm::lookAt(
+		glm::vec3(_SDHR_WIDTH_F / 2.f, _SDHR_HEIGHT_F / 2.f, -10.f), // camera position in world space
+		glm::vec3(_SDHR_WIDTH_F / 2.f, _SDHR_HEIGHT_F / 2.f, 0.f),   // camera target (what are we looking at?)
+		glm::vec3(0.f, -1.f, 0.f)        // upVector: (0,-1,0) to look from the top down
+	);
+	// Projection matrix (left, right, bottom, top, near, far)
+	glm::mat4 mat_proj = glm::ortho(0.0f, _SDHR_WIDTH_F, 0.0f, _SDHR_HEIGHT_F, 0.f, 1.0f);
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods

@@ -52,7 +52,7 @@ public:
 	void SetWorldCoordinates(int32_t x, int32_t y);
 
 	// render the mesh
-	void Draw();
+	void Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj);
 
 private:
 	// render data

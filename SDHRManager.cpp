@@ -318,7 +318,7 @@ void SDHRManager::Render()
 	for each (auto& _w in this->windows) {
 		if (_w.enabled) {
 			if (_w.mesh) {
-				_w.mesh->Draw();
+				_w.mesh->Draw(mat_camera, mat_proj);
 			}
 		}
 	}
