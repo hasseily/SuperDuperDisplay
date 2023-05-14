@@ -1,6 +1,5 @@
 #include "MosaicMesh.h"
 
-#include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "OpenGLHelper.h"
 #include "SDHRManager.h"
@@ -105,6 +104,9 @@ void MosaicMesh::updateMesh()
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(2, 1, GL_BYTE, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexIndex));
 
+	// Update the model->world transform matrix, to translate the model into the world space
+	this->mat_trans = glm::translate(glm::mat4(1.0f), glm::vec3(world_x, world_y, 0.0f));
+
 	// reset the binding
 	glBindVertexArray(0);
 	bNeedsGPUUpdate = false;
@@ -119,9 +121,7 @@ void MosaicMesh::Draw()
 
 	glUseProgram(shaderProgram->ID);
 	glBindVertexArray(VAO);
-	glm::mat4 trans = glm::mat4(1.0f);
-	trans = glm::translate(trans, glm::vec3(world_x, world_y, 0.0f));
-	shaderProgram->setMat4("transform", trans);
+	shaderProgram->setMat4("transform",this->mat_trans);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glBindVertexArray(0);
 }

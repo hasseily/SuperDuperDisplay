@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "shader.h"
+#include "glm/gtc/matrix_transform.hpp"
 
 using namespace std;
 
@@ -58,6 +59,7 @@ private:
 	unsigned int VBO = UINT_MAX;       // Vertex Buffer Object (holds vertices)
 	float world_x = 0.f;		// top-left position in the world space
 	float world_y = 0.f;		// which is also the view (camera) space
+	glm::mat4 mat_trans = glm::mat4(1.0f);	// Model->World translation matrix. Changes when the mesh is moved in the world
 
 	bool bNeedsGPUUpdate = true;	// the mesh data was updated, it needs to be pushed to the GPU
 
