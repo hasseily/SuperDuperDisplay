@@ -12,6 +12,7 @@
 #include "common.h"
 #include "OpenGLHelper.h"
 #include "MosaicMesh.h"
+#include "camera.h"
 
 #define _SDHR_WIDTH  640
 #define _SDHR_HEIGHT 360
@@ -149,11 +150,13 @@ public:
 	Window windows[256];
 	// The standard default shader for the windows and their mosaics
 	Shader defaultWindowShaderProgram = Shader("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");
-	// World -> View matrix transform based on the camera position
-	glm::mat4 mat_camera = glm::lookAt(
-		glm::vec3(_SDHR_WIDTH_F / 2.f, _SDHR_HEIGHT_F / 2.f, -10.f), // camera position in world space
-		glm::vec3(_SDHR_WIDTH_F / 2.f, _SDHR_HEIGHT_F / 2.f, 0.f),   // camera target (what are we looking at?)
-		glm::vec3(0.f, -1.f, 0.f)        // upVector: (0,-1,0) to look from the top down
+	// Camera for World -> View matrix transform
+	Camera camera = Camera(
+		_SDHR_WIDTH_F / 2.f, _SDHR_HEIGHT / 2.f,	// x,y
+		-10.f,										// z
+		0.f, -1.f, 0.f,								// upVector xyz
+		0.f,										// yaw
+		0.f											// pitch
 	);
 	// Projection matrix (left, right, bottom, top, near, far)
 	glm::mat4 mat_proj = glm::ortho(0.0f, _SDHR_WIDTH_F, 0.0f, _SDHR_HEIGHT_F, 0.f, 1.0f);

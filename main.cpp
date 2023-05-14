@@ -138,6 +138,12 @@ int main(int, char**)
 	std::thread thread_server(socket_server_thread, (uint16_t)_SERVER_PORT, &bShouldTerminateNetworking);
     sdhrManager->threadState = THREADCOMM_e::IDLE;
 
+
+    // Delta Time
+	uint64_t dt_NOW = SDL_GetPerformanceCounter();
+    uint64_t dt_LAST = 0;
+	float deltaTime = 0.f;
+
     // Main loop
     bool done = false;
 #ifdef __EMSCRIPTEN__
@@ -149,6 +155,10 @@ int main(int, char**)
     while (!done)
 #endif
     {
+        dt_LAST = dt_NOW;
+        dt_NOW = SDL_GetPerformanceCounter();
+		deltaTime = (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
+
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
@@ -162,11 +172,40 @@ int main(int, char**)
                 done = true;
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
                 done = true;
-            if (event.key.keysym.sym == SDLK_F4) {  // Quit on Alt-F4
-                auto state = SDL_GetKeyboardState(NULL);
-                if (state[SDL_SCANCODE_LALT]) {
-                    done = true;
+            if (event.type == SDL_KEYDOWN) {
+				if (event.key.keysym.sym == SDLK_F4) {  // Quit on Alt-F4
+					auto state = SDL_GetKeyboardState(NULL);
+					if (state[SDL_SCANCODE_LALT]) {
+						done = true;
+					}
+				}
+				// Camera movement!
+                if (!io.WantCaptureKeyboard) {
+                    switch (event.key.keysym.sym)
+                    {
+                    case SDLK_w:
+                        sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
+                        break;
+                    case SDLK_s:
+                        sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
+                        break;
+                    case SDLK_a:
+                        sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
+                        break;
+                    case SDLK_d:
+                        sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
+                        break;
+                    default:
+                        break;
+                    };
                 }
+            }
+            else if (event.type == SDL_MOUSEMOTION && event.motion.state & SDL_BUTTON_RMASK && !io.WantCaptureMouse) {
+                // Move the camera when the right mouse button is pressed while moving the mouse
+                sdhrManager->camera.ProcessMouseMovement(event.motion.xrel, event.motion.yrel);
+            }
+            else if (event.type == SDL_MOUSEWHEEL && !io.WantCaptureMouse) {
+                sdhrManager->camera.ProcessMouseScroll(event.wheel.preciseY);
             }
         }
 
@@ -232,7 +271,7 @@ int main(int, char**)
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        if (sdhrManager->threadState == THREADCOMM_e::COMMAND_PROCESSED)
+        if (sdhrManager->threadState != THREADCOMM_e::SOCKET_LOCK)
         {
 			sdhrManager->threadState = THREADCOMM_e::MAIN_LOCK;
             sdhrManager->Render();

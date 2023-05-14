@@ -16,12 +16,8 @@ OpenGLHelper* OpenGLHelper::s_instance;
 
 void OpenGLHelper::Initialize()
 {
-	camera = Camera(glm::vec3(0.0f, 0.0f, 3.0f));
 	lastX = (float)SCR_WIDTH / 2.0f;
 	lastY = (float)SCR_HEIGHT / 2.0f;
-	firstMouse = true;
-	deltaTime = 0.0f;
-	lastFrame = 0.0f;
 }
 
 OpenGLHelper::~OpenGLHelper()

@@ -5,7 +5,6 @@
 #include <stddef.h>
 #include <vector>
 #include "common.h"
-#include "camera.h"
 #include "shader.h"
 
 #define _SDHR_MAX_TEXTURES 16		// Max # of image assets available
@@ -25,9 +24,7 @@ public:
 	void load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID);	// replace texture
 	void clear_textures();
 	// TODO: Testing, remove
-	// void create_vertices();
-	void add_shader(GLuint program, const char* shader_code, GLenum type);
-	void create_shaders();
+	// void create_vertices();;
 	void create_framebuffer();
 	void bind_framebuffer();
 	void unbind_framebuffer();
@@ -64,15 +61,8 @@ private:
 	const unsigned int SCR_WIDTH = 640;
 	const unsigned int SCR_HEIGHT = 360;
 
-	// camera
-	Camera camera;
 	float lastX = (float)SCR_WIDTH / 2.0f;
 	float lastY = (float)SCR_HEIGHT / 2.0f;
-	bool firstMouse = true;
-
-	// timing
-	float deltaTime = 0.0f;
-	float lastFrame = 0.0f;
 
 };
 #endif // OPENGLHELPER_H
