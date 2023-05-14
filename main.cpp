@@ -5,6 +5,8 @@
 
 #define _SERVER_PORT 8080
 
+#define GLM_MESSAGES    // Shows the GLM configuration at build time
+
 #define IMGUI_USER_CONFIG "../../my_imgui_config.h"
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
@@ -157,7 +159,7 @@ int main(int, char**)
     {
         dt_LAST = dt_NOW;
         dt_NOW = SDL_GetPerformanceCounter();
-		deltaTime = (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
+		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
 
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -222,6 +224,10 @@ int main(int, char**)
 			ImGui::Begin("Super Duper Display Options");
 			if (!ImGui::IsWindowCollapsed())
 			{
+				auto _c = sdhrManager->camera;
+                auto _pos = _c.Position;
+                ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
+				ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
 				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 				// ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
 				ImGui::Checkbox("Memory Window", &show_memory_window);      // Edit bools storing our window open/close state

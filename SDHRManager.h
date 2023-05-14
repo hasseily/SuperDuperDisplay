@@ -152,7 +152,7 @@ public:
 	Shader defaultWindowShaderProgram = Shader("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");
 	// Camera for World -> View matrix transform
 	Camera camera = Camera(
-		_SDHR_WIDTH_F / 2.f, _SDHR_HEIGHT / 2.f,	// x,y
+		_SDHR_WIDTH_F / 2.f, _SDHR_HEIGHT_F / 2.f,	// x,y
 		-10.f,										// z
 		0.f, -1.f, 0.f,								// upVector xyz
 		0.f,										// yaw

@@ -9,4 +9,5 @@ out vec4 fragColor;
 void main()
 {
     fragColor = texture(tilesTexture[vTexIdx], vTexCoord);
+//    fragColor = vec4 (1.f, 0.3f, 0.6f, 1.0f);    // TODO: Debug Pink
 }
