@@ -49,6 +49,7 @@ unsigned int OpenGLHelper::load_texture(unsigned char* data, int width, int heig
 // This method loads the texture data into the texture specified at textureID
 void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID)
 {
+	GLenum err;
 	GLenum format = GL_RGBA;
 	if (nrComponents == 1)
 		format = GL_RED;
@@ -59,8 +60,13 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 
 	glBindTexture(GL_TEXTURE_2D, textureID);
 	// TODO: Check if glGetError() == GL_OUT_OF_MEMORY !!!
+	if ((err = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL load_texture glBindTexture error: " << err << std::endl;
+	}
 	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-
+	if ((err = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL load_texture glTexImage2D error: " << err << std::endl;
+	}
 	// NOTE: May need to generate mipmaps in case we want to allow zooming in-out
 	// glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -68,7 +74,13 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	if ((err = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL load_texture glTexParameteri error: " << err << std::endl;
+	}
 	glBindTexture(GL_TEXTURE_2D, 0);
+	if ((err = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glBindTexture 0 error: " << err << std::endl;
+	}
 }
 
 void OpenGLHelper::clear_textures()
