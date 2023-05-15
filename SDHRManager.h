@@ -157,7 +157,7 @@ public:
 		0.f											// pitch
 	);
 	// Projection matrix (left, right, bottom, top, near, far)
-	glm::mat4 mat_proj = glm::ortho(0.0f, _SDHR_WIDTH_F, 0.0f, _SDHR_HEIGHT_F, 0.f, 1.0f);
+	glm::mat4 mat_proj = glm::ortho(0.0f, _SDHR_WIDTH_F, 0.0f, _SDHR_HEIGHT_F, -1.f, 1.0f);
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
