@@ -38,7 +38,7 @@ unsigned int OpenGLHelper::load_texture(unsigned char* data, int width, int heig
 		std::cerr << "ERROR: Already at max textures! Cannot create new texture" << '\n';
 		return UINT_MAX;
 	}
-	unsigned int textureID;
+	GLuint textureID;
 	glGenTextures(1, &textureID);
 	v_texture_ids.push_back(textureID);
 
@@ -49,7 +49,7 @@ unsigned int OpenGLHelper::load_texture(unsigned char* data, int width, int heig
 // This method loads the texture data into the texture specified at textureID
 void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID)
 {
-	GLenum err;
+	GLenum glerr;
 	GLenum format = GL_RGBA;
 	if (nrComponents == 1)
 		format = GL_RED;
@@ -60,12 +60,14 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 
 	glBindTexture(GL_TEXTURE_2D, textureID);
 	// TODO: Check if glGetError() == GL_OUT_OF_MEMORY !!!
-	if ((err = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL load_texture glBindTexture error: " << err << std::endl;
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL load_texture glBindTexture error: " << glerr << std::endl;
+		return;
 	}
 	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-	if ((err = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL load_texture glTexImage2D error: " << err << std::endl;
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL load_texture glTexImage2D error: " << glerr << std::endl;
+		return;
 	}
 	// NOTE: May need to generate mipmaps in case we want to allow zooming in-out
 	// glGenerateMipmap(GL_TEXTURE_2D);
@@ -74,12 +76,14 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	if ((err = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL load_texture glTexParameteri error: " << err << std::endl;
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL load_texture glTexParameteri error: " << glerr << std::endl;
+		return;
 	}
 	glBindTexture(GL_TEXTURE_2D, 0);
-	if ((err = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glBindTexture 0 error: " << err << std::endl;
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glBindTexture 0 error: " << glerr << std::endl;
+		return;
 	}
 }
 
@@ -171,9 +175,17 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
 }
 
-void OpenGLHelper::setup_sdhr_render()
+void OpenGLHelper::setup_sdhr_render(GLuint shaderProgramID)
 {
+	GLenum glerr;
 	bind_framebuffer();
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL bind_framebuffer error: " << glerr << std::endl;
+	}
+	glUseProgram(shaderProgramID);	// TODO: Check if necessary
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glUseProgram error: " << glerr << std::endl;
+	}
 
 	// Bind all 16 textures at once to GL_TEXTURE0... GL_TEXTURE16
 	// All the meshes will be able to use them

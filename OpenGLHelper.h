@@ -31,7 +31,7 @@ public:
 	void rescale_framebuffer(uint32_t width, uint32_t height);
 	GLuint get_texture_id() { return texture_id; };
 
-	void setup_sdhr_render();
+	void setup_sdhr_render(GLuint shaderProgramID);		// Pass in the default shader at the start
 	void cleanup_sdhr_render();
 
 	// TODO: Testing, remove

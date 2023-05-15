@@ -32,6 +32,10 @@
 #include "SDHRManager.h"
 #include "OpenGLHelper.h"
 
+#ifdef _DEBUG
+#define DEBUG
+#endif
+
 // Main code
 int main(int, char**)
 {
@@ -105,6 +109,11 @@ int main(int, char**)
 		std::cout << "Failed to initialize OpenGL context" << std::endl;
 		return -1;
 	}
+	// glEnable(GL_DEPTH_TEST); // TODO: Check if necessary
+    GLenum glerr;
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glEnable error: " << glerr << std::endl;
+	}
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -132,9 +141,15 @@ int main(int, char**)
 
     auto sdhrManager = SDHRManager::GetInstance();
 
-	glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+	glViewport(0, 0, (GLsizei)io.DisplaySize.x, (GLsizei)io.DisplaySize.y);
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glViewport error: " << glerr << std::endl;
+	}
 	auto glhelper = OpenGLHelper::GetInstance();
 	glhelper->create_framebuffer();
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL create_framebuffer error: " << glerr << std::endl;
+	}
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
 	std::thread thread_server(socket_server_thread, (uint16_t)_SERVER_PORT, &bShouldTerminateNetworking);
@@ -242,7 +257,7 @@ int main(int, char**)
         if (show_memory_window)
         {
             static MemoryEditor mem_edit_1;
-            mem_edit_1.DrawWindow("Memory Editor", sdhrManager->cpubuffer, _SDHR_WIDTH * _SDHR_HEIGHT *4);
+            mem_edit_1.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000)", sdhrManager->GetApple2MemPtr(), 0xc000);
         }
 
 		{
@@ -273,7 +288,7 @@ int main(int, char**)
 
 		// Rendering
 		ImGui::Render();
-        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+        glViewport(0, 0, (GLsizei)io.DisplaySize.x, (GLsizei)io.DisplaySize.y);
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
 
