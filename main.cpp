@@ -14,7 +14,6 @@
 #include "imgui_memory_editor.h"
 #include <SDL.h>
 
-
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
@@ -31,10 +30,6 @@
 #include "SDHRNetworking.h"
 #include "SDHRManager.h"
 #include "OpenGLHelper.h"
-
-#ifdef _DEBUG
-#define DEBUG
-#endif
 
 // Main code
 int main(int, char**)
@@ -139,12 +134,7 @@ int main(int, char**)
     bool did_press_quit = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    auto sdhrManager = SDHRManager::GetInstance();
-
-	glViewport(0, 0, (GLsizei)io.DisplaySize.x, (GLsizei)io.DisplaySize.y);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glViewport error: " << glerr << std::endl;
-	}
+	auto sdhrManager = SDHRManager::GetInstance();
 	auto glhelper = OpenGLHelper::GetInstance();
 	glhelper->create_framebuffer();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -289,6 +279,9 @@ int main(int, char**)
 		// Rendering
 		ImGui::Render();
         glViewport(0, 0, (GLsizei)io.DisplaySize.x, (GLsizei)io.DisplaySize.y);
+		while ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL glViewport error: " << glerr << std::endl;
+		}
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
 
