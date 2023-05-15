@@ -11,6 +11,8 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 	cols = tile_xcount;	// number of columns
 	rows = tile_ycount;	// number of rows
 
+	this->mosaicHeight = tile_ydim;
+
 	// This is a default vertex that we'll use as base to insert into vertices later
 	// Because push_back() makes a copy, it's faster not to recreate the vertex every time
 	auto _v = Vertex({
@@ -20,10 +22,11 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 		});
 
 	// Create all the vertices for each tile
+	// The origin is top left, but in OpenGL it should be bottom left, so we reverse j
 	float fcols = (float)cols;
 	float frows = (float)rows;
-	float z_val = 1.f - (win_index / 256.f);	// z-value. 0 is closest to camera, 1 is furthest.
-	for (size_t j = 0; j < rows; j++)
+	float z_val = 0.5f - (win_index / 256.f);	// z-value (-,5 to .5). Clip space is: -1 is closest to camera, 1 is furthest.
+	for (size_t j = (rows - 1); j >= 0; j--)
 	{
 		for (size_t i = 0; i < cols; i++)
 		{
@@ -55,14 +58,16 @@ void MosaicMesh::UpdateMosaicUV(uint64_t xpos, uint64_t ypos, uint64_t u, uint64
 }
 
 // Update the UV data of all the vertices of a single mosaic tile (using index positioning)
+//  NOTE: U/V has its 0,0 origin at the top left. OpenGL is bottom left
 void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, uint8_t texture_index)
 {
 	const auto ia = SDHRManager::GetInstance()->image_assets[texture_index];
 	auto _idx = mosaic_index * 6;	// index of the first vertex of the mosaic tile
+	auto v_reverse = this->mosaicHeight - v;
 	for (size_t i = 0; i < 6; i++)
 	{
 		auto& _v = this->vertices.at(_idx + i);		// reference to the vertex. Update in place
-		_v.TexCoords = glm::vec2((float)u / ia.image_xcount, (float)v / ia.image_ycount);
+		_v.TexCoords = glm::vec2((float)u / ia.image_xcount, (float)v_reverse / ia.image_ycount);
 		_v.TexIndex = texture_index;
 	}
 	bNeedsGPUUpdate = true;

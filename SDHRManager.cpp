@@ -594,6 +594,7 @@ bool SDHRManager::ProcessCommands(void)
 			//  Allocate to each vertex:
 			//  u, v coordinates of the texture (based on the tileset's tile index)
 			//  textureId of the image asset used in the tileset
+			//  NOTE: U/V has its 0,0 origin at the top left. OpenGL is bottom left
 			uint8_t* sp = (uint8_t*)s.c_str();
 			auto mesh = r->mesh;
 			for (uint64_t tile_y = 0; tile_y < r->tile_ycount; ++tile_y) {

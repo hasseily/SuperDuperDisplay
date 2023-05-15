@@ -39,6 +39,7 @@ public:
 	vector<Vertex> vertices;
 	uint64_t cols = 0;			// # of mosaic tiles horizontally
 	uint64_t rows = 0;			// # of mosaic tiles vertically
+	uint64_t mosaicHeight = 0;	// height of a mosaic tile (needed to reverse y origin)
 
 	unsigned int VAO = UINT_MAX;
 	Shader* shaderProgram = NULL;		// Shader program for the mesh. Starts with a default shader
