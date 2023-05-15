@@ -23,7 +23,7 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 	// The origin is top left, but in OpenGL it should be bottom left, so we reverse j
 	float fcols = (float)cols;
 	float frows = (float)rows;
-	float z_val = 0.5f - (win_index / 256.f);	// z-value (-,5 to .5). Clip space is: -1 is closest to camera, 1 is furthest.
+	float z_val = (float)(~win_index);	// z plane is 0-255. Window index 0 is the furthest away
 	for (size_t j = rows; j > 0; j--)
 	{
 		for (size_t i = 0; i < cols; i++)
