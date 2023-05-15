@@ -115,6 +115,8 @@ struct UpdateWindowEnableCmd {
 // Image Asset Methods
 //////////////////////////////////////////////////////////////////////////
 
+// NOTE:	Both the below image asset methods use OpenGL 
+//			so they _must_ be called from the main thread
 void SDHRManager::ImageAsset::AssignByFilename(SDHRManager* owner, const char* filename) {
 	int width;
 	int height;
@@ -236,7 +238,7 @@ int upload_inflate(const char* source, uint64_t size, std::ostream& dest) {
 
 void SDHRManager::Initialize()
 {
-	m_bEnabled = false;
+	bSDHREnabled = false;
 	error_flag = false;
 	memset(error_str, 0, sizeof(error_str));
 	memset(uploaded_data_region, 0, sizeof(uploaded_data_region));
@@ -258,10 +260,9 @@ void SDHRManager::Initialize()
 	// Assign to the GPU the default pink image to all 16 image assets
 	// because the shaders expect 16 textures
 	oglHelper->clear_textures();
-	for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++)
-	{
-		image_assets[i].AssignByFilename(this, "Texture_Default.png");
-	}
+
+	// tell the next Render() call to run initialization routines
+	bShouldInitializeRender = true;
 }
 
 SDHRManager::~SDHRManager()
@@ -275,7 +276,6 @@ SDHRManager::~SDHRManager()
 		}
 	}
 	oglHelper->clear_textures();
-	free(cpubuffer);
 	delete[] a2mem;
 }
 
@@ -314,7 +314,29 @@ uint8_t* SDHRManager::GetApple2MemPtr()
 void SDHRManager::Render()
 {
 	auto oglh = OpenGLHelper::GetInstance();
-	oglh->setup_sdhr_render();
+	oglh->setup_sdhr_render(defaultWindowShaderProgram.ID);
+
+	if (bShouldInitializeRender) {
+		bShouldInitializeRender = false;
+		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
+			image_assets[i].AssignByFilename(this, "Texture_Default.png");
+		}
+	}
+
+	// Check to see if we need to upload data to the GPU
+	while (!fifo_upload_image_data.empty()) {
+		auto _uidata = fifo_upload_image_data.front();
+		image_assets[_uidata.asset_index].AssignByMemory(this, uploaded_data_region + _uidata.upload_start_addr, _uidata.upload_data_size);
+		if (error_flag) {
+			std::cerr << "AssignByMemory failed!" << std::endl;
+		}
+		fifo_upload_image_data.pop();
+#ifdef _DEBUG
+		std::cout << "AssignByMemory: " << _uidata.upload_data_size << " for index: " << (uint32_t)_uidata.asset_index << std::endl;
+#endif
+	}
+
+	// Render the windows (i.e. the meshes with the windows stencils)
 	for each (auto& _w in this->windows) {
 		if (_w.enabled) {
 			if (_w.mesh) {
@@ -398,7 +420,6 @@ bool SDHRManager::ProcessCommands(void)
 		// Command data (variable)
 		switch (_cmd) {
 		case SDHR_CMD_UPLOAD_DATA: {
-			// 
 			if (!CheckCommandLength(p, end, sizeof(UploadDataCmd))) return false;
 			UploadDataCmd* cmd = (UploadDataCmd*)p;
 			uint64_t dest_offset = (uint64_t)cmd->dest_block * 512;
@@ -407,6 +428,9 @@ bool SDHRManager::ProcessCommands(void)
 				std::cerr << "DataSizeCheck failed!" << std::endl;
 				return false;
 			}
+			// Check if there's a pending image upload 
+			// Wait until it's done
+			while (!fifo_upload_image_data.empty()) {};
 			/*
 			std::cout << std::hex << "Uploaded from: " << (uint64_t)(cmd->source_addr) 
 				<< " To: " << (uint64_t)(uploaded_data_region + dest_offset)
@@ -427,18 +451,19 @@ bool SDHRManager::ProcessCommands(void)
 
 			ImageAsset* r = image_assets + cmd->asset_index;
 
-			r->AssignByMemory(this, uploaded_data_region + upload_start_addr, upload_data_size);
-			if (error_flag) {
-				std::cerr << "AssignByMemory failed!" << std::endl;
-				return false;
-			}
-#ifdef DEBUG
+			auto _uidata = UploadImageData();
+			_uidata.asset_index = cmd->asset_index;
+			_uidata.upload_start_addr = upload_start_addr;
+			_uidata.upload_data_size = upload_data_size;
+			fifo_upload_image_data.push(_uidata);
+#ifdef _DEBUG
 			std::cout << "SDHR_CMD_DEFINE_IMAGE_ASSET: Success:" << r->image_xcount << " x " << r->image_ycount << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_DEFINE_IMAGE_ASSET_FILENAME: {
 			std::cerr << "SDHR_CMD_DEFINE_IMAGE_ASSET_FILENAME: Not Implemented." << std::endl;
 			// NOT IMPLEMENTED
+			// NOTE: Implementation would have to make sure it's the main thread that loads the image asset
 		} break;
 		case SDHR_CMD_UPLOAD_DATA_FILENAME: {
 			std::cerr << "SDHR_CMD_UPLOAD_DATA_FILENAME: Not Implemented." << std::endl;

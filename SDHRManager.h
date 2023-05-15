@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <vector>
+#include <queue>
 
 #include "common.h"
 #include "OpenGLHelper.h"
@@ -139,9 +140,6 @@ public:
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
 
-	uint32_t* cpubuffer;
-	bool shouldUseCpuBuffer = false;	// Disables the temp cpu buffer
-	bool shouldUseSubImage2D = true;	// Disables the pixel-by-pixel subimage2d upload
 	THREADCOMM_e threadState;
 	// NOTE:	Maximum of 16 image assets.
 	//			They're always concomitantly available as textures in the GPU
@@ -176,11 +174,11 @@ public:
 	TileTex GetTilesetTileTex(uint8_t tileset_index, uint8_t tile_index) { return tileset_records[tileset_index].tile_data[tile_index]; };
 
 	void ToggleSdhr(bool value) {
-		m_bEnabled = value;
+		bSDHREnabled = value;
 	}
 
 	bool IsSdhrEnabled(void) {
-		return m_bEnabled;
+		return bSDHREnabled;
 	}
 
 	void ResetSdhr() {
@@ -203,7 +201,6 @@ private:
 	static SDHRManager* s_instance;
 	SDHRManager()
 	{
-		cpubuffer = (uint32_t*)malloc(_SDHR_WIDTH * _SDHR_HEIGHT * 4);
 		a2mem = new uint8_t[0xc000];	// anything below $200 is unused
 		Initialize();
 	}
@@ -231,9 +228,11 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // Internal data
 //////////////////////////////////////////////////////////////////////////
+	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
+											// routines like clearing out the image assets
 	uint8_t* a2mem;	// The current state of the Apple 2 memory ($0200-$BFFF)
 	
-	bool m_bEnabled;
+	bool bSDHREnabled;	// is SDHR enabled?
 
 	static const uint16_t screen_xcount = _SDHR_WIDTH;
 	static const uint16_t screen_ycount = _SDHR_HEIGHT;
@@ -242,5 +241,16 @@ private:
 	bool error_flag;
 	char error_str[256];
 	uint8_t uploaded_data_region[256 * 256 * 256];
+
+	// This is a FIFO queue where the network thread tells the main thread that
+	// there's image data that needs to be uploaded to the GPU
+	// It's only FIFO in name because we don't allow more than one entry in there
+	// The queue not being empty acts as a semaphore.
+	struct UploadImageData {
+		uint8_t asset_index;
+		uint64_t upload_start_addr;
+		int upload_data_size;
+	};
+	std::queue<UploadImageData>fifo_upload_image_data;
 };
 #endif // SDHRMANAGER_H
