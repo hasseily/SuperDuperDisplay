@@ -2,6 +2,10 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#ifdef _DEBUG   // Visual Studio
+#define DEBUG
+#endif
+
 #include <stdio.h>
 
 #include "glad/glad.h"
