@@ -26,7 +26,7 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 	float fcols = (float)cols;
 	float frows = (float)rows;
 	float z_val = 0.5f - (win_index / 256.f);	// z-value (-,5 to .5). Clip space is: -1 is closest to camera, 1 is furthest.
-	for (size_t j = (rows - 1); j >= 0; j--)
+	for (size_t j = rows; j > 0; j--)
 	{
 		for (size_t i = 0; i < cols; i++)
 		{
@@ -35,14 +35,14 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 			this->vertices.push_back(_v);
 			_v.Position = glm::vec3(tile_xdim * (i + 1), tile_ydim * j, z_val);	// top right
 			this->vertices.push_back(_v);
-			_v.Position = glm::vec3(tile_xdim * i, tile_ydim * (j + 1), z_val);	// bottom left
+			_v.Position = glm::vec3(tile_xdim * i, tile_ydim * (j - 1), z_val);	// bottom left
 			this->vertices.push_back(_v);
 			// Second triangle
-			_v.Position = glm::vec3(tile_xdim * i, tile_ydim * (j + 1), z_val);	// bottom left
+			_v.Position = glm::vec3(tile_xdim * i, tile_ydim * (j - 1), z_val);	// bottom left
 			this->vertices.push_back(_v);
 			_v.Position = glm::vec3(tile_xdim * (i + 1), tile_ydim * j, z_val);	// top right
 			this->vertices.push_back(_v);
-			_v.Position = glm::vec3(tile_xdim * (i + 1), tile_ydim * (j + 1), z_val);	// bottom right
+			_v.Position = glm::vec3(tile_xdim * (i + 1), tile_ydim * (j - 1), z_val);	// bottom right
 			this->vertices.push_back(_v);
 			++t_idx;
 		}
@@ -73,10 +73,11 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 	bNeedsGPUUpdate = true;
 }
 
+// NOTE: Also here the world coordinates have a reversed y for OpenGL whose origin is bottom left
 void MosaicMesh::SetWorldCoordinates(int32_t x, int32_t y)
 {
 	this->world_x = x;
-	this->world_y = y;
+	this->world_y = _SDHR_HEIGHT - y;
 }
 
 // Anytime the underlying mesh data is changed, it needs to be updated on the GPU
