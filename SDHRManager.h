@@ -17,8 +17,6 @@
 
 #define _SDHR_WIDTH  640
 #define _SDHR_HEIGHT 360
-#define _SDHR_WIDTH_F  640.f
-#define _SDHR_HEIGHT_F 360.f
 
 enum THREADCOMM_e
 {
@@ -150,14 +148,14 @@ public:
 	Shader defaultWindowShaderProgram = Shader("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");
 	// Camera for World -> View matrix transform
 	Camera camera = Camera(
-		_SDHR_WIDTH_F / 2.f, _SDHR_HEIGHT_F / 2.f,	// x,y
-		-10.f,										// z
-		0.f, -1.f, 0.f,								// upVector xyz
-		0.f,										// yaw
+		_SDHR_WIDTH / 2.f, _SDHR_HEIGHT / 2.f,	// x,y
+		2.f,										// z
+		0.f, 1.f, 0.f,								// upVector xyz
+		-90.f,										// yaw
 		0.f											// pitch
 	);
 	// Projection matrix (left, right, bottom, top, near, far)
-	glm::mat4 mat_proj = glm::ortho(0.0f, _SDHR_WIDTH_F, 0.0f, _SDHR_HEIGHT_F, -1.f, 1.0f);
+	glm::mat4 mat_proj = glm::ortho<float>(0, _SDHR_WIDTH, 0, _SDHR_HEIGHT, 0, 256);
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods

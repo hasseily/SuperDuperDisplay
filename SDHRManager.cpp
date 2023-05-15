@@ -363,7 +363,7 @@ void SDHRManager::DefineTileset(uint8_t tileset_index, uint16_t num_entries, uin
 	r->num_entries = num_entries;
 	r->tile_data = (TileTex*)malloc(sizeof(TileTex) * num_entries);
 #ifdef DEBUG
-	std::cout << "Allocating tile data size: " << store_data_size << " for index: " << (uint32_t)tileset_index << std::endl;
+	std::cout << "Allocating tile data size: " << sizeof(TileTex) * num_entries << " for index: " << (uint32_t)tileset_index << std::endl;
 #endif
 
 	uint8_t* offset_p = offsets;
@@ -456,7 +456,7 @@ bool SDHRManager::ProcessCommands(void)
 			_uidata.upload_start_addr = upload_start_addr;
 			_uidata.upload_data_size = upload_data_size;
 			fifo_upload_image_data.push(_uidata);
-#ifdef _DEBUG
+#ifdef DEBUG
 			std::cout << "SDHR_CMD_DEFINE_IMAGE_ASSET: Success:" << r->image_xcount << " x " << r->image_ycount << std::endl;
 #endif
 		} break;
