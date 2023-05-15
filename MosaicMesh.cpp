@@ -11,8 +11,6 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 	cols = tile_xcount;	// number of columns
 	rows = tile_ycount;	// number of rows
 
-	this->mosaicHeight = tile_ydim;
-
 	// This is a default vertex that we'll use as base to insert into vertices later
 	// Because push_back() makes a copy, it's faster not to recreate the vertex every time
 	auto _v = Vertex({
@@ -63,7 +61,8 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 {
 	const auto ia = SDHRManager::GetInstance()->image_assets[texture_index];
 	auto _idx = mosaic_index * 6;	// index of the first vertex of the mosaic tile
-	auto v_reverse = this->mosaicHeight - v;
+	// The v value needs to be reversed from the top left
+	auto v_reverse = ia.image_ycount - v;
 	for (size_t i = 0; i < 6; i++)
 	{
 		auto& _v = this->vertices.at(_idx + i);		// reference to the vertex. Update in place
