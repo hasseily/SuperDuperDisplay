@@ -273,7 +273,7 @@ int main(int, char**)
 		// END TEST STUFF
 */
 
-		sdhrManager->RenderTest();
+		sdhrManager->Render();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);

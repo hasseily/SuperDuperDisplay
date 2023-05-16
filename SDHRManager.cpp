@@ -334,9 +334,14 @@ void SDHRManager::Render()
 	// for drawing the SDHR stuff is active
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
+		GLint texIds[_SDHR_MAX_TEXTURES];
 		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
 			image_assets[i].AssignByFilename(this, "Texture_Default.png");
+			texIds[i] = image_assets[i].tex_id;
 		}
+		// And assign the list of all the textures to the shader's "tilesTexture" uniform
+		auto texUniformId = glGetUniformLocation(defaultWindowShaderProgram.ID, "tilesTexture");
+		glUniform1iv(texUniformId, _SDHR_MAX_TEXTURES, &texIds[0]);
 	}
 
 	if (this->dataState == DATASTATE_e::COMMAND_READY)
