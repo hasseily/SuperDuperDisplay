@@ -261,7 +261,8 @@ void SDHRManager::Initialize()
 	{
 		image_assets[i].tex_id = oglHelper->get_next_free_texture_id();
 	}
-	defaultWindowShaderProgram.build("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");
+	if (!defaultWindowShaderProgram.isReady)
+		defaultWindowShaderProgram.build("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");
 	bShouldInitializeRender = true;
 }
 

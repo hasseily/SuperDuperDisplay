@@ -12,6 +12,7 @@ class Shader
 {
 public:
     unsigned int ID;
+    bool isReady = false;
     // Useless until you call build()
     void build(const char* vertexPath, const char* fragmentPath)
     {
@@ -66,7 +67,7 @@ public:
         // delete the shaders as they're linked into our program now and no longer necessary
         glDeleteShader(vertex);
         glDeleteShader(fragment);
-
+        isReady = true;
     }
     // activate the shader
     // ------------------------------------------------------------------------
