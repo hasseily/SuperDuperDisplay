@@ -257,6 +257,7 @@ void SDHRManager::Initialize()
 	// tell the next Render() call to run initialization routines
 	// Assign to the GPU the default pink image to all 16 image assets
 	// because the shaders expect 16 textures
+	oglHelper->clear_textures();
 	for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++)
 	{
 		image_assets[i].tex_id = oglHelper->get_next_free_texture_id();

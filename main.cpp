@@ -329,7 +329,8 @@ int main(int, char**)
             // const float window_width = ImGui::GetContentRegionAvail().x;
 			// const float window_height = ImGui::GetContentRegionAvail().y;
 
-            glhelper->rescale_framebuffer((uint32_t)io.DisplaySize.x, (uint32_t)io.DisplaySize.y);
+            // shouldn't be necessary
+            // glhelper->rescale_framebuffer((uint32_t)io.DisplaySize.x, (uint32_t)io.DisplaySize.y);
 
             ImGui::GetBackgroundDrawList()->AddImage(
 				(void*)glhelper->get_texture_id(),
