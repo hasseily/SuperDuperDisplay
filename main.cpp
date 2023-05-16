@@ -141,7 +141,6 @@ int main(int, char**)
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
 	std::thread thread_server(socket_server_thread, (uint16_t)_SERVER_PORT, &bShouldTerminateNetworking);
-    sdhrManager->threadState = THREADCOMM_e::IDLE;
 
 
     // Delta Time

@@ -156,6 +156,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 						// Whether or not the processing worked, clear the buffer. If the processing failed,
 						// the data was corrupt and shouldn't be reprocessed
 						sdhrMgr->ClearBuffer();
+						sdhrMgr->dataState = DATASTATE_e::COMMAND_READY;
 						sdhrMgr->threadState = THREADCOMM_e::IDLE;
 						if (processingSucceeded)
 						{

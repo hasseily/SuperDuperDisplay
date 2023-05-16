@@ -22,6 +22,12 @@ enum THREADCOMM_e
 	MAIN_LOCK			// Main thread is updating GPU data
 };
 
+enum DATASTATE_e
+{
+	NODATA = 0,			// No command to process
+	COMMAND_READY		// Command is ready for processing
+};
+
 enum SDHRCtrl_e
 {
 	SDHR_CTRL_DISABLE = 0,
@@ -130,6 +136,7 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 
 	THREADCOMM_e threadState;
+	DATASTATE_e dataState;
 	// NOTE:	Maximum of 16 image assets.
 	//			They're always concomitantly available as textures in the GPU
 	ImageAsset image_assets[_SDHR_MAX_TEXTURES];

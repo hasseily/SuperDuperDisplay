@@ -265,6 +265,8 @@ void SDHRManager::Initialize()
 	if (!defaultWindowShaderProgram.isReady)
 		defaultWindowShaderProgram.build("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");
 	bShouldInitializeRender = true;
+	threadState = THREADCOMM_e::IDLE;
+	dataState = DATASTATE_e::NODATA;
 }
 
 SDHRManager::~SDHRManager()
@@ -337,7 +339,7 @@ void SDHRManager::Render()
 		}
 	}
 
-	if (this->threadState == THREADCOMM_e::IDLE)
+	if (this->dataState == DATASTATE_e::COMMAND_READY)
 	{
 		// Check to see if we need to upload data to the GPU
 		this->threadState = THREADCOMM_e::MAIN_LOCK;
@@ -360,6 +362,7 @@ void SDHRManager::Render()
 				}
 			}
 		}
+		this->dataState = DATASTATE_e::NODATA;
 		this->threadState = THREADCOMM_e::IDLE;
 	}
 
@@ -496,7 +499,8 @@ bool SDHRManager::ProcessCommands(void)
 			}
 			// Check if there's a pending image upload 
 			// Wait until it's done
-			while (!fifo_upload_image_data.empty()) {};
+			//while (!fifo_upload_image_data.empty()) {};
+			while (this->dataState == DATASTATE_e::COMMAND_READY) {}
 			/*
 			std::cout << std::hex << "Uploaded from: " << (uint64_t)(cmd->source_addr) 
 				<< " To: " << (uint64_t)(uploaded_data_region + dest_offset)
