@@ -15,9 +15,6 @@
 #include "MosaicMesh.h"
 #include "camera.h"
 
-#define _SDHR_WIDTH  640
-#define _SDHR_HEIGHT 360
-
 enum THREADCOMM_e
 {
 	IDLE = 0,			// SDHR data and OpenGL are in sync
@@ -81,12 +78,7 @@ public:
 		// image assets are full 32-bit bitmap files, uploaded from PNG
 		uint64_t image_xcount = 0;	// width and height of asset in pixels
 		uint64_t image_ycount = 0;
-		GLuint tex_id = UINT_MAX;	// Texture ID on the GPU that holds the image data
-		ImageAsset()
-			: image_xcount(0)
-			, image_ycount(0)
-			, tex_id(UINT_MAX)
-		{}	// Do nothing in constructor
+		GLuint tex_id = 0;	// Texture ID on the GPU that holds the image data
 	};
 
 	struct TileTex {				// Tile texture starting coordinates
@@ -144,8 +136,6 @@ public:
 	ImageAsset image_assets[_SDHR_MAX_TEXTURES];
 	TilesetRecord tileset_records[256];
 	Window windows[256];
-	// The standard default shader for the windows and their mosaics
-	Shader defaultWindowShaderProgram = Shader("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");
 	// Camera for World -> View matrix transform
 	Camera camera = Camera(
 		_SDHR_WIDTH / 2.f, _SDHR_HEIGHT / 2.f,	// x,y
@@ -167,6 +157,7 @@ public:
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 memory pointer
 
 	void Render();	// render everything SDHR related
+	void RenderTest();	// test render function
 
 	TileTex* GetTilesetRecordData(uint8_t tileset_index) { return tileset_records[tileset_index].tile_data; };
 	TileTex GetTilesetTileTex(uint8_t tileset_index, uint8_t tile_index) { return tileset_records[tileset_index].tile_data[tile_index]; };

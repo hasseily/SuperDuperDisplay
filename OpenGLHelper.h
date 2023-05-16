@@ -20,18 +20,20 @@ public:
 		return s_instance;
 	}
 	~OpenGLHelper();
-	unsigned int load_texture(unsigned char* data, int width, int height, int nrComponents);			// new texture
-	void load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID);	// replace texture
+
+	void load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID);
+	GLuint get_texture_id() { return output_texture_id; };	// output texture id
 	void clear_textures();
+
 	// TODO: Testing, remove
-	// void create_vertices();;
-	void create_framebuffer();
+	// void create_vertices();
+	void create_framebuffer();	// also binds it
 	void bind_framebuffer();
 	void unbind_framebuffer();
+	unsigned int get_next_free_texture_id();	// returns the next available tex slot that hasn't been used yet. UINT_MAX if full
 	void rescale_framebuffer(uint32_t width, uint32_t height);
-	GLuint get_texture_id() { return texture_id; };
 
-	void setup_sdhr_render(GLuint shaderProgramID);		// Pass in the default shader at the start
+	void setup_sdhr_render();
 	void cleanup_sdhr_render();
 
 	// TODO: Testing, remove
@@ -51,11 +53,10 @@ private:
 		Initialize();
 	}
 
-	GLuint texture_id;
+	GLuint output_texture_id;
 //	GLuint VAO;	// for testing
 //	GLuint VBO;	// for testing
-	GLuint FBO;
-	GLuint RBO;
+	GLuint FBO = UINT_MAX;
 
 	// settings
 	const unsigned int SCR_WIDTH = 640;

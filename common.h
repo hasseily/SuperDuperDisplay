@@ -21,4 +21,8 @@
 
 #include "glm/glm.hpp"
 
+// DEFINITIONS OF SDHR SPECS
+#define _SDHR_WIDTH  640
+#define _SDHR_HEIGHT 360
+
 #endif

@@ -16,7 +16,9 @@
 // below because "The declaration of a static data member in its class definition is not a definition"
 SDHRManager* SDHRManager::s_instance;
 
-static OpenGLHelper* oglHelper;
+static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
+// The standard default shader for the windows and their mosaics
+static Shader defaultWindowShaderProgram = Shader();
 
 //////////////////////////////////////////////////////////////////////////
 // Commands structs
@@ -128,13 +130,12 @@ void SDHRManager::ImageAsset::AssignByFilename(SDHRManager* owner, const char* f
 		return;
 	}
 	if (tex_id != UINT_MAX)
-		oglHelper->load_texture(data, width, height, channels, tex_id);
-	else
-		tex_id = oglHelper->load_texture(data, width, height, channels);
-	stbi_image_free(data);
-	if (tex_id == UINT_MAX)
 	{
-		std::cerr << "ERROR: Could not bind new texture!" << '\n';
+		oglHelper->load_texture(data, width, height, channels, tex_id);
+		stbi_image_free(data);
+	}
+	else {
+		std::cerr << "ERROR: Could not bind texture, all slots filled!" << '\n';
 		return;
 	}
 	image_xcount = width;
@@ -152,13 +153,11 @@ void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* 
 		return;
 	}
 	if (tex_id != UINT_MAX)
-		oglHelper->load_texture(data, width, height, channels, tex_id);
-	else
-		tex_id = oglHelper->load_texture(data, width, height, channels);
-	stbi_image_free(data);
-	if (tex_id == UINT_MAX)
 	{
-		std::cerr << "ERROR: Could not bind new texture!" << '\n';
+		oglHelper->load_texture(data, width, height, channels, tex_id);
+		stbi_image_free(data);
+	} else {
+		std::cerr << "ERROR: Could not bind texture, all slots filled!" << '\n';
 		return;
 	}
 	image_xcount = width;
@@ -255,13 +254,14 @@ void SDHRManager::Initialize()
 	// be sent through the socket and this buffer will be updated
 	memset(a2mem, 0, 0xc000);
 
-	oglHelper = OpenGLHelper::GetInstance();
-
+	// tell the next Render() call to run initialization routines
 	// Assign to the GPU the default pink image to all 16 image assets
 	// because the shaders expect 16 textures
-	oglHelper->clear_textures();
-
-	// tell the next Render() call to run initialization routines
+	for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++)
+	{
+		image_assets[i].tex_id = oglHelper->get_next_free_texture_id();
+	}
+	defaultWindowShaderProgram.build("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");
 	bShouldInitializeRender = true;
 }
 
@@ -277,6 +277,9 @@ SDHRManager::~SDHRManager()
 	}
 	oglHelper->clear_textures();
 	delete[] a2mem;
+	delete[] windows;
+	delete[] image_assets;
+	delete[] tileset_records;
 }
 
 void SDHRManager::AddPacketDataToBuffer(uint8_t data)
@@ -313,8 +316,14 @@ uint8_t* SDHRManager::GetApple2MemPtr()
 // Render all window meshes and whatever else SDHR related
 void SDHRManager::Render()
 {
+	GLenum glerr;
 	auto oglh = OpenGLHelper::GetInstance();
-	oglh->setup_sdhr_render(defaultWindowShaderProgram.ID);
+	oglh->setup_sdhr_render();
+
+	defaultWindowShaderProgram.use();
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glUseProgram error: " << glerr << std::endl;
+	}
 
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
@@ -344,6 +353,45 @@ void SDHRManager::Render()
 			}
 		}
 	}
+	oglh->cleanup_sdhr_render();
+}
+
+void SDHRManager::RenderTest()
+{
+	static auto shd = Shader();
+	shd.build("shaders/basic.vert", "shaders/basic.frag");
+	auto oglh = OpenGLHelper::GetInstance();
+	oglh->setup_sdhr_render();
+	shd.use();
+
+	GLuint VertexArrayID;
+	glGenVertexArrays(1, &VertexArrayID);
+	glBindVertexArray(VertexArrayID);
+
+	static const GLfloat g_vertex_buffer_data[] = {
+			-1.0f, -1.0f, 0.0f,
+			1.0f, -1.0f, 0.0f,
+			0.0f, 1.0f, 0.0f,
+	};
+
+	GLuint vertexbuffer;
+	glGenBuffers(1, &vertexbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+	glVertexAttribPointer(
+		0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+		3,                  // size
+		GL_FLOAT,           // type
+		GL_FALSE,           // normalized?
+		0,                  // stride
+		(void*)0            // array buffer offset
+	);
+	glDrawArrays(GL_TRIANGLES, 0, 3); // Starting from vertex 0; 3 vertices total -> 1 triangle
+	glDisableVertexAttribArray(0);
+
 	oglh->cleanup_sdhr_render();
 }
 

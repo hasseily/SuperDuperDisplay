@@ -31,6 +31,8 @@
 #include "SDHRManager.h"
 #include "OpenGLHelper.h"
 
+
+
 // Main code
 int main(int, char**)
 {
@@ -136,10 +138,6 @@ int main(int, char**)
 
 	auto sdhrManager = SDHRManager::GetInstance();
 	auto glhelper = OpenGLHelper::GetInstance();
-	glhelper->create_framebuffer();
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL create_framebuffer error: " << glerr << std::endl;
-	}
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
 	std::thread thread_server(socket_server_thread, (uint16_t)_SERVER_PORT, &bShouldTerminateNetworking);
@@ -150,7 +148,55 @@ int main(int, char**)
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
     uint64_t dt_LAST = 0;
 	float deltaTime = 0.f;
+/*
 
+    // TEST STUFF
+	// Vertices for the triangle.
+	float vertices[] = {
+		-0.5f, -0.5f, 0.0f,
+		 0.5f, -0.5f, 0.0f,
+		 0.0f,  0.5f, 0.0f
+	};
+
+	static auto shd = Shader("shaders/basic.vert", "shaders/basic.frag");
+
+	// Generate and bind a Vertex Array Object and a Vertex Buffer Object, then set up vertex attributes.
+	GLuint VAO, VBO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	// Create and bind a framebuffer.
+	GLuint FBO;
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+	// Create a texture for the framebuffer.
+	GLuint texColorBuffer;
+	glGenTextures(1, &texColorBuffer);
+	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glUseProgram render error: " << glerr << std::endl;
+	};
+    // END TEST STUFF
+    */
     // Main loop
     bool done = false;
 #ifdef __EMSCRIPTEN__
@@ -216,6 +262,31 @@ int main(int, char**)
             }
         }
 
+/*
+        // TEST STUFF
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		shd.use();
+		glBindVertexArray(VAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		// END TEST STUFF
+*/
+
+		if (sdhrManager->threadState != THREADCOMM_e::SOCKET_LOCK)
+		{
+			sdhrManager->threadState = THREADCOMM_e::MAIN_LOCK;
+            glhelper->bind_framebuffer();
+            sdhrManager->Render();
+            glhelper->unbind_framebuffer();
+			sdhrManager->threadState = THREADCOMM_e::IDLE;
+		}
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
@@ -249,24 +320,48 @@ int main(int, char**)
             static MemoryEditor mem_edit_1;
             mem_edit_1.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000)", sdhrManager->GetApple2MemPtr(), 0xc000);
         }
+        
 
-		{
+        {
             // Display the OpenGLHelper framebuffer in the background of the main window
             // so we don't need to create an ImGui window. It'll fill the full background
 			
             // const float window_width = ImGui::GetContentRegionAvail().x;
 			// const float window_height = ImGui::GetContentRegionAvail().y;
 
-			OpenGLHelper::GetInstance()->rescale_framebuffer((uint32_t)io.DisplaySize.x, (uint32_t)io.DisplaySize.y);
+            glhelper->rescale_framebuffer((uint32_t)io.DisplaySize.x, (uint32_t)io.DisplaySize.y);
 
             ImGui::GetBackgroundDrawList()->AddImage(
-				(void*)OpenGLHelper::GetInstance()->get_texture_id(),
+				(void*)glhelper->get_texture_id(),
+                // (void*)(intptr_t)texColorBuffer,
 				ImVec2(0, 0),
 				ImVec2(io.DisplaySize.x, io.DisplaySize.y),
 				ImVec2(0, 1),
 				ImVec2(1, 0)
 			);
 		}
+        
+
+		// ImGui window creation.
+		if (ImGui::Begin("Demo")) {
+			ImVec2 window_pos = ImGui::GetWindowPos();
+            ImVec2 window_size = ImGui::GetWindowSize();
+            ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
+
+            ImGui::Image((void*)glhelper->get_texture_id(), window_size);
+/*
+			ImGui::GetWindowDrawList()->AddImage(
+				(void*)(intptr_t)texColorBuffer,
+				ImVec2(0, 0),
+                window_size,
+				ImVec2(0, 1),
+				ImVec2(1, 0)
+			);
+*/
+
+            // ImGui::Image((void*)(intptr_t)texColorBuffer, window_size);
+		}
+		ImGui::End();
 
         //ImVec2 window_pos = ImGui::GetWindowPos();
         //ImVec2 window_size = ImGui::GetWindowSize();
@@ -278,19 +373,6 @@ int main(int, char**)
 
 		// Rendering
 		ImGui::Render();
-        glViewport(0, 0, (GLsizei)io.DisplaySize.x, (GLsizei)io.DisplaySize.y);
-		while ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL glViewport error: " << glerr << std::endl;
-		}
-        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        if (sdhrManager->threadState != THREADCOMM_e::SOCKET_LOCK)
-        {
-			sdhrManager->threadState = THREADCOMM_e::MAIN_LOCK;
-            sdhrManager->Render();
-			sdhrManager->threadState = THREADCOMM_e::IDLE;
-        }
 
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		SDL_GL_SwapWindow(window);

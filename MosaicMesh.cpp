@@ -127,7 +127,7 @@ void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 
 	glUseProgram(shaderProgram->ID);
 	glBindVertexArray(VAO);
-	glm::mat4 mat_final = mat_proj * mat_camera * this->mat_trans;
+	glm::mat4 mat_final = this->mat_trans;
 	shaderProgram->setMat4("transform",mat_final);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glBindVertexArray(0);

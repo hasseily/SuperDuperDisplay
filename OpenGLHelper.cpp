@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 
+#include "common.h"
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 
@@ -23,32 +24,21 @@ void OpenGLHelper::Initialize()
 OpenGLHelper::~OpenGLHelper()
 {
 	glDeleteFramebuffers(1, &FBO);
-	glDeleteTextures(1, &texture_id);
-	glDeleteRenderbuffers(1, &RBO);
+	glDeleteTextures(1, &output_texture_id);
 }
 
 //////////////////////////////////////////////////////////////////////////
 // Methods
 //////////////////////////////////////////////////////////////////////////
 
-unsigned int OpenGLHelper::load_texture(unsigned char* data, int width, int height, int nrComponents)
-{
-	if (v_texture_ids.size() >= _SDHR_MAX_TEXTURES)
-	{
-		std::cerr << "ERROR: Already at max textures! Cannot create new texture" << '\n';
-		return UINT_MAX;
-	}
-	GLuint textureID;
-	glGenTextures(1, &textureID);
-	v_texture_ids.push_back(textureID);
-
-	load_texture(data, width, height, nrComponents, textureID);
-	return textureID;
-}
-
 // This method loads the texture data into the texture specified at textureID
 void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID)
 {
+	// remember the current bound framebuffer, and our FBO's currently bound texture
+	GLint _currFBO, _currTexId;
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &_currFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, &_currTexId);
 	GLenum glerr;
 	GLenum format = GL_RGBA;
 	if (nrComponents == 1)
@@ -59,15 +49,12 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 		format = GL_RGBA;
 
 	glBindTexture(GL_TEXTURE_2D, textureID);
-	// TODO: Check if glGetError() == GL_OUT_OF_MEMORY !!!
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL load_texture glBindTexture error: " << glerr << std::endl;
-		return;
 	}
 	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL load_texture glTexImage2D error: " << glerr << std::endl;
-		return;
 	}
 	// NOTE: May need to generate mipmaps in case we want to allow zooming in-out
 	// glGenerateMipmap(GL_TEXTURE_2D);
@@ -78,13 +65,27 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL load_texture glTexParameteri error: " << glerr << std::endl;
-		return;
 	}
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(GL_TEXTURE_2D, _currTexId);		// rebind our FBO's original texture
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL glBindTexture 0 error: " << glerr << std::endl;
-		return;
 	}
+	glBindFramebuffer(GL_FRAMEBUFFER, _currFBO);	// rebind the current FBO
+}
+
+unsigned int OpenGLHelper::get_next_free_texture_id()
+{
+	if (v_texture_ids.size() == _SDHR_MAX_TEXTURES)
+	{
+#ifdef DEBUG
+		std::cerr << "WARNING: Requesting more textures than available!\n";
+#endif
+		return UINT_MAX;
+	}
+	GLuint texid;
+	glGenTextures(1, &texid);
+	v_texture_ids.push_back(texid);
+	return texid;
 }
 
 void OpenGLHelper::clear_textures()
@@ -129,31 +130,28 @@ void OpenGLHelper::create_vertices()
 
 void OpenGLHelper::create_framebuffer()
 {
+	if (FBO != UINT_MAX)
+		return;
 	glGenFramebuffers(1, &FBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-	glGenTextures(1, &texture_id);
-	glBindTexture(GL_TEXTURE_2D, texture_id);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_WIDTH, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	// bind the output texture
+	// every time the framebuffer is bound, the output texture will be already bound
+	glGenTextures(1, &output_texture_id);
+	glBindTexture(GL_TEXTURE_2D, output_texture_id);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, _SDHR_WIDTH, _SDHR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture_id, 0);
-
-	glGenRenderbuffers(1, &RBO);
-	glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_WIDTH);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!\n";
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 }
 
 void OpenGLHelper::bind_framebuffer()
 {
+	if (FBO == UINT_MAX)
+		create_framebuffer();
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 }
 
@@ -164,42 +162,23 @@ void OpenGLHelper::unbind_framebuffer()
 
 void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 {
-	glBindTexture(GL_TEXTURE_2D, texture_id);
+	glBindTexture(GL_TEXTURE_2D, output_texture_id);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture_id, 0);
-
-	glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);
 }
 
-void OpenGLHelper::setup_sdhr_render(GLuint shaderProgramID)
+void OpenGLHelper::setup_sdhr_render()
 {
 	GLenum glerr;
 	bind_framebuffer();
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL bind_framebuffer error: " << glerr << std::endl;
-	}
-	glUseProgram(shaderProgramID);	// TODO: Check if necessary
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glUseProgram error: " << glerr << std::endl;
-	}
-
-	// Bind all 16 textures at once to GL_TEXTURE0... GL_TEXTURE16
-	// All the meshes will be able to use them
-
-	auto vti = this->v_texture_ids;
-	for (unsigned int i = 0; i < vti.size(); i++) {
-		glActiveTexture(GL_TEXTURE0 + i);
-		glBindTexture(GL_TEXTURE_2D, vti.at(i));
-	}
+	glClearColor(0.f, 0.f, 0.f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void OpenGLHelper::cleanup_sdhr_render()
 {
-	glActiveTexture(GL_TEXTURE0);
 	glUseProgram(0);
 	unbind_framebuffer();
 }
