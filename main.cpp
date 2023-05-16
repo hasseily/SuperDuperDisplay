@@ -274,14 +274,7 @@ int main(int, char**)
 		// END TEST STUFF
 */
 
-		if (sdhrManager->threadState != THREADCOMM_e::SOCKET_LOCK)
-		{
-			sdhrManager->threadState = THREADCOMM_e::MAIN_LOCK;
-            glhelper->bind_framebuffer();
-            sdhrManager->Render();
-            glhelper->unbind_framebuffer();
-			sdhrManager->threadState = THREADCOMM_e::IDLE;
-		}
+		sdhrManager->Render();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);

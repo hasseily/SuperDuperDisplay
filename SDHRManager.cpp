@@ -327,6 +327,9 @@ void SDHRManager::Render()
 		std::cerr << "OpenGL glUseProgram error: " << glerr << std::endl;
 	}
 
+	// Initialization routine runs only once on init (or re-init)
+	// We do that here because we know the framebuffer is bound, and everything
+	// for drawing the SDHR stuff is active
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
 		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
@@ -334,17 +337,30 @@ void SDHRManager::Render()
 		}
 	}
 
-	// Check to see if we need to upload data to the GPU
-	while (!fifo_upload_image_data.empty()) {
-		auto _uidata = fifo_upload_image_data.front();
-		image_assets[_uidata.asset_index].AssignByMemory(this, uploaded_data_region + _uidata.upload_start_addr, _uidata.upload_data_size);
-		if (error_flag) {
-			std::cerr << "AssignByMemory failed!" << std::endl;
-		}
-		fifo_upload_image_data.pop();
+	if (this->threadState == THREADCOMM_e::IDLE)
+	{
+		// Check to see if we need to upload data to the GPU
+		this->threadState = THREADCOMM_e::MAIN_LOCK;
+		while (!fifo_upload_image_data.empty()) {
+			auto _uidata = fifo_upload_image_data.front();
+			image_assets[_uidata.asset_index].AssignByMemory(this, uploaded_data_region + _uidata.upload_start_addr, _uidata.upload_data_size);
+			if (error_flag) {
+				std::cerr << "AssignByMemory failed!" << std::endl;
+			}
+			fifo_upload_image_data.pop();
 #ifdef _DEBUG
-		std::cout << "AssignByMemory: " << _uidata.upload_data_size << " for index: " << (uint32_t)_uidata.asset_index << std::endl;
+			std::cout << "AssignByMemory: " << _uidata.upload_data_size << " for index: " << (uint32_t)_uidata.asset_index << std::endl;
 #endif
+		}
+		// Update meshes
+		for each (auto & _w in this->windows) {
+			if (_w.enabled) {
+				if (_w.mesh) {
+					_w.mesh->updateMesh();
+				}
+			}
+		}
+		this->threadState = THREADCOMM_e::IDLE;
 	}
 
 	// Render the windows (i.e. the meshes with the windows stencils)
@@ -453,7 +469,7 @@ bool SDHRManager::ProcessCommands(void)
 	uint8_t* p = begin;
 
 #ifdef DEBUG
-	// std::cerr << "Command buffer size: " << command_buffer.size() << std::endl;
+	std::cerr << "Command buffer size: " << command_buffer.size() << std::endl;
 #endif
 
 	while (p < end) {
@@ -490,7 +506,7 @@ bool SDHRManager::ProcessCommands(void)
 			*/
 			memcpy(uploaded_data_region + dest_offset, a2mem + ((uint16_t)cmd->source_addr), data_size);
 #ifdef DEBUG
-			// std::cout << "SDHR_CMD_UPLOAD_DATA: Success: " << std::hex << data_size << std::endl;
+			std::cout << "SDHR_CMD_UPLOAD_DATA: Success: " << std::hex << data_size << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_DEFINE_IMAGE_ASSET: {

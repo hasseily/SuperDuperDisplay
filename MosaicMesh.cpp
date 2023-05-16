@@ -123,8 +123,6 @@ void MosaicMesh::updateMesh()
 // NOTE: It assumes the textures have been already bound to GL_TEXTURE0... GL_TEXTURE16
 void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 {
-	updateMesh();
-
 	glUseProgram(shaderProgram->ID);
 	glBindVertexArray(VAO);
 	glm::mat4 mat_final = this->mat_trans;

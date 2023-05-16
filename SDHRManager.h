@@ -17,10 +17,9 @@
 
 enum THREADCOMM_e
 {
-	IDLE = 0,			// SDHR data and OpenGL are in sync
+	IDLE = 0,			// SDHR data and GPU are in sync
 	SOCKET_LOCK,		// Socket thread is updating the SDHR data
-	COMMAND_PROCESSED,	// Socket thread has processed a command batch, waiting for Main thread to work
-	MAIN_LOCK			// Main thread is updating OpenGL textures
+	MAIN_LOCK			// Main thread is updating GPU data
 };
 
 enum SDHRCtrl_e

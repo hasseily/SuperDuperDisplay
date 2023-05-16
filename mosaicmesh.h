@@ -51,6 +51,9 @@ public:
 
 	void SetWorldCoordinates(int32_t x, int32_t y);
 
+	// updates all the buffer objects/arrays
+	void updateMesh();
+
 	// render the mesh
 	void Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj);
 
@@ -62,9 +65,6 @@ private:
 	glm::mat4 mat_trans = glm::mat4(1.0f);	// Model->World translation matrix. Changes when the mesh is moved in the world
 
 	bool bNeedsGPUUpdate = true;	// the mesh data was updated, it needs to be pushed to the GPU
-
-	// updates all the buffer objects/arrays
-	void updateMesh();
 };
 
 #endif // !MOSAICMESH_H
