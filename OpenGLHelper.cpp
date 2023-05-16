@@ -17,8 +17,7 @@ OpenGLHelper* OpenGLHelper::s_instance;
 
 void OpenGLHelper::Initialize()
 {
-	lastX = (float)SCR_WIDTH / 2.0f;
-	lastY = (float)SCR_HEIGHT / 2.0f;
+
 }
 
 OpenGLHelper::~OpenGLHelper()
@@ -134,6 +133,7 @@ void OpenGLHelper::create_framebuffer()
 		return;
 	glGenFramebuffers(1, &FBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	glViewport(0, 0, _SDHR_WIDTH, _SDHR_HEIGHT);
 
 	// bind the output texture
 	// every time the framebuffer is bound, the output texture will be already bound
@@ -164,12 +164,14 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 {
 	GLenum glerr;
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
+	glViewport(0, 0, width, height);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL 5 error: " << glerr << std::endl;
 	}
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void OpenGLHelper::setup_sdhr_render()

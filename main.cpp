@@ -273,7 +273,7 @@ int main(int, char**)
 		// END TEST STUFF
 */
 
-		sdhrManager->Render();
+		sdhrManager->RenderTest();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -314,53 +314,46 @@ int main(int, char**)
         }
         
 
-        {
-            // Display the OpenGLHelper framebuffer in the background of the main window
-            // so we don't need to create an ImGui window. It'll fill the full background
-			
-            // const float window_width = ImGui::GetContentRegionAvail().x;
-			// const float window_height = ImGui::GetContentRegionAvail().y;
+		int sdlwidth, sdlheight;
+		SDL_GetWindowSize(window, &sdlwidth, &sdlheight);
+		glhelper->rescale_framebuffer(sdlwidth, sdlheight);
+		ImGui::GetBackgroundDrawList()->AddImage(
+			(void*)glhelper->get_texture_id(),
+			// (void*)(intptr_t)texColorBuffer,
+			ImVec2(0, 0),
+			ImVec2(sdlwidth, sdlheight),
+			ImVec2(0, 1),
+			ImVec2(1, 0)
+		);
+  
 
-            // shouldn't be necessary
-            // glhelper->rescale_framebuffer((uint32_t)io.DisplaySize.x, (uint32_t)io.DisplaySize.y);
 
-            ImGui::GetBackgroundDrawList()->AddImage(
-				(void*)glhelper->get_texture_id(),
-                // (void*)(intptr_t)texColorBuffer,
-				ImVec2(0, 0),
-				ImVec2(io.DisplaySize.x, io.DisplaySize.y),
-				ImVec2(0, 1),
-				ImVec2(1, 0)
-			);
-		}
-        
-
+/*
 		// ImGui window creation.
 		if (ImGui::Begin("Demo")) {
+            ImVec2 avail_size = ImGui::GetContentRegionAvail();
 			ImVec2 window_pos = ImGui::GetWindowPos();
             ImVec2 window_size = ImGui::GetWindowSize();
             ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
 
-            ImGui::Image((void*)glhelper->get_texture_id(), window_size);
-/*
-			ImGui::GetWindowDrawList()->AddImage(
-				(void*)(intptr_t)texColorBuffer,
-				ImVec2(0, 0),
-                window_size,
-				ImVec2(0, 1),
-				ImVec2(1, 0)
-			);
-*/
+            // glhelper->rescale_framebuffer((uint32_t)window_size.x, (uint32_t)window_size.y);
+            ImGui::Image((void*)glhelper->get_texture_id(), avail_size, ImVec2(0, 1), ImVec2(1, 0));
 
             // ImGui::Image((void*)(intptr_t)texColorBuffer, window_size);
 		}
 		ImGui::End();
+*/
 
-        //ImVec2 window_pos = ImGui::GetWindowPos();
-        //ImVec2 window_size = ImGui::GetWindowSize();
-        //ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
-        //ImGui::GetBackgroundDrawList()->AddCircle(window_center, window_size.x * 0.6f, IM_COL32(255, 0, 0, 200), 0, 10 + 4);
-        //ImGui::GetForegroundDrawList()->AddCircle(window_center, window_size.y * 0.6f, IM_COL32(0, 255, 0, 200), 0, 10);
+
+		// Get available space
+        // For the main window it's a never the window size but the screen
+        // ImVec2 available = ImGui::GetContentRegionAvail();
+        // ImVec2 window_pos = ImGui::GetWindowPos();
+        // ImVec2 window_size = ImGui::GetWindowSize();
+
+        // ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
+        // ImGui::GetBackgroundDrawList()->AddCircle(window_center, window_size.x * 0.6f, IM_COL32(255, 0, 0, 200), 0, 10 + 4);
+        // ImGui::GetForegroundDrawList()->AddCircle(window_center, window_size.y * 0.6f, IM_COL32(0, 255, 0, 200), 0, 10);
         //auto _txtstr = "DRAWING a string!!!!";
         //ImGui::GetForegroundDrawList()->AddText(window_center, IM_COL32(100, 100, 0, 255), _txtstr);
 

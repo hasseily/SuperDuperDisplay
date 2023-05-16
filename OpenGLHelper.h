@@ -58,12 +58,5 @@ private:
 //	GLuint VBO;	// for testing
 	GLuint FBO = UINT_MAX;
 
-	// settings
-	const unsigned int SCR_WIDTH = 640;
-	const unsigned int SCR_HEIGHT = 360;
-
-	float lastX = (float)SCR_WIDTH / 2.0f;
-	float lastY = (float)SCR_HEIGHT / 2.0f;
-
 };
 #endif // OPENGLHELPER_H
