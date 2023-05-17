@@ -346,6 +346,15 @@ void SDHRManager::Render()
 		glUniform1iv(texUniformId, _SDHR_MAX_TEXTURES, &texIds[0]);
 	}
 
+	// Always rebind all the textures for the meshes on the first 16 textures (GL_TEXTURE0 -> GL_TEXTURE15)
+	{
+		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
+			glActiveTexture(GL_TEXTURE0 + i);
+			glBindTexture(GL_TEXTURE_BINDING_2D, image_assets[i].tex_id);
+		}
+		glActiveTexture(GL_TEXTURE0);
+	}
+
 	if (this->dataState == DATASTATE_e::COMMAND_READY)
 	{
 		// Check to see if we need to upload data to the GPU
