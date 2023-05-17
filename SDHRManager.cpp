@@ -336,9 +336,11 @@ void SDHRManager::Render()
 		bShouldInitializeRender = false;
 		GLint texIds[_SDHR_MAX_TEXTURES];
 		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
+			glActiveTexture(GL_TEXTURE0 + i);
 			image_assets[i].AssignByFilename(this, "Texture_Default.png");
 			texIds[i] = image_assets[i].tex_id;
 		}
+		glActiveTexture(GL_TEXTURE0);
 		// And assign the list of all the textures to the shader's "tilesTexture" uniform
 		auto texUniformId = glGetUniformLocation(defaultWindowShaderProgram.ID, "tilesTexture");
 		glUniform1iv(texUniformId, _SDHR_MAX_TEXTURES, &texIds[0]);
@@ -350,6 +352,7 @@ void SDHRManager::Render()
 		this->threadState = THREADCOMM_e::MAIN_LOCK;
 		while (!fifo_upload_image_data.empty()) {
 			auto _uidata = fifo_upload_image_data.front();
+			glActiveTexture(GL_TEXTURE0 + _uidata.asset_index);
 			image_assets[_uidata.asset_index].AssignByMemory(this, uploaded_data_region + _uidata.upload_start_addr, _uidata.upload_data_size);
 			if (error_flag) {
 				std::cerr << "AssignByMemory failed!" << std::endl;
@@ -358,6 +361,7 @@ void SDHRManager::Render()
 #ifdef _DEBUG
 			std::cout << "AssignByMemory: " << _uidata.upload_data_size << " for index: " << (uint32_t)_uidata.asset_index << std::endl;
 #endif
+			glActiveTexture(GL_TEXTURE0);
 		}
 		// Update meshes
 		for each (auto & _w in this->windows) {
