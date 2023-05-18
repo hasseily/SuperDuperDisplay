@@ -275,7 +275,7 @@ int main(int, char**)
 			ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
 
 			// glhelper->rescale_framebuffer((uint32_t)window_size.x, (uint32_t)window_size.y);
- 			ImGui::Image((void*)glhelper->get_texture_id_at_slot(0), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+ 			ImGui::Image((void*)glhelper->get_texture_id_at_slot(0), avail_size, ImVec2(0, 1), ImVec2(1, 0));
 			ImGui::End();
 		}
 

@@ -45,6 +45,7 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 		}
 	};
 
+/*	XXX Test vertices at a specific position
 	this->vertices[0].Position = glm::vec3(-1100, 1900, 0.2);
 	this->vertices[1].Position = glm::vec3(-1000, 1900, 0.2);
 	this->vertices[2].Position = glm::vec3(-1000, 2000, 0.2);
@@ -65,6 +66,7 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 	this->vertices[3].TexIndex = 0;
 	this->vertices[4].TexIndex = 0;
 	this->vertices[5].TexIndex = 1;
+*/
 
 	bNeedsGPUUpdate = true;
 }

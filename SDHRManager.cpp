@@ -123,6 +123,7 @@ void SDHRManager::ImageAsset::AssignByFilename(SDHRManager* owner, const char* f
 	int width;
 	int height;
 	int channels;
+	stbi_set_flip_vertically_on_load(1);
 	unsigned char* data = stbi_load(filename, &width, &height, &channels, 4);
 	if (data == NULL) {
 		owner->CommandError(stbi_failure_reason());
@@ -148,6 +149,7 @@ void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* 
 	int width;
 	int height;
 	int channels;
+	stbi_set_flip_vertically_on_load(1);
 	unsigned char* data = stbi_load_from_memory(buffer, size, &width, &height, &channels, 4);
 	if (data == NULL) {
 		owner->CommandError(stbi_failure_reason());
