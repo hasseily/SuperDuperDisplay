@@ -116,6 +116,7 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 	_v = this->vertices.at(_idx + 5);
 	_v.TexCoords = glm::fvec2((u + _v.Position.x - _vx) / _iaw, (v + _v.Position.y - _vy) / _iah);
 	_v.TexIndex = texture_index;
+
 	bNeedsGPUUpdate = true;
 }
 
