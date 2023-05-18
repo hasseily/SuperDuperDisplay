@@ -20,11 +20,10 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 		});
 
 	// Create all the vertices for each tile
-	// The origin is top left, but in OpenGL it should be bottom left, so we reverse j
 	float fcols = (float)cols;
 	float frows = (float)rows;
 	float z_val = (float)(~win_index);	// z plane is 0-255. Window index 0 is the furthest away
-	for (size_t j = rows; j > 0; j--)
+	for (size_t j = 0; j < rows; j++)
 	{
 		for (size_t i = 0; i < cols; i++)
 		{
@@ -33,18 +32,39 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 			this->vertices.push_back(_v);
 			_v.Position = glm::vec3(tile_xdim * (i + 1), tile_ydim * j, z_val);	// top right
 			this->vertices.push_back(_v);
-			_v.Position = glm::vec3(tile_xdim * i, tile_ydim * (j - 1), z_val);	// bottom left
+			_v.Position = glm::vec3(tile_xdim * i, tile_ydim * (j + 1), z_val);	// bottom left
 			this->vertices.push_back(_v);
 			// Second triangle
-			_v.Position = glm::vec3(tile_xdim * i, tile_ydim * (j - 1), z_val);	// bottom left
+			_v.Position = glm::vec3(tile_xdim * i, tile_ydim * (j + 1), z_val);	// bottom left
 			this->vertices.push_back(_v);
 			_v.Position = glm::vec3(tile_xdim * (i + 1), tile_ydim * j, z_val);	// top right
 			this->vertices.push_back(_v);
-			_v.Position = glm::vec3(tile_xdim * (i + 1), tile_ydim * (j - 1), z_val);	// bottom right
+			_v.Position = glm::vec3(tile_xdim * (i + 1), tile_ydim * (j + 1), z_val);	// bottom right
 			this->vertices.push_back(_v);
 			++t_idx;
 		}
 	};
+
+	this->vertices[0].Position = glm::vec3(-1100, 1900, 0.2);
+	this->vertices[1].Position = glm::vec3(-1000, 1900, 0.2);
+	this->vertices[2].Position = glm::vec3(-1000, 2000, 0.2);
+	this->vertices[3].Position = glm::vec3(-1300, 2900, 0.2);
+	this->vertices[4].Position = glm::vec3(-1300, 1700, 0.2);
+	this->vertices[5].Position = glm::vec3(-1200, 3000, 0.2);
+
+	this->vertices[0].TexCoords = glm::vec2(0.1, 0.1);
+	this->vertices[1].TexCoords = glm::vec2(0.5, 0.1);
+	this->vertices[2].TexCoords = glm::vec2(0.3, 0.5);
+	this->vertices[3].TexCoords = glm::vec2(0.2, 0.6);
+	this->vertices[4].TexCoords = glm::vec2(0.4, 0.6);
+	this->vertices[5].TexCoords = glm::vec2(0.3, 0.8);
+
+	this->vertices[0].TexIndex = 0;
+	this->vertices[1].TexIndex = 0;
+	this->vertices[2].TexIndex = 0;
+	this->vertices[3].TexIndex = 0;
+	this->vertices[4].TexIndex = 0;
+	this->vertices[5].TexIndex = 1;
 
 	bNeedsGPUUpdate = true;
 }
@@ -56,27 +76,23 @@ void MosaicMesh::UpdateMosaicUV(uint64_t xpos, uint64_t ypos, uint64_t u, uint64
 }
 
 // Update the UV data of all the vertices of a single mosaic tile (using index positioning)
-//  NOTE: U/V has its 0,0 origin at the top left. OpenGL is bottom left
 void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, uint8_t texture_index)
 {
 	const auto ia = SDHRManager::GetInstance()->image_assets[texture_index];
 	auto _idx = mosaic_index * 6;	// index of the first vertex of the mosaic tile
-	// The v value needs to be reversed from the top left
-	auto v_reverse = ia.image_ycount - v;
 	for (size_t i = 0; i < 6; i++)
 	{
 		auto& _v = this->vertices.at(_idx + i);		// reference to the vertex. Update in place
-		_v.TexCoords = glm::vec2((float)u / ia.image_xcount, (float)v_reverse / ia.image_ycount);
+		_v.TexCoords = glm::vec2((float)u / ia.image_xcount, (float)v / ia.image_ycount);
 		_v.TexIndex = texture_index;
 	}
 	bNeedsGPUUpdate = true;
 }
 
-// NOTE: Also here the world coordinates have a reversed y for OpenGL whose origin is bottom left
 void MosaicMesh::SetWorldCoordinates(int32_t x, int32_t y)
 {
 	this->world_x = x;
-	this->world_y = _SDHR_HEIGHT - y;
+	this->world_y = y;
 }
 
 // Anytime the underlying mesh data is changed, it needs to be updated on the GPU
@@ -126,7 +142,7 @@ void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 	glUseProgram(shaderProgram->ID);
 	glBindVertexArray(VAO);
 	glm::mat4 mat_final = mat_proj * mat_camera * this->mat_trans;
-	shaderProgram->setMat4("transform",mat_final);
+	shaderProgram->setMat4("transform", mat_final);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glBindVertexArray(0);
 }
