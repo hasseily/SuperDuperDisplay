@@ -314,9 +314,12 @@ int main(int, char**)
         }
         
 
-		int sdlwidth, sdlheight;
+        int sdlwidth, sdlheight;
 		SDL_GetWindowSize(window, &sdlwidth, &sdlheight);
+		glhelper->bind_framebuffer();
 		glhelper->rescale_framebuffer(sdlwidth, sdlheight);
+		glhelper->unbind_framebuffer();
+
 		ImGui::GetBackgroundDrawList()->AddImage(
 			(void*)glhelper->get_texture_id(),
 			// (void*)(intptr_t)texColorBuffer,
