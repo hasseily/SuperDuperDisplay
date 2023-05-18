@@ -399,6 +399,10 @@ void SDHRManager::Render()
 		}
 	}
 
+	// TEST
+	// Using a prespective so I can zoom back and forth easily
+	mat_proj = glm::perspective<float>(120, 1, 0, 256);
+
 	// Render the windows (i.e. the meshes with the windows stencils)
 	for each (auto& _w in this->windows) {
 		if (_w.enabled) {
