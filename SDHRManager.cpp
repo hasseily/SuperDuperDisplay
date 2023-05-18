@@ -339,20 +339,32 @@ void SDHRManager::Render()
 			glActiveTexture(GL_TEXTURE0 + i);
 			image_assets[i].AssignByFilename(this, "Texture_Default.png");
 			texIds[i] = image_assets[i].tex_id;
+			if ((glerr = glGetError()) != GL_NO_ERROR) {
+				std::cerr << "OpenGL AssignByFilename error: " << i << " - " << glerr << std::endl;
+			}
 		}
 		glActiveTexture(GL_TEXTURE0);
 		// And assign the list of all the textures to the shader's "tilesTexture" uniform
 		auto texUniformId = glGetUniformLocation(defaultWindowShaderProgram.ID, "tilesTexture");
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL glGetUniformLocation error: " << glerr << std::endl;
+		}
 		glUniform1iv(texUniformId, _SDHR_MAX_TEXTURES, &texIds[0]);
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
+		}
 	}
 
 	// Always rebind all the textures for the meshes on the first 16 textures (GL_TEXTURE0 -> GL_TEXTURE15)
 	{
 		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
 			glActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_BINDING_2D, image_assets[i].tex_id);
+			glBindTexture(GL_TEXTURE_2D, image_assets[i].tex_id);
 		}
 		glActiveTexture(GL_TEXTURE0);
+	}
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glBindTexture error: " << glerr << std::endl;
 	}
 
 	if (this->dataState == DATASTATE_e::COMMAND_READY)
@@ -382,6 +394,9 @@ void SDHRManager::Render()
 		}
 		this->dataState = DATASTATE_e::NODATA;
 		this->threadState = THREADCOMM_e::IDLE;
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL updateMesh error: " << glerr << std::endl;
+		}
 	}
 
 	// Render the windows (i.e. the meshes with the windows stencils)
@@ -392,13 +407,16 @@ void SDHRManager::Render()
 			}
 		}
 	}
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL draw error: " << glerr << std::endl;
+	}
 	oglh->cleanup_sdhr_render();
 }
 
 void SDHRManager::RenderTest()
 {
 	static auto shd = Shader();
-	shd.build("shaders/basic.vert", "shaders/basic.frag");
+	shd.build("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");
 	auto oglh = OpenGLHelper::GetInstance();
 	oglh->setup_sdhr_render();
 	shd.use();
