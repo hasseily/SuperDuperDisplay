@@ -145,13 +145,16 @@ public:
 	// Camera for World -> View matrix transform
 	Camera camera = Camera(
 		_SDHR_WIDTH / 2.f, _SDHR_HEIGHT / 2.f,	// x,y
-		2.f,										// z
+		-2.f,										// z
 		0.f, 1.f, 0.f,								// upVector xyz
-		-90.f,										// yaw
+		90.f,										// yaw
 		0.f											// pitch
 	);
 	// Projection matrix (left, right, bottom, top, near, far)
 	glm::mat4 mat_proj = glm::ortho<float>(0, _SDHR_WIDTH, 0, _SDHR_HEIGHT, 0, 256);
+
+	// Debugging attributes
+	bool bDebugTextures = true;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods

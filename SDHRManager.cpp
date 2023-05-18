@@ -335,7 +335,7 @@ void SDHRManager::Render()
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
 		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
-			glActiveTexture(GL_TEXTURE0 + i);
+			glActiveTexture(GL_TEXTURE0 + i);	// AssignByFilename() will bind to the active texture slot
 			image_assets[i].AssignByFilename(this, "Texture_Default.png");
 			texIds[i] = image_assets[i].tex_id;
 			if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -355,6 +355,8 @@ void SDHRManager::Render()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
 	}
+
+	defaultWindowShaderProgram.setBool("bDebugTextures", bDebugTextures);
 	
 	// XXX TEST
 	// Assigning the first texture to everything
@@ -362,19 +364,7 @@ void SDHRManager::Render()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL glUniform1i error: " << glerr << std::endl;
 	}
-	
 
-	// Always rebind all the textures for the meshes on the first 16 textures (GL_TEXTURE0 -> GL_TEXTURE15)
-	{
-		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
-			glActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_2D, image_assets[i].tex_id);
-		}
-		glActiveTexture(GL_TEXTURE0);
-	}
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glBindTexture error: " << glerr << std::endl;
-	}
 
 	if (this->dataState == DATASTATE_e::COMMAND_READY)
 	{
