@@ -17,7 +17,10 @@ OpenGLHelper* OpenGLHelper::s_instance;
 
 void OpenGLHelper::Initialize()
 {
-
+	for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++)
+	{
+		v_texture_ids.push_back(UINT_MAX);
+	}
 }
 
 OpenGLHelper::~OpenGLHelper()
@@ -33,11 +36,10 @@ OpenGLHelper::~OpenGLHelper()
 // This method loads the texture data into the texture specified at textureID
 void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID)
 {
-	// remember the current bound framebuffer, and our FBO's currently bound texture
-	GLint _currFBO, _currTexId;
+	// remember the current bound framebuffer
+	GLint _currFBO;
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &_currFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, &_currTexId);
 	GLenum glerr;
 	GLenum format = GL_RGBA;
 	if (nrComponents == 1)
@@ -56,7 +58,7 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 		std::cerr << "OpenGL load_texture glTexImage2D error: " << glerr << std::endl;
 	}
 	// NOTE: May need to generate mipmaps in case we want to allow zooming in-out
-	// glGenerateMipmap(GL_TEXTURE_2D);
+	glGenerateMipmap(GL_TEXTURE_2D);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
@@ -65,31 +67,25 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL load_texture glTexParameteri error: " << glerr << std::endl;
 	}
-	glBindTexture(GL_TEXTURE_2D, _currTexId);		// rebind our FBO's original texture
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glBindTexture 0 error: " << glerr << std::endl;
-	}
 	glBindFramebuffer(GL_FRAMEBUFFER, _currFBO);	// rebind the current FBO
 }
 
-unsigned int OpenGLHelper::get_next_free_texture_id()
+unsigned int OpenGLHelper::get_texture_id_at_slot(uint8_t slot)
 {
-	if (v_texture_ids.size() == _SDHR_MAX_TEXTURES)
+	if (slot >= v_texture_ids.size())
 	{
 #ifdef DEBUG
-		std::cerr << "WARNING: Requesting more textures than available!\n";
+		std::cerr << "ERROR: Requesting a texture slot above _SDHR_MAX_TEXTURES!\n";
 #endif
 		return UINT_MAX;
 	}
-	GLuint texid;
-	glGenTextures(1, &texid);
-	v_texture_ids.push_back(texid);
+	GLuint texid = v_texture_ids.at(slot);
+	if (texid == UINT_MAX)
+	{
+		glGenTextures(1, &texid);
+		v_texture_ids.at(slot) = texid;
+	}
 	return texid;
-}
-
-void OpenGLHelper::clear_textures()
-{
-	v_texture_ids.clear();
 }
 
 // TODO: testing, remove

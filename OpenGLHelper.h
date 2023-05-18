@@ -22,15 +22,14 @@ public:
 	~OpenGLHelper();
 
 	void load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID);
-	GLuint get_texture_id() { return output_texture_id; };	// output texture id
-	void clear_textures();
+	GLuint get_output_texture_id() { return output_texture_id; };	// output texture id
+	unsigned int get_texture_id_at_slot(uint8_t slot);	// returns the opengl-generated texture id for this tex slot
 
 	// TODO: Testing, remove
 	// void create_vertices();
 	void create_framebuffer();	// also binds it
 	void bind_framebuffer();
 	void unbind_framebuffer();
-	unsigned int get_next_free_texture_id();	// returns the next available tex slot that hasn't been used yet. UINT_MAX if full
 	void rescale_framebuffer(uint32_t width, uint32_t height);
 
 	void setup_sdhr_render();

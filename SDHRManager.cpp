@@ -131,7 +131,9 @@ void SDHRManager::ImageAsset::AssignByFilename(SDHRManager* owner, const char* f
 	}
 	if (tex_id != UINT_MAX)
 	{
-		oglHelper->load_texture(data, width, height, channels, tex_id);
+		// Force the number of channels to be 4
+		// TODO: Need to understand why
+		oglHelper->load_texture(data, width, height, 4, tex_id);
 		stbi_image_free(data);
 	}
 	else {
@@ -154,7 +156,9 @@ void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* 
 	}
 	if (tex_id != UINT_MAX)
 	{
-		oglHelper->load_texture(data, width, height, channels, tex_id);
+		// Force the number of channels to be 4
+		// TODO: Need to understand why
+		oglHelper->load_texture(data, width, height, 4, tex_id);
 		stbi_image_free(data);
 	} else {
 		std::cerr << "ERROR: Could not bind texture, all slots filled!" << '\n';
@@ -257,10 +261,9 @@ void SDHRManager::Initialize()
 	// tell the next Render() call to run initialization routines
 	// Assign to the GPU the default pink image to all 16 image assets
 	// because the shaders expect 16 textures
-	oglHelper->clear_textures();
 	for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++)
 	{
-		image_assets[i].tex_id = oglHelper->get_next_free_texture_id();
+		image_assets[i].tex_id = oglHelper->get_texture_id_at_slot(i);
 	}
 	if (!defaultWindowShaderProgram.isReady)
 		defaultWindowShaderProgram.build("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");
@@ -279,7 +282,6 @@ SDHRManager::~SDHRManager()
 			delete windows[i].mesh;
 		}
 	}
-	oglHelper->clear_textures();
 	delete[] a2mem;
 	delete[] windows;
 	delete[] image_assets;
@@ -344,6 +346,7 @@ void SDHRManager::Render()
 			}
 		}
 		glActiveTexture(GL_TEXTURE0);
+		
 		// And assign the list of all the textures to the shader's "tilesTexture" uniform
 		auto texUniformId = glGetUniformLocation(defaultWindowShaderProgram.ID, "tilesTexture");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -353,7 +356,17 @@ void SDHRManager::Render()
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
 		}
+		
 	}
+
+	
+	// XXX TEST
+	// Assigning the first texture to everything
+	defaultWindowShaderProgram.setInt("demoTexture", (GLint)image_assets[0].tex_id);
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glUniform1i error: " << glerr << std::endl;
+	}
+	
 
 	// Always rebind all the textures for the meshes on the first 16 textures (GL_TEXTURE0 -> GL_TEXTURE15)
 	{

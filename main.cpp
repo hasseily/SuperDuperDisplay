@@ -13,6 +13,7 @@
 #include "imgui_impl_opengl3.h"
 #include "imgui_memory_editor.h"
 #include <SDL.h>
+#include "stb_image.h"
 
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
@@ -265,6 +266,18 @@ int main(int, char**)
             mem_edit_1.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000)", sdhrManager->GetApple2MemPtr(), 0xc000);
         }
         
+		// Show one of the textures loaded
+		{
+			ImGui::Begin("Texture slot 0");
+			ImVec2 avail_size = ImGui::GetContentRegionAvail();
+			ImVec2 window_pos = ImGui::GetWindowPos();
+			ImVec2 window_size = ImGui::GetWindowSize();
+			ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
+
+			// glhelper->rescale_framebuffer((uint32_t)window_size.x, (uint32_t)window_size.y);
+ 			ImGui::Image((void*)glhelper->get_texture_id_at_slot(0), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+			ImGui::End();
+		}
 
         int sdlwidth, sdlheight;
 		SDL_GetWindowSize(window, &sdlwidth, &sdlheight);
@@ -273,29 +286,12 @@ int main(int, char**)
 		glhelper->unbind_framebuffer();
 
 		ImGui::GetBackgroundDrawList()->AddImage(
-			(void*)glhelper->get_texture_id(),
+			(void*)glhelper->get_output_texture_id(),
 			ImVec2(0, 0),
 			ImVec2(sdlwidth, sdlheight),
 			ImVec2(0, 1),
 			ImVec2(1, 0)
 		);
-  
-
-
-/*
-		// ImGui window creation.
-		if (ImGui::Begin("Demo")) {
-            ImVec2 avail_size = ImGui::GetContentRegionAvail();
-			ImVec2 window_pos = ImGui::GetWindowPos();
-            ImVec2 window_size = ImGui::GetWindowSize();
-            ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
-
-            // glhelper->rescale_framebuffer((uint32_t)window_size.x, (uint32_t)window_size.y);
-            ImGui::Image((void*)glhelper->get_texture_id(), avail_size, ImVec2(0, 1), ImVec2(1, 0));
-		}
-		ImGui::End();
-*/
-
 
 		// Get available space
         // For the main window it's a never the window size but the screen
