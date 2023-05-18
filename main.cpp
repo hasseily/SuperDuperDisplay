@@ -147,55 +147,7 @@ int main(int, char**)
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
     uint64_t dt_LAST = 0;
 	float deltaTime = 0.f;
-/*
 
-    // TEST STUFF
-	// Vertices for the triangle.
-	float vertices[] = {
-		-0.5f, -0.5f, 0.0f,
-		 0.5f, -0.5f, 0.0f,
-		 0.0f,  0.5f, 0.0f
-	};
-
-	static auto shd = Shader("shaders/basic.vert", "shaders/basic.frag");
-
-	// Generate and bind a Vertex Array Object and a Vertex Buffer Object, then set up vertex attributes.
-	GLuint VAO, VBO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	// Create and bind a framebuffer.
-	GLuint FBO;
-	glGenFramebuffers(1, &FBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-
-	// Create a texture for the framebuffer.
-	GLuint texColorBuffer;
-	glGenTextures(1, &texColorBuffer);
-	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
-
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glUseProgram render error: " << glerr << std::endl;
-	};
-    // END TEST STUFF
-    */
     // Main loop
     bool done = false;
 #ifdef __EMSCRIPTEN__
@@ -322,7 +274,6 @@ int main(int, char**)
 
 		ImGui::GetBackgroundDrawList()->AddImage(
 			(void*)glhelper->get_texture_id(),
-			// (void*)(intptr_t)texColorBuffer,
 			ImVec2(0, 0),
 			ImVec2(sdlwidth, sdlheight),
 			ImVec2(0, 1),
@@ -341,8 +292,6 @@ int main(int, char**)
 
             // glhelper->rescale_framebuffer((uint32_t)window_size.x, (uint32_t)window_size.y);
             ImGui::Image((void*)glhelper->get_texture_id(), avail_size, ImVec2(0, 1), ImVec2(1, 0));
-
-            // ImGui::Image((void*)(intptr_t)texColorBuffer, window_size);
 		}
 		ImGui::End();
 */
