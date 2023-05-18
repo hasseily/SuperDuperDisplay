@@ -4,7 +4,7 @@ layout (location = 1) in vec2 aTexCoord;
 layout (location = 2) in int aTexIdx;       // texture index (max 16)
 
 out vec2 vTexCoord;
-out int vTexIdx;
+flat out int vTexIdx;
 out vec3 vColor;    // DEBUG
 
 uniform mat4 transform; // Transform from model to world space

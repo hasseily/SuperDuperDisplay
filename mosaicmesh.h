@@ -27,7 +27,7 @@ struct Vertex {
 	// position
 	glm::vec3 Position;     // the z position will always be the window's id that the mesh is linked to
 	// texCoords
-	glm::vec2 TexCoords;
+	glm::fvec2 TexCoords;
 	// texture index (max 16)
 	uint8_t TexIndex;
 };

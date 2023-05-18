@@ -237,6 +237,9 @@ private:
 	char error_str[256];
 	uint8_t uploaded_data_region[256 * 256 * 256];
 
+	// Texture ids of the 16 textures the meshes will use
+	GLint texIds[_SDHR_MAX_TEXTURES];
+
 	// This is a FIFO queue where the network thread tells the main thread that
 	// there's image data that needs to be uploaded to the GPU
 	// It's only FIFO in name because we don't allow more than one entry in there

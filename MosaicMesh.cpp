@@ -15,7 +15,7 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 	// Because push_back() makes a copy, it's faster not to recreate the vertex every time
 	auto _v = Vertex({
 					glm::vec3(0, 0, 0),	// vertex position (z is the reverse window index)
-					glm::vec2(0, 0),	// UV (not set yet, waiting for SDHR_CMD_UPDATE_WINDOW...)
+					glm::fvec2(0, 0),	// UV (not set yet, waiting for SDHR_CMD_UPDATE_WINDOW...)
 					(uint8_t)0			// Texture index (not set yet, waiting for SDHR_CMD_UPDATE_WINDOW...)
 		});
 
@@ -45,7 +45,8 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 		}
 	};
 
-/*	XXX Test vertices at a specific position
+/*
+	// XXX Test vertices at a specific position
 	this->vertices[0].Position = glm::vec3(-1100, 1900, 0.2);
 	this->vertices[1].Position = glm::vec3(-1000, 1900, 0.2);
 	this->vertices[2].Position = glm::vec3(-1000, 2000, 0.2);
@@ -68,6 +69,7 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 	this->vertices[5].TexIndex = 1;
 */
 
+
 	bNeedsGPUUpdate = true;
 }
 
@@ -81,13 +83,39 @@ void MosaicMesh::UpdateMosaicUV(uint64_t xpos, uint64_t ypos, uint64_t u, uint64
 void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, uint8_t texture_index)
 {
 	const auto ia = SDHRManager::GetInstance()->image_assets[texture_index];
+	auto _iaw = (float)ia.image_xcount;	// image width and height, as floats so everything is floats
+	auto _iah = (float)ia.image_ycount;
+
 	auto _idx = mosaic_index * 6;	// index of the first vertex of the mosaic tile
-	for (size_t i = 0; i < 6; i++)
-	{
-		auto& _v = this->vertices.at(_idx + i);		// reference to the vertex. Update in place
-		_v.TexCoords = glm::vec2((float)u / ia.image_xcount, (float)v / ia.image_ycount);
-		_v.TexIndex = texture_index;
-	}
+	// The passed-in U and V are the non-normalized pixel coordinates of the first vertex of the tile
+	auto& _v = this->vertices.at(_idx);		// reference to the first vertex. Update in place
+	auto _vx = _v.Position.x;		// X coord of the top left of the mosaic tile
+	auto _vy = _v.Position.y;		// Y coord of the top left of the mosaic tile
+
+	// Update each vertex in sequence
+	// Top left
+	_v.TexCoords = glm::fvec2(u / _iaw, v / _iah);
+	_v.TexIndex = texture_index;
+	// Top right
+	_v = this->vertices.at(_idx + 1);
+	_v.TexCoords = glm::fvec2((u + _v.Position.x - _vx) / _iaw, v / _iah);
+	_v.TexIndex = texture_index;
+	// Bottom left
+	_v = this->vertices.at(_idx + 2);
+	_v.TexCoords = glm::fvec2(u / _iaw, (v + _v.Position.y - _vy) / _iah);
+	_v.TexIndex = texture_index;
+	// Bottom left (again)
+	_v = this->vertices.at(_idx + 3);
+	_v.TexCoords = glm::fvec2(u / _iaw, (v + _v.Position.y - _vy) / _iah);
+	_v.TexIndex = texture_index;
+	// Top right (again)
+	_v = this->vertices.at(_idx + 4);
+	_v.TexCoords = glm::fvec2((u + _v.Position.x - _vx) / _iaw, v / _iah);
+	_v.TexIndex = texture_index;
+	// Bottom right
+	_v = this->vertices.at(_idx + 5);
+	_v.TexCoords = glm::fvec2((u + _v.Position.x - _vx) / _iaw, (v + _v.Position.y - _vy) / _iah);
+	_v.TexIndex = texture_index;
 	bNeedsGPUUpdate = true;
 }
 

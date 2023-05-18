@@ -11,6 +11,6 @@ out vec4 fragColor;
 void main()
 {
     fragColor = texture(tilesTexture[vTexIdx], vTexCoord);
-    fragColor = texture(demoTexture, vTexCoord);
+//    fragColor = texture(demoTexture, vTexCoord);
 //    fragColor = vec4(vColor, 1.f);  // DEBUG
 }

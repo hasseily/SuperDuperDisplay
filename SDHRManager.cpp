@@ -334,7 +334,6 @@ void SDHRManager::Render()
 	// for drawing the SDHR stuff is active
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
-		GLint texIds[_SDHR_MAX_TEXTURES];
 		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
 			glActiveTexture(GL_TEXTURE0 + i);
 			image_assets[i].AssignByFilename(this, "Texture_Default.png");
@@ -344,19 +343,18 @@ void SDHRManager::Render()
 			}
 		}
 		glActiveTexture(GL_TEXTURE0);
-		
-		// And assign the list of all the textures to the shader's "tilesTexture" uniform
-		auto texUniformId = glGetUniformLocation(defaultWindowShaderProgram.ID, "tilesTexture");
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL glGetUniformLocation error: " << glerr << std::endl;
-		}
-		glUniform1iv(texUniformId, _SDHR_MAX_TEXTURES, &texIds[0]);
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
-		}
-		
 	}
 
+
+	// Assign the list of all the textures to the shader's "tilesTexture" uniform
+	auto texUniformId = glGetUniformLocation(defaultWindowShaderProgram.ID, "tilesTexture");
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glGetUniformLocation error: " << glerr << std::endl;
+	}
+	glUniform1iv(texUniformId, _SDHR_MAX_TEXTURES, &texIds[0]);
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
+	}
 	
 	// XXX TEST
 	// Assigning the first texture to everything
