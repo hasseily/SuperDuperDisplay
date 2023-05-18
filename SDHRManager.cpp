@@ -132,9 +132,7 @@ void SDHRManager::ImageAsset::AssignByFilename(SDHRManager* owner, const char* f
 	}
 	if (tex_id != UINT_MAX)
 	{
-		// Force the number of channels to be 4
-		// TODO: Need to understand why
-		oglHelper->load_texture(data, width, height, 4, tex_id);
+		oglHelper->load_texture(data, width, height, channels, tex_id);
 		stbi_image_free(data);
 	}
 	else {
@@ -158,9 +156,7 @@ void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* 
 	}
 	if (tex_id != UINT_MAX)
 	{
-		// Force the number of channels to be 4
-		// TODO: Need to understand why
-		oglHelper->load_texture(data, width, height, 4, tex_id);
+		oglHelper->load_texture(data, width, height, channels, tex_id);
 		stbi_image_free(data);
 	} else {
 		std::cerr << "ERROR: Could not bind texture, all slots filled!" << '\n';
