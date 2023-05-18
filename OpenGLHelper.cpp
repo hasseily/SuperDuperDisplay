@@ -138,6 +138,7 @@ void OpenGLHelper::create_framebuffer()
 	// bind the output texture
 	// every time the framebuffer is bound, the output texture will be already bound
 	glGenTextures(1, &output_texture_id);
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, _SDHR_WIDTH, _SDHR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -163,6 +164,7 @@ void OpenGLHelper::unbind_framebuffer()
 void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 {
 	GLenum glerr;
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
 	glViewport(0, 0, width, height);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
