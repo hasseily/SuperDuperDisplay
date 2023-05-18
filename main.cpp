@@ -136,6 +136,7 @@ int main(int, char**)
 	bool show_memory_window = false;
     bool did_press_quit = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+	int _slotnum = 0;
 
 	auto sdhrManager = SDHRManager::GetInstance();
 	auto glhelper = OpenGLHelper::GetInstance();
@@ -250,8 +251,11 @@ int main(int, char**)
                 ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
 				ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
 				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-				// ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+//				ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
 				ImGui::Checkbox("Memory Window", &show_memory_window);      // Edit bools storing our window open/close state
+                ImGui::Separator();
+                ImGui::Checkbox("Textured Geometry", &sdhrManager->bDebugTextures);    // Show textures toggle
+				ImGui::Separator();
 				did_press_quit = ImGui::Button("Quit App (Alt-F4)");
 				if (did_press_quit)
 					done = true;
@@ -268,14 +272,15 @@ int main(int, char**)
         
 		// Show one of the textures loaded
 		{
-			ImGui::Begin("Texture slot 0");
+			ImGui::Begin("Texture Viewer");
+            ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES - 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
 			ImVec2 avail_size = ImGui::GetContentRegionAvail();
 			ImVec2 window_pos = ImGui::GetWindowPos();
 			ImVec2 window_size = ImGui::GetWindowSize();
 			ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
 
 			// glhelper->rescale_framebuffer((uint32_t)window_size.x, (uint32_t)window_size.y);
- 			ImGui::Image((void*)glhelper->get_texture_id_at_slot(0), avail_size, ImVec2(0, 1), ImVec2(1, 0));
+ 			ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum), avail_size, ImVec2(0, 1), ImVec2(1, 0));
 			ImGui::End();
 		}
 
