@@ -14,9 +14,10 @@ void main()
     vTexCoord = aTexCoord;
     vTexIdx = aTexIdx;
     gl_Position = transform * vec4(aPos, 1.0); 
+
     vColor = vec3(      // DEBUG: Change the colors of each triangle to be better visible
-        (gl_VertexID % 0xFF) / 0xFF,
-        ((gl_VertexID >> 0x1) % 0xFF) / 0xFF,
-        ((gl_VertexID >> 0x2) % 0xFF) / 0xFF
+        (gl_VertexID % 0xFF),
+        ((gl_VertexID >> 0x1) % 0xFF),
+        ((gl_VertexID >> 0x2) % 0xFF)
     );
 }
