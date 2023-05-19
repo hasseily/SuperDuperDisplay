@@ -201,6 +201,12 @@ int main(int, char**)
                     case SDLK_d:
                         sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
                         break;
+					case SDLK_q:
+						sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
+						break;
+					case SDLK_z:
+						sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
+						break;
                     default:
                         break;
                     };
