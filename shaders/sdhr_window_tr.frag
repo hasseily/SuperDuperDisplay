@@ -1,6 +1,5 @@
 #version 330 core
 
-uniform sampler2D demoTexture;  // TODO: Remove, just used for debugging with a single texture
 uniform sampler2D tilesTexture[16];
 uniform bool bDebugTextures;
 in vec2 vTexCoord;
@@ -16,5 +15,4 @@ void main()
     } else {
         fragColor = vec4(vColor, 1.f);  // DEBUG
     }
-    fragColor = texture(demoTexture, vTexCoord);    // TODO: Remove
 }

@@ -281,9 +281,6 @@ SDHRManager::~SDHRManager()
 		}
 	}
 	delete[] a2mem;
-	delete[] windows;
-	delete[] image_assets;
-	delete[] tileset_records;
 }
 
 void SDHRManager::AddPacketDataToBuffer(uint8_t data)
@@ -357,14 +354,6 @@ void SDHRManager::Render()
 	}
 
 	defaultWindowShaderProgram.setBool("bDebugTextures", bDebugTextures);
-	
-	// XXX TEST
-	// Assigning the first texture to everything
-	defaultWindowShaderProgram.setInt("demoTexture", (GLint)image_assets[0].tex_id);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glUniform1i error: " << glerr << std::endl;
-	}
-
 
 	if (this->dataState == DATASTATE_e::COMMAND_READY)
 	{
