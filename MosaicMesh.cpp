@@ -45,29 +45,14 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 		}
 	};
 
-/*
+
 	// XXX Test vertices at a specific position
-	this->vertices[0].Position = glm::vec3(-1100, 1900, 0.2);
-	this->vertices[1].Position = glm::vec3(-1000, 1900, 0.2);
-	this->vertices[2].Position = glm::vec3(-1000, 2000, 0.2);
-	this->vertices[3].Position = glm::vec3(-1300, 2900, 0.2);
-	this->vertices[4].Position = glm::vec3(-1300, 1700, 0.2);
-	this->vertices[5].Position = glm::vec3(-1200, 3000, 0.2);
+	this->vertices[0].Position = glm::vec3(-1100, -1900, 1);
+	this->vertices[1].Position = glm::vec3(1000, -1900, 1);
+	this->vertices[2].Position = glm::vec3(1000, 2000, 1);
 
-	this->vertices[0].TexCoords = glm::vec2(0.1, 0.1);
-	this->vertices[1].TexCoords = glm::vec2(0.5, 0.1);
-	this->vertices[2].TexCoords = glm::vec2(0.3, 0.5);
-	this->vertices[3].TexCoords = glm::vec2(0.2, 0.6);
-	this->vertices[4].TexCoords = glm::vec2(0.4, 0.6);
-	this->vertices[5].TexCoords = glm::vec2(0.3, 0.8);
 
-	this->vertices[0].TexIndex = 0;
-	this->vertices[1].TexIndex = 0;
-	this->vertices[2].TexIndex = 0;
-	this->vertices[3].TexIndex = 0;
-	this->vertices[4].TexIndex = 0;
-	this->vertices[5].TexIndex = 1;
-*/
+
 
 
 	bNeedsGPUUpdate = true;
@@ -118,12 +103,27 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 	_v.TexIndex = texture_index;
 
 	bNeedsGPUUpdate = true;
+
+	// XXX TEST
+	if (mosaic_index == 1)	// Change second mosaic tile only
+	{
+		this->vertices[mosaic_index + 0].TexCoords = glm::vec2(0.2, 0.2);
+		this->vertices[mosaic_index + 1].TexCoords = glm::vec2(0.5, 0.2);
+		this->vertices[mosaic_index + 2].TexCoords = glm::vec2(0.3, 0.5);
+
+		this->vertices[mosaic_index + 0].TexIndex = 1;
+		this->vertices[mosaic_index + 1].TexIndex = 1;
+		this->vertices[mosaic_index + 2].TexIndex = 1;
+	}
 }
 
 void MosaicMesh::SetWorldCoordinates(int32_t x, int32_t y)
 {
 	this->world_x = x;
 	this->world_y = y;
+	// Update the model->world transform matrix, to translate the model into the world space
+	this->mat_trans = glm::translate(glm::mat4(1.0f), glm::vec3(world_x, world_y, 0.0f));
+
 }
 
 // Anytime the underlying mesh data is changed, it needs to be updated on the GPU
