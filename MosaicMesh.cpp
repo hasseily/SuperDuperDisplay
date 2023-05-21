@@ -85,25 +85,25 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 		std::cout << "Vertex BL " << _v0.Position.x << " x " << _v0.Position.y << " : " << _v0.TexCoords.x << " x " << _v0.TexCoords.y << std::endl;
 	// Top right
 	auto& _v1 = this->vertices.at(_idx + 1);
-	_v1.TexCoords = glm::fvec2((u + _v0.Position.x - _vx) / _iaw, (v + _v0.Position.y - _vy) / _iah);
+	_v1.TexCoords = glm::fvec2((u + _v1.Position.x - _vx) / _iaw, (v + _v1.Position.y - _vy) / _iah);
 	this->texIndexes[_idx + 1] = texture_index;
 	if (isDebug)
 		std::cout << "Vertex TR " << _v1.Position.x << " x " << _v1.Position.y << " : " << _v1.TexCoords.x << " x " << _v1.TexCoords.y << std::endl;
 	// Top left
 	auto& _v2 = this->vertices.at(_idx + 2);
-	_v2.TexCoords = glm::fvec2(u / _iaw, (v + _v0.Position.y - _vy) / _iah);
+	_v2.TexCoords = glm::fvec2(u / _iaw, (v + _v2.Position.y - _vy) / _iah);
 	this->texIndexes[_idx + 2] = texture_index;
 	if (isDebug)
 		std::cout << "Vertex TL " << _v2.Position.x << " x " << _v2.Position.y << " : " << _v2.TexCoords.x << " x " << _v2.TexCoords.y << std::endl;
 	// Bottom right
 	auto& _v3 = this->vertices.at(_idx + 3);
-	_v3.TexCoords = glm::fvec2((u + _v0.Position.x - _vx) / _iaw, v / _iah);
+	_v3.TexCoords = glm::fvec2((u + _v3.Position.x - _vx) / _iaw, v / _iah);
 	this->texIndexes[_idx + 3] = texture_index;
 	if (isDebug)
 		std::cout << "    Vertex BR " << _v3.Position.x << " x " << _v3.Position.y << " : " << _v3.TexCoords.x << " x " << _v3.TexCoords.y << std::endl;
 	// Top right (again)
 	auto& _v4 = this->vertices.at(_idx + 4);
-	_v4.TexCoords = glm::fvec2((u + _v0.Position.x - _vx) / _iaw, (v + _v0.Position.y - _vy) / _iah);
+	_v4.TexCoords = glm::fvec2((u + _v4.Position.x - _vx) / _iaw, (v + _v4.Position.y - _vy) / _iah);
 	this->texIndexes[_idx + 4] = texture_index;
 	if (isDebug)
 		std::cout << "   Vertex TR " << _v4.Position.x << " x " << _v4.Position.y << " : " << _v4.TexCoords.x << " x " << _v4.TexCoords.y << std::endl;
@@ -121,7 +121,7 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 				glm::fvec2(0, 0),	// UV
 			});
 
-		_v.Position = glm::vec3(_v0.Position.x, _v0.Position.y, _v0.Position.z);
+		_v.Position = glm::fvec3(_v0.Position.x, _v0.Position.y, _v0.Position.z);
 		_v.TexCoords = glm::fvec2(0, 0);
 		this->vertices[_idx] = _v;
 		this->texIndexes[_idx] = 0; // bl
