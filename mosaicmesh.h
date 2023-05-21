@@ -28,15 +28,14 @@ struct Vertex {
 	glm::vec3 Position;     // the z position will always be the window's id that the mesh is linked to
 	// texCoords
 	glm::fvec2 TexCoords;
-	// texture index (max 16)
-	uint8_t TexIndex;
 };
 
 class MosaicMesh
 {
 public:
 	// mesh Data
-	vector<Vertex> vertices;
+	vector<Vertex> vertices;		// Vertices with XY and UV	(2 vectors of floats)
+	vector<uint8_t> texIndexes;		// Texture index of each vertex (integers)
 	uint64_t cols = 0;			// # of mosaic tiles horizontally
 	uint64_t rows = 0;			// # of mosaic tiles vertically
 
@@ -60,6 +59,7 @@ public:
 private:
 	// render data
 	unsigned int VBO = UINT_MAX;       // Vertex Buffer Object (holds vertices)
+	unsigned int VTO = UINT_MAX;	   // Vertex Texture Buffer Object (holds texture indexes)
 	float world_x = 0.f;		// top-left position in the world space
 	float world_y = 0.f;		// which is also the view (camera) space
 	glm::mat4 mat_trans = glm::mat4(1.0f);	// Model->World translation matrix. Changes when the mesh is moved in the world

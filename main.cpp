@@ -280,6 +280,7 @@ int main(int, char**)
 		{
 			ImGui::Begin("Texture Viewer");
             ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES - 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::Text("Texture ID: %d", glhelper->get_texture_id_at_slot(_slotnum));
 			ImVec2 avail_size = ImGui::GetContentRegionAvail();
 			ImVec2 window_pos = ImGui::GetWindowPos();
 			ImVec2 window_size = ImGui::GetWindowSize();
@@ -300,8 +301,8 @@ int main(int, char**)
 			(void*)glhelper->get_output_texture_id(),
 			ImVec2(0, 0),
 			ImVec2(sdlwidth, sdlheight),
-			ImVec2(0, 1),
-			ImVec2(1, 0)
+			ImVec2(0, 0),
+			ImVec2(1, 1)
 		);
 
 		// Get available space
