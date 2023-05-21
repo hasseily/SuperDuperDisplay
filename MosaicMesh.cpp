@@ -74,7 +74,7 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 	auto _vy = _v0.Position.y;		// Y coord of the top left of the mosaic tile
 
 	bool isDebug = false;
-	isDebug = (_idx >= 9000 && _idx < 9300);
+	// isDebug = (_idx >= 9000 && _idx < 9300);
 	if (isDebug)
 		std::cout << std::dec << "--- MOSAIC START ---" << std::endl;
 	// Update each vertex in sequence
@@ -114,6 +114,8 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 	if (isDebug)
 		std::cout << "    Vertex BL " << _v5.Position.x << " x " << _v5.Position.y << " : " << _v5.TexCoords.x << " x " << _v5.TexCoords.y << std::endl;
 
+/*
+	// XXX Test stuff to change a single tile
 	if (mosaic_index == 256 * 128 + 127)	// center of big map
 	{
 		auto _v = Vertex({
@@ -151,6 +153,8 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 		this->vertices[_idx + 5] = _v;
 		this->texIndexes[_idx + 5] = 0;	// bl
 	}
+	*/
+
 	bNeedsGPUUpdate = true;
 
 }
