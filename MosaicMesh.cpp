@@ -51,7 +51,7 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 		}
 	};
 
-
+/*
 	// XXX Test vertices at a specific position
 	this->vertices[0].Position = glm::vec3(-1100, 1900, 0.2);
 	this->vertices[1].Position = glm::vec3(-1000, 1900, 0.2);
@@ -61,6 +61,13 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 	this->vertices[5].Position = glm::vec3(-1200, 3000, 0.2);
 
 
+	this->vertices[0].TexIndex = 0;
+	this->vertices[1].TexIndex = 0;
+	this->vertices[2].TexIndex = 0;
+	this->vertices[3].TexIndex = 0;
+	this->vertices[4].TexIndex = 0;
+	this->vertices[5].TexIndex = 1;
+*/
 
 	bNeedsGPUUpdate = true;
 }
@@ -147,6 +154,9 @@ void MosaicMesh::SetWorldCoordinates(int32_t x, int32_t y)
 {
 	this->world_x = x;
 	this->world_y = y;
+	// Update the model->world transform matrix, to translate the model into the world space
+	this->mat_trans = glm::translate(glm::mat4(1.0f), glm::vec3(world_x, world_y, 0.0f));
+
 }
 
 // Anytime the underlying mesh data is changed, it needs to be updated on the GPU
