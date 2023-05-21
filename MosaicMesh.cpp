@@ -51,6 +51,7 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 		}
 	};
 
+
 /*
 	// XXX Test vertices at a specific position
 	this->vertices[0].Position = glm::vec3(-1100, 1900, 0.2);
@@ -59,15 +60,7 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 	this->vertices[3].Position = glm::vec3(-1300, 2900, 0.2);
 	this->vertices[4].Position = glm::vec3(-1300, 1700, 0.2);
 	this->vertices[5].Position = glm::vec3(-1200, 3000, 0.2);
-
-
-	this->vertices[0].TexIndex = 0;
-	this->vertices[1].TexIndex = 0;
-	this->vertices[2].TexIndex = 0;
-	this->vertices[3].TexIndex = 0;
-	this->vertices[4].TexIndex = 0;
-	this->vertices[5].TexIndex = 1;
-*/
+	*/
 
 	bNeedsGPUUpdate = true;
 }
@@ -134,6 +127,7 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 
 	bNeedsGPUUpdate = true;
 
+/*
 	// XXX Test vertices at a specific position
 	this->vertices[0].TexCoords = glm::vec2(0.1, 0.1);
 	this->vertices[1].TexCoords = glm::vec2(0.5, 0.1);
@@ -148,6 +142,7 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 	this->texIndexes[3] = 2;
 	this->texIndexes[4] = 2;
 	this->texIndexes[5] = 2;
+	*/
 }
 
 void MosaicMesh::SetWorldCoordinates(int32_t x, int32_t y)
