@@ -759,12 +759,11 @@ bool SDHRManager::ProcessCommands(void)
 					CommandError("invalid tile specification");
 					return false;
 				}
-				mesh->UpdateMosaicUV(i,
-					tr.tile_data[tile_index].upos, tr.tile_data[tile_index].vpos,
-					tileset_records[tileset_index].asset_index);
-				// Set the textures and their coordinates
-				mesh->vertices[i].TexCoords = glm::vec2(tr.tile_data[tile_index].upos, tr.tile_data[tile_index].vpos);
-				mesh->texIndexes[i] = tileset_records[tileset_index].asset_index;
+				mesh->UpdateMosaicUV(
+					i,
+					tr.tile_data[tile_index].upos,
+					tr.tile_data[tile_index].vpos,
+					tr.asset_index);
 			}
 			p += cmd->data_length;
 #ifdef DEBUG
@@ -801,9 +800,11 @@ bool SDHRManager::ProcessCommands(void)
 						CommandError("invalid tile specification");
 						return false;
 					}
-					mesh->UpdateMosaicUV(tile_x, tile_y,
+
+					mesh->UpdateMosaicUV(
+						tile_x, tile_y,
 						tr.tile_data[tile_index].upos, tr.tile_data[tile_index].vpos,
-						tileset_records[tileset_index].asset_index);
+						tr.asset_index);
 				}
 			}
 #ifdef DEBUG

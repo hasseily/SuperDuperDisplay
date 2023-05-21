@@ -51,17 +51,6 @@ MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile
 		}
 	};
 
-
-/*
-	// XXX Test vertices at a specific position
-	this->vertices[0].Position = glm::vec3(-1100, 1900, 0.2);
-	this->vertices[1].Position = glm::vec3(-1000, 1900, 0.2);
-	this->vertices[2].Position = glm::vec3(-1000, 2000, 0.2);
-	this->vertices[3].Position = glm::vec3(-1300, 2900, 0.2);
-	this->vertices[4].Position = glm::vec3(-1300, 1700, 0.2);
-	this->vertices[5].Position = glm::vec3(-1200, 3000, 0.2);
-	*/
-
 	bNeedsGPUUpdate = true;
 }
 
@@ -80,69 +69,90 @@ void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, u
 
 	auto _idx = mosaic_index * 6;	// index of the first vertex of the mosaic tile
 	// The passed-in U and V are the non-normalized pixel coordinates of the first vertex of the tile
-	auto& _v = this->vertices.at(_idx);		// reference to the bottom left vertex. Update in place
-	auto _vx = _v.Position.x;		// X coord of the top left of the mosaic tile
-	auto _vy = _v.Position.y;		// Y coord of the top left of the mosaic tile
+	auto &_v0 = this->vertices.at(_idx);		// reference to the bottom left vertex. Update in place
+	auto _vx = _v0.Position.x;		// X coord of the top left of the mosaic tile
+	auto _vy = _v0.Position.y;		// Y coord of the top left of the mosaic tile
 
-	bool isDebug = (_idx >= 9000 && _idx < 9300);
+	bool isDebug = false;
+	isDebug = (_idx >= 9000 && _idx < 9300);
 	if (isDebug)
 		std::cout << std::dec << "--- MOSAIC START ---" << std::endl;
 	// Update each vertex in sequence
 	// Bottom left
-	_v = this->vertices.at(_idx);
-	_v.TexCoords = glm::fvec2(u / _iaw, v / _iah);
-	this->texIndexes.at(_idx) = texture_index;
+	_v0.TexCoords = glm::fvec2(u / _iaw, v / _iah);
+	this->texIndexes[_idx] = texture_index;
 	if (isDebug)
-		std::cout << "Vertex BL" << _v.Position.x << " x " << _v.Position.y << " : " << _v.TexCoords.x << " x " << _v.TexCoords.y << std::endl;
+		std::cout << "Vertex BL " << _v0.Position.x << " x " << _v0.Position.y << " : " << _v0.TexCoords.x << " x " << _v0.TexCoords.y << std::endl;
 	// Top right
-	_v = this->vertices.at(_idx + 1);
-	_v.TexCoords = glm::fvec2((u + _v.Position.x - _vx) / _iaw, (v + _v.Position.y - _vy) / _iah);
-	this->texIndexes.at(_idx + 1) = texture_index;
+	auto& _v1 = this->vertices.at(_idx + 1);
+	_v1.TexCoords = glm::fvec2((u + _v0.Position.x - _vx) / _iaw, (v + _v0.Position.y - _vy) / _iah);
+	this->texIndexes[_idx + 1] = texture_index;
 	if (isDebug)
-		std::cout << "Vertex TR" << _v.Position.x << " x " << _v.Position.y << " : " << _v.TexCoords.x << " x " << _v.TexCoords.y << std::endl;
+		std::cout << "Vertex TR " << _v1.Position.x << " x " << _v1.Position.y << " : " << _v1.TexCoords.x << " x " << _v1.TexCoords.y << std::endl;
 	// Top left
-	_v = this->vertices.at(_idx + 2);
-	_v.TexCoords = glm::fvec2(u / _iaw, (v + _v.Position.y - _vy) / _iah);
-	this->texIndexes.at(_idx + 2) = texture_index;
+	auto& _v2 = this->vertices.at(_idx + 2);
+	_v2.TexCoords = glm::fvec2(u / _iaw, (v + _v0.Position.y - _vy) / _iah);
+	this->texIndexes[_idx + 2] = texture_index;
 	if (isDebug)
-		std::cout << "Vertex TL" << _v.Position.x << " x " << _v.Position.y << " : " << _v.TexCoords.x << " x " << _v.TexCoords.y << std::endl;
+		std::cout << "Vertex TL " << _v2.Position.x << " x " << _v2.Position.y << " : " << _v2.TexCoords.x << " x " << _v2.TexCoords.y << std::endl;
 	// Bottom right
-	_v = this->vertices.at(_idx + 3);
-	_v.TexCoords = glm::fvec2((u + _v.Position.x - _vx) / _iaw, v / _iah);
-	this->texIndexes.at(_idx + 3) = texture_index;
+	auto& _v3 = this->vertices.at(_idx + 3);
+	_v3.TexCoords = glm::fvec2((u + _v0.Position.x - _vx) / _iaw, v / _iah);
+	this->texIndexes[_idx + 3] = texture_index;
 	if (isDebug)
-		std::cout << "    Vertex BR" << _v.Position.x << " x " << _v.Position.y << " : " << _v.TexCoords.x << " x " << _v.TexCoords.y << std::endl;
+		std::cout << "    Vertex BR " << _v3.Position.x << " x " << _v3.Position.y << " : " << _v3.TexCoords.x << " x " << _v3.TexCoords.y << std::endl;
 	// Top right (again)
-	_v = this->vertices.at(_idx + 4);
-	_v.TexCoords = glm::fvec2((u + _v.Position.x - _vx) / _iaw, (v + _v.Position.y - _vy) / _iah);
-	this->texIndexes.at(_idx + 4) = texture_index;
+	auto& _v4 = this->vertices.at(_idx + 4);
+	_v4.TexCoords = glm::fvec2((u + _v0.Position.x - _vx) / _iaw, (v + _v0.Position.y - _vy) / _iah);
+	this->texIndexes[_idx + 4] = texture_index;
 	if (isDebug)
-		std::cout << "   Vertex TR" << _v.Position.x << " x " << _v.Position.y << " : " << _v.TexCoords.x << " x " << _v.TexCoords.y << std::endl;
+		std::cout << "   Vertex TR " << _v4.Position.x << " x " << _v4.Position.y << " : " << _v4.TexCoords.x << " x " << _v4.TexCoords.y << std::endl;
 	// Bottom left (again)
-	_v = this->vertices.at(_idx + 5);
-	_v.TexCoords = glm::fvec2(u / _iaw, v / _iah);
-	this->texIndexes.at(_idx + 5) = texture_index;
+	auto& _v5 = this->vertices.at(_idx + 5);
+	_v5.TexCoords = glm::fvec2(u / _iaw, v / _iah);
+	this->texIndexes[_idx + 5] = texture_index;
 	if (isDebug)
-		std::cout << "    Vertex BL" << _v.Position.x << " x " << _v.Position.y << " : " << _v.TexCoords.x << " x " << _v.TexCoords.y << std::endl;
+		std::cout << "    Vertex BL " << _v5.Position.x << " x " << _v5.Position.y << " : " << _v5.TexCoords.x << " x " << _v5.TexCoords.y << std::endl;
 
+	if (mosaic_index == 256 * 128 + 127)	// center of big map
+	{
+		auto _v = Vertex({
+				glm::vec3(0, 0, 0),	// vertex position (z is the reverse window index)
+				glm::fvec2(0, 0),	// UV
+			});
+
+		_v.Position = glm::vec3(_v0.Position.x, _v0.Position.y, _v0.Position.z);
+		_v.TexCoords = glm::fvec2(0, 0);
+		this->vertices[_idx] = _v;
+		this->texIndexes[_idx] = 0; // bl
+
+		_v.Position = glm::vec3(_v1.Position.x + 500, _v1.Position.y + 500, _v1.Position.z);
+		_v.TexCoords = glm::fvec2(1, 1);
+		this->vertices[_idx + 1] = _v;
+		this->texIndexes[_idx + 1] = 0; // tr
+
+		_v.Position = glm::vec3(_v2.Position.x, _v2.Position.y + 500, _v2.Position.z);
+		_v.TexCoords = glm::fvec2(0, 1);
+		this->vertices[_idx + 2] = _v;
+		this->texIndexes[_idx + 2] = 0; // tl
+
+		_v.Position = glm::vec3(_v3.Position.x + 500, _v3.Position.y, _v3.Position.z);
+		_v.TexCoords = glm::fvec2(1, 0);
+		this->vertices[_idx + 3] = _v;
+		this->texIndexes[_idx + 3] = 0;	// br
+
+		_v.Position = glm::vec3(_v4.Position.x + 500, _v4.Position.y + 500, _v4.Position.z);
+		_v.TexCoords = glm::fvec2(1, 1);
+		this->vertices[_idx + 4] = _v;
+		this->texIndexes[_idx + 4] = 0;	// tr
+
+		_v.Position = glm::vec3(_v5.Position.x, _v5.Position.y, _v5.Position.z);
+		_v.TexCoords = glm::fvec2(0, 0);
+		this->vertices[_idx + 5] = _v;
+		this->texIndexes[_idx + 5] = 0;	// bl
+	}
 	bNeedsGPUUpdate = true;
 
-/*
-	// XXX Test vertices at a specific position
-	this->vertices[0].TexCoords = glm::vec2(0.1, 0.1);
-	this->vertices[1].TexCoords = glm::vec2(0.5, 0.1);
-	this->vertices[2].TexCoords = glm::vec2(0.3, 0.5);
-	this->vertices[3].TexCoords = glm::vec2(0.2, 0.6);
-	this->vertices[4].TexCoords = glm::vec2(0.4, 0.6);
-	this->vertices[5].TexCoords = glm::vec2(0.3, 0.8);
-
-	this->texIndexes[0] = 0;
-	this->texIndexes[1] = 0;
-	this->texIndexes[2] = 0;
-	this->texIndexes[3] = 2;
-	this->texIndexes[4] = 2;
-	this->texIndexes[5] = 2;
-	*/
 }
 
 void MosaicMesh::SetWorldCoordinates(int32_t x, int32_t y)
