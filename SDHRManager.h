@@ -2,26 +2,30 @@
 // List of commands and their structs
 
 #pragma once
+#ifndef SDHRMANAGER_H
+#define SDHRMANAGER_H
 
 #include <stdint.h>
 #include <stddef.h>
 #include <vector>
+#include <queue>
 
-#if defined(IMGUI_IMPL_OPENGL_ES2)
-#include <SDL_opengles2.h>
-#else
-#include <SDL_opengl.h>
-#endif
-
-#define _SDHR_WIDTH  640
-#define _SDHR_HEIGHT 360
+#include "common.h"
+#include "OpenGLHelper.h"
+#include "MosaicMesh.h"
+#include "camera.h"
 
 enum THREADCOMM_e
 {
-	IDLE = 0,			// SDHR data and OpenGL are in sync
+	IDLE = 0,			// SDHR data and GPU are in sync
 	SOCKET_LOCK,		// Socket thread is updating the SDHR data
-	COMMAND_PROCESSED,	// Socket thread has processed a command batch, waiting for Main thread to work
-	MAIN_LOCK			// Main thread is updating OpenGL textures
+	MAIN_LOCK			// Main thread is updating GPU data
+};
+
+enum DATASTATE_e
+{
+	NODATA = 0,			// No command to process
+	COMMAND_READY		// Command is ready for processing
 };
 
 enum SDHRCtrl_e
@@ -59,38 +63,120 @@ struct bgra_t
 	uint8_t a;
 };
 
-struct sdhr_image
-{
-	int width = _SDHR_WIDTH;
-	int height = _SDHR_HEIGHT;
-	GLuint texture_id = 0;
-};
-
 class SDHRManager
 {
 public:
+
+//////////////////////////////////////////////////////////////////////////
+// SDHR state structs
+//////////////////////////////////////////////////////////////////////////
+
+	// NOTE:	Anything labled "id" is an internal identifier by the GPU
+	//			Anything labled "index" is an actual array or vector index used by the code
+	
+	// An image asset is a texture with its metadata (width, height)
+	// The actual texture data is in the GPU memory
+	struct ImageAsset {
+		void AssignByFilename(SDHRManager* owner, const char* filename);
+		void AssignByMemory(SDHRManager* owner, const uint8_t* buffer, int size);
+
+		// image assets are full 32-bit bitmap files, uploaded from PNG
+		uint64_t image_xcount = 0;	// width and height of asset in pixels
+		uint64_t image_ycount = 0;
+		GLuint tex_id = 0;	// Texture ID on the GPU that holds the image data
+	};
+
+	struct TileTex {				// Tile texture starting coordinates
+		uint32_t upos;					// U (x) starting position
+		uint32_t vpos;					// V (y) starting position
+		// TODO: Add flags (inverted, mirrored, ...)
+	};
+
+	struct TilesetRecord {			// A single tileset
+		uint8_t asset_index;			// index of the image asset
+		uint16_t xdim;					// Width of tiles in this tileset
+		uint16_t ydim;					// Height of tiles in this tileset
+		uint64_t num_entries;
+		TileTex* tile_data = NULL;		// list of tile texture starting coordinates
+		TilesetRecord()
+			: asset_index(0)
+			, xdim(0)
+			, ydim(0)
+			, num_entries(0)
+			, tile_data()
+		{}
+	};
+
+	struct Window {
+		uint8_t enabled;
+		bool black_or_wrap;      // false: viewport is black outside of tile range, true: viewport wraps
+		uint64_t screen_xcount;  // width in pixels of visible screen area of window
+		uint64_t screen_ycount;
+		int64_t screen_xbegin;   // pixel xy coordinate where window begins
+		int64_t screen_ybegin;
+		int64_t tile_xbegin;     // pixel xy coordinate on backing tile array where aperture begins
+		int64_t tile_ybegin;
+		uint64_t tile_xdim;      // xy dimension, in pixels, of tiles in the window.
+		uint64_t tile_ydim;
+		uint64_t tile_xcount;    // xy dimension, in tiles, of the tile array
+		uint64_t tile_ycount;
+		MosaicMesh* mesh = NULL;
+		Window()
+			: enabled(0), black_or_wrap(false)
+			, screen_xcount(0), screen_ycount(0)
+			, screen_xbegin(0), screen_ybegin(0)
+			, tile_xbegin(0), tile_ybegin(0)
+			, tile_xdim(0), tile_ydim(0)
+			, tile_xcount(0), tile_ycount(0)
+		{}
+	};
+
+	//////////////////////////////////////////////////////////////////////////
+	// Attributes
+	//////////////////////////////////////////////////////////////////////////
+
+	THREADCOMM_e threadState;
+	DATASTATE_e dataState;
+	// NOTE:	Maximum of 16 image assets.
+	//			They're always concomitantly available as textures in the GPU
+	ImageAsset image_assets[_SDHR_MAX_TEXTURES];
+	TilesetRecord tileset_records[256];
+	Window windows[256];
+	// Camera for World -> View matrix transform
+	Camera camera = Camera(
+		_SDHR_WIDTH / 2.f, _SDHR_HEIGHT / 2.f,	// x,y
+		-2.f,										// z
+		0.f, 1.f, 0.f,								// upVector xyz
+		90.f,										// yaw
+		0.f											// pitch
+	);
+	// Projection matrix (left, right, bottom, top, near, far)
+	glm::mat4 mat_proj = glm::ortho<float>(0, _SDHR_WIDTH, 0, _SDHR_HEIGHT, 0, 256);
+
+	// Debugging attributes
+	bool bDebugTextures = true;
+
+	//////////////////////////////////////////////////////////////////////////
+	// Methods
+	//////////////////////////////////////////////////////////////////////////
+
 	void AddPacketDataToBuffer(uint8_t data);
 	void ClearBuffer();
 	bool ProcessCommands(void);
-	void DrawWindowsIntoScreenImage(GLuint textureid);
-	uint32_t ARGB555_to_ARGB888(uint16_t argb555);
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 memory pointer
-	uint32_t* cpubuffer;
-	bool shouldUseCpuBuffer = false;	// Disables the temp cpu buffer
-	bool shouldUseSubImage2D = true;	// Disables the pixel-by-pixel subimage2d upload
-	THREADCOMM_e threadState;
 
-	void SetSDHRImage(sdhr_image simage) { screen_image = simage; };
-	sdhr_image GetSDHRImage() { return screen_image; };
+	void Render();	// render everything SDHR related
+	void RenderTest();	// test render function
 
-	uint8_t* GetTilesetRecordData(uint8_t index) { return reinterpret_cast<uint8_t*>(tileset_records[index].tile_data); };
+	TileTex* GetTilesetRecordData(uint8_t tileset_index) { return tileset_records[tileset_index].tile_data; };
+	TileTex GetTilesetTileTex(uint8_t tileset_index, uint8_t tile_index) { return tileset_records[tileset_index].tile_data[tile_index]; };
 
 	void ToggleSdhr(bool value) {
-		m_bEnabled = value;
+		bSDHREnabled = value;
 	}
 
 	bool IsSdhrEnabled(void) {
-		return m_bEnabled;
+		return bSDHREnabled;
 	}
 
 	void ResetSdhr() {
@@ -113,68 +199,9 @@ private:
 	static SDHRManager* s_instance;
 	SDHRManager()
 	{
+		a2mem = new uint8_t[0xc000];	// anything below $200 is unused
 		Initialize();
 	}
-//////////////////////////////////////////////////////////////////////////
-// Internal state structs
-//////////////////////////////////////////////////////////////////////////
-
-	struct ImageAsset {
-		void AssignByFilename(const char* filename);	// currently unused
-		void AssignByMemory(SDHRManager* owner, const uint8_t* buffer, uint64_t size);
-		void ExtractTile(SDHRManager* owner, uint32_t* tile_p,
-			uint16_t tile_xdim, uint16_t tile_ydim, 
-			uint64_t xsource, uint64_t ysource);
-
-		// image assets are full 32-bit bitmap files, uploaded from PNG
-		uint64_t image_xcount = 0;
-		uint64_t image_ycount = 0;
-		uint8_t* data = NULL;
-		ImageAsset()
-			: image_xcount(0)
-			, image_ycount(0)
-			, data()
-		{}	// Do nothing in constructor
-	};
-
-	struct TilesetRecord {
-		uint64_t xdim;
-		uint64_t ydim;
-		uint64_t num_entries;
-		uint32_t* tile_data = NULL;  // tiledata is 32-bit RGBA
-		TilesetRecord()
-			: xdim(0)
-			, ydim(0)
-			, num_entries(0)
-			, tile_data()
-		{}
-	};
-
-	struct Window {
-		uint8_t enabled;
-		bool black_or_wrap;      // false: viewport is black outside of tile range, true: viewport wraps
-		uint64_t screen_xcount;  // width in pixels of visible screen area of window
-		uint64_t screen_ycount;
-		int64_t screen_xbegin;   // pixel xy coordinate where window begins
-		int64_t screen_ybegin;
-		int64_t tile_xbegin;     // pixel xy coordinate on backing tile array where aperture begins
-		int64_t tile_ybegin;
-		uint64_t tile_xdim;      // xy dimension, in pixels, of tiles in the window.
-		uint64_t tile_ydim;
-		uint64_t tile_xcount;    // xy dimension, in tiles, of the tile array
-		uint64_t tile_ycount;
-		uint8_t* tilesets = NULL;
-		uint8_t* tile_indexes = NULL;
-		Window()
-			: enabled(0), black_or_wrap(false)
-			, screen_xcount(0), screen_ycount(0)
-			, screen_xbegin(0), screen_ybegin(0)
-			, tile_xbegin(0), tile_ybegin(0)
-			, tile_xdim(0), tile_ydim(0)
-			, tile_xcount(0), tile_ycount(0)
-			, tilesets(), tile_indexes()
-		{}
-	};
 
 	//////////////////////////////////////////////////////////////////////////
 	// Internal methods
@@ -192,27 +219,39 @@ private:
 		return true;
 	}
 
-	void DefineTileset(uint8_t tileset_index, uint16_t num_entries, uint8_t xdim, uint8_t ydim,
-		ImageAsset* asset, uint8_t* offsets);
+	void DefineTileset(uint8_t tileset_index, uint16_t num_entries, uint16_t xdim, uint16_t ydim,
+		uint8_t asset_index, uint8_t* offsets);
 
 
 //////////////////////////////////////////////////////////////////////////
 // Internal data
 //////////////////////////////////////////////////////////////////////////
+	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
+											// routines like clearing out the image assets
 	uint8_t* a2mem;	// The current state of the Apple 2 memory ($0200-$BFFF)
 	
-	bool m_bEnabled;
+	bool bSDHREnabled;	// is SDHR enabled?
 
 	static const uint16_t screen_xcount = _SDHR_WIDTH;
 	static const uint16_t screen_ycount = _SDHR_HEIGHT;
-
-	sdhr_image screen_image;
 
 	std::vector<uint8_t> command_buffer;
 	bool error_flag;
 	char error_str[256];
 	uint8_t uploaded_data_region[256 * 256 * 256];
-	ImageAsset image_assets[256];
-	TilesetRecord tileset_records[256];
-	Window windows[256];
+
+	// Texture ids of the 16 textures the meshes will use
+	GLint texIds[_SDHR_MAX_TEXTURES];
+
+	// This is a FIFO queue where the network thread tells the main thread that
+	// there's image data that needs to be uploaded to the GPU
+	// It's only FIFO in name because we don't allow more than one entry in there
+	// The queue not being empty acts as a semaphore.
+	struct UploadImageData {
+		uint8_t asset_index;
+		uint64_t upload_start_addr;
+		int upload_data_size;
+	};
+	std::queue<UploadImageData>fifo_upload_image_data;
 };
+#endif // SDHRMANAGER_H

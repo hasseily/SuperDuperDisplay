@@ -11,8 +11,14 @@
 #include <chrono>
 #endif
 
+#include "OpenGLHelper.h"
+
 // below because "The declaration of a static data member in its class definition is not a definition"
 SDHRManager* SDHRManager::s_instance;
+
+static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
+// The standard default shader for the windows and their mosaics
+static Shader defaultWindowShaderProgram = Shader();
 
 //////////////////////////////////////////////////////////////////////////
 // Commands structs
@@ -48,7 +54,7 @@ struct DefineTilesetCmd {
 	uint8_t tileset_index;
 	uint8_t asset_index;
 	uint8_t num_entries;
-	uint16_t xdim;
+	uint16_t xdim;			// xy dimension, in pixels, of tiles
 	uint16_t ydim;
 	uint16_t block_count;
 };
@@ -56,7 +62,7 @@ struct DefineTilesetCmd {
 struct DefineTilesetImmediateCmd {
 	uint8_t tileset_index;
 	uint8_t num_entries;
-	uint8_t xdim;
+	uint8_t xdim;			// xy dimension, in pixels, of tiles
 	uint8_t ydim;
 	uint8_t asset_index;
 	uint8_t data[];  // data is 4-byte records, 16-bit x and y offsets (scaled by x/ydim), from the given asset
@@ -111,54 +117,51 @@ struct UpdateWindowEnableCmd {
 // Image Asset Methods
 //////////////////////////////////////////////////////////////////////////
 
-void SDHRManager::ImageAsset::AssignByFilename(const char* filename) {
+// NOTE:	Both the below image asset methods use OpenGL 
+//			so they _must_ be called from the main thread
+void SDHRManager::ImageAsset::AssignByFilename(SDHRManager* owner, const char* filename) {
 	int width;
 	int height;
 	int channels;
-	data = stbi_load(filename, &width, &height, &channels, 4);
-	if (data == NULL) {
-		// image failed to load
-		SDHRManager::GetInstance()->error_flag = true;
-		return;
-	}
-	image_xcount = width;
-	image_ycount = height;
-}
-
-void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* buffer, uint64_t size) {
-	int width;
-	int height;
-	int channels;
-	data = stbi_load_from_memory(buffer, size, &width, &height, &channels, 4);
+	unsigned char* data = stbi_load(filename, &width, &height, &channels, 4);
 	if (data == NULL) {
 		owner->CommandError(stbi_failure_reason());
 		owner->error_flag = true;
 		return;
 	}
+	if (tex_id != UINT_MAX)
+	{
+		oglHelper->load_texture(data, width, height, channels, tex_id);
+		stbi_image_free(data);
+	}
+	else {
+		std::cerr << "ERROR: Could not bind texture, all slots filled!" << '\n';
+		return;
+	}
 	image_xcount = width;
 	image_ycount = height;
 }
 
-void SDHRManager::ImageAsset::ExtractTile(SDHRManager* owner, uint32_t* tile_p, uint16_t tile_xdim, uint16_t tile_ydim, uint64_t xsource, uint64_t ysource) {
-	uint32_t* dest_p = tile_p;
-	if (xsource + tile_xdim > image_xcount ||
-		ysource + tile_ydim > image_ycount) {
-		owner->CommandError("ExtractTile out of bounds");
+void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* buffer, int size) {
+	int width;
+	int height;
+	int channels;
+	unsigned char* data = stbi_load_from_memory(buffer, size, &width, &height, &channels, 4);
+	if (data == NULL) {
+		owner->CommandError(stbi_failure_reason());
 		owner->error_flag = true;
 		return;
 	}
-
-	// Extracting from RGBA to RGBA. No rewriring of channels necessary
-	uint32_t* data32 = reinterpret_cast<uint32_t*>(data);
-	for (uint64_t y = 0; y < tile_ydim; ++y) {
-		uint64_t source_yoffset = (ysource + y) * image_xcount;
-		for (uint64_t x = 0; x < tile_xdim; ++x) {
-			uint64_t pixel_offset = source_yoffset + (xsource + x);
-			uint32_t dest_pixel = data32[pixel_offset];
-			*dest_p = dest_pixel;
-			++dest_p;
-		}
+	if (tex_id != UINT_MAX)
+	{
+		oglHelper->load_texture(data, width, height, channels, tex_id);
+		stbi_image_free(data);
+	} else {
+		std::cerr << "ERROR: Could not bind texture, all slots filled!" << '\n';
+		return;
 	}
+	image_xcount = width;
+	image_ycount = height;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -170,8 +173,14 @@ int upload_inflate(const char* source, uint64_t size, std::ostream& dest) {
 	int ret;
 	unsigned have;
 	z_stream strm;
-	unsigned char in[CHUNK];
-	unsigned char out[CHUNK];
+	unsigned char* in; //[CHUNK] ;
+	unsigned char* out; //[CHUNK] ;
+	in = (unsigned char*)malloc(CHUNK);
+	if (in == NULL)
+		return Z_MEM_ERROR;
+	out = (unsigned char*)malloc(CHUNK);
+	if (out == NULL)
+		return Z_MEM_ERROR;
 
 	/* allocate inflate state */
 	strm.zalloc = Z_NULL;
@@ -189,7 +198,7 @@ int upload_inflate(const char* source, uint64_t size, std::ostream& dest) {
 		uint64_t bytes_to_read = std::min((uint64_t)CHUNK, size - bytes_read);
 		memcpy(in, source + bytes_read, bytes_to_read);
 		bytes_read += bytes_to_read;
-		strm.avail_in = bytes_to_read;
+		strm.avail_in = (unsigned int)bytes_to_read;
 		if (strm.avail_in == 0)
 			break;
 		strm.next_in = in;
@@ -217,6 +226,8 @@ int upload_inflate(const char* source, uint64_t size, std::ostream& dest) {
 
 	/* clean up and return */
 	(void)inflateEnd(&strm);
+	free(in);
+	free(out);
 	return ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
 }
 
@@ -226,15 +237,13 @@ int upload_inflate(const char* source, uint64_t size, std::ostream& dest) {
 
 void SDHRManager::Initialize()
 {
-	m_bEnabled = false;
+	bSDHREnabled = false;
 	error_flag = false;
 	memset(error_str, 0, sizeof(error_str));
 	memset(uploaded_data_region, 0, sizeof(uploaded_data_region));
 	*image_assets = {};
 	*tileset_records = {};
 	*windows = {};
-
-	cpubuffer = (uint32_t*)malloc(_SDHR_WIDTH * _SDHR_HEIGHT * 4);
 
 	command_buffer.clear();
 	command_buffer.reserve(64 * 1024);
@@ -243,28 +252,32 @@ void SDHRManager::Initialize()
 	// Whenever memory is written from the Apple2
 	// in the main bank between $200 and $BFFF it will
 	// be sent through the socket and this buffer will be updated
-	a2mem = new uint8_t[0xc000];	// anything below $200 is unused
 	memset(a2mem, 0, 0xc000);
 
+	// tell the next Render() call to run initialization routines
+	// Assign to the GPU the default pink image to all 16 image assets
+	// because the shaders expect 16 textures
+	for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++)
+	{
+		image_assets[i].tex_id = oglHelper->get_texture_id_at_slot(i);
+	}
+	if (!defaultWindowShaderProgram.isReady)
+		defaultWindowShaderProgram.build("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");
+	bShouldInitializeRender = true;
+	threadState = THREADCOMM_e::IDLE;
+	dataState = DATASTATE_e::NODATA;
 }
 
 SDHRManager::~SDHRManager()
 {
 	for (uint16_t i = 0; i < 256; ++i) {
-		if (image_assets[i].data) {
-			stbi_image_free(image_assets[i].data);
-		}
 		if (tileset_records[i].tile_data) {
 			free(tileset_records[i].tile_data);
 		}
-		if (windows[i].tilesets) {
-			free(windows[i].tilesets);
-		}
-		if (windows[i].tile_indexes) {
-			free(windows[i].tile_indexes);
+		if (windows[i].mesh) {
+			delete windows[i].mesh;
 		}
 	}
-	free(cpubuffer);
 	delete[] a2mem;
 }
 
@@ -279,7 +292,7 @@ void SDHRManager::ClearBuffer()
 }
 
 void SDHRManager::CommandError(const char* err) {
-	strcpy(error_str, err);
+	strcpy_s(error_str, err);
 	error_flag = true;
 	std::cerr << "Command Error: " << error_str << std::endl;
 }
@@ -293,53 +306,267 @@ bool SDHRManager::CheckCommandLength(uint8_t* p, uint8_t* e, size_t sz) {
 	return true;
 }
 
-uint32_t SDHRManager::ARGB555_to_ARGB888(uint16_t argb555) {
-	uint8_t r = (argb555 >> 10) & 0x1F;
-	uint8_t g = (argb555 >> 5) & 0x1F;
-	uint8_t b = argb555 & 0x1F;
-	uint8_t a = (argb555 & 0x8000);	// alpha in RGB555 is all or nothing
-
-	uint32_t r888 = (r << 3) | (r >> 2);
-	uint32_t g888 = (g << 3) | (g >> 2);
-	uint32_t b888 = (b << 3) | (b >> 2);
-	uint32_t a888 = a * 0xFF;
-
-	uint32_t argb888 = (a888 << 24) | (r888 << 16) | (g888 << 8) | b888;
-	return argb888;
-}
-
+// Return a pointer to the shadowed apple 2 memory
 uint8_t* SDHRManager::GetApple2MemPtr()
 {
 	return a2mem;
 }
 
-void SDHRManager::DefineTileset(uint8_t tileset_index, uint16_t num_entries, uint8_t xdim, uint8_t ydim,
-	ImageAsset* asset, uint8_t* offsets) {
-	uint64_t store_data_size = (uint64_t)xdim * ydim * sizeof(uint32_t) * num_entries;
+// Render all window meshes and whatever else SDHR related
+void SDHRManager::Render()
+{
+	GLenum glerr;
+	auto oglh = OpenGLHelper::GetInstance();
+	oglh->setup_sdhr_render();
+
+	defaultWindowShaderProgram.use();
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glUseProgram error: " << glerr << std::endl;
+	}
+
+	// Initialization routine runs only once on init (or re-init)
+	// We do that here because we know the framebuffer is bound, and everything
+	// for drawing the SDHR stuff is active
+	// We're going to set the active textures to 1-15, leaving texture GL_TEXTURE0 alone
+	if (bShouldInitializeRender) {
+		bShouldInitializeRender = false;
+		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
+			glActiveTexture(GL_TEXTURE1 + i);	// AssignByFilename() will bind to the active texture slot
+			if (i == 1)
+				image_assets[i].AssignByFilename(this, "Texture_Default1.png");
+			else if (i == 2)
+				image_assets[i].AssignByFilename(this, "Texture_Default2.png");
+			else if (i == 3)
+				image_assets[i].AssignByFilename(this, "Texture_Default3.png");
+			else
+				image_assets[i].AssignByFilename(this, "Texture_Default.png");
+			texIds[i] = image_assets[i].tex_id;
+			if ((glerr = glGetError()) != GL_NO_ERROR) {
+				std::cerr << "OpenGL AssignByFilename error: " << i << " - " << glerr << std::endl;
+			}
+		}
+		glActiveTexture(GL_TEXTURE0);
+	}
+
+	if (this->dataState == DATASTATE_e::COMMAND_READY)
+	{
+		// Check to see if we need to upload data to the GPU
+		this->threadState = THREADCOMM_e::MAIN_LOCK;
+		while (!fifo_upload_image_data.empty()) {
+			auto _uidata = fifo_upload_image_data.front();
+			glActiveTexture(GL_TEXTURE1 + _uidata.asset_index);
+			image_assets[_uidata.asset_index].AssignByMemory(this, uploaded_data_region + _uidata.upload_start_addr, _uidata.upload_data_size);
+			if (error_flag) {
+				std::cerr << "AssignByMemory failed!" << std::endl;
+			}
+			fifo_upload_image_data.pop();
+#ifdef _DEBUG
+			std::cout << "AssignByMemory: " << _uidata.upload_data_size << " for index: " << (uint32_t)_uidata.asset_index << std::endl;
+#endif
+			glActiveTexture(GL_TEXTURE0);
+		}
+		// Update meshes
+		for each (auto & _w in this->windows) {
+			if (_w.enabled) {
+				if (_w.mesh) {
+					_w.mesh->updateMesh();
+				}
+			}
+		}
+		this->dataState = DATASTATE_e::NODATA;
+		this->threadState = THREADCOMM_e::IDLE;
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL updateMesh error: " << glerr << std::endl;
+		}
+	}
+
+
+	// Assign the list of all the textures to the shader's "tilesTexture" uniform
+	auto texUniformId = glGetUniformLocation(defaultWindowShaderProgram.ID, "tilesTexture");
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glGetUniformLocation error: " << glerr << std::endl;
+	}
+	glUniform1iv(texUniformId, _SDHR_MAX_TEXTURES, &texIds[0]);
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
+	}
+
+	defaultWindowShaderProgram.setBool("bDebugTextures", bDebugTextures);
+
+	// TEST
+	// Using a prespective so I can zoom back and forth easily
+	// perspective uses (fov, aspect, near, far)
+	mat_proj = glm::perspective<float>(120, (float)_SDHR_WIDTH/_SDHR_HEIGHT, 0, 256);
+	// Render the windows (i.e. the meshes with the windows stencils)
+	for each (auto& _w in this->windows) {
+		if (_w.enabled) {
+			if (_w.mesh) {
+				_w.mesh->Draw(this->camera.GetViewMatrix(), mat_proj);
+			}
+		}
+	}
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL draw error: " << glerr << std::endl;
+	}
+	oglh->cleanup_sdhr_render();
+}
+
+void SDHRManager::RenderTest()
+{
+	GLenum glerr;
+	auto oglh = OpenGLHelper::GetInstance();
+	oglh->setup_sdhr_render();
+
+	defaultWindowShaderProgram.use();
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glUseProgram error: " << glerr << std::endl;
+	}
+
+	// Initialization routine runs only once on init (or re-init)
+	// We do that here because we know the framebuffer is bound, and everything
+	// for drawing the SDHR stuff is active
+	// We're going to set the active textures to 1-15, leaving texture GL_TEXTURE0 alone
+	if (bShouldInitializeRender) {
+		bShouldInitializeRender = false;
+		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
+			glActiveTexture(GL_TEXTURE1 + i);	// AssignByFilename() will bind to the active texture slot
+			if (i == 1)
+				image_assets[i].AssignByFilename(this, "Texture_Default1.png");
+			else if (i == 2)
+				image_assets[i].AssignByFilename(this, "Texture_Default2.png");
+			else if (i == 3)
+				image_assets[i].AssignByFilename(this, "Texture_Default3.png");
+			else
+				image_assets[i].AssignByFilename(this, "Texture_Default.png");
+			texIds[i] = image_assets[i].tex_id;
+			if ((glerr = glGetError()) != GL_NO_ERROR) {
+				std::cerr << "OpenGL AssignByFilename error: " << i << " - " << glerr << std::endl;
+			}
+		}
+		glActiveTexture(GL_TEXTURE0);
+	}
+
+	if (this->dataState == DATASTATE_e::COMMAND_READY)
+	{
+		// Check to see if we need to upload data to the GPU
+		this->threadState = THREADCOMM_e::MAIN_LOCK;
+		while (!fifo_upload_image_data.empty()) {
+			auto _uidata = fifo_upload_image_data.front();
+			glActiveTexture(GL_TEXTURE1 + _uidata.asset_index);
+			image_assets[_uidata.asset_index].AssignByMemory(this, uploaded_data_region + _uidata.upload_start_addr, _uidata.upload_data_size);
+			if (error_flag) {
+				std::cerr << "AssignByMemory failed!" << std::endl;
+			}
+			fifo_upload_image_data.pop();
+#ifdef _DEBUG
+			std::cout << "AssignByMemory: " << _uidata.upload_data_size << " for index: " << (uint32_t)_uidata.asset_index << std::endl;
+#endif
+			glActiveTexture(GL_TEXTURE0);
+		}
+		this->dataState = DATASTATE_e::NODATA;
+		this->threadState = THREADCOMM_e::IDLE;
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL updateMesh error: " << glerr << std::endl;
+		}
+	}
+
+	// Assign the list of all the textures to the shader's "tilesTexture" uniform
+	auto texUniformId = glGetUniformLocation(defaultWindowShaderProgram.ID, "tilesTexture");
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glGetUniformLocation error: " << glerr << std::endl;
+	}
+	glUniform1iv(texUniformId, _SDHR_MAX_TEXTURES, &texIds[0]);
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
+	}
+
+	defaultWindowShaderProgram.setBool("bDebugTextures", bDebugTextures);
+
+	GLuint VertexArrayID;
+	glGenVertexArrays(1, &VertexArrayID);
+	glBindVertexArray(VertexArrayID);
+
+	static const GLfloat g_vertex_buffer_data[] = {
+			-0.5f, -0.5f, 0.0f,	9*0.0625f + 0.03125f,	0.f		,// 0.f,		//bl
+			0.5f, 0.5f, 0.0f,	9*0.0625f + 0.0625f,	0.0625f	,// 0.f,		//tr
+			-0.5f, 0.5f, 0.0f,	9*0.0625f + 0.03125f,	0.0625f	,// 0.f,		//tl
+			0.5f, -0.5f, 0.0f,	9*0.0625f + 0.0625f,	0.f		,// 1.f,		//br
+			0.5f, 0.5f, 0.0f,	9*0.0625f + 0.0625f,	0.0625f	,// 1.f,		//tr
+			-0.5f, -0.5f, 0.0f,	9*0.0625f + 0.03125f,	0.f		,// 1.f,		//bl
+	};
+	static const GLbyte g_texidx_buffer_data[] = {
+		0,		//bl
+		0,		//tr
+		0,		//tl
+		1,		//br
+		1,		//tr
+		1,		//bl
+	};
+
+	GLuint vertexbuffer;
+	glGenBuffers(1, &vertexbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+
+	// set the vertex attribute pointers
+	// vertex Positions: position 0, size 3
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 5, (void*)0);
+	// vertex texture coords: position 1, size 2
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 5, (void*)(sizeof(GLfloat) * 3));
+
+	// WARNING: Must use glVertexAttribIPointer with uints, otherwise the shader doesn't pick that up!
+	GLuint texidbuffer;
+	glGenBuffers(1, &texidbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, texidbuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(g_texidx_buffer_data), g_texidx_buffer_data, GL_STATIC_DRAW);
+	// vertex texture index: position 0, size 1
+	glEnableVertexAttribArray(2);
+	glVertexAttribIPointer(2, 1, GL_BYTE, GL_FALSE, (void*)0);
+
+	// TEST
+	// Using a prespective so I can zoom back and forth easily
+	mat_proj = glm::mat4(1);
+	defaultWindowShaderProgram.setMat4("transform", mat_proj);
+	// mat_proj = glm::perspective<float>(120, 1, 0, 256);
+	// defaultWindowShaderProgram.setMat4("transform", mat_proj * this->camera.GetViewMatrix() * glm::mat4(1));
+
+	glDrawArrays(GL_TRIANGLES, 0, 6); // Starting from vertex 0; 6 vertices total -> 2 triangles
+	glDisableVertexAttribArray(0);
+
+	oglh->cleanup_sdhr_render();
+}
+
+// Define a tileset from the SDHR_CMD_DEFINE_TILESET commands
+// The tileset data is kept in the CPU's memory while waiting for window data
+// Once window data comes in, the tileset data is used to allocate the UVs to each vertex
+void SDHRManager::DefineTileset(uint8_t tileset_index, uint16_t num_entries, uint16_t xdim, uint16_t ydim,
+	uint8_t asset_index, uint8_t* offsets) {
 	TilesetRecord* r = tileset_records + tileset_index;
 	if (r->tile_data) {
 		free(r->tile_data);
 	}
 	*r = {};
+	r->asset_index = asset_index;
 	r->xdim = xdim;
 	r->ydim = ydim;
 	r->num_entries = num_entries;
-	r->tile_data = (uint32_t*)malloc(store_data_size);
+	r->tile_data = (TileTex*)malloc(sizeof(TileTex) * num_entries);
 #ifdef DEBUG
-	std::cout << "Allocating tile data size: " << store_data_size << " for index: " << (uint32_t)tileset_index << std::endl;
+	std::cout << "Allocating tile data size: " << sizeof(TileTex) * num_entries << " for index: " << (uint32_t)tileset_index << std::endl;
 #endif
 
 	uint8_t* offset_p = offsets;
-	uint32_t* dest_p = r->tile_data;
+	TileTex* tex_p = r->tile_data;
 	for (uint64_t i = 0; i < num_entries; ++i) {
-		uint64_t xoffset = *((uint16_t*)offset_p);
+		uint32_t xoffset = *((uint16_t*)offset_p);
 		offset_p += 2;
-		uint64_t yoffset = *((uint16_t*)offset_p);
+		uint32_t yoffset = *((uint16_t*)offset_p);
 		offset_p += 2;
-		uint64_t asset_xoffset = xoffset * xdim;
-		uint64_t asset_yoffset = yoffset * xdim;
-		asset->ExtractTile(this, dest_p, xdim, ydim, asset_xoffset, asset_yoffset);
-		dest_p += (uint64_t)xdim * ydim;
+		tex_p->upos = xoffset * xdim;
+		tex_p->vpos = yoffset * ydim;
+		++tex_p;
 	}
 }
 
@@ -367,7 +594,7 @@ bool SDHRManager::ProcessCommands(void)
 	uint8_t* p = begin;
 
 #ifdef DEBUG
-	// std::cerr << "Command buffer size: " << command_buffer.size() << std::endl;
+	std::cerr << "Command buffer size: " << command_buffer.size() << std::endl;
 #endif
 
 	while (p < end) {
@@ -380,9 +607,9 @@ bool SDHRManager::ProcessCommands(void)
 		if (!CheckCommandLength(p, end, message_length)) return false;
 		p += 2;
 		// Command ID (1 byte)
-		uint8_t cmd = *p++;
+		uint8_t _cmd = *p++;
 		// Command data (variable)
-		switch (cmd) {
+		switch (_cmd) {
 		case SDHR_CMD_UPLOAD_DATA: {
 			if (!CheckCommandLength(p, end, sizeof(UploadDataCmd))) return false;
 			UploadDataCmd* cmd = (UploadDataCmd*)p;
@@ -392,6 +619,10 @@ bool SDHRManager::ProcessCommands(void)
 				std::cerr << "DataSizeCheck failed!" << std::endl;
 				return false;
 			}
+			// Check if there's a pending image upload 
+			// Wait until it's done
+			//while (!fifo_upload_image_data.empty()) {};
+			while (this->dataState == DATASTATE_e::COMMAND_READY) {}
 			/*
 			std::cout << std::hex << "Uploaded from: " << (uint64_t)(cmd->source_addr) 
 				<< " To: " << (uint64_t)(uploaded_data_region + dest_offset)
@@ -401,25 +632,22 @@ bool SDHRManager::ProcessCommands(void)
 			*/
 			memcpy(uploaded_data_region + dest_offset, a2mem + ((uint16_t)cmd->source_addr), data_size);
 #ifdef DEBUG
-			// std::cout << "SDHR_CMD_UPLOAD_DATA: Success: " << std::hex << data_size << std::endl;
+			std::cout << "SDHR_CMD_UPLOAD_DATA: Success: " << std::hex << data_size << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_DEFINE_IMAGE_ASSET: {
 			if (!CheckCommandLength(p, end, sizeof(DefineImageAssetCmd))) return false;
 			DefineImageAssetCmd* cmd = (DefineImageAssetCmd*)p;
 			uint64_t upload_start_addr = 0;
-			uint64_t upload_data_size = (uint64_t)cmd->block_count * 512;
+			int upload_data_size = (int)cmd->block_count * 512;
 
 			ImageAsset* r = image_assets + cmd->asset_index;
 
-			if (r->data != NULL) {
-				stbi_image_free(r->data);
-			}
-			r->AssignByMemory(this, uploaded_data_region + upload_start_addr, upload_data_size);
-			if (error_flag) {
-				std::cerr << "AssignByMemory failed!" << std::endl;
-				return false;
-			}
+			auto _uidata = UploadImageData();
+			_uidata.asset_index = cmd->asset_index;
+			_uidata.upload_start_addr = upload_start_addr;
+			_uidata.upload_data_size = upload_data_size;
+			fifo_upload_image_data.push(_uidata);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_DEFINE_IMAGE_ASSET: Success:" << r->image_xcount << " x " << r->image_ycount << std::endl;
 #endif
@@ -427,6 +655,7 @@ bool SDHRManager::ProcessCommands(void)
 		case SDHR_CMD_DEFINE_IMAGE_ASSET_FILENAME: {
 			std::cerr << "SDHR_CMD_DEFINE_IMAGE_ASSET_FILENAME: Not Implemented." << std::endl;
 			// NOT IMPLEMENTED
+			// NOTE: Implementation would have to make sure it's the main thread that loads the image asset
 		} break;
 		case SDHR_CMD_UPLOAD_DATA_FILENAME: {
 			std::cerr << "SDHR_CMD_UPLOAD_DATA_FILENAME: Not Implemented." << std::endl;
@@ -443,8 +672,7 @@ bool SDHRManager::ProcessCommands(void)
 			if (cmd->block_count * 512 < required_data_size) {
 				CommandError("Insufficient data space for tileset");
 			}
-			ImageAsset* asset = image_assets + cmd->asset_index;
-			DefineTileset(cmd->tileset_index, num_entries, cmd->xdim, cmd->ydim, asset, uploaded_data_region);
+			DefineTileset(cmd->tileset_index, num_entries, cmd->xdim, cmd->ydim, cmd->asset_index, uploaded_data_region);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_DEFINE_TILESET: Success! " << (uint32_t)cmd->tileset_index << ';'<< (uint32_t)num_entries << std::endl;
 #endif
@@ -462,8 +690,7 @@ bool SDHRManager::ProcessCommands(void)
 				CommandError("DefineTilesetImmediate data size mismatch");
 				return false;
 			}
-			ImageAsset* asset = image_assets + cmd->asset_index;
-			DefineTileset(cmd->tileset_index, num_entries, cmd->xdim, cmd->ydim, asset, cmd->data);
+			DefineTileset(cmd->tileset_index, num_entries, cmd->xdim, cmd->ydim, cmd->asset_index, cmd->data);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_DEFINE_TILESET_IMMEDIATE: Success! " << (uint32_t)cmd->tileset_index << ';' << (uint32_t)num_entries << std::endl;
 #endif
@@ -491,14 +718,14 @@ bool SDHRManager::ProcessCommands(void)
 			r->tile_ydim = cmd->tile_ydim;
 			r->tile_xcount = cmd->tile_xcount;
 			r->tile_ycount = cmd->tile_ycount;
-			if (r->tilesets) {
-				free(r->tilesets);
+			if (r->mesh) {
+				delete r->mesh;
 			}
-			r->tilesets = (uint8_t*)malloc(r->tile_xcount * r->tile_ycount);
-			if (r->tile_indexes) {
-				free(r->tile_indexes);
-			}
-			r->tile_indexes = (uint8_t*)malloc(r->tile_xcount * r->tile_ycount);
+			r->mesh = new MosaicMesh(r->tile_xcount, r->tile_ycount, r->tile_xdim, r->tile_ydim, cmd->window_index);
+			r->mesh->shaderProgram = &defaultWindowShaderProgram;
+			// Calculate the position of the mesh with respect to the screen top-left 0,0
+			r->mesh->SetWorldCoordinates(r->screen_xbegin - r->tile_xbegin, r->screen_ybegin - r->tile_ybegin);
+
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_DEFINE_WINDOW: Success! " 
 				<< cmd->window_index << ';' << (uint32_t)r->tile_xcount << ';' << (uint32_t)r->tile_ycount << std::endl;
@@ -517,18 +744,26 @@ bool SDHRManager::ProcessCommands(void)
 				return false;
 			}
 			if (!CheckCommandLength(p, end, cmd_sz + cmd->data_length)) return false;
+			// Allocate to each vertex:
+			//  u, v coordinates of the texture (based on the tileset's tile index)
+			//  textureId of the image asset used in the tileset
 			uint8_t* sp = p + cmd_sz;
+			auto mesh = r->mesh;
 			for (uint64_t i = 0; i < cmd->data_length / 2; ++i) {
 				uint8_t tileset_index = sp[i * 2];
 				uint8_t tile_index = sp[i * 2 + 1];
-				if (tileset_records[tileset_index].xdim != r->tile_xdim ||
-					tileset_records[tileset_index].ydim != r->tile_ydim ||
-					tileset_records[tileset_index].num_entries <= tile_index) {
+				const TilesetRecord tr = tileset_records[tileset_index];
+				if (tr.xdim != r->tile_xdim ||
+					tr.ydim != r->tile_ydim ||
+					tr.num_entries <= tile_index) {
 					CommandError("invalid tile specification");
 					return false;
 				}
-				r->tilesets[i] = tileset_index;
-				r->tile_indexes[i] = tile_index;
+				mesh->UpdateMosaicUV(
+					i,
+					tr.tile_data[tile_index].upos,
+					tr.tile_data[tile_index].vpos,
+					tr.asset_index);
 			}
 			p += cmd->data_length;
 #ifdef DEBUG
@@ -547,20 +782,29 @@ bool SDHRManager::ProcessCommands(void)
 			if (s.length() != r->tile_xcount * r->tile_ycount * 2) {
 				CommandError("UploadWindowSetUpload data insufficient to define window tiles");
 			}
+			//  Allocate to each vertex:
+			//  u, v coordinates of the texture (based on the tileset's tile index)
+			//  textureId of the image asset used in the tileset
+			//  NOTE: U/V has its 0,0 origin at the top left. OpenGL is bottom left
 			uint8_t* sp = (uint8_t*)s.c_str();
+			auto mesh = r->mesh;
 			for (uint64_t tile_y = 0; tile_y < r->tile_ycount; ++tile_y) {
-				uint64_t line_offset = (uint64_t)tile_y * r->tile_xcount;
+				// uint64_t line_offset = (uint64_t)tile_y * r->tile_xcount;
 				for (uint64_t tile_x = 0; tile_x < r->tile_xcount; ++tile_x) {
 					uint8_t tileset_index = *sp++;
 					uint8_t tile_index = *sp++;
-					if (tileset_records[tileset_index].xdim != r->tile_xdim ||
-						tileset_records[tileset_index].ydim != r->tile_ydim ||
-						tileset_records[tileset_index].num_entries <= tile_index) {
+					const TilesetRecord tr = tileset_records[tileset_index];
+					if (tr.xdim != r->tile_xdim ||
+						tr.ydim != r->tile_ydim ||
+						tr.num_entries <= tile_index) {
 						CommandError("invalid tile specification");
 						return false;
 					}
-					r->tilesets[line_offset + tile_x] = tileset_index;
-					r->tile_indexes[line_offset + tile_x] = tile_index;
+
+					mesh->UpdateMosaicUV(
+						tile_x, tile_y,
+						tr.tile_data[tile_index].upos, tr.tile_data[tile_index].vpos,
+						tr.asset_index);
 				}
 			}
 #ifdef DEBUG
@@ -594,7 +838,7 @@ bool SDHRManager::ProcessCommands(void)
 						CommandError("invalid tile specification");
 						return false;
 					}
-					r->tilesets[line_offset + tile_x] = cmd->tileset_index;
+					r->tileset_indexes[line_offset + tile_x] = cmd->tileset_index;
 					r->tile_indexes[line_offset + tile_x] = tile_index;
 				}
 			}
@@ -659,6 +903,8 @@ bool SDHRManager::ProcessCommands(void)
 				}
 			}
 #endif
+			// Calculate the position of the mesh with respect to the screen top-left 0,0
+			r->mesh->SetWorldCoordinates(r->screen_xbegin - r->tile_xbegin, r->screen_ybegin - r->tile_ybegin);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_SHIFT_TILES: Success! " 
 				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->x_dir << ';' << (uint32_t)cmd->y_dir << std::endl;
@@ -670,6 +916,7 @@ bool SDHRManager::ProcessCommands(void)
 			Window* r = windows + cmd->window_index;
 			r->screen_xbegin = cmd->screen_xbegin;
 			r->screen_ybegin = cmd->screen_ybegin;
+			// Here we don't change the mesh world_x/y because it's only the window that moves around the screen
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_SET_WINDOW_POSITION: Success! "
 				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->screen_xbegin << ';' << (uint32_t)cmd->screen_ybegin << std::endl;
@@ -681,6 +928,8 @@ bool SDHRManager::ProcessCommands(void)
 			Window* r = windows + cmd->window_index;
 			r->tile_xbegin = cmd->tile_xbegin;
 			r->tile_ybegin = cmd->tile_ybegin;
+			// Calculate the position of the mesh with respect to the screen top-left 0,0
+			r->mesh->SetWorldCoordinates(r->screen_xbegin - r->tile_xbegin, r->screen_ybegin - r->tile_ybegin);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_ADJUST_WINDOW_VIEW: Success! "
 				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->tile_xbegin << ';' << (uint32_t)cmd->tile_ybegin << std::endl;
@@ -707,96 +956,4 @@ bool SDHRManager::ProcessCommands(void)
 		p += message_length - 3;
 	}
 	return true;
-}
-
-void SDHRManager::DrawWindowsIntoScreenImage(GLuint textureid)
-{
-#ifdef _DEBUGTIMINGS
-	using std::chrono::high_resolution_clock;
-	using std::chrono::duration_cast;
-	using std::chrono::duration;
-	using std::chrono::milliseconds;
-
-	duration<double, std::milli> ms_double2;
-	auto t1 = high_resolution_clock::now();
-#endif
-
-#ifdef DEBUG
-	// std::cout << "Entered DrawWindowsIntoScreenImage" << std::endl;
-#endif
-
-	glBindTexture(GL_TEXTURE_2D, textureid);
-	// Setup filtering parameters for display
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
-
-	// Draw the windows into the bound texture
-	uint32_t pixel_color_rgba = 0;
-	for (uint16_t window_index = 0; window_index < 256; ++window_index) {
-		Window* w = windows + window_index;
-		if (!w->enabled) {
-			continue;
-		}
-
-#if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
-		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-#endif
-
-		for (int64_t tile_y = w->tile_ybegin; tile_y < w->tile_ybegin + (int64_t)w->screen_ycount; ++tile_y) {
-			int64_t adj_tile_y = tile_y;
-			int64_t tile_yspan = (int64_t)w->tile_ycount * w->tile_ydim;
-			while (adj_tile_y < 0) adj_tile_y += tile_yspan;
-			while (adj_tile_y >= tile_yspan) adj_tile_y -= tile_yspan;
-			uint64_t tile_yindex = adj_tile_y / w->tile_ydim;
-			uint64_t tile_yoffset = adj_tile_y % w->tile_ydim;
-			for (int64_t tile_x = w->tile_xbegin; tile_x < w->tile_xbegin + (int64_t)w->screen_xcount; ++tile_x) {
-				// check if destination pixel is offscreen
-				int64_t screen_y = tile_y + w->screen_ybegin - w->tile_ybegin;
-				int64_t screen_x = tile_x + w->screen_xbegin - w->tile_xbegin;
-				if (screen_x < 0 || screen_y < 0 || screen_x > screen_xcount || screen_y > screen_ycount) {
-					// destination pixel is offscreen, do not draw
-					continue;
-				}
-				int64_t adj_tile_x = tile_x;
-				int64_t tile_xspan = (int64_t)w->tile_xcount * w->tile_xdim;
-				while (adj_tile_x < 0) adj_tile_x += tile_xspan;
-				while (adj_tile_x >= tile_xspan) adj_tile_x -= tile_xspan;
-				uint64_t tile_xindex = adj_tile_x / w->tile_xdim;
-				uint64_t tile_xoffset = adj_tile_x % w->tile_xdim;
-				uint64_t entry_index = tile_yindex * w->tile_xcount + tile_xindex;
-				TilesetRecord* t = tileset_records + w->tilesets[entry_index];
-				uint64_t tile_index = w->tile_indexes[entry_index];
-				pixel_color_rgba = t->tile_data[tile_index * t->xdim * t->ydim + tile_yoffset * t->xdim + tile_xoffset];
-
-				if ((pixel_color_rgba & 0xFF000000) == 0) {
-					continue; // zero alpha, don't draw
-				}
-
-#ifdef DEBUG
-				// std::cout << std::dec << screen_x << "," << screen_y << " >> " << std::hex << pixel_color_rgba << std::endl;
-#endif
-				// Where's the pixel?
-				if (shouldUseCpuBuffer)
-				{
-					int64_t screen_offset = ((_SDHR_WIDTH * screen_y) + (screen_x));
-					cpubuffer[screen_offset] = pixel_color_rgba;
-				}
-				if (shouldUseSubImage2D)
-					glTexSubImage2D(GL_TEXTURE_2D, 0, screen_x, screen_y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &pixel_color_rgba);
-			}
-		}
-
-#ifdef DEBUG
-		std::cout << "Drew into buffer window " << window_index << std::endl;
-#endif
-	}
-
-#ifdef _DEBUGTIMINGS
-	auto t2 = high_resolution_clock::now();
-	duration<double, std::milli> ms_double = t2 - t1;
-	std::cout << "DrawWindowsIntoBuffer() duration: " << ms_double.count() << "ms\n";
-	std::cout << "Framebuffer write: " << ms_double2.count() << "ms\n";
-#endif
 }

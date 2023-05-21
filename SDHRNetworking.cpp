@@ -66,7 +66,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 
 		// Here the thread will block waiting for a connection
 		// In order to kill the thread when we quit the app, we need to connect
-		// to it locally to unblock accept(), which then breaks on bShouldTerminateNetworking
+		// to it locally to unblock accept(), which then breaks on shouldTerminateNetworking
 #ifdef __NETWORKING_WINDOWS__
 		if ((client_fd = accept(server_fd, (SOCKADDR*)&client_addr, &client_len)) == INVALID_SOCKET) {
 			closesocket(server_fd);
@@ -140,38 +140,44 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 						At this point we have a complete set of commands to process.
 						Some more data may be in the kernel socket receive buffer, but we don't care.
 						They'll be processed in the next batch.
-						Wait for the main thread to finish displaying the current state, then process
+						Wait for the main thread to finish loading the current state (if any), then process
 						the commands.
 						*/
 
-						while (sdhrMgr->threadState != THREADCOMM_e::IDLE)
+						while (sdhrMgr->threadState != THREADCOMM_e::SOCKET_LOCK)
 						{
-							// wait for main thread to draw the changes
+							if (sdhrMgr->threadState == THREADCOMM_e::IDLE)
+								sdhrMgr->threadState = THREADCOMM_e::SOCKET_LOCK;
 						}
-
 #ifdef DEBUG
-						// std::cout << "CONTROL: Process SDHR" << std::endl;
+						std::cout << "CONTROL: Process SDHR" << std::endl;
 #endif
-						sdhrMgr->threadState = THREADCOMM_e::SOCKET_LOCK;
 						bool processingSucceeded = sdhrMgr->ProcessCommands();
 						// Whether or not the processing worked, clear the buffer. If the processing failed,
 						// the data was corrupt and shouldn't be reprocessed
 						sdhrMgr->ClearBuffer();
-						sdhrMgr->threadState = THREADCOMM_e::COMMAND_PROCESSED;
-						if (processingSucceeded && sdhrMgr->IsSdhrEnabled())
+						sdhrMgr->dataState = DATASTATE_e::COMMAND_READY;
+						sdhrMgr->threadState = THREADCOMM_e::IDLE;
+						if (processingSucceeded)
 						{
-							// We have processed some commands.
-							// TODO: ???
+							std::cout << "Processing succeeded!" << std::endl;
+						}
+						else {
+							std::cerr << "ERROR: Processing failed!" << std::endl;
 						}
 						break;
 					}
 					default:
+						std::cerr << "ERROR: Unknown control packet type: " << std::hex << packet.addr << std::endl;
 						break;
 					}
 					break;
 				case 0x01:
 					// std::cout << "This is a data packet" << std::endl;
 					sdhrMgr->AddPacketDataToBuffer(packet.data);
+					break;
+				default:
+					std::cerr << "ERROR: Unknown packet type: " << std::hex << packet.addr << std::endl;
 					break;
 				}
 			}
@@ -249,7 +255,7 @@ bool socket_unblock_accept(uint16_t port)
 		return false;
 	}
 	// Do nothing, we've already unblocked the server's accept()
-	// so it will quit if bShouldTerminateNetworking is true
+	// so it will quit if shouldTerminateNetworking is true
 #ifdef __NETWORKING_WINDOWS__
 	closesocket(client_socket);
 	WSACleanup();

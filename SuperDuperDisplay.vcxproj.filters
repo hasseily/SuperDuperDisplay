@@ -8,6 +8,18 @@
       <UniqueIdentifier>{f18ab499-84e1-499f-8eff-9754361e0e52}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="headers">
+      <UniqueIdentifier>{fd5c2b84-3576-48ae-bd69-50aef3e360dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{bc77d915-ea34-4b87-a05c-219375cb07e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="assets">
+      <UniqueIdentifier>{a0ff60f3-4a53-4ffe-946c-9bd8770d7e17}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="glad">
+      <UniqueIdentifier>{c076ead4-8be1-43cd-b5cd-5b6d1e4e6d81}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -40,6 +52,15 @@
     <ClCompile Include="SDHRManager.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="OpenGLHelper.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="MosaicMesh.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="glad\glad.c">
+      <Filter>glad</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imgui\imconfig.h">
@@ -63,17 +84,38 @@
     <ClInclude Include="stb_image.h">
       <Filter>sources</Filter>
     </ClInclude>
-    <ClInclude Include="SDHRNetworking.h">
-      <Filter>sources</Filter>
-    </ClInclude>
-    <ClInclude Include="SDHRManager.h">
-      <Filter>sources</Filter>
-    </ClInclude>
     <ClInclude Include="imgui_memory_editor.h">
       <Filter>sources</Filter>
     </ClInclude>
+    <ClInclude Include="camera.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="common.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="OpenGLHelper.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="shader.h">
+      <Filter>headers</Filter>
+    </ClInclude>
     <ClInclude Include="my_imgui_config.h">
-      <Filter>sources</Filter>
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SDHRNetworking.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SDHRManager.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MosaicMesh.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="glad\glad.h">
+      <Filter>glad</Filter>
+    </ClInclude>
+    <ClInclude Include="glad\khrplatform.h">
+      <Filter>glad</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -85,5 +127,16 @@
       <Filter>imgui</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="shaders\sdhr_window_tr.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\sdhr_window_tr.frag">
+      <Filter>shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Texture_Default.png">
+      <Filter>assets</Filter>
+    </Image>
   </ItemGroup>
 </Project>
