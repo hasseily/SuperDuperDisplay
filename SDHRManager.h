@@ -144,17 +144,18 @@ public:
 	Window windows[256];
 	// Camera for World -> View matrix transform
 	Camera camera = Camera(
-		_SDHR_WIDTH / 2.f, _SDHR_HEIGHT / 2.f,	// x,y
-		500.f,										// z
+		0.f, 0.f,									// x,y
+		10.f,										// z
 		0.f, 1.f, 0.f,								// upVector xyz
 		-90.f,										// yaw
 		0.f											// pitch
 	);
 	// Projection matrix (left, right, bottom, top, near, far)
-	glm::mat4 mat_proj = glm::ortho<float>(0, _SDHR_WIDTH, 0, _SDHR_HEIGHT, 0, 256);
+	glm::mat4 mat_proj = glm::ortho<float>(-_SDHR_WIDTH / 2, _SDHR_WIDTH / 2, -_SDHR_HEIGHT / 2, _SDHR_HEIGHT / 2, 0, 256);
 
 	// Debugging attributes
 	bool bDebugTextures = true;
+	bool bUsePerspective = false;		// see bIsUsingPerspective
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
@@ -230,7 +231,8 @@ private:
 											// routines like clearing out the image assets
 	uint8_t* a2mem;	// The current state of the Apple 2 memory ($0200-$BFFF)
 	
-	bool bSDHREnabled;	// is SDHR enabled?
+	bool bSDHREnabled = false;	// is SDHR enabled?
+	bool bIsUsingPerspective = false;	// is it currently using perspective?
 
 	static const uint16_t screen_xcount = _SDHR_WIDTH;
 	static const uint16_t screen_ycount = _SDHR_HEIGHT;

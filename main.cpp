@@ -261,7 +261,8 @@ int main(int, char**)
 //				ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
 				ImGui::Checkbox("Memory Window", &show_memory_window);      // Edit bools storing our window open/close state
                 ImGui::Separator();
-                ImGui::Checkbox("Textured Geometry", &sdhrManager->bDebugTextures);    // Show textures toggle
+                ImGui::Checkbox("Textured Geometry", &sdhrManager->bDebugTextures);             // Show textures toggle
+				ImGui::Checkbox("Perspective Projection", &sdhrManager->bUsePerspective);       // Change projection type
 				ImGui::Separator();
 				did_press_quit = ImGui::Button("Quit App (Alt-F4)");
 				if (did_press_quit)
