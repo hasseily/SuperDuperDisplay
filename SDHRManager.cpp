@@ -396,7 +396,7 @@ void SDHRManager::Render()
 	// TEST
 	// Using a prespective so I can zoom back and forth easily
 	// perspective uses (fov, aspect, near, far)
-	mat_proj = glm::perspective<float>(120, (float)_SDHR_WIDTH/_SDHR_HEIGHT, 0, 256);
+	mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)_SDHR_WIDTH/_SDHR_HEIGHT, 0, 256);
 	// Render the windows (i.e. the meshes with the windows stencils)
 	for each (auto& _w in this->windows) {
 		if (_w.enabled) {
@@ -529,7 +529,7 @@ void SDHRManager::RenderTest()
 	// Using a prespective so I can zoom back and forth easily
 	mat_proj = glm::mat4(1);
 	defaultWindowShaderProgram.setMat4("transform", mat_proj);
-	// mat_proj = glm::perspective<float>(120, 1, 0, 256);
+	// mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), 1, 0, 256);
 	// defaultWindowShaderProgram.setMat4("transform", mat_proj * this->camera.GetViewMatrix() * glm::mat4(1));
 
 	glDrawArrays(GL_TRIANGLES, 0, 6); // Starting from vertex 0; 6 vertices total -> 2 triangles

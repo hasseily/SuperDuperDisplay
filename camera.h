@@ -108,6 +108,7 @@ public:
     }
 
     // processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
+    // When using a glm::perspective projection, convert the zoom to radians to get the FOV
     void ProcessMouseScroll(float yoffset)
     {
         Zoom -= (float)yoffset;
