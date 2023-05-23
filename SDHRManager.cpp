@@ -702,7 +702,7 @@ bool SDHRManager::ProcessCommands(void)
 			}
 			uint64_t load_data_size;
 			load_data_size = (uint64_t)num_entries * 4;
-			if (message_length != sizeof(DefineTilesetImmediateCmd) + load_data_size) {
+			if (message_length != sizeof(DefineTilesetImmediateCmd) + load_data_size + 3) {	// 3 is cmd_len and cmd_id
 				CommandError("DefineTilesetImmediate data size mismatch");
 				return false;
 			}
