@@ -932,7 +932,7 @@ bool SDHRManager::ProcessCommands(void)
 			Window* r = windows + cmd->window_index;
 			r->screen_xbegin = cmd->screen_xbegin;
 			r->screen_ybegin = cmd->screen_ybegin;
-			// Here we don't change the mesh world_x/y because it's only the window that moves around the screen
+			r->mesh->SetWorldCoordinates(r->screen_xbegin - r->tile_xbegin, r->screen_ybegin - r->tile_ybegin);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_SET_WINDOW_POSITION: Success! "
 				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->screen_xbegin << ';' << (uint32_t)cmd->screen_ybegin << std::endl;

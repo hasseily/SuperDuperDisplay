@@ -142,14 +142,14 @@ public:
 	Window windows[256];
 	// Camera for World -> View matrix transform
 	Camera camera = Camera(
-		0.f, 0.f,									// x,y
+		_SDHR_WIDTH/2.f, _SDHR_HEIGHT/2.f,									// x,y
 		10.f,										// z
 		0.f, 1.f, 0.f,								// upVector xyz
 		-90.f,										// yaw
 		0.f											// pitch
 	);
 	// Projection matrix (left, right, bottom, top, near, far)
-	glm::mat4 mat_proj = glm::ortho<float>(-_SDHR_WIDTH / 2, _SDHR_WIDTH / 2, -_SDHR_HEIGHT / 2, _SDHR_HEIGHT / 2, 0, 256);
+	glm::mat4 mat_proj = glm::ortho<float>(-_SDHR_WIDTH/2, _SDHR_WIDTH/2, -_SDHR_HEIGHT/2, _SDHR_HEIGHT/2, 0, 256);
 
 	// Debugging attributes
 	bool bDebugTextures = true;
