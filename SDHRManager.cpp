@@ -61,10 +61,10 @@ struct DefineTilesetCmd {
 
 struct DefineTilesetImmediateCmd {
 	uint8_t tileset_index;
+	uint8_t asset_index;
 	uint8_t num_entries;
 	uint8_t xdim;			// xy dimension, in pixels, of tiles
 	uint8_t ydim;
-	uint8_t asset_index;
 	uint8_t data[];  // data is 4-byte records, 16-bit x and y offsets (scaled by x/ydim), from the given asset
 };
 
