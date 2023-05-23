@@ -109,6 +109,8 @@ int main(int, char**)
 	}
 	// glEnable(GL_DEPTH_TEST); // TODO: Check if necessary
     glEnable(GL_CULL_FACE);
+	glEnable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_NOTEQUAL, 0.0);
     GLenum glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL glEnable error: " << glerr << std::endl;
