@@ -7,7 +7,6 @@ Display engine for the Apple 2 network bus card
 	  the fragment shader quit early if outside the window bounds
 	- or somehow make a stencil buffer for each mesh when rendering it
 - Disable depth testing because we'll always draw back-to-front starting with window id 0 forward
-- There will be exactly 16 textures, with their index passed in to the shaders
 
 - We _could_ render each mesh as an instanced rendering of tiles. Or draw _all the meshes_, _all the tiles_, as instanced
   in one single rendering call (with the z dimension as the window id for depth testing). But very little data is common
