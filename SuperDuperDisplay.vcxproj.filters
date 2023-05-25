@@ -61,6 +61,9 @@
     <ClCompile Include="glad\glad.c">
       <Filter>glad</Filter>
     </ClCompile>
+    <ClCompile Include="SDHRWindow.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imgui\imconfig.h">
@@ -116,6 +119,9 @@
     </ClInclude>
     <ClInclude Include="glad\khrplatform.h">
       <Filter>glad</Filter>
+    </ClInclude>
+    <ClInclude Include="SDHRWindow.h">
+      <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

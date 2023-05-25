@@ -243,7 +243,12 @@ void SDHRManager::Initialize()
 	memset(uploaded_data_region, 0, sizeof(uploaded_data_region));
 	*image_assets = {};
 	*tileset_records = {};
-	*windows = {};
+
+	for (size_t i = 0; i < (sizeof(windows)/sizeof(SDHRWindow)); i++)
+	{
+		// Set the z index of each window and keep track of them
+		windows[i].Set_index(i);
+	}
 
 	command_buffer.clear();
 	command_buffer.reserve(64 * 1024);
@@ -273,9 +278,6 @@ SDHRManager::~SDHRManager()
 	for (uint16_t i = 0; i < 256; ++i) {
 		if (tileset_records[i].tile_data) {
 			free(tileset_records[i].tile_data);
-		}
-		if (windows[i].mesh) {
-			delete windows[i].mesh;
 		}
 	}
 	delete[] a2mem;
@@ -367,11 +369,7 @@ void SDHRManager::Render()
 		}
 		// Update meshes
 		for each (auto & _w in this->windows) {
-			if (_w.enabled) {
-				if (_w.mesh) {
-					_w.mesh->updateMesh();
-				}
-			}
+			_w.Update();
 		}
 		this->dataState = DATASTATE_e::NODATA;
 		this->threadState = THREADCOMM_e::IDLE;
@@ -415,11 +413,7 @@ void SDHRManager::Render()
 
 	// Render the windows (i.e. the meshes with the windows stencils)
 	for each (auto& _w in this->windows) {
-		if (_w.enabled) {
-			if (_w.mesh) {
-				_w.mesh->Draw(this->camera.GetViewMatrix(), mat_proj);
-			}
-		}
+		_w.Render(this->camera.GetViewMatrix(), mat_proj);
 	}
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
@@ -714,47 +708,37 @@ bool SDHRManager::ProcessCommands(void)
 		case SDHR_CMD_DEFINE_WINDOW: {
 			if (!CheckCommandLength(p, end, sizeof(DefineWindowCmd))) return false;
 			DefineWindowCmd* cmd = (DefineWindowCmd*)p;
-			Window* r = windows + cmd->window_index;
-			if (r->screen_xcount > screen_xcount) {
+			SDHRWindow* r = windows + cmd->window_index;
+			auto sc = r->Get_screen_count();
+			if (sc.x > screen_xcount) {
 				CommandError("Window exceeds max x resolution");
 				return false;
 			}
-			if (r->screen_ycount > screen_ycount) {
+			if (sc.y > screen_ycount) {
 				CommandError("Window exceeds max y resolution");
 				return false;
 			}
-			r->enabled = false;
-			r->screen_xcount = cmd->screen_xcount;
-			r->screen_ycount = cmd->screen_ycount;
-			r->screen_xbegin = 0;
-			r->screen_ybegin = 0;
-			r->tile_xbegin = 0;
-			r->tile_ybegin = 0;
-			r->tile_xdim = cmd->tile_xdim;
-			r->tile_ydim = cmd->tile_ydim;
-			r->tile_xcount = cmd->tile_xcount;
-			r->tile_ycount = cmd->tile_ycount;
-			if (r->mesh) {
-				delete r->mesh;
-			}
-			r->mesh = new MosaicMesh(r->tile_xcount, r->tile_ycount, r->tile_xdim, r->tile_ydim, cmd->window_index);
-			r->mesh->shaderProgram = &defaultWindowShaderProgram;
-			// Calculate the position of the mesh with respect to the screen top-left 0,0
-			r->mesh->SetWorldCoordinates(r->screen_xbegin - r->tile_xbegin, r->screen_ybegin - r->tile_ybegin);
+			r->Define(
+				uXY({ cmd->screen_xcount, cmd->screen_ycount }),
+				uXY({ cmd->tile_xdim, cmd->tile_ydim }),
+				uXY({ cmd->tile_xcount, cmd->tile_ycount }),
+				&defaultWindowShaderProgram
+			);
 
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_DEFINE_WINDOW: Success! " 
-				<< cmd->window_index << ';' << (uint32_t)r->tile_xcount << ';' << (uint32_t)r->tile_ycount << std::endl;
+				<< cmd->window_index << ';' << (uint32_t)cmd->tile_xcount << ';' << (uint32_t)cmd->tile_ycount << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_UPDATE_WINDOW_SET_IMMEDIATE: {
 			size_t cmd_sz = sizeof(UpdateWindowSetImmediateCmd);
 			if (!CheckCommandLength(p, end, cmd_sz)) return false;
 			UpdateWindowSetImmediateCmd* cmd = (UpdateWindowSetImmediateCmd*)p;
-			Window* r = windows + cmd->window_index;
+			SDHRWindow* r = windows + cmd->window_index;
 
 			// full tile specification: tileset and index
-			uint64_t required_data_size = (uint64_t)r->tile_xcount * r->tile_ycount * 2;
+			auto wintilect = r->Get_tile_count();
+			uint64_t required_data_size = wintilect.x * wintilect.y * 2;
 			if (required_data_size != cmd->data_length) {
 				CommandError("UpdateWindowSetImmediate data size mismatch");
 				return false;
@@ -769,8 +753,8 @@ bool SDHRManager::ProcessCommands(void)
 				uint8_t tileset_index = sp[i * 2];
 				uint8_t tile_index = sp[i * 2 + 1];
 				const TilesetRecord tr = tileset_records[tileset_index];
-				if (tr.xdim != r->tile_xdim ||
-					tr.ydim != r->tile_ydim ||
+				if (tr.xdim != r->Get_tile_dim().x ||
+					tr.ydim != r->Get_tile_dim().y ||
 					tr.num_entries <= tile_index) {
 					CommandError("invalid tile specification");
 					return false;
@@ -789,13 +773,15 @@ bool SDHRManager::ProcessCommands(void)
 		case SDHR_CMD_UPDATE_WINDOW_SET_UPLOAD: {
 			if (!CheckCommandLength(p, end, sizeof(UpdateWindowSetUploadCmd))) return false;
 			UpdateWindowSetUploadCmd* cmd = (UpdateWindowSetUploadCmd*)p;
-			Window* r = windows + cmd->window_index;
+			SDHRWindow* r = windows + cmd->window_index;
 			// full tile specification: tileset and index
 			uint64_t data_size = (uint64_t)cmd->block_count * 512;
 			std::stringstream ss;
 			upload_inflate((const char*)uploaded_data_region, data_size, ss);
 			std::string s = ss.str();
-			if (s.length() != r->tile_xcount * r->tile_ycount * 2) {
+
+			auto wintilect = r->Get_tile_count();
+			if (s.length() != wintilect.x * wintilect.y * 2) {
 				CommandError("UploadWindowSetUpload data insufficient to define window tiles");
 			}
 			//  Allocate to each vertex:
@@ -804,14 +790,14 @@ bool SDHRManager::ProcessCommands(void)
 			//  NOTE: U/V has its 0,0 origin at the top left. OpenGL is bottom left
 			uint8_t* sp = (uint8_t*)s.c_str();
 			auto mesh = r->mesh;
-			for (uint64_t tile_y = 0; tile_y < r->tile_ycount; ++tile_y) {
+			for (uint64_t tile_y = 0; tile_y < wintilect.y; ++tile_y) {
 				// uint64_t line_offset = (uint64_t)tile_y * r->tile_xcount;
-				for (uint64_t tile_x = 0; tile_x < r->tile_xcount; ++tile_x) {
+				for (uint64_t tile_x = 0; tile_x < wintilect.x; ++tile_x) {
 					uint8_t tileset_index = *sp++;
 					uint8_t tile_index = *sp++;
 					const TilesetRecord tr = tileset_records[tileset_index];
-					if (tr.xdim != r->tile_xdim ||
-						tr.ydim != r->tile_ydim ||
+					if (tr.xdim != r->Get_tile_dim().x ||
+						tr.ydim != r->Get_tile_dim().y ||
 						tr.num_entries <= tile_index) {
 						CommandError("invalid tile specification");
 						return false;
@@ -831,9 +817,10 @@ bool SDHRManager::ProcessCommands(void)
 		case SDHR_CMD_UPDATE_WINDOW_SINGLE_TILESET: {
 			if (!CheckCommandLength(p, end, sizeof(UpdateWindowSingleTilesetCmd))) return false;
 			UpdateWindowSingleTilesetCmd* cmd = (UpdateWindowSingleTilesetCmd*)p;
-			Window* r = windows + cmd->window_index;
-			if ((uint64_t)cmd->tile_xbegin + cmd->tile_xcount > r->tile_xcount ||
-				(uint64_t)cmd->tile_ybegin + cmd->tile_ycount > r->tile_ycount) {
+			SDHRWindow* r = windows + cmd->window_index;
+			auto wintilect = r->Get_tile_count();
+			if ((uint64_t)cmd->tile_xbegin + cmd->tile_xcount > wintilect.x ||
+				(uint64_t)cmd->tile_ybegin + cmd->tile_ycount > wintilect.y) {
 				CommandError("tile update region exceeds tile dimensions");
 				return false;
 			}
@@ -845,11 +832,11 @@ bool SDHRManager::ProcessCommands(void)
 			}
 			uint8_t* dp = cmd->data;
 			for (uint64_t tile_y = 0; tile_y < cmd->tile_ycount; ++tile_y) {
-				uint64_t line_offset = (cmd->tile_ybegin + tile_y) * r->tile_xcount + cmd->tile_xbegin;
+				uint64_t line_offset = (cmd->tile_ybegin + tile_y) * wintilect.x + cmd->tile_xbegin;
 				for (uint64_t tile_x = 0; tile_x < cmd->tile_xcount; ++tile_x) {
 					uint8_t tile_index = *dp++;
-					if (tileset_records[cmd->tileset_index].xdim != r->tile_xdim ||
-						tileset_records[cmd->tileset_index].ydim != r->tile_ydim ||
+					if (tileset_records[cmd->tileset_index].xdim != r->Get_tile_dim().x ||
+						tileset_records[cmd->tileset_index].ydim != r->Get_tile_dim().y ||
 						tileset_records[cmd->tileset_index].num_entries <= tile_index) {
 						CommandError("invalid tile specification");
 						return false;
@@ -864,63 +851,13 @@ bool SDHRManager::ProcessCommands(void)
 		case SDHR_CMD_UPDATE_WINDOW_SHIFT_TILES: {
 			if (!CheckCommandLength(p, end, sizeof(UpdateWindowShiftTilesCmd))) return false;
 			UpdateWindowShiftTilesCmd* cmd = (UpdateWindowShiftTilesCmd*)p;
-			Window* r = windows + cmd->window_index;
+			SDHRWindow* r = windows + cmd->window_index;
 			if (cmd->x_dir < -1 || cmd->x_dir > 1 || cmd->y_dir < -1 || cmd->y_dir > 1) {
 				CommandError("invalid tile shift");
 				return false;
 			}
-			if (r->tile_xcount == 0 || r->tile_ycount == 0) {
-				CommandError("invalid window for tile shift");
-				return false;
-			}
+			r->ShiftTiles(iXY({ cmd->x_dir, cmd->y_dir }));
 
-			r->tile_xbegin += cmd->x_dir;
-			r->tile_ybegin += cmd->y_dir;
-
-			r->tile_xbegin %= r->tile_xcount;
-			r->tile_ybegin %= r->tile_ycount;
-#if 0
-			if (cmd->x_dir == -1) {
-				for (uint64_t y_index = 0; y_index < r->tile_ycount; ++y_index) {
-					uint64_t line_offset = y_index * r->tile_xcount;
-					for (uint64_t x_index = 1; x_index < r->tile_xcount; ++x_index) {
-						r->tilesets[line_offset + x_index - 1] = r->tilesets[line_offset + x_index];
-						r->tile_indexes[line_offset + x_index - 1] = r->tile_indexes[line_offset + x_index];
-					}
-				}
-			}
-			else if (cmd->x_dir == 1) {
-				for (uint64_t y_index = 0; y_index < r->tile_ycount; ++y_index) {
-					uint64_t line_offset = y_index * r->tile_xcount;
-					for (uint64_t x_index = r->tile_xcount - 1; x_index > 0; --x_index) {
-						r->tilesets[line_offset + x_index] = r->tilesets[line_offset + x_index - 1];
-						r->tile_indexes[line_offset + x_index] = r->tile_indexes[line_offset + x_index - 1];
-					}
-				}
-			}
-			if (cmd->y_dir == -1) {
-				for (uint64_t y_index = 1; y_index < r->tile_ycount; ++y_index) {
-					uint64_t line_offset = y_index * r->tile_xcount;
-					uint64_t prev_line_offset = line_offset - r->tile_xcount;
-					for (uint64_t x_index = 0; x_index < r->tile_xcount; ++x_index) {
-						r->tilesets[prev_line_offset + x_index] = r->tilesets[line_offset + x_index];
-						r->tile_indexes[prev_line_offset + x_index] = r->tile_indexes[line_offset + x_index];
-					}
-				}
-			}
-			else if (cmd->y_dir == 1) {
-				for (uint64_t y_index = r->tile_ycount - 1; y_index > 0; --y_index) {
-					uint64_t line_offset = y_index * r->tile_xcount;
-					uint64_t prev_line_offset = line_offset - r->tile_xcount;
-					for (uint64_t x_index = 0; x_index < r->tile_xcount; ++x_index) {
-						r->tilesets[line_offset + x_index] = r->tilesets[prev_line_offset + x_index];
-						r->tile_indexes[line_offset + x_index] = r->tile_indexes[prev_line_offset + x_index];
-					}
-				}
-			}
-#endif
-			// Calculate the position of the mesh with respect to the screen top-left 0,0
-			r->mesh->SetWorldCoordinates(r->screen_xbegin - r->tile_xbegin, r->screen_ybegin - r->tile_ybegin);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_SHIFT_TILES: Success! " 
 				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->x_dir << ';' << (uint32_t)cmd->y_dir << std::endl;
@@ -929,10 +866,8 @@ bool SDHRManager::ProcessCommands(void)
 		case SDHR_CMD_UPDATE_WINDOW_SET_WINDOW_POSITION: {
 			if (!CheckCommandLength(p, end, sizeof(UpdateWindowSetWindowPositionCmd))) return false;
 			UpdateWindowSetWindowPositionCmd* cmd = (UpdateWindowSetWindowPositionCmd*)p;
-			Window* r = windows + cmd->window_index;
-			r->screen_xbegin = cmd->screen_xbegin;
-			r->screen_ybegin = cmd->screen_ybegin;
-			r->mesh->SetWorldCoordinates(r->screen_xbegin - r->tile_xbegin, r->screen_ybegin - r->tile_ybegin);
+			SDHRWindow* r = windows + cmd->window_index;
+			r->SetPosition(iXY({ cmd->screen_xbegin, cmd->screen_ybegin }));
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_SET_WINDOW_POSITION: Success! "
 				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->screen_xbegin << ';' << (uint32_t)cmd->screen_ybegin << std::endl;
@@ -941,11 +876,8 @@ bool SDHRManager::ProcessCommands(void)
 		case SDHR_CMD_UPDATE_WINDOW_ADJUST_WINDOW_VIEW: {
 			if (!CheckCommandLength(p, end, sizeof(UpdateWindowAdjustWindowViewCommand))) return false;
 			UpdateWindowAdjustWindowViewCommand* cmd = (UpdateWindowAdjustWindowViewCommand*)p;
-			Window* r = windows + cmd->window_index;
-			r->tile_xbegin = cmd->tile_xbegin;
-			r->tile_ybegin = cmd->tile_ybegin;
-			// Calculate the position of the mesh with respect to the screen top-left 0,0
-			r->mesh->SetWorldCoordinates(r->screen_xbegin - r->tile_xbegin, r->screen_ybegin - r->tile_ybegin);
+			SDHRWindow* r = windows + cmd->window_index;
+			r->AdjustView(iXY({ cmd->tile_xbegin, cmd->tile_ybegin }));
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_ADJUST_WINDOW_VIEW: Success! "
 				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->tile_xbegin << ';' << (uint32_t)cmd->tile_ybegin << std::endl;
@@ -954,8 +886,8 @@ bool SDHRManager::ProcessCommands(void)
 		case SDHR_CMD_UPDATE_WINDOW_ENABLE: {
 			if (!CheckCommandLength(p, end, sizeof(UpdateWindowEnableCmd))) return false;
 			UpdateWindowEnableCmd* cmd = (UpdateWindowEnableCmd*)p;
-			Window* r = windows + cmd->window_index;
-			if (!r->tile_xcount || !r->tile_ycount) {
+			SDHRWindow* r = windows + cmd->window_index;
+			if (r->IsEmpty()) {
 				CommandError("cannote enable empty window");
 				return false;
 			}

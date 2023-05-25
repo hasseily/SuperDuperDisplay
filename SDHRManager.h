@@ -12,8 +12,8 @@
 
 #include "common.h"
 #include "OpenGLHelper.h"
-#include "MosaicMesh.h"
 #include "camera.h"
+#include "SDHRWindow.h"
 
 enum THREADCOMM_e
 {
@@ -105,30 +105,6 @@ public:
 		{}
 	};
 
-	struct Window {
-		uint8_t enabled;
-		bool black_or_wrap;      // false: viewport is black outside of tile range, true: viewport wraps
-		uint64_t screen_xcount;  // width in pixels of visible screen area of window
-		uint64_t screen_ycount;
-		int64_t screen_xbegin;   // pixel xy coordinate where window begins
-		int64_t screen_ybegin;
-		int64_t tile_xbegin;     // pixel xy coordinate on backing tile array where aperture begins
-		int64_t tile_ybegin;
-		uint64_t tile_xdim;      // xy dimension, in pixels, of tiles in the window.
-		uint64_t tile_ydim;
-		uint64_t tile_xcount;    // xy dimension, in tiles, of the tile array
-		uint64_t tile_ycount;
-		MosaicMesh* mesh = NULL;
-		Window()
-			: enabled(0), black_or_wrap(false)
-			, screen_xcount(0), screen_ycount(0)
-			, screen_xbegin(0), screen_ybegin(0)
-			, tile_xbegin(0), tile_ybegin(0)
-			, tile_xdim(0), tile_ydim(0)
-			, tile_xcount(0), tile_ycount(0)
-		{}
-	};
-
 	//////////////////////////////////////////////////////////////////////////
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
@@ -139,7 +115,7 @@ public:
 	//			They're always concomitantly available as textures in the GPU
 	ImageAsset image_assets[_SDHR_MAX_TEXTURES];
 	TilesetRecord tileset_records[256];
-	Window windows[256];
+	SDHRWindow windows[256];
 	// Camera for World -> View matrix transform
 	Camera camera = Camera(
 		_SDHR_WIDTH/2.f, _SDHR_HEIGHT/2.f,									// x,y
