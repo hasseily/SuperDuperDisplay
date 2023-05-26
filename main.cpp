@@ -167,7 +167,7 @@ int main(int, char**)
         dt_LAST = dt_NOW;
         dt_NOW = SDL_GetPerformanceCounter();
 		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
-
+        
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
@@ -247,12 +247,16 @@ int main(int, char**)
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
 
+		// Tell sdhrManager the size of the window
+		SDL_GetWindowSize(window, &sdhrManager->rendererOutputWidth, &sdhrManager->rendererOutputHeight);
+		// sdhrManager->rendererOutputWidth
+        
 		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
 
 		{
-			ImGui::Begin("Super Duper Display Options");
+			ImGui::Begin("Super Duper Display Debug");
 			if (!ImGui::IsWindowCollapsed())
 			{
 				auto _c = sdhrManager->camera;
@@ -263,7 +267,7 @@ int main(int, char**)
 //				ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
 				ImGui::Checkbox("Memory Window", &show_memory_window);      // Edit bools storing our window open/close state
                 ImGui::Separator();
-                ImGui::Checkbox("Textured Geometry", &sdhrManager->bDebugTextures);             // Show textures toggle
+                ImGui::Checkbox("Untextured Geometry", &sdhrManager->bDebugNoTextures);             // Show textures toggle
 				ImGui::Checkbox("Perspective Projection", &sdhrManager->bUsePerspective);       // Change projection type
 				ImGui::Separator();
 				did_press_quit = ImGui::Button("Quit App (Alt-F4)");

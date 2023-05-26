@@ -367,7 +367,7 @@ void SDHRManager::Render()
 #endif
 			glActiveTexture(GL_TEXTURE0);
 		}
-		// Update meshes
+		// Update windows and meshes
 		for each (auto & _w in this->windows) {
 			_w.Update();
 		}
@@ -389,13 +389,19 @@ void SDHRManager::Render()
 		std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
 	}
 
-	defaultWindowShaderProgram.setBool("bDebugTextures", bDebugTextures);
+	auto vTexelSize = glm::vec2(
+		this->rendererOutputWidth / (float)_SDHR_WIDTH,
+		this->rendererOutputHeight / (float)_SDHR_HEIGHT
+		);
+	defaultWindowShaderProgram.setVec2("vTexelSize", vTexelSize);
+	defaultWindowShaderProgram.setBool("iDebugNoTextures", bDebugNoTextures);
 
-	// TEST
-	// Using a prespective so I can zoom back and forth easily
+	// bUsePerspective toggle:
+	// Test using a prespective so we can zoom back and forth easily
 	// perspective uses (fov, aspect, near, far)
 	// If the camera is using a perspective projection matrix, specify the z starting distance
 	// Default FOV is 45 degrees
+	// Note that the perspective screws with the stencil test
 
 	if (bUsePerspective && (!bIsUsingPerspective))
 	{
@@ -490,7 +496,12 @@ void SDHRManager::RenderTest()
 		std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
 	}
 
-	defaultWindowShaderProgram.setBool("bDebugTextures", bDebugTextures);
+	auto vTexelSize = glm::vec2(
+		this->rendererOutputWidth / (float)_SDHR_WIDTH,
+		this->rendererOutputHeight / (float)_SDHR_HEIGHT
+	);
+	defaultWindowShaderProgram.setVec2("vTexelSize", vTexelSize);
+	defaultWindowShaderProgram.setBool("bDebugNoTextures", bDebugNoTextures);
 
 	GLuint VertexArrayID;
 	glGenVertexArrays(1, &VertexArrayID);

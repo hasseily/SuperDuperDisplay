@@ -127,8 +127,12 @@ public:
 	// Projection matrix (left, right, bottom, top, near, far)
 	glm::mat4 mat_proj = glm::ortho<float>(-_SDHR_WIDTH/2, _SDHR_WIDTH/2, -_SDHR_HEIGHT/2, _SDHR_HEIGHT/2, 0, 256);
 
+	// Actual screen rendered output dimensions
+	int rendererOutputWidth = _SDHR_WIDTH;
+	int rendererOutputHeight = _SDHR_HEIGHT;
+
 	// Debugging attributes
-	bool bDebugTextures = true;
+	bool bDebugNoTextures = false;
 	bool bUsePerspective = false;		// see bIsUsingPerspective
 
 	//////////////////////////////////////////////////////////////////////////
