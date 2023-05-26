@@ -33,8 +33,8 @@ void SDHRWindow::ShiftTiles(iXY _direction)
 	tile_begin.x += _direction.x;
 	tile_begin.y += _direction.y;
 
-	tile_begin.x %= tile_count.x;
-	tile_begin.y %= tile_count.y;
+	tile_begin.x %= (tile_count.x * tile_dim.x);
+	tile_begin.y %= (tile_count.y * tile_dim.y);
 
 	// Calculate the position of the mesh with respect to the screen top-left 0,0
 	mesh->SetWorldCoordinates(screen_begin.x - tile_begin.x, screen_begin.y - tile_begin.y);
@@ -55,6 +55,9 @@ void SDHRWindow::AdjustView(iXY _mesh_pos)
 {
 	tile_begin.x = _mesh_pos.x;
 	tile_begin.y = _mesh_pos.y;
+
+	tile_begin.x %= (tile_count.x * tile_dim.x);
+	tile_begin.y %= (tile_count.y * tile_dim.y);
 	mesh->SetWorldCoordinates(screen_begin.x - tile_begin.x, screen_begin.y - tile_begin.y);
 }
 
