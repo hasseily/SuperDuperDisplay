@@ -136,7 +136,10 @@ int main(int, char**)
     // Our state
 	bool bShouldTerminateNetworking = false;
     bool show_demo_window = false;
+    bool show_metrics_window = false;
 	bool show_memory_window = false;
+	bool show_sdhrinfo_window = true;
+	bool show_texture_window = false;
     bool did_press_quit = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 	int _slotnum = 0;
@@ -187,6 +190,9 @@ int main(int, char**)
 					if (state[SDL_SCANCODE_LALT]) {
 						done = true;
 					}
+				}
+				else if (event.key.keysym.sym == SDLK_F1) {  // Toggle debug window with F1
+                    show_sdhrinfo_window = !show_sdhrinfo_window;
 				}
 				// Camera movement!
                 if (!io.WantCaptureKeyboard) {
@@ -248,34 +254,42 @@ int main(int, char**)
 		ImGui::NewFrame();
 
 		// Tell sdhrManager the size of the window
+        // This will be used to render the final frame,
+        // and also to calculate texel sizes for the fragment shaders
 		SDL_GetWindowSize(window, &sdhrManager->rendererOutputWidth, &sdhrManager->rendererOutputHeight);
-		// sdhrManager->rendererOutputWidth
-        
+		
+        bool p_open;
+
 		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
 
+		if (show_sdhrinfo_window)
 		{
-			ImGui::Begin("Super Duper Display Debug");
+			ImGui::Begin("Super Duper Display Debug", &show_sdhrinfo_window);
 			if (!ImGui::IsWindowCollapsed())
 			{
 				auto _c = sdhrManager->camera;
                 auto _pos = _c.Position;
-                ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
-				ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
-				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-//				ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-				ImGui::Checkbox("Memory Window", &show_memory_window);      // Edit bools storing our window open/close state
-                ImGui::Separator();
-                ImGui::Checkbox("Untextured Geometry", &sdhrManager->bDebugNoTextures);             // Show textures toggle
+                ImGui::Text("Press F1 at any time to toggle this window");
+				ImGui::Separator();
+				ImGui::Checkbox("Untextured Geometry", &sdhrManager->bDebugNoTextures);             // Show textures toggle
 				ImGui::Checkbox("Perspective Projection", &sdhrManager->bUsePerspective);       // Change projection type
 				ImGui::Separator();
+//				ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+				ImGui::Checkbox("Metrics Window", &show_metrics_window);      // Edit bools storing our window open/close state
+				ImGui::Checkbox("Memory Window", &show_memory_window);      // Edit bools storing our window open/close state
+                ImGui::Separator();
 				did_press_quit = ImGui::Button("Quit App (Alt-F4)");
 				if (did_press_quit)
 					done = true;
             }
 			ImGui::End();
 		}
+
+        // Show the metrics window
+        if (show_metrics_window)
+			ImGui::ShowMetricsWindow(&show_metrics_window);
 
         // Show a memory editor
         if (show_memory_window)
@@ -285,8 +299,9 @@ int main(int, char**)
         }
         
 		// Show one of the textures loaded
+        if (show_texture_window)
 		{
-			ImGui::Begin("Texture Viewer");
+			ImGui::Begin("Texture Viewer", &show_texture_window);
             ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES - 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
             ImGui::Text("Texture ID: %d", glhelper->get_texture_id_at_slot(_slotnum));
 			ImVec2 avail_size = ImGui::GetContentRegionAvail();
@@ -299,20 +314,20 @@ int main(int, char**)
 			ImGui::End();
 		}
 
-        int sdlwidth, sdlheight;
-		SDL_GetWindowSize(window, &sdlwidth, &sdlheight);
+        // Draw the SDHR image full window (or full screen if no windowing manager)
 		glhelper->bind_framebuffer();
-		glhelper->rescale_framebuffer(sdlwidth, sdlheight);
+		glhelper->rescale_framebuffer(sdhrManager->rendererOutputWidth, sdhrManager->rendererOutputHeight);
 		glhelper->unbind_framebuffer();
 
 		ImGui::GetBackgroundDrawList()->AddImage(
 			(void*)glhelper->get_output_texture_id(),
 			ImVec2(0, 0),
-			ImVec2(sdlwidth, sdlheight),
+			ImVec2(sdhrManager->rendererOutputWidth, sdhrManager->rendererOutputHeight),
 			ImVec2(0, 0),
 			ImVec2(1, 1)
 		);
 
+        // XXX TEST stuff
 		// Get available space
         // For the main window it's a never the window size but the screen
         // ImVec2 available = ImGui::GetContentRegionAvail();
