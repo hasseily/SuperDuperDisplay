@@ -26,6 +26,8 @@ in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
 
 out vec4 fragColor;
 
+layout(pixel_center_integer) in vec4 gl_FragCoord;
+
 /*
 struct MosaicTile {
     vec2 uv;            // x and y
@@ -48,7 +50,7 @@ void main()
     uvec2 tileSize = meshSize / tileCount;
     // first figure out which mosaic tile this fragment is part of
         // Calculate the position of the fragment in tile intervals
-    vec2 fTileColRow = (vFragPos - topLeftVertexPos).xy / tileSize;
+    vec2 fTileColRow = (vFragPos).xy / tileSize;
         // Row and column number of the tile containing this fragment
     uvec2 tileColRow = uvec2(uint(fTileColRow.x), uint(fTileColRow.y));
         // Actual tile index for calculating the buffer offsets for texelFetch()
@@ -64,13 +66,18 @@ void main()
     vec2 fragOffset = (fTileColRow - tileColRow) * tileSize;
 
     // Now get the texture color, using the tile uv origin and this fragment's offset (with scaling)
-    vec4 tex = texture(tilesTexture[texIdx], mosaicTile.xy + fragOffset * mosaicTile.z);
+    // TODO: WHY TEXIDX+1? Should be TexIdx
+    ivec2 textureSize2d = textureSize(tilesTexture[texIdx+1],0);
+    vec4 tex = texture(tilesTexture[texIdx+1], mosaicTile.xy + (fragOffset * mosaicTile.z) / textureSize2d);
 
     // TODO: Understand if the mesh size is correct
     // Understand every single other parameter
     //tex.r = fTileColRow.x - tileColRow.x;
     //tex.g = fTileColRow.y - tileColRow.y;
-    tex.a = 1;
+    //tex.b = texIdx;
+    //tex.a = 1;
+    if(tex.a < 0.1)
+        discard;
 
     // Check if the fragment is inside the window
     float t = isInsideWindow(

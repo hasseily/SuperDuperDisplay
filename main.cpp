@@ -37,6 +37,7 @@
 // Main code
 int main(int, char**)
 {
+	GLenum glerr;
     // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
     {
@@ -61,11 +62,16 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 #else
     // GL 3.0 + GLSL 130
+    int SDL_err_res = 0;
     const char* glsl_version = "#version 130";
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0) != 0)
+        std::cerr << "SDL Error: " << SDL_GetError() << std::endl;
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE) != 0)
+		std::cerr << "SDL Error: " << SDL_GetError() << std::endl;
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) != 0)
+		std::cerr << "SDL Error: " << SDL_GetError() << std::endl;
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1) != 0)
+		std::cerr << "SDL Error: " << SDL_GetError() << std::endl;
 #endif
 
     // From 2.0.18: Enable native IME.
@@ -107,11 +113,12 @@ int main(int, char**)
 		std::cout << "Failed to initialize OpenGL context" << std::endl;
 		return -1;
 	}
-	// glEnable(GL_DEPTH_TEST); // TODO: Check if necessary
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "gladLoadGL error: " << glerr << std::endl;
+	}
+    // glEnable(GL_DEPTH_TEST); // TODO: Check if necessary
     glEnable(GL_CULL_FACE);
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_NOTEQUAL, 0.0);
-    GLenum glerr;
+
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL glEnable error: " << glerr << std::endl;
 	}
