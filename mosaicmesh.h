@@ -23,11 +23,20 @@
 
 using namespace std;
 
+// There will be 6 vertices, 2 triangles, 1 quad (rectangle) for the whole MosaicMesh
+// the z position will always be the window's id that the mesh is linked to
+// and the w position is 1.0 for the top left corner, 0.0 for the others
 struct Vertex {
 	// position
-	glm::vec3 Position;     // the z position will always be the window's id that the mesh is linked to
-	// texCoords
-	glm::fvec2 TexCoords;
+	glm::vec4 Position;     
+	glm::vec4 Tint;			// the vertex's color which will be a tint on the fragment color
+};
+
+// For each tile inside, specify the texture index, the uv of its top left corner, and the uv scale
+struct alignas(4) MosaicTile {
+	glm::fvec2 uv;		// uv coords in 0-1 space
+	float uvscale;		// Scale should default to 1 for SDHR.
+	float texIdx;		// It's the texture id, effectively an int
 };
 
 class MosaicMesh
@@ -35,15 +44,21 @@ class MosaicMesh
 public:
 	// mesh Data
 	vector<Vertex> vertices;		// Vertices with XY and UV	(2 vectors of floats)
-	vector<uint8_t> texIndexes;		// Texture index of each vertex (integers)
 	uint64_t cols = 0;			// # of mosaic tiles horizontally
 	uint64_t rows = 0;			// # of mosaic tiles vertically
+	uint64_t width = 0;			// width and height of the mesh in pixels
+	uint64_t height = 0;
 
-	unsigned int VAO = UINT_MAX;
+	// A vector of uvec3 for each tile, specifying texture index + uv coords of each tile
+	vector<MosaicTile> mosaicTiles;
+
 	Shader* shaderProgram = NULL;		// Shader program for the mesh. Starts with a default shader
+
+	unsigned int TBTEX = UINT_MAX;		// MosaicTile Buffer Texture (attaches to TBO)
 
 	MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile_xdim, uint64_t tile_ydim, uint8_t win_index);
 	MosaicMesh() = delete; // Disallow default constructor
+	~MosaicMesh();
 
 	void UpdateMosaicUV(uint64_t xpos, uint64_t ypos, uint64_t u, uint64_t v, uint8_t texture_index);
 	void UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, uint8_t texture_index);
@@ -58,8 +73,9 @@ public:
 
 private:
 	// render data
+	unsigned int VAO = UINT_MAX;		// Vertex Array Object (holds buffers that are vertex related)
 	unsigned int VBO = UINT_MAX;       // Vertex Buffer Object (holds vertices)
-	unsigned int VTO = UINT_MAX;	   // Vertex Texture Buffer Object (holds texture indexes)
+	unsigned int TBO = UINT_MAX;		// MosaicTile Buffer Object (holds mosaic tiles data)
 	float world_x = 0.f;		// top-left position in the world space
 	float world_y = 0.f;		// which is also the view (camera) space
 	glm::mat4 mat_trans = glm::mat4(1.0f);	// Model->World translation matrix. Changes when the mesh is moved in the world

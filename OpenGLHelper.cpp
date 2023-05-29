@@ -123,6 +123,7 @@ void OpenGLHelper::create_framebuffer()
 {
 	if (FBO != UINT_MAX)
 		return;
+
 	glGenFramebuffers(1, &FBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 	glViewport(0, 0, _SDHR_WIDTH, _SDHR_HEIGHT);
@@ -146,6 +147,10 @@ void OpenGLHelper::bind_framebuffer()
 	if (FBO == UINT_MAX)
 		create_framebuffer();
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	GLenum glerr;
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL bind_framebuffer error: " << glerr << std::endl;
+	}
 }
 
 void OpenGLHelper::unbind_framebuffer()
@@ -163,7 +168,7 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL 5 error: " << glerr << std::endl;
+		std::cerr << "OpenGL rescale_framebuffer error: " << glerr << std::endl;
 	}
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
@@ -174,6 +179,9 @@ void OpenGLHelper::setup_sdhr_render()
 	bind_framebuffer();
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL setup_sdhr_render error: " << glerr << std::endl;
+	}
 }
 
 void OpenGLHelper::cleanup_sdhr_render()

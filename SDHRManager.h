@@ -114,11 +114,11 @@ public:
 	// NOTE:	Maximum of 16 image assets.
 	//			They're always concomitantly available as textures in the GPU
 	ImageAsset image_assets[_SDHR_MAX_TEXTURES];
-	TilesetRecord tileset_records[256];
-	SDHRWindow windows[256];
+	TilesetRecord tileset_records[_SDHR_MAX_WINDOWS];
+	SDHRWindow windows[_SDHR_MAX_WINDOWS];
 	// Camera for World -> View matrix transform
 	Camera camera = Camera(
-		_SDHR_WIDTH/2.f, _SDHR_HEIGHT/2.f,									// x,y
+		_SDHR_WIDTH/2.f, _SDHR_HEIGHT/2.f,			// x,y
 		10.f,										// z
 		0.f, 1.f, 0.f,								// upVector xyz
 		-90.f,										// yaw
@@ -145,7 +145,6 @@ public:
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 memory pointer
 
 	void Render();	// render everything SDHR related
-	void RenderTest();	// test render function
 
 	TileTex* GetTilesetRecordData(uint8_t tileset_index) { return tileset_records[tileset_index].tile_data; };
 	TileTex GetTilesetTileTex(uint8_t tileset_index, uint8_t tile_index) { return tileset_records[tileset_index].tile_data[tile_index]; };

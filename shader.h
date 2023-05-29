@@ -75,7 +75,7 @@ public:
     { 
         glUseProgram(ID); 
     }
-    // utility uniform functions
+    // utility uniform functions    (Not all are created. Add as necessary)
     // ------------------------------------------------------------------------
     void setBool(const std::string &name, bool value) const
     {         
@@ -90,7 +90,7 @@ public:
     void setFloat(const std::string &name, float value) const
     { 
         glUniform1f(glGetUniformLocation(ID, name.c_str()), value); 
-    }
+	}
     // ------------------------------------------------------------------------
     void setVec2(const std::string &name, const glm::vec2 &value) const
     { 
@@ -100,6 +100,15 @@ public:
     { 
         glUniform2f(glGetUniformLocation(ID, name.c_str()), x, y); 
     }
+	// ------------------------------------------------------------------------
+	void setVec2u(const std::string& name, const glm::uvec2& value) const
+	{
+		glUniform2uiv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+	}
+    void setVec2u(const std::string& name, unsigned int x, unsigned int y) const
+	{
+		glUniform2ui(glGetUniformLocation(ID, name.c_str()), x, y);
+	}
     // ------------------------------------------------------------------------
     void setVec3(const std::string &name, const glm::vec3 &value) const
     { 

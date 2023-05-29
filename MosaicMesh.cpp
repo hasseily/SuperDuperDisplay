@@ -5,158 +5,88 @@
 #include "SDHRManager.h"
 
 MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile_xdim, uint64_t tile_ydim, uint8_t win_index) {
-	this->vertices.reserve(tile_xcount * tile_ycount * 6);	// total # of unique vertices
-
-	size_t t_idx = 0;	// 1D tile index
 	cols = tile_xcount;	// number of columns
 	rows = tile_ycount;	// number of rows
+	width = tile_xcount * tile_xdim;
+	height = tile_ycount * tile_ydim;
+
+	this->mosaicTiles.reserve(cols * rows);	// total # of tiles in the mesh
 
 	// This is a default vertex that we'll use as base to insert into vertices later
 	// Because push_back() makes a copy, it's faster not to recreate the vertex every time
 	auto _v = Vertex({
-					glm::vec3(0, 0, 0),	// vertex position (z is the reverse window index)
-					glm::fvec2(0, 0),	// UV (not set yet, waiting for SDHR_CMD_UPDATE_WINDOW...)
+					glm::vec4(0),	// vertex position (z is the reverse window index, w is 1 for the top left origin only)
+					glm::vec4(1),	// tint (to be potentially assigned later)	// TODO
+		});
+	auto _t = MosaicTile({ 
+		glm::uvec2(0),		// uv position
+		1.f,				// uv scale
+		0.f,				// texture index
 		});
 
 	// Create all the vertices for each tile
-	float fcols = (float)cols;
-	float frows = (float)rows;
 	float z_val = (float)(~win_index);	// z plane is 0-255. Window index 0 is the furthest away
+
+	// NOTE: We use the top left corner for both triangles so that all the fragments later
+	// can know the top left corner position to calculate which tile they belong to
+	// First triangle
+	_v.Position = glm::vec4(0, height, z_val, 1);	// top left
+	this->vertices.push_back(_v);
+	_v.Position = glm::vec4(width, 0, z_val, 0);	// bottom right
+	this->vertices.push_back(_v);
+	_v.Position = glm::vec4(width, height, z_val, 0);	// top right
+	this->vertices.push_back(_v);
+	// Second triangle
+	_v.Position = glm::vec4(0, height, z_val, 1);	// top left
+	this->vertices.push_back(_v);
+	_v.Position = glm::vec4(0, 0, z_val, 0);	// bottom left
+	this->vertices.push_back(_v);
+	_v.Position = glm::vec4(width, 0, z_val, 0);	// bottom right
+	this->vertices.push_back(_v);
+
+
 	for (size_t j = 0; j < rows; j++)
 	{
 		for (size_t i = 0; i < cols; i++)
 		{
-			// First triangle
-			_v.Position = glm::vec3(tile_xdim * i, tile_ydim * j, z_val);	// bottom left
-			this->vertices.push_back(_v);
-			this->texIndexes.push_back(0);	// Texture index (not set yet, waiting for SDHR_CMD_UPDATE_WINDOW...)
-			_v.Position = glm::vec3(tile_xdim * (i + 1), tile_ydim * (j + 1), z_val);	// top right
-			this->vertices.push_back(_v);
-			this->texIndexes.push_back(0);	// Texture index (not set yet, waiting for SDHR_CMD_UPDATE_WINDOW...)
-			_v.Position = glm::vec3(tile_xdim * i, tile_ydim * (j + 1), z_val);	// top left
-			this->vertices.push_back(_v);
-			this->texIndexes.push_back(0);	// Texture index (not set yet, waiting for SDHR_CMD_UPDATE_WINDOW...)
-			// Second triangle
-			_v.Position = glm::vec3(tile_xdim * (i + 1), tile_ydim * j, z_val);	// bottom right
-			this->vertices.push_back(_v);
-			this->texIndexes.push_back(0);	// Texture index (not set yet, waiting for SDHR_CMD_UPDATE_WINDOW...)
-			_v.Position = glm::vec3(tile_xdim * (i + 1), tile_ydim * (j + 1), z_val);	// top right
-			this->vertices.push_back(_v);
-			this->texIndexes.push_back(0);	// Texture index (not set yet, waiting for SDHR_CMD_UPDATE_WINDOW...)
-			_v.Position = glm::vec3(tile_xdim * i, tile_ydim * j, z_val);	// bottom left
-			this->vertices.push_back(_v);
-			this->texIndexes.push_back(0);	// Texture index (not set yet, waiting for SDHR_CMD_UPDATE_WINDOW...)
-
-			++t_idx;
+			this->mosaicTiles.push_back(_t);
 		}
 	};
 
 	bNeedsGPUUpdate = true;
 }
 
-// Update the UV data of all the vertices of a single mosaic tile (using xy positioning)
+MosaicMesh::~MosaicMesh()
+{
+	if (VAO != UINT_MAX)
+	{
+		glDeleteTextures(1, &TBTEX);
+		glDeleteBuffers(1, &TBO);
+		glDeleteBuffers(1, &VBO);
+		glDeleteBuffers(1, &VAO);
+	}
+}
+
+// Update the UV data of a single mosaic tile (using xy positioning)
 void MosaicMesh::UpdateMosaicUV(uint64_t xpos, uint64_t ypos, uint64_t u, uint64_t v, uint8_t texture_index)
 {
 	UpdateMosaicUV(xpos + ypos * cols, u, v, texture_index);
 }
 
-// Update the UV data of all the vertices of a single mosaic tile (using index positioning)
+// Update the UV data of a single mosaic tile (using index positioning)
 void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, uint8_t texture_index)
 {
 	const auto ia = SDHRManager::GetInstance()->image_assets[texture_index];
 	auto _iaw = (float)ia.image_xcount;	// image width and height, as floats so everything is floats
 	auto _iah = (float)ia.image_ycount;
 
-	auto _idx = mosaic_index * 6;	// index of the first vertex of the mosaic tile
 	// The passed-in U and V are the non-normalized pixel coordinates of the first vertex of the tile
-	auto &_v0 = this->vertices.at(_idx);		// reference to the bottom left vertex. Update in place
-	auto _vx = _v0.Position.x;		// X coord of the top left of the mosaic tile
-	auto _vy = _v0.Position.y;		// Y coord of the top left of the mosaic tile
-
-	bool isDebug = false;
-	// isDebug = (_idx >= 9000 && _idx < 9300);
-	if (isDebug)
-		std::cout << std::dec << "--- MOSAIC START ---" << std::endl;
-	// Update each vertex in sequence
-	// Bottom left
-	_v0.TexCoords = glm::fvec2(u / _iaw, v / _iah);
-	this->texIndexes[_idx] = texture_index;
-	if (isDebug)
-		std::cout << "Vertex BL " << _v0.Position.x << " x " << _v0.Position.y << " : " << _v0.TexCoords.x << " x " << _v0.TexCoords.y << std::endl;
-	// Top right
-	auto& _v1 = this->vertices.at(_idx + 1);
-	_v1.TexCoords = glm::fvec2((u + _v1.Position.x - _vx) / _iaw, (v + _v1.Position.y - _vy) / _iah);
-	this->texIndexes[_idx + 1] = texture_index;
-	if (isDebug)
-		std::cout << "Vertex TR " << _v1.Position.x << " x " << _v1.Position.y << " : " << _v1.TexCoords.x << " x " << _v1.TexCoords.y << std::endl;
-	// Top left
-	auto& _v2 = this->vertices.at(_idx + 2);
-	_v2.TexCoords = glm::fvec2(u / _iaw, (v + _v2.Position.y - _vy) / _iah);
-	this->texIndexes[_idx + 2] = texture_index;
-	if (isDebug)
-		std::cout << "Vertex TL " << _v2.Position.x << " x " << _v2.Position.y << " : " << _v2.TexCoords.x << " x " << _v2.TexCoords.y << std::endl;
-	// Bottom right
-	auto& _v3 = this->vertices.at(_idx + 3);
-	_v3.TexCoords = glm::fvec2((u + _v3.Position.x - _vx) / _iaw, v / _iah);
-	this->texIndexes[_idx + 3] = texture_index;
-	if (isDebug)
-		std::cout << "    Vertex BR " << _v3.Position.x << " x " << _v3.Position.y << " : " << _v3.TexCoords.x << " x " << _v3.TexCoords.y << std::endl;
-	// Top right (again)
-	auto& _v4 = this->vertices.at(_idx + 4);
-	_v4.TexCoords = glm::fvec2((u + _v4.Position.x - _vx) / _iaw, (v + _v4.Position.y - _vy) / _iah);
-	this->texIndexes[_idx + 4] = texture_index;
-	if (isDebug)
-		std::cout << "   Vertex TR " << _v4.Position.x << " x " << _v4.Position.y << " : " << _v4.TexCoords.x << " x " << _v4.TexCoords.y << std::endl;
-	// Bottom left (again)
-	auto& _v5 = this->vertices.at(_idx + 5);
-	_v5.TexCoords = glm::fvec2(u / _iaw, v / _iah);
-	this->texIndexes[_idx + 5] = texture_index;
-	if (isDebug)
-		std::cout << "    Vertex BL " << _v5.Position.x << " x " << _v5.Position.y << " : " << _v5.TexCoords.x << " x " << _v5.TexCoords.y << std::endl;
-
-/*
-	// XXX Test stuff to change a single tile
-	if (mosaic_index == 256 * 128 + 127)	// center of big map
-	{
-		auto _v = Vertex({
-				glm::vec3(0, 0, 0),	// vertex position (z is the reverse window index)
-				glm::fvec2(0, 0),	// UV
-			});
-
-		_v.Position = glm::fvec3(_v0.Position.x, _v0.Position.y, _v0.Position.z);
-		_v.TexCoords = glm::fvec2(0, 0);
-		this->vertices[_idx] = _v;
-		this->texIndexes[_idx] = 0; // bl
-
-		_v.Position = glm::vec3(_v1.Position.x + 500, _v1.Position.y + 500, _v1.Position.z);
-		_v.TexCoords = glm::fvec2(1, 1);
-		this->vertices[_idx + 1] = _v;
-		this->texIndexes[_idx + 1] = 0; // tr
-
-		_v.Position = glm::vec3(_v2.Position.x, _v2.Position.y + 500, _v2.Position.z);
-		_v.TexCoords = glm::fvec2(0, 1);
-		this->vertices[_idx + 2] = _v;
-		this->texIndexes[_idx + 2] = 0; // tl
-
-		_v.Position = glm::vec3(_v3.Position.x + 500, _v3.Position.y, _v3.Position.z);
-		_v.TexCoords = glm::fvec2(1, 0);
-		this->vertices[_idx + 3] = _v;
-		this->texIndexes[_idx + 3] = 0;	// br
-
-		_v.Position = glm::vec3(_v4.Position.x + 500, _v4.Position.y + 500, _v4.Position.z);
-		_v.TexCoords = glm::fvec2(1, 1);
-		this->vertices[_idx + 4] = _v;
-		this->texIndexes[_idx + 4] = 0;	// tr
-
-		_v.Position = glm::vec3(_v5.Position.x, _v5.Position.y, _v5.Position.z);
-		_v.TexCoords = glm::fvec2(0, 0);
-		this->vertices[_idx + 5] = _v;
-		this->texIndexes[_idx + 5] = 0;	// bl
-	}
-	*/
+	auto &_t0 = this->mosaicTiles.at(mosaic_index);		// Update in place
+	_t0.uv.x = u / _iaw;
+	_t0.uv.y = v / _iah;
+	_t0.texIdx = (float)texture_index;
 
 	bNeedsGPUUpdate = true;
-
 }
 
 void MosaicMesh::SetWorldCoordinates(int32_t x, int32_t y)
@@ -177,13 +107,18 @@ void MosaicMesh::updateMesh()
 	if (!bNeedsGPUUpdate)
 		return;				// mesh doesn't need updating on the GPU
 
-	// create buffers/arrays
+	GLenum glerr;
+
+	// Now create the buffers/arrays and tile buffer texture that holds the MosaicTile data.
+	// We're using a texture instead of a uniform buffer object because
+	// the size of the mosaic object is variable
 	if (VAO == UINT_MAX)
+	{
 		glGenVertexArrays(1, &VAO);
-	if (VBO == UINT_MAX)
 		glGenBuffers(1, &VBO);
-	if (VTO == UINT_MAX)
-		glGenBuffers(1, &VTO);
+		glGenBuffers(1, &TBO);
+		glGenTextures(1, &TBTEX);
+	}
 
 	glBindVertexArray(VAO);
 	// load data into vertex buffers
@@ -194,34 +129,59 @@ void MosaicMesh::updateMesh()
 	// vertex Positions: position 0, size 3
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-	// vertex texture coords: position 1, size 2
+	// vertex tint color: position 1, size 4
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tint));
 
-	// vertex texture index: position 2, size 1
-	// Use the texIndexes array here
-	glBindBuffer(GL_ARRAY_BUFFER, VTO);
-	glBufferData(GL_ARRAY_BUFFER, texIndexes.size() * sizeof(uint8_t), &texIndexes[0], GL_STATIC_DRAW);
-	glEnableVertexAttribArray(2);
-	glVertexAttribIPointer(2, 1, GL_BYTE, GL_FALSE, (void*)0);
+	// load the mosaicTiles data in the buffer TBO
+	glBindBuffer(GL_TEXTURE_BUFFER, TBO);
+	glBufferData(GL_TEXTURE_BUFFER, sizeof(MosaicTile) * cols * rows, &this->mosaicTiles[0], GL_STATIC_DRAW);
+	// Associate the texture TBTEX in GL_TEXTURE0+TEXUNIT with the buffer
+	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
+	glBindTexture(GL_TEXTURE_BUFFER, TBTEX);
+	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, TBO);
+
+	// reset the binding
+	glBindVertexArray(0);
+
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "updateMesh error: " << glerr << std::endl;
+	}
 
 	// Update the model->world transform matrix, to translate the model into the world space
 	this->mat_trans = glm::translate(glm::mat4(1.0f), glm::vec3(world_x, world_y, 0.0f));
 
-	// reset the binding
-	glBindVertexArray(0);
 	bNeedsGPUUpdate = false;
 }
 
 // render the mesh
 // NOTE: This (and any methods with OpenGL calls) must be called from the main thread
-// NOTE: It assumes the textures have been already bound to GL_TEXTURE0... GL_TEXTURE16
+// NOTE: It assumes the textures have been already bound to _SDHR_START_TEXTURES forward
 void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 {
+	GLenum glerr;
 	glUseProgram(shaderProgram->ID);
 	glBindVertexArray(VAO);
 	glm::mat4 mat_final = mat_proj * mat_camera * this->mat_trans;
 	shaderProgram->setMat4("transform", mat_final);
+	shaderProgram->setVec2u("meshSize", this->width, this->height);
+	shaderProgram->setVec3("topLeftVertexPos", glm::vec3(world_x, world_y, 0));
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "MosaicMesh 1 render error: " << glerr << std::endl;
+	}
+	shaderProgram->setVec2u("tileCount", this->cols, this->rows);
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "MosaicMesh 2 render error: " << glerr << std::endl;
+	}
+	// point the uniform at the tiles data texture (GL_TEXTURE0 + _SDHR_TBO_TEXUNIT)
+	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
+	glBindTexture(GL_TEXTURE_BUFFER, TBTEX);
+	shaderProgram->setInt("TBTEX", _SDHR_TBO_TEXUNIT);
+	glActiveTexture(GL_TEXTURE0);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glBindVertexArray(0);
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "MosaicMesh render error: " << glerr << std::endl;
+	}
+
 }

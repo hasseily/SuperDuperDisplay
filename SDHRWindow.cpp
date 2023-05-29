@@ -71,7 +71,7 @@ void SDHRWindow::Update()
 };
 
 // NOTE: This (and any methods with OpenGL calls) must be called from the main thread
-// NOTE: It assumes the textures have been already bound to GL_TEXTURE0... GL_TEXTURE16
+// NOTE: It assumes the textures have been already bound to _SDHR_START_TEXTURES forward
 void SDHRWindow::Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 {
 	if (enabled) {
@@ -81,6 +81,11 @@ void SDHRWindow::Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 
 			mesh->shaderProgram->setVec2("windowBottomLeft", window_topleft);
 			mesh->shaderProgram->setVec2("windowTopRight", window_bottomright);
+
+			GLenum glerr;
+			if ((glerr = glGetError()) != GL_NO_ERROR) {
+				std::cerr << "SDHRWindow draw error: " << glerr << std::endl;
+			}
 
 			mesh->Draw(mat_camera, mat_proj);
 		}

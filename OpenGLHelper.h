@@ -7,8 +7,6 @@
 #include "common.h"
 #include "shader.h"
 
-#define _SDHR_MAX_TEXTURES 16		// Max # of image assets available
-
 class OpenGLHelper
 {
 public:

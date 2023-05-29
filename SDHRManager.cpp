@@ -138,6 +138,10 @@ void SDHRManager::ImageAsset::AssignByFilename(SDHRManager* owner, const char* f
 		std::cerr << "ERROR: Could not bind texture, all slots filled!" << '\n';
 		return;
 	}
+	GLenum glerr;
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "ImageAsset::AssignByMemory error: " << glerr << std::endl;
+	}
 	image_xcount = width;
 	image_ycount = height;
 }
@@ -159,6 +163,10 @@ void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* 
 	} else {
 		std::cerr << "ERROR: Could not bind texture, all slots filled!" << '\n';
 		return;
+	}
+	GLenum glerr;
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "ImageAsset::AssignByMemory error: " << glerr << std::endl;
 	}
 	image_xcount = width;
 	image_ycount = height;
@@ -329,11 +337,13 @@ void SDHRManager::Render()
 	// Initialization routine runs only once on init (or re-init)
 	// We do that here because we know the framebuffer is bound, and everything
 	// for drawing the SDHR stuff is active
-	// We're going to set the active textures to 1-15, leaving texture GL_TEXTURE0 alone
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
+
+		// We're going to set the active textures to _SDHR_START_TEXTURES, leaving textures GL_TEXTURE0 (output texture)
+		// and GL_TEXTURE1 (mosaic data buffer) alone
 		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
-			glActiveTexture(GL_TEXTURE1 + i);	// AssignByFilename() will bind to the active texture slot
+			glActiveTexture(_SDHR_START_TEXTURES + i);	// AssignByFilename() will bind to the active texture slot
 			if (i == 1)
 				image_assets[i].AssignByFilename(this, "Texture_Default1.png");
 			else if (i == 2)
@@ -356,7 +366,7 @@ void SDHRManager::Render()
 		this->threadState = THREADCOMM_e::MAIN_LOCK;
 		while (!fifo_upload_image_data.empty()) {
 			auto _uidata = fifo_upload_image_data.front();
-			glActiveTexture(GL_TEXTURE1 + _uidata.asset_index);
+			glActiveTexture(_SDHR_START_TEXTURES + _uidata.asset_index);
 			image_assets[_uidata.asset_index].AssignByMemory(this, uploaded_data_region + _uidata.upload_start_addr, _uidata.upload_data_size);
 			if (error_flag) {
 				std::cerr << "AssignByMemory failed!" << std::endl;
@@ -367,15 +377,19 @@ void SDHRManager::Render()
 #endif
 			glActiveTexture(GL_TEXTURE0);
 		}
+		GLenum glerr;
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error BEFORE window update: " << glerr << std::endl;
+		}
 		// Update windows and meshes
 		for each (auto & _w in this->windows) {
 			_w.Update();
 		}
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL render SDHRManager error: " << glerr << std::endl;
+		}
 		this->dataState = DATASTATE_e::NODATA;
 		this->threadState = THREADCOMM_e::IDLE;
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL updateMesh error: " << glerr << std::endl;
-		}
 	}
 
 
@@ -389,6 +403,7 @@ void SDHRManager::Render()
 		std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
 	}
 
+	// Assign the sdhr global (to all windows) uniforms
 	auto vTexelSize = glm::vec2(
 		this->rendererOutputWidth / (float)_SDHR_WIDTH,
 		this->rendererOutputHeight / (float)_SDHR_HEIGHT
@@ -424,138 +439,6 @@ void SDHRManager::Render()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
 	}
-	oglh->cleanup_sdhr_render();
-}
-
-void SDHRManager::RenderTest()
-{
-	GLenum glerr;
-	auto oglh = OpenGLHelper::GetInstance();
-	oglh->setup_sdhr_render();
-
-	defaultWindowShaderProgram.use();
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glUseProgram error: " << glerr << std::endl;
-	}
-
-	// Initialization routine runs only once on init (or re-init)
-	// We do that here because we know the framebuffer is bound, and everything
-	// for drawing the SDHR stuff is active
-	// We're going to set the active textures to 1-15, leaving texture GL_TEXTURE0 alone
-	if (bShouldInitializeRender) {
-		bShouldInitializeRender = false;
-		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
-			glActiveTexture(GL_TEXTURE1 + i);	// AssignByFilename() will bind to the active texture slot
-			if (i == 1)
-				image_assets[i].AssignByFilename(this, "Texture_Default1.png");
-			else if (i == 2)
-				image_assets[i].AssignByFilename(this, "Texture_Default2.png");
-			else if (i == 3)
-				image_assets[i].AssignByFilename(this, "Texture_Default3.png");
-			else
-				image_assets[i].AssignByFilename(this, "Texture_Default.png");
-			texIds[i] = image_assets[i].tex_id;
-			if ((glerr = glGetError()) != GL_NO_ERROR) {
-				std::cerr << "OpenGL AssignByFilename error: " << i << " - " << glerr << std::endl;
-			}
-		}
-		glActiveTexture(GL_TEXTURE0);
-	}
-
-	if (this->dataState == DATASTATE_e::COMMAND_READY)
-	{
-		// Check to see if we need to upload data to the GPU
-		this->threadState = THREADCOMM_e::MAIN_LOCK;
-		while (!fifo_upload_image_data.empty()) {
-			auto _uidata = fifo_upload_image_data.front();
-			glActiveTexture(GL_TEXTURE1 + _uidata.asset_index);
-			image_assets[_uidata.asset_index].AssignByMemory(this, uploaded_data_region + _uidata.upload_start_addr, _uidata.upload_data_size);
-			if (error_flag) {
-				std::cerr << "AssignByMemory failed!" << std::endl;
-			}
-			fifo_upload_image_data.pop();
-#ifdef _DEBUG
-			std::cout << "AssignByMemory: " << _uidata.upload_data_size << " for index: " << (uint32_t)_uidata.asset_index << std::endl;
-#endif
-			glActiveTexture(GL_TEXTURE0);
-		}
-		this->dataState = DATASTATE_e::NODATA;
-		this->threadState = THREADCOMM_e::IDLE;
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL updateMesh error: " << glerr << std::endl;
-		}
-	}
-
-	// Assign the list of all the textures to the shader's "tilesTexture" uniform
-	auto texUniformId = glGetUniformLocation(defaultWindowShaderProgram.ID, "tilesTexture");
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glGetUniformLocation error: " << glerr << std::endl;
-	}
-	glUniform1iv(texUniformId, _SDHR_MAX_TEXTURES, &texIds[0]);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
-	}
-
-	auto vTexelSize = glm::vec2(
-		this->rendererOutputWidth / (float)_SDHR_WIDTH,
-		this->rendererOutputHeight / (float)_SDHR_HEIGHT
-	);
-	defaultWindowShaderProgram.setVec2("vTexelSize", vTexelSize);
-	defaultWindowShaderProgram.setBool("bDebugNoTextures", bDebugNoTextures);
-
-	GLuint VertexArrayID;
-	glGenVertexArrays(1, &VertexArrayID);
-	glBindVertexArray(VertexArrayID);
-
-	static const GLfloat g_vertex_buffer_data[] = {
-			-0.5f, -0.5f, 0.0f,	9*0.0625f + 0.03125f,	0.f		,// 0.f,		//bl
-			0.5f, 0.5f, 0.0f,	9*0.0625f + 0.0625f,	0.0625f	,// 0.f,		//tr
-			-0.5f, 0.5f, 0.0f,	9*0.0625f + 0.03125f,	0.0625f	,// 0.f,		//tl
-			0.5f, -0.5f, 0.0f,	9*0.0625f + 0.0625f,	0.f		,// 1.f,		//br
-			0.5f, 0.5f, 0.0f,	9*0.0625f + 0.0625f,	0.0625f	,// 1.f,		//tr
-			-0.5f, -0.5f, 0.0f,	9*0.0625f + 0.03125f,	0.f		,// 1.f,		//bl
-	};
-	static const GLbyte g_texidx_buffer_data[] = {
-		0,		//bl
-		0,		//tr
-		0,		//tl
-		1,		//br
-		1,		//tr
-		1,		//bl
-	};
-
-	GLuint vertexbuffer;
-	glGenBuffers(1, &vertexbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
-
-	// set the vertex attribute pointers
-	// vertex Positions: position 0, size 3
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 5, (void*)0);
-	// vertex texture coords: position 1, size 2
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 5, (void*)(sizeof(GLfloat) * 3));
-
-	// WARNING: Must use glVertexAttribIPointer with uints, otherwise the shader doesn't pick that up!
-	GLuint texidbuffer;
-	glGenBuffers(1, &texidbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, texidbuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(g_texidx_buffer_data), g_texidx_buffer_data, GL_STATIC_DRAW);
-	// vertex texture index: position 0, size 1
-	glEnableVertexAttribArray(2);
-	glVertexAttribIPointer(2, 1, GL_BYTE, GL_FALSE, (void*)0);
-
-	// TEST
-	// Using a prespective so I can zoom back and forth easily
-	mat_proj = glm::mat4(1);
-	defaultWindowShaderProgram.setMat4("transform", mat_proj);
-	// mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), 1, 0, 256);
-	// defaultWindowShaderProgram.setMat4("transform", mat_proj * this->camera.GetViewMatrix() * glm::mat4(1));
-
-	glDrawArrays(GL_TRIANGLES, 0, 6); // Starting from vertex 0; 6 vertices total -> 2 triangles
-	glDisableVertexAttribArray(0);
-
 	oglh->cleanup_sdhr_render();
 }
 
