@@ -4,7 +4,7 @@ precision mediump float;
 
 // Global shdr uniforms assigned in SDHRManager
 uniform mat4 transform; // Mesh transform from model to world space (also in vertex shader)
-uniform sampler2D tilesTexture[16];
+uniform sampler2D tilesTexture[16]; // It's always 2..18 (for GL_TEXTURE2->GL_TEXTURE18)
 uniform int iDebugNoTextures;
 uniform vec2 vTexelSize;        // render output size divided by SDHR resolution size
 
@@ -66,9 +66,8 @@ void main()
     vec2 fragOffset = (fTileColRow - tileColRow) * tileSize;
 
     // Now get the texture color, using the tile uv origin and this fragment's offset (with scaling)
-    // TODO: WHY TEXIDX+1? Should be TexIdx
-    ivec2 textureSize2d = textureSize(tilesTexture[texIdx+1],0);
-    vec4 tex = texture(tilesTexture[texIdx+1], mosaicTile.xy + (fragOffset * mosaicTile.z) / textureSize2d);
+    ivec2 textureSize2d = textureSize(tilesTexture[texIdx],0);
+    vec4 tex = texture(tilesTexture[texIdx], mosaicTile.xy + (fragOffset * mosaicTile.z) / textureSize2d);
 
     // TODO: Understand if the mesh size is correct
     // Understand every single other parameter

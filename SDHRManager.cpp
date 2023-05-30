@@ -344,6 +344,7 @@ void SDHRManager::Render()
 		// and GL_TEXTURE1 (mosaic data buffer) alone
 		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
 			glActiveTexture(_SDHR_START_TEXTURES + i);	// AssignByFilename() will bind to the active texture slot
+			// the default tex0 and tex4..16 are the same, but the others are unique for better testing
 			if (i == 1)
 				image_assets[i].AssignByFilename(this, "Texture_Default1.png");
 			else if (i == 2)
@@ -352,7 +353,7 @@ void SDHRManager::Render()
 				image_assets[i].AssignByFilename(this, "Texture_Default3.png");
 			else
 				image_assets[i].AssignByFilename(this, "Texture_Default.png");
-			texIds[i] = image_assets[i].tex_id;
+			texSamplers[i] = (_SDHR_START_TEXTURES - GL_TEXTURE0) + i;
 			if ((glerr = glGetError()) != GL_NO_ERROR) {
 				std::cerr << "OpenGL AssignByFilename error: " << i << " - " << glerr << std::endl;
 			}
@@ -398,7 +399,7 @@ void SDHRManager::Render()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL glGetUniformLocation error: " << glerr << std::endl;
 	}
-	glUniform1iv(texUniformId, _SDHR_MAX_TEXTURES, &texIds[0]);
+	glUniform1iv(texUniformId, _SDHR_MAX_TEXTURES, &texSamplers[0]);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
 	}

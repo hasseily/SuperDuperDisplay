@@ -309,7 +309,7 @@ int main(int, char**)
             mem_edit_1.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000)", sdhrManager->GetApple2MemPtr(), 0xc000);
         }
         
-		// Show one of the textures loaded
+		// Show the 16 textures loaded (which are always bound to GL_TEXTURE2 -> GL_TEXTURE18)
         if (show_texture_window)
 		{
 			ImGui::Begin("Texture Viewer", &show_texture_window);
