@@ -64,6 +64,7 @@ public:
 	void UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, uint8_t texture_index);
 
 	void SetWorldCoordinates(int32_t x, int32_t y);
+	glm::vec2 GetWorldCoordinates() { return glm::vec2(world_x, world_y); };
 
 	// updates all the buffer objects/arrays
 	void updateMesh();

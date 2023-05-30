@@ -3,24 +3,21 @@
 precision mediump float;
 
 // Global shdr uniforms assigned in SDHRManager
-uniform mat4 transform; // Mesh transform from model to world space (also in vertex shader)
 uniform sampler2D tilesTexture[16]; // It's always 2..18 (for GL_TEXTURE2->GL_TEXTURE18)
 uniform int iDebugNoTextures;
-uniform vec2 vTexelSize;        // render output size divided by SDHR resolution size
 
 // Window-level uniforms assigned in SDHRWindow
-uniform vec2 windowBottomLeft;  // The stencil window coordinates in SDHR (pixel) space
-uniform vec2 windowTopRight;
+uniform vec2 windowTopLeft;    // Corners of window in model coordinates (pixels)
+uniform vec2 windowBottomRight;
 
 // Mesh-level uniforms assigned in MosaicMesh
-uniform uvec2 meshSize;          // mesh size in pixels
+uniform uvec2 meshSize;          // mesh size in model coordinates (pixels)
 uniform uvec2 tileCount;         // Count of tiles (cols, rows)
-uniform vec3 topLeftVertexPos;  // the position of the top left vertex
 uniform samplerBuffer TBTEX;
 
 vec4 vStencilFailColor = vec4(0);   // Change this to show the stencil cutouts in color
 
-in vec3 vFragPos;       // The fragment position in world coordinates
+in vec3 vFragPos;       // The fragment position in model coordinates (pixels)
 in vec4 vTintColor;     // The mixed vertex colors for tinting
 in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
 
@@ -38,8 +35,8 @@ struct MosaicTile {
 
 // return 1 if the fragment v of the MosaicMesh is inside the Window, return 0 otherwise
 // Essentially a stencil test
-float isInsideWindow(vec2 v, vec2 bottomLeft, vec2 topRight) {
-    vec2 s = step(bottomLeft, v) - step(topRight, v);
+float isInsideWindow(vec2 v, vec2 topLeft, vec2 bottomRight) {
+    vec2 s = step(bottomRight, v) - step(topLeft, v);
     return s.x * s.y;
 }
 
@@ -69,22 +66,17 @@ void main()
     ivec2 textureSize2d = textureSize(tilesTexture[texIdx],0);
     vec4 tex = texture(tilesTexture[texIdx], mosaicTile.xy + (fragOffset * mosaicTile.z) / textureSize2d);
 
-    // TODO: Understand if the mesh size is correct
-    // Understand every single other parameter
-    //tex.r = fTileColRow.x - tileColRow.x;
-    //tex.g = fTileColRow.y - tileColRow.y;
-    //tex.b = texIdx;
-    //tex.a = 1;
-    if(tex.a < 0.1)
+    if(tex.a == 0)  // alpha discard
         discard;
 
-    // Check if the fragment is inside the window
+    // Check if the fragment is inside the window (stencil culling)
+    // All of those are relative to the mesh origin
     float t = isInsideWindow(
-        gl_FragCoord.xy,
-        windowBottomLeft * vTexelSize,
-        windowTopRight * vTexelSize
+        vFragPos.xy,
+        windowTopLeft,
+        windowBottomRight
     );
-    t = 1.0;    // XXX Disabled culling
+
     fragColor = (t * tex * vTintColor + (1 - t) * vStencilFailColor) * (1 - iDebugNoTextures)
                                          + vec4(vColor, 1.f) * iDebugNoTextures;
     

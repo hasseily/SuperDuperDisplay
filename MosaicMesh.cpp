@@ -165,7 +165,6 @@ void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 	glm::mat4 mat_final = mat_proj * mat_camera * this->mat_trans;
 	shaderProgram->setMat4("transform", mat_final);
 	shaderProgram->setVec2u("meshSize", this->width, this->height);
-	shaderProgram->setVec3("topLeftVertexPos", glm::vec3(world_x, world_y, 0));
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "MosaicMesh 1 render error: " << glerr << std::endl;
 	}

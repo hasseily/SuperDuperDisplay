@@ -26,10 +26,7 @@ void main()
     // just to flag that the vertex is the top left corner of the mesh
     gl_Position = transform * vec4(aPos.xyz, 1.0); 
 
-    // Calculate the transformed mesh origin
-    // So the fragment can determine which mosaic tile it's part of
-    vec4 worldPos = model * vec4(aPos.xyz, 1.0);
-    //vFragPos = worldPos.xyz;
+    // This is for the fragment can determine which mosaic tile it's part of
     vFragPos = aPos.xyz;
 
     // The tint color is passed in to tint each vertex

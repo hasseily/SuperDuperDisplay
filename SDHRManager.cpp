@@ -405,11 +405,6 @@ void SDHRManager::Render()
 	}
 
 	// Assign the sdhr global (to all windows) uniforms
-	auto vTexelSize = glm::vec2(
-		this->rendererOutputWidth / (float)_SDHR_WIDTH,
-		this->rendererOutputHeight / (float)_SDHR_HEIGHT
-		);
-	defaultWindowShaderProgram.setVec2("vTexelSize", vTexelSize);
 	defaultWindowShaderProgram.setBool("iDebugNoTextures", bDebugNoTextures);
 
 	// bUsePerspective toggle:
