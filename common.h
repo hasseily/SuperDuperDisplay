@@ -29,4 +29,13 @@
 #define _SDHR_MAX_TEXTURES 16				// Max # of image assets available
 #define _SDHR_START_TEXTURES GL_TEXTURE2	// Start of the image assets
 
+// SHADERS
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+#define _SHADER_SDHR_VERTEX_DEFAULT "shaders/sdhr_default_310es.vert"
+#define _SHADER_SDHR_FRAGMENT_DEFAULT "shaders/sdhr_default_310es.frag"
+#else
+#define _SHADER_SDHR_VERTEX_DEFAULT "shaders/sdhr_default_330.vert"
+#define _SHADER_SDHR_FRAGMENT_DEFAULT "shaders/sdhr_default_330.frag"
 #endif
+
+#endif	// COMMON_H

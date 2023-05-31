@@ -11,13 +11,9 @@ out vec3 vColor;    // DEBUG for non-textured display
 
 out vec3 vFragPos;
 
+uniform int ticks;      // ms since start
 uniform mat4 model;     // model matrix
 uniform mat4 transform; // Final mesh transform matrix from model to world space
-
-// simple pseudo random function just for color coding the triangles for debug
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
-}
 
 void main()
 {
@@ -33,9 +29,9 @@ void main()
     vTintColor = aTintColor;
 
     // This below is just to create a random vertex color for debugging untextured triangles
-    float r = rand(vec2((gl_VertexID % 0xFF) / 255.0f, (gl_VertexID >> 0x1) / 255.0f));
-    float g = rand(vec2((gl_VertexID % 0xFF) / 255.0f, (gl_VertexID >> 0x2) / 255.0f));
-    float b = rand(vec2((gl_VertexID >> 0x2) / 255.0f, (gl_VertexID >> 0x1) / 255.0f));
+    float r = float(int(vFragPos.x) % 0xFF) / 255.f; 
+    float g = float(int(vFragPos.y) % 0xFF) / 255.f; 
+    float b = r*g; 
     vColor = vec3(      // DEBUG: Change the colors of each triangle to be better visible
         r, g, b
     );

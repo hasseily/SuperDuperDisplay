@@ -7,6 +7,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include <algorithm>
+#include "SDL.h"
 #ifdef _DEBUGTIMINGS
 #include <chrono>
 #endif
@@ -275,7 +276,7 @@ void SDHRManager::Initialize()
 		image_assets[i].tex_id = oglHelper->get_texture_id_at_slot(i);
 	}
 	if (!defaultWindowShaderProgram.isReady)
-		defaultWindowShaderProgram.build("shaders/sdhr_default.vert", "shaders/sdhr_default.frag");
+		defaultWindowShaderProgram.build(_SHADER_SDHR_VERTEX_DEFAULT, _SHADER_SDHR_FRAGMENT_DEFAULT);
 	bShouldInitializeRender = true;
 	threadState = THREADCOMM_e::IDLE;
 	dataState = DATASTATE_e::NODATA;
@@ -406,6 +407,7 @@ void SDHRManager::Render()
 
 	// Assign the sdhr global (to all windows) uniforms
 	defaultWindowShaderProgram.setBool("iDebugNoTextures", bDebugNoTextures);
+	defaultWindowShaderProgram.setInt("ticks", SDL_GetTicks());
 
 	// bUsePerspective toggle:
 	// Test using a prespective so we can zoom back and forth easily
