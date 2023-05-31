@@ -113,8 +113,9 @@ int main(int, char**)
 		std::cout << "Failed to initialize OpenGL context" << std::endl;
 		return -1;
 	}
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "gladLoadGL error: " << glerr << std::endl;
+	while ((glerr = glGetError()) != GL_NO_ERROR) {
+        // reset and clear error
+		// std::cerr << "gladLoadGL error: " << glerr << std::endl;
 	}
     // glEnable(GL_DEPTH_TEST); // TODO: Check if necessary
     glEnable(GL_CULL_FACE);
@@ -238,18 +239,6 @@ int main(int, char**)
             }
         }
 
-/*
-        // TEST STUFF
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		shd.use();
-		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-		// END TEST STUFF
-*/
-
 		sdhrManager->Render();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -316,9 +305,6 @@ int main(int, char**)
             ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES - 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
             ImGui::Text("Texture ID: %d", glhelper->get_texture_id_at_slot(_slotnum));
 			ImVec2 avail_size = ImGui::GetContentRegionAvail();
-			//ImVec2 window_pos = ImGui::GetWindowPos();
-			//ImVec2 window_size = ImGui::GetWindowSize();
-			//ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
  			ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			ImGui::End();
 		}
@@ -335,19 +321,6 @@ int main(int, char**)
 			ImVec2(0, 0),
 			ImVec2(1, 1)
 		);
-
-        // XXX TEST stuff
-		// Get available space
-        // For the main window it's a never the window size but the screen
-        // ImVec2 available = ImGui::GetContentRegionAvail();
-        // ImVec2 window_pos = ImGui::GetWindowPos();
-        // ImVec2 window_size = ImGui::GetWindowSize();
-
-        // ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
-        // ImGui::GetBackgroundDrawList()->AddCircle(window_center, window_size.x * 0.6f, IM_COL32(255, 0, 0, 200), 0, 10 + 4);
-        // ImGui::GetForegroundDrawList()->AddCircle(window_center, window_size.y * 0.6f, IM_COL32(0, 255, 0, 200), 0, 10);
-        //auto _txtstr = "DRAWING a string!!!!";
-        //ImGui::GetForegroundDrawList()->AddText(window_center, IM_COL32(100, 100, 0, 255), _txtstr);
 
 		// Rendering
 		ImGui::Render();

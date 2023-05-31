@@ -412,7 +412,6 @@ void SDHRManager::Render()
 	// perspective uses (fov, aspect, near, far)
 	// If the camera is using a perspective projection matrix, specify the z starting distance
 	// Default FOV is 45 degrees
-	// Note that the perspective screws with the stencil test
 
 	if (bUsePerspective && (!bIsUsingPerspective))
 	{

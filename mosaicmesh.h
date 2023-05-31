@@ -3,15 +3,16 @@
 #define MOSAICMESH_H
 
 /**
- * MosaicMesh generates a flat mesh comprised
- * of tile quads. The constructor needs the following:
+ * This MosaicMesh generates a flat mesh in a single quad
+ * The constructor needs the following:
  *	- number of tiles in the x and y axes
  *	- width and height of tiles in pixels
- *	- a pointer to a C-style array of indexes of tilesets
- *	- a pointer to a C-style array of indexes of tiles
+ *	- the window index this mesh belongs to
  * 
- * The last 2 arrays are of size (numquads_x * numquads_y). Each quad gets therefore
- * its own entry of which tileset it belongs to, and within this tileset, which tile it is
+ * Determining the tiles themselves is done exclusively in the shader program.
+ * The shader programe will look at the position of the pixel inside the mesh
+ * and determine the tile it belongs to and grab the relative pixel color from
+ * the tileset image.
  */
 
 #include "common.h"

@@ -190,13 +190,3 @@ void OpenGLHelper::cleanup_sdhr_render()
 	unbind_framebuffer();
 }
 
-// TODO: testing, remove
-/*
-void OpenGLHelper::render()
-{
-	glBindVertexArray(VAO);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
-	glBindVertexArray(0);
-}
-*/
-
