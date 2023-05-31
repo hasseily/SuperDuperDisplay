@@ -275,7 +275,7 @@ void SDHRManager::Initialize()
 		image_assets[i].tex_id = oglHelper->get_texture_id_at_slot(i);
 	}
 	if (!defaultWindowShaderProgram.isReady)
-		defaultWindowShaderProgram.build("shaders/sdhr_window_tr.vert", "shaders/sdhr_window_tr.frag");
+		defaultWindowShaderProgram.build("shaders/sdhr_default.vert", "shaders/sdhr_default.frag");
 	bShouldInitializeRender = true;
 	threadState = THREADCOMM_e::IDLE;
 	dataState = DATASTATE_e::NODATA;

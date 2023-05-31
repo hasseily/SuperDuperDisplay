@@ -133,16 +133,18 @@
       <Filter>imgui</Filter>
     </None>
     <None Include="packages.config" />
-    <None Include="shaders\sdhr_window_tr.vert">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\sdhr_window_tr.frag">
-      <Filter>shaders</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Texture_Default.png">
       <Filter>assets</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="shaders\sdhr_default.frag">
+      <Filter>shaders</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="shaders\sdhr_default.vert">
+      <Filter>shaders</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
 </Project>
