@@ -383,7 +383,7 @@ void SDHRManager::Render()
 			std::cerr << "OpenGL error BEFORE window update: " << glerr << std::endl;
 		}
 		// Update windows and meshes
-		for each (auto & _w in this->windows) {
+		for (auto& _w: this->windows) {
 			_w.Update();
 		}
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -428,7 +428,7 @@ void SDHRManager::Render()
 
 
 	// Render the windows (i.e. the meshes with the windows stencils)
-	for each (auto& _w in this->windows) {
+	for (auto& _w: this->windows) {
 		_w.Render(this->camera.GetViewMatrix(), mat_proj);
 	}
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
