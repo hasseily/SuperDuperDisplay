@@ -30,8 +30,8 @@ void main()
 
     // This below is just to create a random vertex color for debugging untextured triangles
     float r = float(int(gl_VertexID * 204.95f) % 0xFF) / 255.f; 
-    float g = float(int(gl_VertexID * 182.53f + aPos.x) % 0xFF) / 255.f; 
-    float b = float(int(gl_VertexID * 159.65f + aPos.y) % 0xFF) / 255.f; 
+    float g = float(int(gl_VertexID * 182.53f * abs(aPos.x)) % 0xFF) / 255.f; 
+    float b = float(int(gl_VertexID * 359.65f * abs(aPos.y)) % 0xFF) / 255.f; 
     vColor = vec3(      // DEBUG: Change the colors of each triangle to be better visible
         r, g, b
     );
