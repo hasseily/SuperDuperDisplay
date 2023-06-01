@@ -66,7 +66,7 @@ void main()
     ivec2 textureSize2d = textureSize(tilesTexture[texIdx],0);
     vec4 tex = texture(tilesTexture[texIdx], mosaicTile.xy + (fragOffset * mosaicTile.z) / textureSize2d);
 
-    if(tex.a == 0)  // alpha discard
+    if(tex.a < 0.01f)  // alpha discard
         discard;
 
     // Check if the fragment is inside the window (stencil culling)
