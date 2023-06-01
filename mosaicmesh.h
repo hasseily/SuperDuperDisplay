@@ -35,7 +35,8 @@ struct Vertex {
 
 // For each tile inside, specify the texture index, the uv of its top left corner, and the uv scale
 struct alignas(4) MosaicTile {
-	glm::fvec2 uv;		// uv coords in 0-1 space
+	float x;			// uv coords in 0-1 space
+	float y;
 	float uvscale;		// Scale should default to 1 for SDHR.
 	float texIdx;		// It's the texture id, effectively an int
 };
