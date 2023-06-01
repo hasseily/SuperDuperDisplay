@@ -79,8 +79,8 @@ public:
 		void AssignByMemory(SDHRManager* owner, const uint8_t* buffer, int size);
 
 		// image assets are full 32-bit bitmap files, uploaded from PNG
-		uint64_t image_xcount = 0;	// width and height of asset in pixels
-		uint64_t image_ycount = 0;
+		uint32_t image_xcount = 0;	// width and height of asset in pixels
+		uint32_t image_ycount = 0;
 		GLuint tex_id = 0;	// Texture ID on the GPU that holds the image data
 	};
 
@@ -94,7 +94,7 @@ public:
 		uint8_t asset_index;			// index of the image asset
 		uint16_t xdim;					// Width of tiles in this tileset
 		uint16_t ydim;					// Height of tiles in this tileset
-		uint64_t num_entries;
+		uint32_t num_entries;
 		TileTex* tile_data = NULL;		// list of tile texture starting coordinates
 		TilesetRecord()
 			: asset_index(0)
@@ -186,10 +186,10 @@ private:
 	//////////////////////////////////////////////////////////////////////////
 	void CommandError(const char* err);
 	bool CheckCommandLength(uint8_t* p, uint8_t* e, size_t sz);
-	uint64_t DataOffset(uint8_t low, uint8_t med, uint8_t high) {
-		return (uint64_t)high * 256 * 256 + (uint64_t)med * 256 + low;
+	uint32_t DataOffset(uint8_t low, uint8_t med, uint8_t high) {
+		return (uint32_t)high * 256 * 256 + (uint32_t)med * 256 + low;
 	}
-	bool DataSizeCheck(uint64_t offset, uint64_t data_size) {
+	bool DataSizeCheck(uint32_t offset, uint32_t data_size) {
 		if (offset + data_size >= sizeof(uploaded_data_region)) {
 			CommandError("data not bounded by uploaded data region");
 			return false;
@@ -229,7 +229,7 @@ private:
 	// The queue not being empty acts as a semaphore.
 	struct UploadImageData {
 		uint8_t asset_index;
-		uint64_t upload_start_addr;
+		uint32_t upload_start_addr;
 		int upload_data_size;
 	};
 	std::queue<UploadImageData>fifo_upload_image_data;

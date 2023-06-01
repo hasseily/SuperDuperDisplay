@@ -4,7 +4,7 @@
 #include "OpenGLHelper.h"
 #include "SDHRManager.h"
 
-MosaicMesh::MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile_xdim, uint64_t tile_ydim, uint8_t win_index) {
+MosaicMesh::MosaicMesh(uint32_t tile_xcount, uint32_t tile_ycount, uint32_t tile_xdim, uint32_t tile_ydim, uint8_t win_index) {
 	cols = tile_xcount;	// number of columns
 	rows = tile_ycount;	// number of rows
 	width = tile_xcount * tile_xdim;
@@ -68,13 +68,13 @@ MosaicMesh::~MosaicMesh()
 }
 
 // Update the UV data of a single mosaic tile (using xy positioning)
-void MosaicMesh::UpdateMosaicUV(uint64_t xpos, uint64_t ypos, uint64_t u, uint64_t v, uint8_t texture_index)
+void MosaicMesh::UpdateMosaicUV(uint32_t xpos, uint32_t ypos, uint32_t u, uint32_t v, uint8_t texture_index)
 {
 	UpdateMosaicUV(xpos + ypos * cols, u, v, texture_index);
 }
 
 // Update the UV data of a single mosaic tile (using index positioning)
-void MosaicMesh::UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, uint8_t texture_index)
+void MosaicMesh::UpdateMosaicUV(uint32_t mosaic_index, uint32_t u, uint32_t v, uint8_t texture_index)
 {
 	const auto ia = SDHRManager::GetInstance()->image_assets[texture_index];
 	auto _iaw = (float)ia.image_xcount;	// image width and height, as floats so everything is floats

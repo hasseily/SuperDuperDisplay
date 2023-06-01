@@ -161,8 +161,8 @@ int main(int, char**)
 
 
     // Delta Time
-	uint64_t dt_NOW = SDL_GetPerformanceCounter();
-    uint64_t dt_LAST = 0;
+	uint32_t dt_NOW = SDL_GetPerformanceCounter();
+    uint32_t dt_LAST = 0;
 	float deltaTime = 0.f;
 
     // Main loop

@@ -177,7 +177,7 @@ void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* 
 // Static Methods
 //////////////////////////////////////////////////////////////////////////
 
-int upload_inflate(const char* source, uint64_t size, std::ostream& dest) {
+int upload_inflate(const char* source, uint32_t size, std::ostream& dest) {
 	static const int CHUNK = 16384;
 	int ret;
 	unsigned have;
@@ -202,9 +202,9 @@ int upload_inflate(const char* source, uint64_t size, std::ostream& dest) {
 		return ret;
 
 	/* decompress until deflate stream ends or end of file */
-	uint64_t bytes_read = 0;
+	uint32_t bytes_read = 0;
 	while (bytes_read < size) {
-		uint64_t bytes_to_read = std::min((uint64_t)CHUNK, size - bytes_read);
+		uint32_t bytes_to_read = std::min((uint32_t)CHUNK, size - bytes_read);
 		memcpy(in, source + bytes_read, bytes_to_read);
 		bytes_read += bytes_to_read;
 		strm.avail_in = (unsigned int)bytes_to_read;
@@ -460,7 +460,7 @@ void SDHRManager::DefineTileset(uint8_t tileset_index, uint16_t num_entries, uin
 
 	uint8_t* offset_p = offsets;
 	TileTex* tex_p = r->tile_data;
-	for (uint64_t i = 0; i < num_entries; ++i) {
+	for (uint32_t i = 0; i < num_entries; ++i) {
 		uint32_t xoffset = *((uint16_t*)offset_p);
 		offset_p += 2;
 		uint32_t yoffset = *((uint16_t*)offset_p);
@@ -514,8 +514,8 @@ bool SDHRManager::ProcessCommands(void)
 		case SDHR_CMD_UPLOAD_DATA: {
 			if (!CheckCommandLength(p, end, sizeof(UploadDataCmd))) return false;
 			UploadDataCmd* cmd = (UploadDataCmd*)p;
-			uint64_t dest_offset = (uint64_t)cmd->dest_block * 512;
-			uint64_t data_size = (uint64_t)512;
+			uint32_t dest_offset = (uint32_t)cmd->dest_block * 512;
+			uint32_t data_size = (uint32_t)512;
 			if (!DataSizeCheck(dest_offset, data_size)) {
 				std::cerr << "DataSizeCheck failed!" << std::endl;
 				return false;
@@ -525,10 +525,10 @@ bool SDHRManager::ProcessCommands(void)
 			//while (!fifo_upload_image_data.empty()) {};
 			while (this->dataState == DATASTATE_e::COMMAND_READY) {}
 			/*
-			std::cout << std::hex << "Uploaded from: " << (uint64_t)(cmd->source_addr) 
-				<< " To: " << (uint64_t)(uploaded_data_region + dest_offset)
-				<< " Amount: " << std::dec << (uint64_t)data_size
-				<< " Destination Block: " << (uint64_t)cmd->dest_block
+			std::cout << std::hex << "Uploaded from: " << (uint32_t)(cmd->source_addr) 
+				<< " To: " << (uint32_t)(uploaded_data_region + dest_offset)
+				<< " Amount: " << std::dec << (uint32_t)data_size
+				<< " Destination Block: " << (uint32_t)cmd->dest_block
 				<< std::endl;
 			*/
 			memcpy(uploaded_data_region + dest_offset, a2mem + ((uint16_t)cmd->source_addr), data_size);
@@ -539,7 +539,7 @@ bool SDHRManager::ProcessCommands(void)
 		case SDHR_CMD_DEFINE_IMAGE_ASSET: {
 			if (!CheckCommandLength(p, end, sizeof(DefineImageAssetCmd))) return false;
 			DefineImageAssetCmd* cmd = (DefineImageAssetCmd*)p;
-			uint64_t upload_start_addr = 0;
+			uint32_t upload_start_addr = 0;
 			int upload_data_size = (int)cmd->block_count * 512;
 
 			ImageAsset* r = image_assets + cmd->asset_index;
@@ -569,7 +569,7 @@ bool SDHRManager::ProcessCommands(void)
 			if (num_entries == 0) {
 				num_entries = 256;
 			}
-			uint64_t required_data_size = num_entries * 4;
+			uint32_t required_data_size = num_entries * 4;
 			if (cmd->block_count * 512 < required_data_size) {
 				CommandError("Insufficient data space for tileset");
 			}
@@ -585,8 +585,8 @@ bool SDHRManager::ProcessCommands(void)
 			if (num_entries == 0) {
 				num_entries = 256;
 			}
-			uint64_t load_data_size;
-			load_data_size = (uint64_t)num_entries * 4;
+			uint32_t load_data_size;
+			load_data_size = (uint32_t)num_entries * 4;
 			if (message_length != sizeof(DefineTilesetImmediateCmd) + load_data_size + 3) {	// 3 is cmd_len and cmd_id
 				CommandError("DefineTilesetImmediate data size mismatch");
 				return false;
@@ -629,7 +629,7 @@ bool SDHRManager::ProcessCommands(void)
 
 			// full tile specification: tileset and index
 			auto wintilect = r->Get_tile_count();
-			uint64_t required_data_size = wintilect.x * wintilect.y * 2;
+			uint32_t required_data_size = wintilect.x * wintilect.y * 2;
 			if (required_data_size != cmd->data_length) {
 				CommandError("UpdateWindowSetImmediate data size mismatch");
 				return false;
@@ -640,7 +640,7 @@ bool SDHRManager::ProcessCommands(void)
 			//  textureId of the image asset used in the tileset
 			uint8_t* sp = p + cmd_sz;
 			auto mesh = r->mesh;
-			for (uint64_t i = 0; i < cmd->data_length / 2; ++i) {
+			for (uint32_t i = 0; i < cmd->data_length / 2; ++i) {
 				uint8_t tileset_index = sp[i * 2];
 				uint8_t tile_index = sp[i * 2 + 1];
 				const TilesetRecord tr = tileset_records[tileset_index];
@@ -666,7 +666,7 @@ bool SDHRManager::ProcessCommands(void)
 			UpdateWindowSetUploadCmd* cmd = (UpdateWindowSetUploadCmd*)p;
 			SDHRWindow* r = windows + cmd->window_index;
 			// full tile specification: tileset and index
-			uint64_t data_size = (uint64_t)cmd->block_count * 512;
+			uint32_t data_size = (uint32_t)cmd->block_count * 512;
 			std::stringstream ss;
 			upload_inflate((const char*)uploaded_data_region, data_size, ss);
 			std::string s = ss.str();
@@ -681,9 +681,9 @@ bool SDHRManager::ProcessCommands(void)
 			//  NOTE: U/V has its 0,0 origin at the top left. OpenGL is bottom left
 			uint8_t* sp = (uint8_t*)s.c_str();
 			auto mesh = r->mesh;
-			for (uint64_t tile_y = 0; tile_y < wintilect.y; ++tile_y) {
-				// uint64_t line_offset = (uint64_t)tile_y * r->tile_xcount;
-				for (uint64_t tile_x = 0; tile_x < wintilect.x; ++tile_x) {
+			for (uint32_t tile_y = 0; tile_y < wintilect.y; ++tile_y) {
+				// uint32_t line_offset = (uint32_t)tile_y * r->tile_xcount;
+				for (uint32_t tile_x = 0; tile_x < wintilect.x; ++tile_x) {
 					uint8_t tileset_index = *sp++;
 					uint8_t tile_index = *sp++;
 					const TilesetRecord tr = tileset_records[tileset_index];
@@ -710,21 +710,21 @@ bool SDHRManager::ProcessCommands(void)
 			UpdateWindowSingleTilesetCmd* cmd = (UpdateWindowSingleTilesetCmd*)p;
 			SDHRWindow* r = windows + cmd->window_index;
 			auto wintilect = r->Get_tile_count();
-			if ((uint64_t)cmd->tile_xbegin + cmd->tile_xcount > wintilect.x ||
-				(uint64_t)cmd->tile_ybegin + cmd->tile_ycount > wintilect.y) {
+			if ((uint32_t)cmd->tile_xbegin + cmd->tile_xcount > wintilect.x ||
+				(uint32_t)cmd->tile_ybegin + cmd->tile_ycount > wintilect.y) {
 				CommandError("tile update region exceeds tile dimensions");
 				return false;
 			}
 			// partial tile specification: index and palette, single tileset
-			uint64_t data_size = (uint64_t)cmd->tile_xcount * cmd->tile_ycount;
+			uint32_t data_size = (uint32_t)cmd->tile_xcount * cmd->tile_ycount;
 			if (data_size + sizeof(UpdateWindowSingleTilesetCmd) != message_length) {
 				CommandError("UpdateWindowSingleTileset data size mismatch");
 				return false;
 			}
 			uint8_t* dp = cmd->data;
-			for (uint64_t tile_y = 0; tile_y < cmd->tile_ycount; ++tile_y) {
-				uint64_t line_offset = (cmd->tile_ybegin + tile_y) * wintilect.x + cmd->tile_xbegin;
-				for (uint64_t tile_x = 0; tile_x < cmd->tile_xcount; ++tile_x) {
+			for (uint32_t tile_y = 0; tile_y < cmd->tile_ycount; ++tile_y) {
+				uint32_t line_offset = (cmd->tile_ybegin + tile_y) * wintilect.x + cmd->tile_xbegin;
+				for (uint32_t tile_x = 0; tile_x < cmd->tile_xcount; ++tile_x) {
 					uint8_t tile_index = *dp++;
 					if (tileset_records[cmd->tileset_index].xdim != r->Get_tile_dim().x ||
 						tileset_records[cmd->tileset_index].ydim != r->Get_tile_dim().y ||

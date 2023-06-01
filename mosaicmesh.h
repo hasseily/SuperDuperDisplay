@@ -45,10 +45,10 @@ class MosaicMesh
 public:
 	// mesh Data
 	vector<Vertex> vertices;		// Vertices with XY and UV	(2 vectors of floats)
-	uint64_t cols = 0;			// # of mosaic tiles horizontally
-	uint64_t rows = 0;			// # of mosaic tiles vertically
-	uint64_t width = 0;			// width and height of the mesh in pixels
-	uint64_t height = 0;
+	uint32_t cols = 0;			// # of mosaic tiles horizontally
+	uint32_t rows = 0;			// # of mosaic tiles vertically
+	uint32_t width = 0;			// width and height of the mesh in pixels
+	uint32_t height = 0;
 
 	// A vector of uvec3 for each tile, specifying texture index + uv coords of each tile
 	vector<MosaicTile> mosaicTiles;
@@ -57,12 +57,12 @@ public:
 
 	unsigned int TBTEX = UINT_MAX;		// MosaicTile Buffer Texture (attaches to TBO)
 
-	MosaicMesh(uint64_t tile_xcount, uint64_t tile_ycount, uint64_t tile_xdim, uint64_t tile_ydim, uint8_t win_index);
+	MosaicMesh(uint32_t tile_xcount, uint32_t tile_ycount, uint32_t tile_xdim, uint32_t tile_ydim, uint8_t win_index);
 	MosaicMesh() = delete; // Disallow default constructor
 	~MosaicMesh();
 
-	void UpdateMosaicUV(uint64_t xpos, uint64_t ypos, uint64_t u, uint64_t v, uint8_t texture_index);
-	void UpdateMosaicUV(uint64_t mosaic_index, uint64_t u, uint64_t v, uint8_t texture_index);
+	void UpdateMosaicUV(uint32_t xpos, uint32_t ypos, uint32_t u, uint32_t v, uint8_t texture_index);
+	void UpdateMosaicUV(uint32_t mosaic_index, uint32_t u, uint32_t v, uint8_t texture_index);
 
 	void SetWorldCoordinates(int32_t x, int32_t y);
 	glm::vec2 GetWorldCoordinates() { return glm::vec2(world_x, world_y); };
