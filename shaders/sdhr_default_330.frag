@@ -13,7 +13,7 @@ uniform vec2 windowBottomRight;
 // Mesh-level uniforms assigned in MosaicMesh
 uniform uvec2 meshSize;          // mesh size in model coordinates (pixels)
 uniform uvec2 tileCount;         // Count of tiles (cols, rows)
-uniform samplerBuffer TBTEX;
+uniform sampler2D TBTEX;
 
 vec4 vStencilFailColor = vec4(0);   // Change this to show the stencil cutouts in color
 
@@ -54,7 +54,7 @@ void main()
     int tileIdx = int(tileColRow.y * tileCount.x + tileColRow.x);
 
     // Next grab the data for that tile from the tilesBuffer
-    vec4 mosaicTile = texelFetch(TBTEX, tileIdx);
+    vec4 mosaicTile = texture(TBTEX, tileColRow);
 
     // We've got the texture index
     int texIdx = int(mosaicTile.w);

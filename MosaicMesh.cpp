@@ -133,13 +133,10 @@ void MosaicMesh::updateMesh()
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tint));
 
-	// load the mosaicTiles data in the buffer TBO
-	glBindBuffer(GL_TEXTURE_BUFFER, TBO);
-	glBufferData(GL_TEXTURE_BUFFER, sizeof(MosaicTile) * cols * rows, &this->mosaicTiles[0], GL_STATIC_DRAW);
 	// Associate the texture TBTEX in GL_TEXTURE0+TEXUNIT with the buffer
 	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
-	glBindTexture(GL_TEXTURE_BUFFER, TBTEX);
-	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, TBO);
+	glBindTexture(GL_TEXTURE_2D, TBTEX);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, cols, rows, 0, GL_RGBA, GL_FLOAT, &this->mosaicTiles[0]);
 
 	// reset the binding
 	glBindVertexArray(0);
@@ -174,7 +171,7 @@ void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 	}
 	// point the uniform at the tiles data texture (GL_TEXTURE0 + _SDHR_TBO_TEXUNIT)
 	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
-	glBindTexture(GL_TEXTURE_BUFFER, TBTEX);
+	glBindTexture(GL_TEXTURE_2D, TBTEX);
 	shaderProgram->setInt("TBTEX", _SDHR_TBO_TEXUNIT);
 	glActiveTexture(GL_TEXTURE0);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());

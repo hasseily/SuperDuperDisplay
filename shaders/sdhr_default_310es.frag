@@ -1,5 +1,4 @@
 #version 310 es
-#extension GL_EXT_texture_buffer : enable
 
 precision mediump float;
 precision highp samplerBuffer;
