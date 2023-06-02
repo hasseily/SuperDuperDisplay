@@ -41,7 +41,7 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 	if (nrComponents == 1)
 		format = GL_RED;
 	else if (nrComponents == 3)
-		format = GL_RGBA;		// TODO: Understand why it shouldn't be GL_RGB
+		format = GL_RGB;
 	else if (nrComponents == 4)
 		format = GL_RGBA;
 
@@ -49,7 +49,7 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL load_texture glBindTexture error: " << glerr << std::endl;
 	}
-	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL load_texture glTexImage2D error: " << glerr << std::endl;
 	}

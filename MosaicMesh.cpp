@@ -19,9 +19,9 @@ MosaicMesh::MosaicMesh(uint32_t tile_xcount, uint32_t tile_ycount, uint32_t tile
 					glm::vec4(1),	// tint (to be potentially assigned later)	// TODO
 		});
 	auto _t = MosaicTile({ 
-		glm::uvec2(0),		// uv position
-		1.f,				// uv scale
-		0.f,				// texture index
+		1.f, 1.f,						// uv position
+		1.f / _SDHR_MAX_UV_SCALE,		// uv scale
+		0.f / _SDHR_MAX_TEXTURES,		// texture index
 		});
 
 	// Create all the vertices for each tile
@@ -80,11 +80,12 @@ void MosaicMesh::UpdateMosaicUV(uint32_t mosaic_index, uint32_t u, uint32_t v, u
 	auto _iaw = (float)ia.image_xcount;	// image width and height, as floats so everything is floats
 	auto _iah = (float)ia.image_ycount;
 
-	// The passed-in U and V are the non-normalized pixel coordinates of the first vertex of the tile
+	// Calculate the mosaic tile metadata
+
 	auto &_t0 = this->mosaicTiles.at(mosaic_index);		// Update in place
-	_t0.uv.x = u / _iaw;
-	_t0.uv.y = v / _iah;
-	_t0.texIdx = (float)texture_index;
+	_t0.x = u / _iaw;
+	_t0.y = v / _iah;
+	_t0.texIdx = float(texture_index) / _SDHR_MAX_TEXTURES;
 
 	bNeedsGPUUpdate = true;
 }
@@ -137,6 +138,10 @@ void MosaicMesh::updateMesh()
 	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
 	glBindTexture(GL_TEXTURE_2D, TBTEX);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, cols, rows, 0, GL_RGBA, GL_FLOAT, &this->mosaicTiles[0]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);	// Note: Could also use GL_LINEAR, need to test
 
 	// reset the binding
 	glBindVertexArray(0);
@@ -159,20 +164,22 @@ void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 	GLenum glerr;
 	glUseProgram(shaderProgram->ID);
 	glBindVertexArray(VAO);
+
+	// Assign the scales so that we can get the proper original
+	// values for each mosaic tile
+	shaderProgram->setFloat("maxTextures", _SDHR_START_TEXTURES);
+	shaderProgram->setFloat("maxUVScale", _SDHR_MAX_UV_SCALE);
+	shaderProgram->setVec2u("tileCount", this->cols, this->rows);
+	shaderProgram->setVec2u("meshSize", this->width, this->height);
+
 	glm::mat4 mat_final = mat_proj * mat_camera * this->mat_trans;
 	shaderProgram->setMat4("transform", mat_final);
-	shaderProgram->setVec2u("meshSize", this->width, this->height);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "MosaicMesh 1 render error: " << glerr << std::endl;
-	}
-	shaderProgram->setVec2u("tileCount", this->cols, this->rows);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "MosaicMesh 2 render error: " << glerr << std::endl;
-	}
+
 	// point the uniform at the tiles data texture (GL_TEXTURE0 + _SDHR_TBO_TEXUNIT)
 	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
 	glBindTexture(GL_TEXTURE_2D, TBTEX);
 	shaderProgram->setInt("TBTEX", _SDHR_TBO_TEXUNIT);
+	// back to the output buffer to draw our scene
 	glActiveTexture(GL_TEXTURE0);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glBindVertexArray(0);

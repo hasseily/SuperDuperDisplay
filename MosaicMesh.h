@@ -34,6 +34,7 @@ struct Vertex {
 };
 
 // For each tile inside, specify the texture index, the uv of its top left corner, and the uv scale
+// NOTE: Everything must be bound in the 0-1 space because of the 2D Texture specifications
 struct alignas(4) MosaicTile {
 	float x;			// uv coords in 0-1 space
 	float y;
