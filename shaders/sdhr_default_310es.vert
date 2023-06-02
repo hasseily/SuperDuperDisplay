@@ -29,9 +29,9 @@ void main()
     vTintColor = aTintColor;
 
     // This below is just to create a random vertex color for debugging untextured triangles
-    float r = float(int(vFragPos.x) % 0xFF) / 255.f; 
-    float g = float(int(vFragPos.y) % 0xFF) / 255.f; 
-    float b = r*g; 
+    float r = float((gl_VertexID * 204) % 0xFF) / 255.f; 
+    float g = float(int(float(gl_VertexID) * 182.53f * abs(aPos.x)) % 0xFF) / 255.f; 
+    float b = float(int(float(gl_VertexID) * 359.65f * abs(aPos.y)) % 0xFF) / 255.f; 
     vColor = vec3(      // DEBUG: Change the colors of each triangle to be better visible
         r, g, b
     );

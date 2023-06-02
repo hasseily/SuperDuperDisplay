@@ -77,7 +77,7 @@ void main()
         windowTopLeft,
         windowBottomRight
     );
-    t = 1.0; // DEBUG
+    
     fragColor = (t * tex * vTintColor + (1 - t) * vStencilFailColor) * (1 - iDebugNoTextures)
                                          + vec4(vColor, 1.f) * iDebugNoTextures;
 }
