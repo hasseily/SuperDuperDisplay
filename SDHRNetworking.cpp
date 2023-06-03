@@ -158,6 +158,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 						sdhrMgr->ClearBuffer();
 						sdhrMgr->dataState = DATASTATE_e::COMMAND_READY;
 						sdhrMgr->threadState = THREADCOMM_e::IDLE;
+#ifdef DEBUG
 						if (processingSucceeded)
 						{
 							std::cout << "Processing succeeded!" << std::endl;
@@ -165,6 +166,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 						else {
 							std::cerr << "ERROR: Processing failed!" << std::endl;
 						}
+#endif
 						break;
 					}
 					default:
