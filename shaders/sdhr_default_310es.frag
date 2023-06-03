@@ -68,63 +68,63 @@ void main()
             textureSize2d = textureSize(tilesTexture[0],0);
             tex = texture(tilesTexture[0], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 1:
             textureSize2d = textureSize(tilesTexture[1],0);
             tex = texture(tilesTexture[1], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 2:
             textureSize2d = textureSize(tilesTexture[2],0);
             tex = texture(tilesTexture[2], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 3:
             textureSize2d = textureSize(tilesTexture[3],0);
             tex = texture(tilesTexture[3], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 4:
             textureSize2d = textureSize(tilesTexture[4],0);
             tex = texture(tilesTexture[4], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 5:
             textureSize2d = textureSize(tilesTexture[5],0);
             tex = texture(tilesTexture[5], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 6:
             textureSize2d = textureSize(tilesTexture[6],0);
             tex = texture(tilesTexture[6], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 7:
             textureSize2d = textureSize(tilesTexture[7],0);
             tex = texture(tilesTexture[7], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 8:
             textureSize2d = textureSize(tilesTexture[8],0);
             tex = texture(tilesTexture[8], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 9:
             textureSize2d = textureSize(tilesTexture[9],0);
             tex = texture(tilesTexture[9], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 10:
             textureSize2d = textureSize(tilesTexture[10],0);
             tex = texture(tilesTexture[10], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 11:
             textureSize2d = textureSize(tilesTexture[11],0);
             tex = texture(tilesTexture[11], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 12:
             textureSize2d = textureSize(tilesTexture[12],0);
             tex = texture(tilesTexture[12], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 13:
             textureSize2d = textureSize(tilesTexture[13],0);
             tex = texture(tilesTexture[13], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 14:
             textureSize2d = textureSize(tilesTexture[14],0);
             tex = texture(tilesTexture[14], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
-        case 0:
+        case 15:
             textureSize2d = textureSize(tilesTexture[15],0);
             tex = texture(tilesTexture[15], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
