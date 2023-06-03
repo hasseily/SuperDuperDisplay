@@ -235,7 +235,7 @@ int main(int, char**)
                 sdhrManager->camera.ProcessMouseMovement(event.motion.xrel, event.motion.yrel);
             }
             else if (event.type == SDL_MOUSEWHEEL && !io.WantCaptureMouse) {
-                sdhrManager->camera.ProcessMouseScroll(event.wheel.preciseY);
+                sdhrManager->camera.ProcessMouseScroll(event.wheel.y);
             }
         }
 
