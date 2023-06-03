@@ -1,5 +1,4 @@
 #version 310 es
-#extension GL_ARB_gpu_shader5 : require
 
 precision mediump float;
 
@@ -26,8 +25,6 @@ in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
 
 out vec4 fragColor;
 
-layout(pixel_center_integer) in vec4 gl_FragCoord;
-
 /*
 struct MosaicTile {
     vec2 uv;            // x and y
@@ -47,6 +44,7 @@ void main()
 {
     //fragColor = vec4(1);
     //return;
+
     vec2 tileSize = vec2(meshSize / tileCount);
     // first figure out which mosaic tile this fragment is part of
         // Calculate the position of the fragment in tile intervals
@@ -58,15 +56,82 @@ void main()
 
     // Next grab the data for that tile from the tilesBuffer
     // Make sure to rescale all values back from 0-1 to their original values
-    vec4 mosaicTile = texture2D(TBTEX, tileColRow / vec2(tileCount));
-    int texIdx = int(round(mosaicTile.w * maxTextures));
-    ivec2 textureSize2d = textureSize(tilesTexture[texIdx],0);
+    vec4 mosaicTile = texture(TBTEX, tileColRow / vec2(tileCount));
     float scale = mosaicTile.z * maxUVScale;
+    int texIdx = int(round(mosaicTile.w * maxTextures));
+    // Now get the texture color, using the tile uv origin and this fragment's offset (with scaling)
+    // Need to use a big switch because gl-es 3.1 doesn't allow for using dynamic indexes
+    ivec2 textureSize2d = ivec2(0);
+    vec4 tex = vec4(0);
+    switch (texIdx) {
+        case 0:
+            textureSize2d = textureSize(tilesTexture[0],0);
+            tex = texture(tilesTexture[0], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[1],0);
+            tex = texture(tilesTexture[1], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[2],0);
+            tex = texture(tilesTexture[2], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[3],0);
+            tex = texture(tilesTexture[3], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[4],0);
+            tex = texture(tilesTexture[4], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[5],0);
+            tex = texture(tilesTexture[5], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[6],0);
+            tex = texture(tilesTexture[6], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[7],0);
+            tex = texture(tilesTexture[7], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[8],0);
+            tex = texture(tilesTexture[8], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[9],0);
+            tex = texture(tilesTexture[9], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[10],0);
+            tex = texture(tilesTexture[10], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[11],0);
+            tex = texture(tilesTexture[11], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[12],0);
+            tex = texture(tilesTexture[12], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[13],0);
+            tex = texture(tilesTexture[13], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[14],0);
+            tex = texture(tilesTexture[14], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+        case 0:
+            textureSize2d = textureSize(tilesTexture[15],0);
+            tex = texture(tilesTexture[15], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+            break;
+    }
+
     // no need to rescale the uvVals because we'll use them normalized
     // ivec2 uvVals = ivec2(mosaicTile.xy * textureSize2d);
-
-    // Now get the texture color, using the tile uv origin and this fragment's offset (with scaling)
-    vec4 tex = texture(tilesTexture[texIdx], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
 
     if(tex.a < 0.01f)  // alpha discard
         discard;
