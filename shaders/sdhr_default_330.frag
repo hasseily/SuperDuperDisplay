@@ -3,7 +3,7 @@
 precision mediump float;
 
 // Global shdr uniforms assigned in SDHRManager
-uniform sampler2D tilesTexture[16]; // It's always 2..18 (for GL_TEXTURE2->GL_TEXTURE18)
+uniform sampler2D tilesTexture[14]; // It's always 2..16 (for GL_TEXTURE2->GL_TEXTURE16)
 uniform int iDebugNoTextures;
 
 // Window-level uniforms assigned in SDHRWindow

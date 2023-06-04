@@ -3,7 +3,7 @@
 precision mediump float;
 
 // Global shdr uniforms assigned in SDHRManager
-uniform sampler2D tilesTexture[16]; // It's always 2..18 (for GL_TEXTURE2->GL_TEXTURE18)
+uniform sampler2D tilesTexture[14]; // It's always 2..16 (for GL_TEXTURE2->GL_TEXTURE16)
 uniform int iDebugNoTextures;
 
 // Window-level uniforms assigned in SDHRWindow
@@ -119,14 +119,6 @@ void main()
         case 13:
             textureSize2d = textureSize(tilesTexture[13],0);
             tex = texture(tilesTexture[13], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
-            break;
-        case 14:
-            textureSize2d = textureSize(tilesTexture[14],0);
-            tex = texture(tilesTexture[14], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
-            break;
-        case 15:
-            textureSize2d = textureSize(tilesTexture[15],0);
-            tex = texture(tilesTexture[15], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
             break;
     }
 

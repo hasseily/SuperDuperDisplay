@@ -27,7 +27,7 @@
 #define _SDHR_UPLOAD_REGION_SIZE 256*256*256	// Upload data region size (should be 16MB)
 #define _SDHR_MAX_WINDOWS 256
 #define _SDHR_TBO_TEXUNIT 1					// Texture unit (GL_TEXTURE0 + unit) of the tilebufferobject
-#define _SDHR_MAX_TEXTURES 16				// Max # of image assets available
+#define _SDHR_MAX_TEXTURES 14				// Max # of image assets available
 #define _SDHR_START_TEXTURES GL_TEXTURE2	// Start of the image assets
 #define _SDHR_MAX_UV_SCALE 100.f			// Maximum scale of Mosaic Tile UV	
 
