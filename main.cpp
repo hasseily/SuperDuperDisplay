@@ -13,7 +13,6 @@
 #include "imgui_impl_opengl3.h"
 #include "imgui_memory_editor.h"
 #include <SDL.h>
-#include "stb_image.h"
 
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
@@ -62,7 +61,6 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 #else
     // GL 3.0 + GLSL 130
-    int SDL_err_res = 0;
     const char* glsl_version = "#version 130";
     if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0) != 0)
         std::cerr << "SDL Error: " << SDL_GetError() << std::endl;
@@ -145,13 +143,13 @@ int main(int, char**)
 	bool bShouldTerminateNetworking = false;
     bool show_demo_window = false;
     bool show_metrics_window = false;
-	bool show_memory_window = false;
+	bool show_mem_apple2_window = false;
+	bool show_mem_upload_window = false;
 	bool show_sdhrinfo_window = true;
 	bool show_texture_window = false;
     bool did_press_quit = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 	int _slotnum = 0;
-	int _meshnum = 0;
 
 	auto sdhrManager = SDHRManager::GetInstance();
 	auto glhelper = OpenGLHelper::GetInstance();
@@ -255,8 +253,6 @@ int main(int, char**)
         // and also to calculate texel sizes for the fragment shaders
 		SDL_GetWindowSize(window, &sdhrManager->rendererOutputWidth, &sdhrManager->rendererOutputHeight);
 		
-        bool p_open;
-
 		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
@@ -275,10 +271,11 @@ int main(int, char**)
 				ImGui::Checkbox("Untextured Geometry", &sdhrManager->bDebugNoTextures);             // Show textures toggle
 				ImGui::Checkbox("Perspective Projection", &sdhrManager->bUsePerspective);       // Change projection type
 				ImGui::Separator();
-//				ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-				ImGui::Checkbox("Textures Window", &show_texture_window);      // Edit bools storing our window open/close state
-				ImGui::Checkbox("Metrics Window", &show_metrics_window);      // Edit bools storing our window open/close state
-				ImGui::Checkbox("Memory Window", &show_memory_window);      // Edit bools storing our window open/close state
+//				ImGui::Checkbox("Demo Window", &show_demo_window);
+				ImGui::Checkbox("Textures Window", &show_texture_window);
+				ImGui::Checkbox("Metrics Window", &show_metrics_window);
+				ImGui::Checkbox("Apple //e Memory Window", &show_mem_apple2_window);
+				ImGui::Checkbox("Upload Region Memory Window", &show_mem_upload_window);
                 ImGui::Separator();
 				did_press_quit = ImGui::Button("Quit App (Alt-F4)");
 				if (did_press_quit)
@@ -291,12 +288,19 @@ int main(int, char**)
         if (show_metrics_window)
 			ImGui::ShowMetricsWindow(&show_metrics_window);
 
-        // Show a memory editor
-        if (show_memory_window)
+        // Show the Apple //e memory
+        if (show_mem_apple2_window)
         {
-            static MemoryEditor mem_edit_1;
-            mem_edit_1.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000)", sdhrManager->GetApple2MemPtr(), 0xc000);
+            static MemoryEditor mem_edit_a2e;
+            mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000)", sdhrManager->GetApple2MemPtr(), 0xc000);
         }
+
+		// Show the upload data region memory
+		if (show_mem_upload_window)
+		{
+			static MemoryEditor mem_edit_upload;
+            mem_edit_upload.DrawWindow("Memory Editor: Upload memory", sdhrManager->GetUploadRegionPtr(), _SDHR_UPLOAD_REGION_SIZE);
+		}
         
 		// Show the 16 textures loaded (which are always bound to GL_TEXTURE2 -> GL_TEXTURE18)
         if (show_texture_window)
