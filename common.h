@@ -24,6 +24,7 @@
 // DEFINITIONS OF SDHR SPECS
 #define _SDHR_WIDTH  640
 #define _SDHR_HEIGHT 360
+#define _SDHR_UPLOAD_REGION_SIZE 256*256*256	// Upload data region size (should be 16MB)
 #define _SDHR_MAX_WINDOWS 256
 #define _SDHR_TBO_TEXUNIT 1					// Texture unit (GL_TEXTURE0 + unit) of the tilebufferobject
 #define _SDHR_MAX_TEXTURES 16				// Max # of image assets available

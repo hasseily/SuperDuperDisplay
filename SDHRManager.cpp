@@ -148,13 +148,12 @@ void SDHRManager::ImageAsset::AssignByFilename(SDHRManager* owner, const char* f
 }
 
 void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* buffer, int size) {
-	int width;
-	int height;
-	int channels;
+	int width = 0;
+	int height = 0;
+	int channels = 0;
 	unsigned char* data = stbi_load_from_memory(buffer, size, &width, &height, &channels, 4);
 	if (data == NULL) {
 		owner->CommandError(stbi_failure_reason());
-		owner->error_flag = true;
 		return;
 	}
 	if (tex_id != UINT_MAX)
@@ -249,7 +248,6 @@ void SDHRManager::Initialize()
 	bSDHREnabled = false;
 	error_flag = false;
 	memset(error_str, 0, sizeof(error_str));
-	memset(uploaded_data_region, 0, sizeof(uploaded_data_region));
 	*image_assets = {};
 	*tileset_records = {};
 
@@ -290,6 +288,7 @@ SDHRManager::~SDHRManager()
 		}
 	}
 	delete[] a2mem;
+	free(uploaded_data_region);
 }
 
 void SDHRManager::AddPacketDataToBuffer(uint8_t data)
@@ -322,6 +321,12 @@ uint8_t* SDHRManager::GetApple2MemPtr()
 {
 	return a2mem;
 }
+
+uint8_t* SDHRManager::GetUploadRegionPtr()
+{ 
+	return uploaded_data_region;
+};
+
 
 // Render all window meshes and whatever else SDHR related
 void SDHRManager::Render()

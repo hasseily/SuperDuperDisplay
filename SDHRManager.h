@@ -53,14 +53,6 @@ enum SDHRCmd_e {
 	SDHR_CMD_UPDATE_WINDOW_SET_UPLOAD = 16,
 };
 
-struct bgra_t
-{
-	uint8_t b;
-	uint8_t g;
-	uint8_t r;
-	uint8_t a;
-};
-
 class SDHRManager
 {
 public:
@@ -109,8 +101,8 @@ public:
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
 
-	THREADCOMM_e threadState;
-	DATASTATE_e dataState;
+	volatile THREADCOMM_e threadState;
+	volatile DATASTATE_e dataState;
 	// NOTE:	Maximum of 16 image assets.
 	//			They're always concomitantly available as textures in the GPU
 	ImageAsset image_assets[_SDHR_MAX_TEXTURES];
@@ -143,6 +135,7 @@ public:
 	void ClearBuffer();
 	bool ProcessCommands(void);
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 memory pointer
+	uint8_t* GetUploadRegionPtr();
 
 	void Render();	// render everything SDHR related
 
@@ -178,6 +171,10 @@ private:
 	SDHRManager()
 	{
 		a2mem = new uint8_t[0xc000];	// anything below $200 is unused
+		uploaded_data_region = new uint8_t[_SDHR_UPLOAD_REGION_SIZE];
+
+		if (uploaded_data_region == NULL)
+			std::cerr << "FATAL ERROR: COULD NOT ALLOCATE uploaded_data_region MEMORY" << std::endl;
 		Initialize();
 	}
 
@@ -190,7 +187,7 @@ private:
 		return (uint32_t)high * 256 * 256 + (uint32_t)med * 256 + low;
 	}
 	bool DataSizeCheck(uint32_t offset, uint32_t data_size) {
-		if (offset + data_size >= sizeof(uploaded_data_region)) {
+		if (offset + data_size >= _SDHR_UPLOAD_REGION_SIZE) {
 			CommandError("data not bounded by uploaded data region");
 			return false;
 		}
@@ -215,9 +212,9 @@ private:
 	static const uint16_t screen_ycount = _SDHR_HEIGHT;
 
 	std::vector<uint8_t> command_buffer;
-	bool error_flag;
+	bool error_flag = false;
 	char error_str[256];
-	uint8_t uploaded_data_region[256 * 256 * 256];
+	uint8_t* uploaded_data_region = NULL;	// A region of 256 * 256 * 256 bytes (16MB)
 
 	// Texture samplers of the 16 textures the meshes will use
 	// That's just 16 consecutive integers starting at _SDHR_START_TEXTURES
