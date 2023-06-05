@@ -267,6 +267,7 @@ int main(int, char**)
 				auto _c = sdhrManager->camera;
                 auto _pos = _c.Position;
                 ImGui::Text("Press F1 at any time to toggle this window");
+                ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 				ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
 				ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
 				ImGui::Separator();
@@ -315,10 +316,12 @@ int main(int, char**)
 			ImGui::End();
 		}
 
-        // Draw the SDHR image full window (or full screen if no windowing manager)
-		glhelper->bind_framebuffer();
-		glhelper->rescale_framebuffer(sdhrManager->rendererOutputWidth, sdhrManager->rendererOutputHeight);
-		glhelper->unbind_framebuffer();
+        // In case we want to rescale the SDHR framebuffer
+        // But this is not needed since ImGui's AddImage() will do the scaling
+		// NOTE: ImGui scales NEAREST, so it will be fuzzy.
+        // glhelper->bind_framebuffer();
+		// glhelper->rescale_framebuffer(sdhrManager->rendererOutputWidth, sdhrManager->rendererOutputHeight);
+		// glhelper->unbind_framebuffer();
 
 		ImGui::GetBackgroundDrawList()->AddImage(
 			(void*)glhelper->get_output_texture_id(),
