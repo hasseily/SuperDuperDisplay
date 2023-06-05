@@ -41,7 +41,7 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 	if (nrComponents == 1)
 		format = GL_RED;
 	else if (nrComponents == 3)
-		format = GL_RGB;
+		format = GL_RGBA;
 	else if (nrComponents == 4)
 		format = GL_RGBA;
 

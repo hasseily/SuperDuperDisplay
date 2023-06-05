@@ -87,7 +87,7 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    SDL_Window* window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _SDHR_WIDTH, _SDHR_HEIGHT, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
@@ -318,7 +318,7 @@ int main(int, char**)
 
         // In case we want to rescale the SDHR framebuffer
         // But this is not needed since ImGui's AddImage() will do the scaling
-		// NOTE: ImGui scales NEAREST, so it will be fuzzy.
+		// NOTE: ImGui scales NEAREST, so it will be fuzzy. TODO: Scale LINEAR
         // glhelper->bind_framebuffer();
 		// glhelper->rescale_framebuffer(sdhrManager->rendererOutputWidth, sdhrManager->rendererOutputHeight);
 		// glhelper->unbind_framebuffer();
