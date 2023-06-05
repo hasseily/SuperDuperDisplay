@@ -123,10 +123,6 @@ void main()
     }
 
     // no need to rescale the uvVals because we'll use them normalized
-    // ivec2 uvVals = ivec2(mosaicTile.xy * textureSize2d);
-
-    if(tex.a < 0.01f)  // alpha discard
-        discard;
 
     // Check if the fragment is inside the window (stencil culling)
     // All of those are relative to the mesh origin

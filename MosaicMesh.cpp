@@ -167,7 +167,7 @@ void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 
 	// Assign the scales so that we can get the proper original
 	// values for each mosaic tile
-	shaderProgram->setFloat("maxTextures", _SDHR_START_TEXTURES);
+	shaderProgram->setFloat("maxTextures", _SDHR_MAX_TEXTURES);
 	shaderProgram->setFloat("maxUVScale", _SDHR_MAX_UV_SCALE);
 	shaderProgram->setVec2u("tileCount", this->cols, this->rows);
 	shaderProgram->setVec2u("meshSize", this->width, this->height);

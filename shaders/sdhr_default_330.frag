@@ -44,8 +44,10 @@ float isInsideWindow(vec2 v, vec2 topLeft, vec2 bottomRight) {
 
 void main()
 {
-    //fragColor = vec4(1);
-    //return;
+    // For testing
+    // fragColor = vec4(vColor, 1);
+    // return;
+
     uvec2 tileSize = meshSize / tileCount;
     // first figure out which mosaic tile this fragment is part of
         // Calculate the position of the fragment in tile intervals
@@ -62,13 +64,9 @@ void main()
     ivec2 textureSize2d = textureSize(tilesTexture[texIdx],0);
     float scale = mosaicTile.z * maxUVScale;
     // no need to rescale the uvVals because we'll use them normalized
-    // ivec2 uvVals = ivec2(mosaicTile.xy * textureSize2d);
 
     // Now get the texture color, using the tile uv origin and this fragment's offset (with scaling)
     vec4 tex = texture(tilesTexture[texIdx], mosaicTile.xy + (fragOffset * scale) / textureSize2d);
-
-    if(tex.a < 0.01f)  // alpha discard
-        discard;
 
     // Check if the fragment is inside the window (stencil culling)
     // All of those are relative to the mesh origin
