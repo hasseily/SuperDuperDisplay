@@ -25,7 +25,7 @@ MosaicMesh::MosaicMesh(uint32_t tile_xcount, uint32_t tile_ycount, uint32_t tile
 		});
 
 	// Create all the vertices for each tile
-	float z_val = (float)(~win_index);	// z plane is 0-255. Window index 0 is the furthest away
+	float z_val = (float)(win_index);	// z plane is 0-255.
 
 	// NOTE: We use the top left corner for both triangles so that all the fragments later
 	// can know the top left corner position to calculate which tile they belong to

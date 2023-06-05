@@ -111,7 +111,7 @@ public:
 	// Camera for World -> View matrix transform
 	Camera camera = Camera(
 		_SDHR_WIDTH/2.f, _SDHR_HEIGHT/2.f,			// x,y
-		10.f,										// z
+		_SDHR_MAX_WINDOWS,							// z
 		0.f, 1.f, 0.f,								// upVector xyz
 		-90.f,										// yaw
 		0.f											// pitch

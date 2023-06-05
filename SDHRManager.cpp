@@ -417,22 +417,28 @@ void SDHRManager::Render()
 	// bUsePerspective toggle:
 	// Test using a prespective so we can zoom back and forth easily
 	// perspective uses (fov, aspect, near, far)
-	// If the camera is using a perspective projection matrix, specify the z starting distance
 	// Default FOV is 45 degrees
 
 	if (bUsePerspective && (!bIsUsingPerspective))
 	{
+		camera.Position.x = _SDHR_WIDTH / 2.f;
+		camera.Position.y = _SDHR_HEIGHT / 2.f;
 		camera.Position.z = glm::cos(glm::radians(ZOOM)) * _SDHR_WIDTH;
 		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)_SDHR_WIDTH / _SDHR_HEIGHT, 0, 256);
 		bIsUsingPerspective = bUsePerspective;
 	}
 	else if ((!bUsePerspective) && bIsUsingPerspective)
 	{
-		camera.Position.z = 10.f;
+		camera.Position.x = _SDHR_WIDTH / 2.f;
+		camera.Position.y = _SDHR_HEIGHT / 2.f;
+		camera.Position.z = _SDHR_MAX_WINDOWS;
 		mat_proj = glm::ortho<float>(-_SDHR_WIDTH/2, _SDHR_WIDTH/2, -_SDHR_HEIGHT/2, _SDHR_HEIGHT/2, 0, 256);
 		bIsUsingPerspective = bUsePerspective;
 	}
 
+	// And always update the projection when in perspective due to the zoom state
+	if (bUsePerspective)
+		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)_SDHR_WIDTH / _SDHR_HEIGHT, 0, 256);
 
 	// Render the windows (i.e. the meshes with the windows stencils)
 	for (auto& _w: this->windows) {
