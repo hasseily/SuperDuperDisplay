@@ -112,11 +112,10 @@ struct UpdateWindowEnableCmd {
 	uint8_t enabled;
 };
 
-
 struct UpdateWindowSetWindowSizeCommand {
 	uint8_t window_index;
-	uint16_t screen_xcount;		// width in pixels of visible screen area of window
-	uint16_t screen_ycount;
+	uint32_t screen_xcount;		// width in pixels of visible screen area of window
+	uint32_t screen_ycount;
 };
 
 struct ChangeResolutionCmd {
@@ -579,7 +578,8 @@ bool SDHRManager::ProcessCommands(void)
 			_uidata.upload_data_size = upload_data_size;
 			fifo_upload_image_data.push(_uidata);
 #ifdef DEBUG
-			std::cout << "SDHR_CMD_DEFINE_IMAGE_ASSET: Success:" << r->image_xcount << " x " << r->image_ycount << std::endl;
+			std::cout << "SDHR_CMD_DEFINE_IMAGE_ASSET: Success:" 
+				<< std::dec << r->image_xcount << " x " << r->image_ycount << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_DEFINE_IMAGE_ASSET_FILENAME: {
@@ -604,7 +604,8 @@ bool SDHRManager::ProcessCommands(void)
 			}
 			DefineTileset(cmd->tileset_index, num_entries, cmd->xdim, cmd->ydim, cmd->asset_index, uploaded_data_region);
 #ifdef DEBUG
-			std::cout << "SDHR_CMD_DEFINE_TILESET: Success! " << (uint32_t)cmd->tileset_index << ';'<< (uint32_t)num_entries << std::endl;
+			std::cout << "SDHR_CMD_DEFINE_TILESET: Success! "
+				<< std::dec << (uint32_t)cmd->tileset_index << ';'<< (uint32_t)num_entries << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_DEFINE_TILESET_IMMEDIATE: {
@@ -622,7 +623,8 @@ bool SDHRManager::ProcessCommands(void)
 			}
 			DefineTileset(cmd->tileset_index, num_entries, cmd->xdim, cmd->ydim, cmd->asset_index, cmd->data);
 #ifdef DEBUG
-			std::cout << "SDHR_CMD_DEFINE_TILESET_IMMEDIATE: Success! " << (uint32_t)cmd->tileset_index << ';' << (uint32_t)num_entries << std::endl;
+			std::cout << "SDHR_CMD_DEFINE_TILESET_IMMEDIATE: Success! " 
+				<< std::dec << (uint32_t)cmd->tileset_index << ';' << (uint32_t)num_entries << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_DEFINE_WINDOW: {
@@ -647,7 +649,7 @@ bool SDHRManager::ProcessCommands(void)
 
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_DEFINE_WINDOW: Success! " 
-				<< cmd->window_index << ';' << (uint32_t)cmd->tile_xcount << ';' << (uint32_t)cmd->tile_ycount << std::endl;
+				<< std::dec << cmd->window_index << ';' << (uint32_t)cmd->tile_xcount << ';' << (uint32_t)cmd->tile_ycount << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_UPDATE_WINDOW_SET_IMMEDIATE: {
@@ -780,7 +782,7 @@ bool SDHRManager::ProcessCommands(void)
 
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_SHIFT_TILES: Success! " 
-				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->x_dir << ';' << (uint32_t)cmd->y_dir << std::endl;
+				<< (uint32_t)cmd->window_index << std::dec << ';' << (uint32_t)cmd->x_dir << ';' << (uint32_t)cmd->y_dir << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_UPDATE_WINDOW_SET_WINDOW_POSITION: {
@@ -790,7 +792,7 @@ bool SDHRManager::ProcessCommands(void)
 			r->SetPosition(iXY({ cmd->screen_xbegin, cmd->screen_ybegin }));
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_SET_WINDOW_POSITION: Success! "
-				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->screen_xbegin << ';' << (uint32_t)cmd->screen_ybegin << std::endl;
+				<< (uint32_t)cmd->window_index << std::dec << ';' << (uint32_t)cmd->screen_xbegin << ';' << (uint32_t)cmd->screen_ybegin << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_UPDATE_WINDOW_ADJUST_WINDOW_VIEW: {
@@ -800,7 +802,7 @@ bool SDHRManager::ProcessCommands(void)
 			r->AdjustView(iXY({ cmd->tile_xbegin, cmd->tile_ybegin }));
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_ADJUST_WINDOW_VIEW: Success! "
-				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->tile_xbegin << ';' << (uint32_t)cmd->tile_ybegin << std::endl;
+				<< (uint32_t)cmd->window_index << std::dec << ';' << (uint32_t)cmd->tile_xbegin << ';' << (uint32_t)cmd->tile_ybegin << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_UPDATE_WINDOW_SET_SIZE: {
@@ -810,7 +812,7 @@ bool SDHRManager::ProcessCommands(void)
 			r->SetSize(uXY({ cmd->screen_xcount, cmd->screen_ycount }));
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_SET_SIZE: Success! "
-				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->screen_xcount << ';' << (uint32_t)cmd->screen_ycount << std::endl;
+				<< (uint32_t)cmd->window_index << std::dec << ';' << (uint32_t)cmd->screen_xcount << ';' << (uint32_t)cmd->screen_ycount << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_UPDATE_WINDOW_ENABLE: {
@@ -818,21 +820,24 @@ bool SDHRManager::ProcessCommands(void)
 			UpdateWindowEnableCmd* cmd = (UpdateWindowEnableCmd*)p;
 			SDHRWindow* r = windows + cmd->window_index;
 			if (r->IsEmpty()) {
-				CommandError("cannote enable empty window");
+				CommandError("cannot enable empty window");
 				return false;
 			}
 			r->enabled = cmd->enabled;
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_ENABLE: Success! "
-				<< (uint32_t)cmd->window_index << std::endl;
+				<< std::dec << (uint32_t)cmd->window_index << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_CHANGE_RESOLUTION: {
 			if (!CheckCommandLength(p, end, sizeof(ChangeResolutionCmd))) return false;
 			ChangeResolutionCmd* cmd = (ChangeResolutionCmd*)p;
-			rendererOutputWidth = cmd->width;
-			rendererOutputHeight = cmd->height;
-			bDidChangeResolution = true;		// Get the render method to update the resolution
+			if ((rendererOutputWidth != cmd->width) || (rendererOutputHeight != cmd->height))
+			{
+				rendererOutputWidth = cmd->width;
+				rendererOutputHeight = cmd->height;
+				bDidChangeResolution = true;		// Get the render method to update the resolution
+			}
 		} break;
 		default:
 			CommandError("unrecognized command");

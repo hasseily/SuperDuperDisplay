@@ -180,6 +180,9 @@ int main(int, char**)
         dt_NOW = SDL_GetPerformanceCounter();
 		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
         
+        if (sdhrManager->GetDidChangeResolution())
+			SDL_SetWindowSize(window, sdhrManager->rendererOutputWidth, sdhrManager->rendererOutputHeight);
+
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.

@@ -142,6 +142,7 @@ public:
 	bool ProcessCommands(void);
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 memory pointer
 	uint8_t* GetUploadRegionPtr();
+	bool GetDidChangeResolution() { return bDidChangeResolution; };
 
 	void Render();	// render everything SDHR related
 
