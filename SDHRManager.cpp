@@ -112,6 +112,18 @@ struct UpdateWindowEnableCmd {
 	uint8_t enabled;
 };
 
+
+struct UpdateWindowSetWindowSizeCommand {
+	uint8_t window_index;
+	uint16_t screen_xcount;		// width in pixels of visible screen area of window
+	uint16_t screen_ycount;
+};
+
+struct ChangeResolutionCmd {
+	uint32_t width;
+	uint32_t height;
+};
+
 #pragma pack(pop)
 
 //////////////////////////////////////////////////////////////////////////
@@ -333,7 +345,12 @@ void SDHRManager::Render()
 {
 	GLenum glerr;
 	auto oglh = OpenGLHelper::GetInstance();
+
 	oglh->setup_sdhr_render();
+
+	if (bDidChangeResolution) {
+		oglh->rescale_framebuffer(rendererOutputWidth, rendererOutputHeight);
+	}
 
 	defaultWindowShaderProgram.use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -419,26 +436,26 @@ void SDHRManager::Render()
 	// perspective uses (fov, aspect, near, far)
 	// Default FOV is 45 degrees
 
-	if (bUsePerspective && (!bIsUsingPerspective))
+	if (bUsePerspective && (bDidChangeResolution || (!bIsUsingPerspective)))
 	{
-		camera.Position.x = _SDHR_WIDTH / 2.f;
-		camera.Position.y = _SDHR_HEIGHT / 2.f;
-		camera.Position.z = glm::cos(glm::radians(ZOOM)) * _SDHR_WIDTH;
-		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)_SDHR_WIDTH / _SDHR_HEIGHT, 0, 256);
+		camera.Position.x = rendererOutputWidth / 2.f;
+		camera.Position.y = rendererOutputHeight / 2.f;
+		camera.Position.z = glm::cos(glm::radians(ZOOM)) * rendererOutputWidth;
+		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)rendererOutputWidth / rendererOutputHeight, 0, 256);
 		bIsUsingPerspective = bUsePerspective;
 	}
-	else if ((!bUsePerspective) && bIsUsingPerspective)
+	else if ((!bUsePerspective) && (bDidChangeResolution || bIsUsingPerspective))
 	{
-		camera.Position.x = _SDHR_WIDTH / 2.f;
-		camera.Position.y = _SDHR_HEIGHT / 2.f;
+		camera.Position.x = rendererOutputWidth / 2.f;
+		camera.Position.y = rendererOutputHeight / 2.f;
 		camera.Position.z = _SDHR_MAX_WINDOWS;
-		mat_proj = glm::ortho<float>(-_SDHR_WIDTH/2, _SDHR_WIDTH/2, -_SDHR_HEIGHT/2, _SDHR_HEIGHT/2, 0, 256);
+		mat_proj = glm::ortho<float>(-rendererOutputWidth/2, rendererOutputWidth/2, -rendererOutputHeight/2, rendererOutputHeight/2, 0, 256);
 		bIsUsingPerspective = bUsePerspective;
 	}
 
 	// And always update the projection when in perspective due to the zoom state
 	if (bUsePerspective)
-		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)_SDHR_WIDTH / _SDHR_HEIGHT, 0, 256);
+		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)rendererOutputWidth / rendererOutputHeight, 0, 256);
 
 	// Render the windows (i.e. the meshes with the windows stencils)
 	for (auto& _w: this->windows) {
@@ -448,6 +465,7 @@ void SDHRManager::Render()
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
 	}
 	oglh->cleanup_sdhr_render();
+	bDidChangeResolution = false;
 }
 
 // Define a tileset from the SDHR_CMD_DEFINE_TILESET commands
@@ -612,11 +630,11 @@ bool SDHRManager::ProcessCommands(void)
 			DefineWindowCmd* cmd = (DefineWindowCmd*)p;
 			SDHRWindow* r = windows + cmd->window_index;
 			auto sc = r->Get_screen_count();
-			if (sc.x > screen_xcount) {
+			if (sc.x > rendererOutputWidth) {
 				CommandError("Window exceeds max x resolution");
 				return false;
 			}
-			if (sc.y > screen_ycount) {
+			if (sc.y > rendererOutputHeight) {
 				CommandError("Window exceeds max y resolution");
 				return false;
 			}
@@ -785,6 +803,16 @@ bool SDHRManager::ProcessCommands(void)
 				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->tile_xbegin << ';' << (uint32_t)cmd->tile_ybegin << std::endl;
 #endif
 		} break;
+		case SDHR_CMD_UPDATE_WINDOW_SET_SIZE: {
+			if (!CheckCommandLength(p, end, sizeof(UpdateWindowSetWindowSizeCommand))) return false;
+			UpdateWindowSetWindowSizeCommand* cmd = (UpdateWindowSetWindowSizeCommand*)p;
+			SDHRWindow* r = windows + cmd->window_index;
+			r->SetSize(uXY({ cmd->screen_xcount, cmd->screen_ycount }));
+#ifdef DEBUG
+			std::cout << "SDHR_CMD_UPDATE_WINDOW_SET_SIZE: Success! "
+				<< (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->screen_xcount << ';' << (uint32_t)cmd->screen_ycount << std::endl;
+#endif
+		} break;
 		case SDHR_CMD_UPDATE_WINDOW_ENABLE: {
 			if (!CheckCommandLength(p, end, sizeof(UpdateWindowEnableCmd))) return false;
 			UpdateWindowEnableCmd* cmd = (UpdateWindowEnableCmd*)p;
@@ -798,6 +826,13 @@ bool SDHRManager::ProcessCommands(void)
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_ENABLE: Success! "
 				<< (uint32_t)cmd->window_index << std::endl;
 #endif
+		} break;
+		case SDHR_CMD_CHANGE_RESOLUTION: {
+			if (!CheckCommandLength(p, end, sizeof(ChangeResolutionCmd))) return false;
+			ChangeResolutionCmd* cmd = (ChangeResolutionCmd*)p;
+			rendererOutputWidth = cmd->width;
+			rendererOutputHeight = cmd->height;
+			bDidChangeResolution = true;		// Get the render method to update the resolution
 		} break;
 		default:
 			CommandError("unrecognized command");

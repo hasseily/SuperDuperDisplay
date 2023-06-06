@@ -51,6 +51,9 @@ enum SDHRCmd_e {
 	SDHR_CMD_UPDATE_WINDOW_ENABLE = 13,
 	SDHR_CMD_UPLOAD_DATA_FILENAME = 15,			// NOT RELEVANT, NOT IMPLEMENTED
 	SDHR_CMD_UPDATE_WINDOW_SET_UPLOAD = 16,
+
+	SDHR_CMD_CHANGE_RESOLUTION = 50,
+	SDHR_CMD_UPDATE_WINDOW_SET_SIZE = 51,
 };
 
 class SDHRManager
@@ -110,18 +113,21 @@ public:
 	SDHRWindow windows[_SDHR_MAX_WINDOWS];
 	// Camera for World -> View matrix transform
 	Camera camera = Camera(
-		_SDHR_WIDTH/2.f, _SDHR_HEIGHT/2.f,			// x,y
+		_SDHR_DEFAULT_WIDTH/2.f, _SDHR_DEFAULT_HEIGHT/2.f,			// x,y
 		_SDHR_MAX_WINDOWS,							// z
 		0.f, 1.f, 0.f,								// upVector xyz
 		-90.f,										// yaw
 		0.f											// pitch
 	);
 	// Projection matrix (left, right, bottom, top, near, far)
-	glm::mat4 mat_proj = glm::ortho<float>(-_SDHR_WIDTH/2, _SDHR_WIDTH/2, -_SDHR_HEIGHT/2, _SDHR_HEIGHT/2, 0, 256);
+	glm::mat4 mat_proj = glm::ortho<float>(
+		-_SDHR_DEFAULT_WIDTH/2, _SDHR_DEFAULT_WIDTH /2,
+		-_SDHR_DEFAULT_HEIGHT/2, _SDHR_DEFAULT_HEIGHT /2,
+		0, 256);
 
 	// Actual screen rendered output dimensions
-	int rendererOutputWidth = _SDHR_WIDTH;
-	int rendererOutputHeight = _SDHR_HEIGHT;
+	int rendererOutputWidth = _SDHR_DEFAULT_WIDTH;
+	int rendererOutputHeight = _SDHR_DEFAULT_HEIGHT;
 
 	// Debugging attributes
 	bool bDebugNoTextures = false;
@@ -207,9 +213,7 @@ private:
 	
 	bool bSDHREnabled = false;	// is SDHR enabled?
 	bool bIsUsingPerspective = false;	// is it currently using perspective?
-
-	static const uint16_t screen_xcount = _SDHR_WIDTH;
-	static const uint16_t screen_ycount = _SDHR_HEIGHT;
+	bool bDidChangeResolution = false;	// did the resolution change?
 
 	std::vector<uint8_t> command_buffer;
 	bool error_flag = false;

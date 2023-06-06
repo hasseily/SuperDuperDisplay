@@ -11,6 +11,9 @@
 // below because "The declaration of a static data member in its class definition is not a definition"
 OpenGLHelper* OpenGLHelper::s_instance;
 
+static uint32_t fb_width = 0;
+static uint32_t fb_height = 0;
+
 //////////////////////////////////////////////////////////////////////////
 // Basic singleton methods
 //////////////////////////////////////////////////////////////////////////
@@ -119,21 +122,27 @@ void OpenGLHelper::create_vertices()
 }
 */
 
-void OpenGLHelper::create_framebuffer()
+void OpenGLHelper::create_framebuffer(uint32_t width, uint32_t height)
 {
+	// regenerate the framebuffer if different size
+	if ((FBO != UINT_MAX) && ((width != fb_width) || (height != fb_height)))
+	{
+		return rescale_framebuffer(width, height);
+	}
+
 	if (FBO != UINT_MAX)
 		return;
 
 	glGenFramebuffers(1, &FBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-	glViewport(0, 0, _SDHR_WIDTH, _SDHR_HEIGHT);
+	glViewport(0, 0, width, height);
 
 	// bind the output texture
 	// every time the framebuffer is bound, the output texture will be already bound
 	glGenTextures(1, &output_texture_id);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, _SDHR_WIDTH, _SDHR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);
@@ -144,8 +153,9 @@ void OpenGLHelper::create_framebuffer()
 
 void OpenGLHelper::bind_framebuffer()
 {
+	
 	if (FBO == UINT_MAX)
-		create_framebuffer();
+		create_framebuffer(_SDHR_DEFAULT_WIDTH, _SDHR_DEFAULT_HEIGHT);
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 	GLenum glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -171,6 +181,8 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 		std::cerr << "OpenGL rescale_framebuffer error: " << glerr << std::endl;
 	}
 	glBindTexture(GL_TEXTURE_2D, 0);
+	fb_width = width;
+	fb_height = height;
 }
 
 void OpenGLHelper::setup_sdhr_render()

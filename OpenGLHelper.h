@@ -25,7 +25,7 @@ public:
 
 	// TODO: Testing, remove
 	// void create_vertices();
-	void create_framebuffer();	// also binds it
+	void create_framebuffer(uint32_t width, uint32_t height);	// also binds it
 	void bind_framebuffer();
 	void unbind_framebuffer();
 	void rescale_framebuffer(uint32_t width, uint32_t height);

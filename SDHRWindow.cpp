@@ -61,6 +61,11 @@ void SDHRWindow::AdjustView(iXY _mesh_pos)
 	mesh->SetWorldCoordinates(screen_begin.x - tile_begin.x, screen_begin.y - tile_begin.y);
 }
 
+void SDHRWindow::SetSize(uXY _size)
+{
+	screen_count = _size;
+}
+
 void SDHRWindow::Update()
 {
 	if (enabled)

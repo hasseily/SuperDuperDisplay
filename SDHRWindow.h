@@ -36,6 +36,7 @@ public:
 	void ShiftTiles(iXY _direction);
 	void SetPosition(iXY _screen_pos);	// Sets the window position on screen
 	void AdjustView(iXY _mesh_pos);		// Adjusts the mesh position relative to the window
+	void SetSize(uXY _size);			// Sets the window size
 
 	void Update();
 	void Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj);
