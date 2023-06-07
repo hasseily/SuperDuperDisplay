@@ -218,15 +218,6 @@ int main(int, char**)
 				else if (event.key.keysym.sym == SDLK_F1) {  // Toggle debug window with F1
                     show_sdhrinfo_window = !show_sdhrinfo_window;
 				}
-				else if (event.key.keysym.sym == SDLK_F11) {   // Toggle fullscreen with F11
-                    bisFullScreen = !bisFullScreen;
-					if (bisFullScreen) {
-						SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
-					}
-					else {
-						SDL_SetWindowFullscreen(window, 0);
-					}
-				}
 				// Camera movement!
                 if (!io.WantCaptureKeyboard) {
                     switch (event.key.keysym.sym)
