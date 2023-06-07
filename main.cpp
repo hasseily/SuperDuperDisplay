@@ -180,8 +180,16 @@ int main(int, char**)
         dt_NOW = SDL_GetPerformanceCounter();
 		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
         
+        // In case the window was program-resized, tell SDL to change the window size
         if (sdhrManager->GetDidChangeResolution())
 			SDL_SetWindowSize(window, sdhrManager->rendererOutputWidth, sdhrManager->rendererOutputHeight);
+
+		// In case the window was user-resized, tell sdhrManager the size of the window
+        // This will be used to render the final frame,
+        // and also to calculate texel sizes for the fragment shaders
+        SDL_GetWindowSize(window, &sdhrManager->rendererOutputWidth, &sdhrManager->rendererOutputHeight);
+
+        io.DisplaySize = ImVec2(sdhrManager->rendererOutputWidth, sdhrManager->rendererOutputHeight);
 
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -252,11 +260,6 @@ int main(int, char**)
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
-
-		// Tell sdhrManager the size of the window
-        // This will be used to render the final frame,
-        // and also to calculate texel sizes for the fragment shaders
-		SDL_GetWindowSize(window, &sdhrManager->rendererOutputWidth, &sdhrManager->rendererOutputHeight);
 		
 		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 		if (show_demo_window)
