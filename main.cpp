@@ -157,6 +157,8 @@ int main(int, char**)
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 	int _slotnum = 0;
 
+	bool bisFullScreen = false;
+
 	auto sdhrManager = SDHRManager::GetInstance();
 	auto glhelper = OpenGLHelper::GetInstance();
 
@@ -193,8 +195,6 @@ int main(int, char**)
         // and also to calculate texel sizes for the fragment shaders
         SDL_GetWindowSize(window, &sdhrManager->rendererOutputWidth, &sdhrManager->rendererOutputHeight);
 
-        io.DisplaySize = ImVec2(displayMode.w, displayMode.h);
-
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
@@ -217,6 +217,15 @@ int main(int, char**)
 				}
 				else if (event.key.keysym.sym == SDLK_F1) {  // Toggle debug window with F1
                     show_sdhrinfo_window = !show_sdhrinfo_window;
+				}
+				else if (event.key.keysym.sym == SDLK_F11) {   // Toggle fullscreen with F11
+                    bisFullScreen = !bisFullScreen;
+					if (bisFullScreen) {
+						SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+					}
+					else {
+						SDL_SetWindowFullscreen(window, 0);
+					}
 				}
 				// Camera movement!
                 if (!io.WantCaptureKeyboard) {
