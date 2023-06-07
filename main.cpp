@@ -92,6 +92,10 @@ int main(int, char**)
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
 
+    // Get the actual display size
+	SDL_DisplayMode displayMode;
+	SDL_GetCurrentDisplayMode(0, &displayMode);
+
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -189,7 +193,7 @@ int main(int, char**)
         // and also to calculate texel sizes for the fragment shaders
         SDL_GetWindowSize(window, &sdhrManager->rendererOutputWidth, &sdhrManager->rendererOutputHeight);
 
-        io.DisplaySize = ImVec2(sdhrManager->rendererOutputWidth, sdhrManager->rendererOutputHeight);
+        io.DisplaySize = ImVec2(displayMode.w, displayMode.h);
 
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
