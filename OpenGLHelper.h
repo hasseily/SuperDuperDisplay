@@ -21,7 +21,7 @@ public:
 
 	void load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID);
 	GLuint get_output_texture_id() { return output_texture_id; };	// output texture id
-	unsigned int get_texture_id_at_slot(uint8_t slot);	// returns the opengl-generated texture id for this tex slot
+	size_t get_texture_id_at_slot(uint8_t slot);	// returns the opengl-generated texture id for this tex slot
 
 	// TODO: Testing, remove
 	// void create_vertices();

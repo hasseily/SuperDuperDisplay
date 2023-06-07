@@ -69,7 +69,7 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 	}
 }
 
-unsigned int OpenGLHelper::get_texture_id_at_slot(uint8_t slot)
+size_t OpenGLHelper::get_texture_id_at_slot(uint8_t slot)
 {
 	if (slot >= v_texture_ids.size())
 	{

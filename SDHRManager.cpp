@@ -570,8 +570,6 @@ bool SDHRManager::ProcessCommands(void)
 			uint32_t upload_start_addr = 0;
 			int upload_data_size = (int)cmd->block_count * 512;
 
-			ImageAsset* r = image_assets + cmd->asset_index;
-
 			auto _uidata = UploadImageData();
 			_uidata.asset_index = cmd->asset_index;
 			_uidata.upload_start_addr = upload_start_addr;
@@ -632,11 +630,11 @@ bool SDHRManager::ProcessCommands(void)
 			DefineWindowCmd* cmd = (DefineWindowCmd*)p;
 			SDHRWindow* r = windows + cmd->window_index;
 			auto sc = r->Get_screen_count();
-			if (sc.x > rendererOutputWidth) {
+			if (sc.x > (uint32_t)rendererOutputWidth) {
 				CommandError("Window exceeds max x resolution");
 				return false;
 			}
-			if (sc.y > rendererOutputHeight) {
+			if (sc.y > (uint32_t)rendererOutputHeight) {
 				CommandError("Window exceeds max y resolution");
 				return false;
 			}
@@ -832,10 +830,10 @@ bool SDHRManager::ProcessCommands(void)
 		case SDHR_CMD_CHANGE_RESOLUTION: {
 			if (!CheckCommandLength(p, end, sizeof(ChangeResolutionCmd))) return false;
 			ChangeResolutionCmd* cmd = (ChangeResolutionCmd*)p;
-			if ((rendererOutputWidth != cmd->width) || (rendererOutputHeight != cmd->height))
+			if ((rendererOutputWidth != (int)cmd->width) || (rendererOutputHeight != (int)cmd->height))
 			{
-				rendererOutputWidth = cmd->width;
-				rendererOutputHeight = cmd->height;
+				rendererOutputWidth = (int)cmd->width;
+				rendererOutputHeight = (int)cmd->height;
 				bDidChangeResolution = true;		// Get the render method to update the resolution
 			}
 		} break;

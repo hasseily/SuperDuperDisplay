@@ -22,6 +22,7 @@
 #include "glm/glm.hpp"
 
 // DEFINITIONS OF SDHR SPECS
+#define _SDHR_SERVER_PORT 8080
 #define _SDHR_DEFAULT_WIDTH  640
 #define _SDHR_DEFAULT_HEIGHT 360
 #define _SDHR_UPLOAD_REGION_SIZE 256*256*256	// Upload data region size (should be 16MB)

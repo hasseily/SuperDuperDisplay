@@ -3,10 +3,6 @@
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
-#define _SERVER_PORT 8080
-
-#define GLM_MESSAGES    // Shows the GLM configuration at build time
-
 #define IMGUI_USER_CONFIG "../../my_imgui_config.h"
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
@@ -154,7 +150,6 @@ int main(int, char**)
 	bool show_sdhrinfo_window = true;
 	bool show_texture_window = false;
     bool did_press_quit = false;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 	int _slotnum = 0;
 
 	bool bisFullScreen = false;
@@ -163,7 +158,7 @@ int main(int, char**)
 	auto glhelper = OpenGLHelper::GetInstance();
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
-	std::thread thread_server(socket_server_thread, (uint16_t)_SERVER_PORT, &bShouldTerminateNetworking);
+	std::thread thread_server(socket_server_thread, (uint16_t)_SDHR_SERVER_PORT, &bShouldTerminateNetworking);
 
 
     // Delta Time
@@ -357,7 +352,7 @@ int main(int, char**)
 
     // Network cleanup
     bShouldTerminateNetworking = true;
-    socket_unblock_accept(_SERVER_PORT);
+    socket_unblock_accept(_SDHR_SERVER_PORT);
     thread_server.join();
 
     // Cleanup
