@@ -152,8 +152,6 @@ int main(int, char**)
     bool did_press_quit = false;
 	int _slotnum = 0;
 
-	bool bisFullScreen = false;
-
 	auto sdhrManager = SDHRManager::GetInstance();
 	auto glhelper = OpenGLHelper::GetInstance();
 
@@ -315,7 +313,7 @@ int main(int, char**)
 		{
 			ImGui::Begin("Texture Viewer", &show_texture_window);
             ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES - 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::Text("Texture ID: %d", glhelper->get_texture_id_at_slot(_slotnum));
+            ImGui::Text("Texture ID: %d", (int)glhelper->get_texture_id_at_slot(_slotnum));
 			ImVec2 avail_size = ImGui::GetContentRegionAvail();
  			ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			ImGui::End();
