@@ -16,12 +16,12 @@ public:
 
 	SDHRWindow()
 		: enabled(false), black_or_wrap(false)
-		, index(UINT8_MAX)
 		, screen_count(uXY({ 0,0 }))
 		, screen_begin(iXY({ 0,0 }))
 		, tile_begin(iXY({ 0,0 }))
 		, tile_dim(uXY({ 0,0 }))
 		, tile_count(uXY({ 0,0 }))
+		, index(UINT8_MAX)
 	{};
 
 	~SDHRWindow()
