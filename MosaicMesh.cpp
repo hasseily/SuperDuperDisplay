@@ -61,8 +61,9 @@ MosaicMesh::~MosaicMesh()
 	if (VAO != UINT_MAX)
 	{
 		glDeleteTextures(1, &TBTEX);
+		// TODO: CRASHES WHEN RECREATING A MESH
 		glDeleteBuffers(1, &TBO);
-		glDeleteBuffers(1, &VBO);
+ 		glDeleteBuffers(1, &VBO);
 		glDeleteBuffers(1, &VAO);
 	}
 }

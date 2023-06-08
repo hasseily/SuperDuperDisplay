@@ -577,7 +577,7 @@ bool SDHRManager::ProcessCommands(void)
 			fifo_upload_image_data.push(_uidata);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_DEFINE_IMAGE_ASSET: Success:" 
-				<< std::dec << r->image_xcount << " x " << r->image_ycount << std::endl;
+				<< std::dec << cmd->asset_index << " x " << std::hex << upload_start_addr << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_DEFINE_IMAGE_ASSET_FILENAME: {
