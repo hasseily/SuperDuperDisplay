@@ -217,41 +217,47 @@ int main(int, char**)
 				}
 				// Camera movement!
                 if (!io.WantCaptureKeyboard) {
-                    switch (event.key.keysym.sym)
-                    {
-                    case SDLK_w:
-                        sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
-                        break;
-                    case SDLK_s:
-                        sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
-                        break;
-                    case SDLK_a:
-                        sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
-                        break;
-                    case SDLK_d:
-                        sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
-                        break;
-					case SDLK_q:
-						sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
-						break;
-					case SDLK_z:
-						sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
-						break;
-                    default:
-                        break;
-                    };
+                    if (sdhrManager->IsSdhrEnabled())
+					{
+						switch (event.key.keysym.sym)
+						{
+						case SDLK_w:
+							sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
+							break;
+						case SDLK_s:
+							sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
+							break;
+						case SDLK_a:
+							sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
+							break;
+						case SDLK_d:
+							sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
+							break;
+						case SDLK_q:
+							sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
+							break;
+						case SDLK_z:
+							sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
+							break;
+						default:
+							break;
+						};
+					}   // SDHR ENABLED
                 }
             }
             else if (event.type == SDL_MOUSEMOTION && event.motion.state & SDL_BUTTON_RMASK && !io.WantCaptureMouse) {
                 // Move the camera when the right mouse button is pressed while moving the mouse
-                sdhrManager->camera.ProcessMouseMovement(event.motion.xrel, event.motion.yrel);
+				if (sdhrManager->IsSdhrEnabled())
+                    sdhrManager->camera.ProcessMouseMovement(event.motion.xrel, event.motion.yrel);
             }
             else if (event.type == SDL_MOUSEWHEEL && !io.WantCaptureMouse) {
-                sdhrManager->camera.ProcessMouseScroll(event.wheel.y);
+				if (sdhrManager->IsSdhrEnabled())
+                    sdhrManager->camera.ProcessMouseScroll(event.wheel.y);
             }
         }
 
-		sdhrManager->Render();
+        if (sdhrManager->IsSdhrEnabled())
+		    sdhrManager->Render();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
