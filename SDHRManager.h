@@ -151,6 +151,8 @@ public:
 
 	void ToggleSdhr(bool value) {
 		bSDHREnabled = value;
+		if (bSDHREnabled)
+			bShouldInitializeRender = true;
 	}
 
 	bool IsSdhrEnabled(void) {
