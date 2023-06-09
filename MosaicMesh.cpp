@@ -60,12 +60,11 @@ MosaicMesh::~MosaicMesh()
 {
 	if (VAO != UINT_MAX)
 	{
-		glDeleteTextures(1, &TBTEX);
 		// TODO: CRASHES WHEN RECREATING A MESH
-		glDeleteBuffers(1, &TBO);
- 		glDeleteBuffers(1, &VBO);
-		glDeleteBuffers(1, &VAO);
+		// GLuint aToDelete[3] = { TBO, VBO, VAO };
+		// glDeleteBuffers(3, aToDelete);
 	}
+	glDeleteTextures(1, &TBTEX);
 }
 
 // Update the UV data of a single mosaic tile (using xy positioning)
