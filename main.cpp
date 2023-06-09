@@ -149,8 +149,12 @@ int main(int, char**)
 	bool show_mem_upload_window = false;
 	bool show_sdhrinfo_window = true;
 	bool show_texture_window = false;
+    bool bRescaleSHDRFramebuffer = true;
     bool did_press_quit = false;
 	int _slotnum = 0;
+
+	static uint32_t oldWidth = 0;
+	static uint32_t oldHeight = 0;
 
 	auto sdhrManager = SDHRManager::GetInstance();
 	auto glhelper = OpenGLHelper::GetInstance();
@@ -276,6 +280,7 @@ int main(int, char**)
 				ImGui::Separator();
 				ImGui::Checkbox("Untextured Geometry", &sdhrManager->bDebugNoTextures);             // Show textures toggle
 				ImGui::Checkbox("Perspective Projection", &sdhrManager->bUsePerspective);       // Change projection type
+                ImGui::Checkbox("Rescale Framebuffer", &bRescaleSHDRFramebuffer);
 				ImGui::Separator();
 //				ImGui::Checkbox("Demo Window", &show_demo_window);
 				ImGui::Checkbox("Textures Window", &show_texture_window);
@@ -319,12 +324,28 @@ int main(int, char**)
 			ImGui::End();
 		}
 
-        // In case we want to rescale the SDHR framebuffer
-        // But this is not needed since ImGui's AddImage() will do the scaling
-		// NOTE: ImGui scales NEAREST, so it will be fuzzy. TODO: Scale LINEAR
-        // glhelper->bind_framebuffer();
-		// glhelper->rescale_framebuffer(sdhrManager->rendererOutputWidth, sdhrManager->rendererOutputHeight);
-		// glhelper->unbind_framebuffer();
+        // The SDHR framebuffer has a specific resolution
+        // If the resolution is lower than the monitor resolution,
+        // the image will be scaled in a fuzzy manner. We can overcome this
+        // using more work from the GPU for it to rescale based
+
+        if (bRescaleSHDRFramebuffer)
+		{
+            if (oldWidth == 0)
+                glhelper->get_framebuffer_size(&oldWidth, &oldHeight);
+			glhelper->bind_framebuffer();
+			glhelper->rescale_framebuffer(sdhrManager->rendererOutputWidth, sdhrManager->rendererOutputHeight);
+			glhelper->unbind_framebuffer();
+        }
+        else
+        {
+            if (oldWidth > 0)
+            {
+				glhelper->bind_framebuffer();
+				glhelper->rescale_framebuffer(oldWidth, oldHeight);
+				glhelper->unbind_framebuffer();
+            }
+        }
 
 		ImGui::GetBackgroundDrawList()->AddImage(
 			(void*)glhelper->get_output_texture_id(),

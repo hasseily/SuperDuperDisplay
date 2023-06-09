@@ -137,6 +137,9 @@ void OpenGLHelper::create_framebuffer(uint32_t width, uint32_t height)
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 	glViewport(0, 0, width, height);
 
+	fb_width = width;
+	fb_height = height;
+
 	// bind the output texture
 	// every time the framebuffer is bound, the output texture will be already bound
 	glGenTextures(1, &output_texture_id);
@@ -170,6 +173,8 @@ void OpenGLHelper::unbind_framebuffer()
 
 void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 {
+	if ((fb_width == width) && (fb_height == height))
+		return;
 	GLenum glerr;
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
@@ -183,6 +188,12 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 	glBindTexture(GL_TEXTURE_2D, 0);
 	fb_width = width;
 	fb_height = height;
+}
+
+void OpenGLHelper::get_framebuffer_size(uint32_t* width, uint32_t* height)
+{
+	*width = fb_width;
+	*height = fb_height;
 }
 
 void OpenGLHelper::setup_sdhr_render()
