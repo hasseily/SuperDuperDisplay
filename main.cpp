@@ -325,10 +325,9 @@ int main(int, char**)
 		}
 
         // The SDHR framebuffer has a specific resolution
-        // If the resolution is lower than the monitor resolution,
-        // the image will be scaled in a fuzzy manner. We can overcome this
-        // using more work from the GPU for it to rescale based
-
+        // If the resolution is lower than the window/monitor resolution,
+        // the image will be scaled in a fuzzy manner.
+        // Rescaling the framebuffer correctly will sharpen it at the cost of FPS
         if (bRescaleSHDRFramebuffer)
 		{
             if (oldWidth == 0)
