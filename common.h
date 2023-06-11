@@ -36,9 +36,13 @@
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #define _SHADER_SDHR_VERTEX_DEFAULT "shaders/sdhr_default_310es.vert"
 #define _SHADER_SDHR_FRAGMENT_DEFAULT "shaders/sdhr_default_310es.frag"
+#define _SHADER_TEXT_VERTEX_DEFAULT "shaders/a2video_text_310es.vert"
+#define _SHADER_TEXT_FRAGMENT_DEFAULT "shaders/a2video_text_310es.frag"
 #else
 #define _SHADER_SDHR_VERTEX_DEFAULT "shaders/sdhr_default_330.vert"
 #define _SHADER_SDHR_FRAGMENT_DEFAULT "shaders/sdhr_default_330.frag"
+#define _SHADER_TEXT_VERTEX_DEFAULT "shaders/a2video_text_330.vert"
+#define _SHADER_TEXT_FRAGMENT_DEFAULT "shaders/a2video_text_330.frag"
 #endif
 
 #endif	// COMMON_H

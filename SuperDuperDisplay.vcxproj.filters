@@ -64,6 +64,9 @@
     <ClCompile Include="SDHRWindow.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="A2VideoManager.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imgui\imconfig.h">
@@ -123,6 +126,7 @@
     <ClInclude Include="SDHRWindow.h">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="A2VideoManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
@@ -133,17 +137,38 @@
       <Filter>imgui</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="shaders\sdhr_default_310es.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\sdhr_default_310es.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\a2video_text_330.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\a2video_text_330.vert">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Texture_Default.png">
       <Filter>assets</Filter>
     </Image>
+    <Image Include="Texture_Default1.png">
+      <Filter>assets</Filter>
+    </Image>
+    <Image Include="Texture_Default2.png">
+      <Filter>assets</Filter>
+    </Image>
+    <Image Include="Texture_Default3.png">
+      <Filter>assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="shaders\sdhr_default.frag">
+    <CopyFileToFolders Include="shaders\sdhr_default_330.frag">
       <Filter>shaders</Filter>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="shaders\sdhr_default.vert">
+    <CopyFileToFolders Include="shaders\sdhr_default_330.vert">
       <Filter>shaders</Filter>
     </CopyFileToFolders>
   </ItemGroup>

@@ -171,8 +171,10 @@
     <ClCompile Include="SDHRManager.cpp" />
     <ClCompile Include="SDHRNetworking.cpp" />
     <ClCompile Include="SDHRWindow.cpp" />
+    <ClCompile Include="A2VideoManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="A2VideoManager.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="glad\glad.h" />
@@ -206,6 +208,8 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
       <FileType>Document</FileType>
     </CopyFileToFolders>
+    <None Include="shaders\a2video_text_330.frag" />
+    <None Include="shaders\a2video_text_330.vert" />
     <None Include="shaders\sdhr_default_310es.frag" />
     <None Include="shaders\sdhr_default_310es.vert" />
   </ItemGroup>
@@ -216,6 +220,9 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
     </Image>
+    <Image Include="Texture_Default1.png" />
+    <Image Include="Texture_Default2.png" />
+    <Image Include="Texture_Default3.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
