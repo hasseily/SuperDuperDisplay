@@ -90,9 +90,6 @@ public:
 
 	void Render();	// render whatever mode is active (enabled windows)
 
-	TileTex* GetTilesetRecordData(uint8_t tileset_index) { return tileset_records[tileset_index].tile_data; };
-	TileTex GetTilesetTileTex(uint8_t tileset_index, uint8_t tile_index) { return tileset_records[tileset_index].tile_data[tile_index]; };
-
 	void SelectVideoMode(A2VideoMode_e mode);
 	void ToggleMixedMode();
 
