@@ -73,8 +73,6 @@ public:
 	// Won't need more than 3 image assets for the Apple 2 video modes
 	// Probably only 1 just for the text
 	ImageAsset image_assets[3];
-	TilesetRecord tileset_records[3];	// tilesets for image_assets
-
 	SDHRWindow windows[1];				// TEXT1 for now
 
 	// Actual screen rendered output dimensions
@@ -124,11 +122,7 @@ private:
 	// Internal methods
 	//////////////////////////////////////////////////////////////////////////
 
-	// For a soecific image asset, generate the linked tileset
-	void GenerateTileset(uint8_t index, uint16_t num_entries,
-		uint16_t xdim, uint16_t ydim,
-		uint16_t width, uint16_t height
-	);
+
 
 	//////////////////////////////////////////////////////////////////////////
 	// Internal data

@@ -86,7 +86,6 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 void A2VideoManager::Initialize()
 {
 	*image_assets = {};
-	*tileset_records = {};
 
 	// Initialize windows
 	// Prepare image assets (textures)
@@ -101,15 +100,15 @@ void A2VideoManager::Initialize()
 		windows[i].SetSize(uXY({ (uint32_t)rendererOutputWidth , (uint32_t)rendererOutputHeight }));
 	}
 
-	// Set up the image assets and their tilesets
+	// Set up the image assets
+	// There's no need for tileset records since we know exactly
+	// what the image assets look like, and the shaders will use them directly
 	for (size_t i = 0; i < (sizeof(image_assets) / sizeof(ImageAsset)); i++)
 	{
 		image_assets[i].tex_id = oglHelper->get_texture_id_at_slot(i);
 	}
 	// image asset 0: The apple 2e US font
 	image_assets[0].AssignByFilename(this, "Texture_Apple2eFont7x8.png");
-	TilesetRecord r = tileset_records[0];
-	GenerateTileset(0, 16 * 8, _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT, 16, 8);
 
 	// Generate shaders
 	shader_a2video_text.build(_SHADER_TEXT_VERTEX_DEFAULT, _SHADER_TEXT_FRAGMENT_DEFAULT);
@@ -120,45 +119,9 @@ void A2VideoManager::Initialize()
 
 A2VideoManager::~A2VideoManager()
 {
-	for (uint16_t i = 0; i < (sizeof(tileset_records) / sizeof(TilesetRecord)); ++i) {
-		if (tileset_records[i].tile_data) {
-			free(tileset_records[i].tile_data);
-		}
-	}
+
 }
 
-// For A2Video, we have one tileset per image asset.
-// So we automate and simplify the generation of tilesets
-// xdim, ydim: the size of each tile in pixels
-// width, height: the number of tiles on the x and y axes of the asset
-void A2VideoManager::GenerateTileset(uint8_t index, uint16_t num_entries,
-	uint16_t xdim, uint16_t ydim,
-	uint16_t width, uint16_t height) {
-	TilesetRecord* r = tileset_records + index;
-	if (r->tile_data) {
-		free(r->tile_data);
-	}
-	*r = {};
-	r->asset_index = index;
-	r->xdim = xdim;
-	r->ydim = ydim;
-	r->num_entries = num_entries;
-	r->tile_data = (TileTex*)malloc(sizeof(TileTex) * num_entries);
-#ifdef DEBUG
-	std::cout << "Allocating tile data size: " << sizeof(TileTex) * num_entries << " for index: " << (uint32_t)tileset_index << std::endl;
-#endif
-
-	TileTex* tex_p = r->tile_data;
-	for (uint16_t j = 0; j < height; ++j)
-	{
-		for (uint16_t i = 0; i < width; ++i)
-		{
-			tex_p->upos = i * xdim;
-			tex_p->vpos = j * ydim;
-			++tex_p;
-		}
-	}
-}
 
 void A2VideoManager::SelectVideoMode(A2VideoMode_e mode)
 {
