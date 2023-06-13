@@ -7,7 +7,6 @@ layout (location = 0) in vec4 aPos;
 out vec3 vFragPos;
 
 uniform int ticks;      // ms since start
-uniform mat4 model;     // model matrix
 uniform mat4 transform; // Final mesh transform matrix from model to world space
 
 void main()

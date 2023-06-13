@@ -4,9 +4,6 @@
 #include "MosaicMesh.h"
 #include "shader.h"
 
-typedef struct uixy { uint32_t x; uint32_t y; } uXY;
-typedef struct ixy { int32_t x; int32_t y; } iXY;
-
 class SDHRWindow
 {
 public:

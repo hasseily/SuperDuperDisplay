@@ -157,6 +157,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="A2Window.cpp" />
     <ClCompile Include="glad\glad.c" />
     <ClCompile Include="imgui\imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui\imgui_demo.cpp" />
@@ -175,6 +176,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="A2VideoManager.h" />
+    <ClInclude Include="A2Window.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="glad\glad.h" />
@@ -214,6 +216,8 @@
     <None Include="shaders\sdhr_default_310es.vert" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="Apple2eFont7x8 - Alternate.png" />
+    <Image Include="Apple2eFont7x8 - Regular.png" />
     <Image Include="Texture_Default.png">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>

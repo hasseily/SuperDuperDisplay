@@ -57,7 +57,7 @@ public:
 
 	Shader* shaderProgram = NULL;		// Shader program for the mesh. Starts with a default shader
 
-	unsigned int TBTEX = UINT_MAX;		// MosaicTile Buffer Texture (attaches to TBO)
+	unsigned int TBTEX = UINT_MAX;		// MosaicTile Buffer Texture
 
 	MosaicMesh(uint32_t tile_xcount, uint32_t tile_ycount, uint32_t tile_xdim, uint32_t tile_ydim, uint8_t win_index);
 	MosaicMesh() = delete; // Disallow default constructor
@@ -79,7 +79,6 @@ private:
 	// render data
 	unsigned int VAO = UINT_MAX;		// Vertex Array Object (holds buffers that are vertex related)
 	unsigned int VBO = UINT_MAX;       // Vertex Buffer Object (holds vertices)
-	unsigned int TBO = UINT_MAX;		// MosaicTile Buffer Object (holds mosaic tiles data)
 	float world_x = 0.f;		// top-left position in the world space
 	float world_y = 0.f;		// which is also the view (camera) space
 	glm::mat4 mat_trans = glm::mat4(1.0f);	// Model->World translation matrix. Changes when the mesh is moved in the world

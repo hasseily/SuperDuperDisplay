@@ -13,12 +13,15 @@
 #endif
 
 #include "OpenGLHelper.h"
+#include "camera.h"
+#include "SDHRManager.h"
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
 
 static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
 
+static Camera camera;
 static Shader shader_a2video_text = Shader();
 static Shader shader_a2video_lores = Shader();
 static Shader shader_a2video_hgr = Shader();
@@ -85,33 +88,40 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 
 void A2VideoManager::Initialize()
 {
-	*image_assets = {};
+	// Reset the camera
+	camera = Camera(
+		rendererOutputWidth / 2.f,
+		rendererOutputHeight / 2.f,					// x,y
+		A2VIDEO_TOTAL_COUNT,						// z
+		0.f, 1.f, 0.f,								// upVector xyz
+		-90.f,										// yaw
+		0.f											// pitch
+	);
 
-	// Initialize windows
-	// Prepare image assets (textures)
-	// TODO: Generate the tilesets for the image assets
-
-	for (size_t i = 0; i < (sizeof(windows) / sizeof(SDHRWindow)); i++)
-	{
-		// Set the z index of each window and keep track of them
-		// They're all the classic size of the Apple 2e (or a multiple thereof)
-		windows[i].Set_index(i);
-		windows[i].SetPosition(iXY({ 0, 0 }));
-		windows[i].SetSize(uXY({ (uint32_t)rendererOutputWidth , (uint32_t)rendererOutputHeight }));
-	}
-
-	// Set up the image assets
+	// Set up the image assets (textures)
 	// There's no need for tileset records since we know exactly
 	// what the image assets look like, and the shaders will use them directly
+	*image_assets = {};
 	for (size_t i = 0; i < (sizeof(image_assets) / sizeof(ImageAsset)); i++)
 	{
 		image_assets[i].tex_id = oglHelper->get_texture_id_at_slot(i);
 	}
-	// image asset 0: The apple 2e US font
-	image_assets[0].AssignByFilename(this, "Texture_Apple2eFont7x8.png");
 
 	// Generate shaders
 	shader_a2video_text.build(_SHADER_TEXT_VERTEX_DEFAULT, _SHADER_TEXT_FRAGMENT_DEFAULT);
+
+	// Initialize windows and meshes
+	
+	// TEXT1
+	windows[A2VIDEO_TEXT1].Define(
+		A2VIDEO_TEXT1,
+		uXY({ (uint32_t)rendererOutputWidth , (uint32_t)rendererOutputHeight }),
+		uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT }),
+		uXY({ 40, 24 }),
+		SDHRManager::GetInstance()->GetApple2MemPtr() + 0x400,		// Pointer to TEXT1
+		0x400,														// Size of TEXT1
+		&shader_a2video_text
+	);
 	
 	// tell the next Render() call to run initialization routines
 	bShouldInitializeRender = true;
@@ -122,20 +132,114 @@ A2VideoManager::~A2VideoManager()
 
 }
 
-
 void A2VideoManager::SelectVideoMode(A2VideoMode_e mode)
 {
 	activeVideoMode = mode;
+	bShouldInitializeRender = true;
+	for (auto& _w : this->windows) {
+		_w.enabled = false;
+	}
+	this->windows[activeVideoMode].enabled = true;
+	if (!bIsMixedMode)
+		return;
+
+	// Now handle mixed mode
+	switch (mode)
+	{
+	case A2VIDEO_LORES:
+		this->windows[A2VIDEO_TEXT1].enabled = true;
+		break;
+	case A2VIDEO_HGR1:
+		this->windows[A2VIDEO_TEXT1].enabled = true;
+		break;
+	case A2VIDEO_HGR2:
+		this->windows[A2VIDEO_TEXT1].enabled = true;
+		break;
+	case A2VIDEO_DLORES:
+		this->windows[A2VIDEO_DTEXT].enabled = true;
+		break;
+	case A2VIDEO_DHGR:
+		this->windows[A2VIDEO_DTEXT].enabled = true;
+		break;
+	default:
+		break;
+	}
 }
 
 void A2VideoManager::ToggleMixedMode()
 {
 	bIsMixedMode = !bIsMixedMode;
+	SelectVideoMode(activeVideoMode);	// Force reinitialization
 }
 
 A2VideoMode_e A2VideoManager::ActiveVideoMode()
 {
 	return activeVideoMode;
-	bShouldInitializeRender = true;
+}
+
+void A2VideoManager::Render()
+{
+	GLenum glerr;
+	auto oglh = OpenGLHelper::GetInstance();
+
+	oglh->setup_sdhr_render();
+
+	if (bDidChangeResolution) {
+		oglh->rescale_framebuffer(rendererOutputWidth, rendererOutputHeight);
+	}
+
+	// activate the correct shader
+	auto currentShader = windows[activeVideoMode].GetShaderProgram();
+	currentShader->use();
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glUseProgram error: " << glerr << std::endl;
+	}
+
+	// Initialization routine runs only once on init (or re-init)
+	// We do that here because we know the framebuffer is bound, and everything
+	// for drawing the SDHR stuff is active
+	if (bShouldInitializeRender) {
+		bShouldInitializeRender = false;
+
+		// image asset 0: The apple 2e US font
+		glActiveTexture(_SDHR_START_TEXTURES);
+		image_assets[0].AssignByFilename(this, "Apple2eFont7x8 - Regular.png");
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL AssignByFilename error: " 
+				<< 0 << " - " << glerr << std::endl;
+		}
+		glActiveTexture(GL_TEXTURE0);
+	}
+
+	// Update windows and meshes
+	for (auto& _w : this->windows) {
+		_w.Update();
+	}
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL render A2VideoManager error: " << glerr << std::endl;
+	}
+
+	// Assign the list of all the textures to the shader's "tilesTexture" uniform
+	auto texUniformId = glGetUniformLocation(currentShader->ID, "tilesTexture");
+	glUniform1i(texUniformId, _SDHR_START_TEXTURES - GL_TEXTURE0);
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
+	}
+
+	// Assign the sdhr global (to all windows) uniforms
+	currentShader->setInt("ticks", SDL_GetTicks());
+
+	// Render the windows (i.e. the meshes with the windows stencils)
+	auto mat_proj = glm::ortho<float>(-rendererOutputWidth / 2, rendererOutputWidth / 2, 
+		-rendererOutputHeight / 2, rendererOutputHeight / 2, 0, 256);
+
+	for (auto& _w : this->windows) {
+		_w.Render(camera.GetViewMatrix(), mat_proj);
+	}
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL draw error: " << glerr << std::endl;
+	}
+	oglh->cleanup_sdhr_render();
+	bDidChangeResolution = false;
 }
 

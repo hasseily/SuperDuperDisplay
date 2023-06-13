@@ -7,7 +7,7 @@
 #include <stddef.h>
 
 #include "common.h"
-#include "SDHRWindow.h"
+#include "A2Window.h"
 
 #define _A2_TEXT40_CHAR_WIDTH 7
 #define _A2_TEXT40_CHAR_HEIGHT 8
@@ -21,7 +21,8 @@ enum A2VideoMode_e
 	A2VIDEO_HGR2,
 	A2VIDEO_DTEXT,
 	A2VIDEO_DLORES,
-	A2VIDEO_DHGR
+	A2VIDEO_DHGR,
+	A2VIDEO_TOTAL_COUNT
 };
 
 class A2VideoManager
@@ -73,7 +74,7 @@ public:
 	// Won't need more than 3 image assets for the Apple 2 video modes
 	// Probably only 1 just for the text
 	ImageAsset image_assets[3];
-	SDHRWindow windows[1];				// TEXT1 for now
+	A2Window windows[A2VIDEO_TOTAL_COUNT];
 
 	// Actual screen rendered output dimensions
 	int rendererOutputWidth = 40 * _A2_TEXT40_CHAR_WIDTH;
@@ -88,12 +89,11 @@ public:
 
 	bool GetDidChangeResolution() { return bDidChangeResolution; };
 
-	void Render();	// render whatever mode is active (enabled windows)
-
 	void SelectVideoMode(A2VideoMode_e mode);
 	void ToggleMixedMode();
-
 	A2VideoMode_e ActiveVideoMode();
+
+	void Render();	// render whatever mode is active (enabled windows)
 
 	// public singleton code
 	static A2VideoManager* GetInstance()

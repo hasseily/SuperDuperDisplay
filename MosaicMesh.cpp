@@ -24,8 +24,9 @@ MosaicMesh::MosaicMesh(uint32_t tile_xcount, uint32_t tile_ycount, uint32_t tile
 		0.f / _SDHR_MAX_TEXTURES,		// texture index
 		});
 
-	// Create all the vertices for each tile
 	float z_val = (float)(win_index);	// z plane is 0-255.
+
+	// Create all 6 vertices
 
 	// NOTE: We use the top left corner for both triangles so that all the fragments later
 	// can know the top left corner position to calculate which tile they belong to
@@ -61,8 +62,8 @@ MosaicMesh::~MosaicMesh()
 	if (VAO != UINT_MAX)
 	{
 		// TODO: CRASHES WHEN RECREATING A MESH
-		// GLuint aToDelete[3] = { TBO, VBO, VAO };
-		// glDeleteBuffers(3, aToDelete);
+		// GLuint aToDelete[2] = { VBO, VAO };
+		// glDeleteBuffers(2, aToDelete);
 	}
 	glDeleteTextures(1, &TBTEX);
 }
@@ -117,7 +118,6 @@ void MosaicMesh::updateMesh()
 	{
 		glGenVertexArrays(1, &VAO);
 		glGenBuffers(1, &VBO);
-		glGenBuffers(1, &TBO);
 		glGenTextures(1, &TBTEX);
 	}
 
