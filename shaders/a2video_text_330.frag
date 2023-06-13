@@ -40,10 +40,9 @@ vec2 windowTopLeft = vec2(0);    // Corners of window in model coordinates (pixe
 uniform vec2 windowBottomRight;
 
 // Mesh-level uniforms assigned in MosaicMesh
-// TODO: Check which are still useful
 uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform uvec2 tileSize;
-uniform sampler2D DBTEX;
+uniform sampler2D DBTEX;        // Apple 2e's memory, starting at 0x400 for TEXT1 and 0x800 for TEXT2
 
 in vec3 vFragPos;       // The fragment position in model coordinates (pixels)
 
@@ -76,10 +75,11 @@ void main()
     float a_flash = (1.0 - step(0x80, char)) * (1.0 - a_inverse);
 
     ivec2 textureSize2d = textureSize(tilesTexture,0);
-    // no need to rescale the uvVals because we'll use them normalized
+    // what's our character's starting origin in the character map?
+    uvec2 charOrigin = uvec2(char % 0xF, char >> 4) * tileSize;
 
     // Now get the texture color, using the tile uv origin and this fragment's offset
-    vec4 tex = texture(tilesTexture, fragOffset);
+    vec4 tex = texture(tilesTexture, (charOrigin + fragOffset) / textureSize2d);
 
     float isFlashing =  a_flash * ((ticks / 500) % 2);    // Flash every half second
     // get the color of flashing or the one above

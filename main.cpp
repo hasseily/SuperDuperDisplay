@@ -25,6 +25,7 @@
 
 #include "SDHRNetworking.h"
 #include "SDHRManager.h"
+#include "A2VideoManager.h"
 #include "OpenGLHelper.h"
 
 
@@ -157,6 +158,7 @@ int main(int, char**)
 	static uint32_t oldHeight = 0;
 
 	auto sdhrManager = SDHRManager::GetInstance();
+    auto a2VideoManager = A2VideoManager::GetInstance();
 	auto glhelper = OpenGLHelper::GetInstance();
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
@@ -251,7 +253,10 @@ int main(int, char**)
             }
         }
 
-        sdhrManager->Render();
+        if (sdhrManager->IsSdhrEnabled())
+            sdhrManager->Render();
+        else
+            a2VideoManager->Render();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);

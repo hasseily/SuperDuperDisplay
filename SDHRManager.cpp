@@ -4,8 +4,6 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 #include <algorithm>
 #include "SDL.h"
 #ifdef _DEBUGTIMINGS
@@ -275,7 +273,7 @@ void SDHRManager::Initialize()
 	// Whenever memory is written from the Apple2
 	// in the main bank between $200 and $BFFF it will
 	// be sent through the socket and this buffer will be updated
-	memset(a2mem, 0, 0xc000);
+	memset(a2mem, 0, _SDHR_MEMORY_SHADOW_END);
 
 	// tell the next Render() call to run initialization routines
 	// Assign to the GPU the default pink image to all 16 image assets
@@ -345,7 +343,7 @@ void SDHRManager::Render()
 	GLenum glerr;
 	auto oglh = OpenGLHelper::GetInstance();
 
-	oglh->setup_sdhr_render();
+	oglh->setup_render();
 
 	if (bDidChangeResolution) {
 		oglh->rescale_framebuffer(rendererOutputWidth, rendererOutputHeight);
@@ -463,7 +461,7 @@ void SDHRManager::Render()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
 	}
-	oglh->cleanup_sdhr_render();
+	oglh->cleanup_render();
 	bDidChangeResolution = false;
 }
 

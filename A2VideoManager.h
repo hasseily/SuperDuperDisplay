@@ -87,8 +87,15 @@ public:
 	// Methods
 	//////////////////////////////////////////////////////////////////////////
 
+	void ToggleA2Video(bool value) {
+		bA2VideoEnabled = value;
+		if (bA2VideoEnabled)
+			bShouldInitializeRender = true;
+	}
+
 	bool GetDidChangeResolution() { return bDidChangeResolution; };
 
+	void NotifyA2MemoryDidChange(uint32_t addr);	// Apple 2's memory changed at addr
 	void SelectVideoMode(A2VideoMode_e mode);
 	void ToggleMixedMode();
 	A2VideoMode_e ActiveVideoMode();
@@ -124,6 +131,7 @@ private:
 	//////////////////////////////////////////////////////////////////////////
 	// Internal data
 	//////////////////////////////////////////////////////////////////////////
+	bool bA2VideoEnabled = true;			// Is standard Apple 2 video enabled?
 	bool bIsMixedMode = false;				// Mixed graphics and text mode
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
 	// routines like clearing out the image assets
@@ -131,8 +139,7 @@ private:
 	bool bIsUsingPerspective = false;	// is it currently using perspective?
 	bool bDidChangeResolution = false;	// did the resolution change?
 
-	A2VideoMode_e activeVideoMode;
-	GLint texSamplers[3];
+	A2VideoMode_e activeVideoMode = A2VIDEO_TEXT1;
 };
 #endif // A2VIDEOMANAGER_H
 

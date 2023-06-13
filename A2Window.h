@@ -10,6 +10,8 @@ class A2Window
 public:
 	bool enabled;
 	unsigned int DBTEX = UINT_MAX;		// Data Buffer Texture (holds Apple 2 memory data)
+	bool bNeedsGPUVertexUpdate = false;	// Update the GPU if the vertex data has changed
+	bool bNeedsGPUDataUpdate = false;	// Update the GPU if the underlying data has changed
 
 	A2Window()
 		: enabled(false)
@@ -51,9 +53,6 @@ private:
 	// TODO: Allow for 2 regions to be uploaded for DTEXT, DLORES, DHGR
 	uint8_t* data;		// The underlying data that will be used by the shader
 	uint32_t datasize;	// Data size in bytes
-
-	bool bNeedsGPUVertexUpdate = false;	// Update the GPU if the vertex data has changed
-	bool bNeedsGPUDataUpdate = false;	// Update the GPU if the underlying data has changed
 
 	std::vector<glm::vec4> vertices;	// Vertices with XY and UV	(2 vectors of floats)
 	unsigned int VAO = UINT_MAX;		// Vertex Array Object (holds buffers that are vertex related)

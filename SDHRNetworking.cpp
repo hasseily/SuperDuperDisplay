@@ -1,4 +1,5 @@
 #include "SDHRNetworking.h"
+#include "A2VideoManager.h"
 #include "SDHRManager.h"
 
 ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_addr)
@@ -59,6 +60,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		return 1;
 
 	auto sdhrMgr = SDHRManager::GetInstance();
+	auto a2VideoMgr = A2VideoManager::GetInstance();
 	uint8_t* a2mem = sdhrMgr->GetApple2MemPtr();
 
 	while (!(*shouldTerminateNetworking)) {
@@ -96,7 +98,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 				std::cout << "  pad: " << std::hex << static_cast<unsigned>(packet.pad) << std::endl;
 				*/
 
-				if ((packet.addr >= 0x200) && (packet.addr <= 0xbfff))
+				if ((packet.addr >= _SDHR_MEMORY_SHADOW_BEGIN) && (packet.addr < _SDHR_MEMORY_SHADOW_END))
 				{
 					// it's a memory write
 					a2mem[packet.addr] = packet.data;
@@ -121,12 +123,14 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 						std::cout << "CONTROL: Disable SDHR" << std::endl;
 #endif
 						sdhrMgr->ToggleSdhr(false);
+						a2VideoMgr->ToggleA2Video(true);
 						break;
 					case SDHR_CTRL_ENABLE:
 #ifdef DEBUG
 						std::cout << "CONTROL: Enable SDHR" << std::endl;
 #endif
 						sdhrMgr->ToggleSdhr(true);
+						a2VideoMgr->ToggleA2Video(false);
 						break;
 					case SDHR_CTRL_RESET:
 #ifdef DEBUG

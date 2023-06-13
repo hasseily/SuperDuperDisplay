@@ -30,8 +30,8 @@ public:
 	void unbind_framebuffer();
 	void rescale_framebuffer(uint32_t width, uint32_t height);
 	void get_framebuffer_size(uint32_t* width, uint32_t* height);
-	void setup_sdhr_render();
-	void cleanup_sdhr_render();
+	void setup_render();
+	void cleanup_render();
 
 	// TODO: Testing, remove
 	// void render();

@@ -179,7 +179,7 @@ private:
 	static SDHRManager* s_instance;
 	SDHRManager()
 	{
-		a2mem = new uint8_t[0xc000];	// anything below $200 is unused
+		a2mem = new uint8_t[_SDHR_MEMORY_SHADOW_END];	// anything below _SDHR_MEMORY_SHADOW_BEGIN is unused
 		uploaded_data_region = new uint8_t[_SDHR_UPLOAD_REGION_SIZE];
 
 		if (uploaded_data_region == NULL)

@@ -3,7 +3,6 @@
 #include <iostream>
 #include <string>
 
-#include "common.h"
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 
@@ -196,18 +195,18 @@ void OpenGLHelper::get_framebuffer_size(uint32_t* width, uint32_t* height)
 	*height = fb_height;
 }
 
-void OpenGLHelper::setup_sdhr_render()
+void OpenGLHelper::setup_render()
 {
 	GLenum glerr;
 	bind_framebuffer();
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL setup_sdhr_render error: " << glerr << std::endl;
+		std::cerr << "OpenGL setup_render error: " << glerr << std::endl;
 	}
 }
 
-void OpenGLHelper::cleanup_sdhr_render()
+void OpenGLHelper::cleanup_render()
 {
 	glUseProgram(0);
 	unbind_framebuffer();

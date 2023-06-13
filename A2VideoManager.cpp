@@ -4,8 +4,6 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 #include <algorithm>
 #include "SDL.h"
 #ifdef _DEBUGTIMINGS
@@ -122,7 +120,8 @@ void A2VideoManager::Initialize()
 		0x400,														// Size of TEXT1
 		&shader_a2video_text
 	);
-	
+	// Activate TEXT1
+	windows[A2VIDEO_TEXT1].enabled = true;
 	// tell the next Render() call to run initialization routines
 	bShouldInitializeRender = true;
 }
@@ -130,6 +129,12 @@ void A2VideoManager::Initialize()
 A2VideoManager::~A2VideoManager()
 {
 
+}
+
+void A2VideoManager::NotifyA2MemoryDidChange(uint32_t addr)
+{
+	if (addr >= 0x400 && addr < 0x800)
+		windows[A2VIDEO_TEXT1].bNeedsGPUDataUpdate = true;
 }
 
 void A2VideoManager::SelectVideoMode(A2VideoMode_e mode)
@@ -179,10 +184,13 @@ A2VideoMode_e A2VideoManager::ActiveVideoMode()
 
 void A2VideoManager::Render()
 {
+	if (!bA2VideoEnabled)
+		return;
+
 	GLenum glerr;
 	auto oglh = OpenGLHelper::GetInstance();
 
-	oglh->setup_sdhr_render();
+	oglh->setup_render();
 
 	if (bDidChangeResolution) {
 		oglh->rescale_framebuffer(rendererOutputWidth, rendererOutputHeight);
@@ -211,12 +219,9 @@ void A2VideoManager::Render()
 		glActiveTexture(GL_TEXTURE0);
 	}
 
-	// Update windows and meshes
+	// Update Apple 2 video windows
 	for (auto& _w : this->windows) {
 		_w.Update();
-	}
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL render A2VideoManager error: " << glerr << std::endl;
 	}
 
 	// Assign the list of all the textures to the shader's "tilesTexture" uniform
@@ -239,7 +244,7 @@ void A2VideoManager::Render()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
 	}
-	oglh->cleanup_sdhr_render();
+	oglh->cleanup_render();
 	bDidChangeResolution = false;
 }
 

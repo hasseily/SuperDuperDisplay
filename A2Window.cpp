@@ -39,6 +39,8 @@ void A2Window::Define(uint8_t _index, uXY _screen_count,
 
 void A2Window::Update()
 {
+	if (vertices.size() == 0)
+		return;
 	if (!(bNeedsGPUVertexUpdate || bNeedsGPUDataUpdate))
 		return;				// doesn't need updating on the GPU
 
@@ -79,6 +81,7 @@ void A2Window::Update()
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
 	// reset the binding
