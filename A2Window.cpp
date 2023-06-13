@@ -101,14 +101,10 @@ void A2Window::Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 	glBindVertexArray(VAO);
 
 	shaderProgram->setVec2("windowBottomRight", glm::vec2(screen_count.x, screen_count.y));
-	// Assign the scales so that we can get the proper original
-	// values for each mosaic tile
-	shaderProgram->setFloat("maxTextures", _SDHR_MAX_TEXTURES);
-	shaderProgram->setFloat("maxUVScale", _SDHR_MAX_UV_SCALE);
 	shaderProgram->setVec2u("tileCount", tile_count.x, tile_count.y);
 	shaderProgram->setVec2u("tileSize", tile_dim.x, tile_dim.y);
 
-	glm::mat4 mat_final = mat_proj * mat_camera * this->mat_trans;
+	glm::mat4 mat_final = mat_proj * mat_camera;
 	shaderProgram->setMat4("transform", mat_final);
 
 	// point the uniform at the tiles data texture (GL_TEXTURE0 + _SDHR_TBO_TEXUNIT)

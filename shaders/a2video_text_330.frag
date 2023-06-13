@@ -41,8 +41,6 @@ uniform vec2 windowBottomRight;
 
 // Mesh-level uniforms assigned in MosaicMesh
 // TODO: Check which are still useful
-uniform float maxTextures;
-uniform float maxUVScale;
 uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform uvec2 tileSize;
 uniform sampler2D DBTEX;
@@ -71,7 +69,7 @@ void main()
     // TODO: Check 0xC007 to switch to alternate charset
 
     // Determine from char which font glyph to use
-    // and whether to inverse or flash
+    // and if we need to flash
     // Determine if it's inverse when the char is below 0x40
     // And then if the char is below 0x80 and not inverse, it's flashing
     float a_inverse = 1.0 - step(0x40, char);
@@ -80,7 +78,7 @@ void main()
     ivec2 textureSize2d = textureSize(tilesTexture,0);
     // no need to rescale the uvVals because we'll use them normalized
 
-    // Now get the texture color, using the tile uv origin and this fragment's offset (with scaling)
+    // Now get the texture color, using the tile uv origin and this fragment's offset
     vec4 tex = texture(tilesTexture, fragOffset);
 
     float isFlashing =  a_flash * ((ticks / 500) % 2);    // Flash every half second
