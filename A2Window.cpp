@@ -74,8 +74,8 @@ void A2Window::Update()
 		glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
 		glBindTexture(GL_TEXTURE_2D, DBTEX);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI,
-			datasize,				// GL_R8UI is essentially an array of regular bytes (unbounded)
-			1,						// Set the height of the texture to 1 pixel, it's irrelevant
+			datasize % 1024,		// GL_R8UI is essentially an array of regular bytes (unbounded)
+			1+ (datasize / 1024),	// Split it by 1kB-sized rows
 			0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
