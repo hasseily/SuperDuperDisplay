@@ -69,7 +69,7 @@ void A2Window::Update()
 
 	if (bNeedsGPUDataUpdate)
 	{
-		// Associate the texture TBTEX in GL_TEXTURE0+TEXUNIT with the buffer
+		// Associate the texture DBTEX in GL_TEXTURE0+_SDHR_TBO_TEXUNIT with the buffer
 		// This is the apple 2's memory which is mapped to a "texture"
 		glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
 		glBindTexture(GL_TEXTURE_2D, DBTEX);

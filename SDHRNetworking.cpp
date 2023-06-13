@@ -102,6 +102,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 				{
 					// it's a memory write
 					a2mem[packet.addr] = packet.data;
+					a2VideoMgr->NotifyA2MemoryDidChange(packet.addr);
 					continue;
 				}
 				if ((packet.addr != CXSDHR_CTRL) && (packet.addr != CXSDHR_DATA))

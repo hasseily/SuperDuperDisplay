@@ -62,7 +62,7 @@ void main()
 
     // Next grab the data for that tile from the tilesBuffer
     // No need to rescale values because we're using GL_R8UI
-    vec4 vChar = texture(DBTEX, vec2(textRow[tileColRow.y] + tileColRow.x, 1));
+    vec4 vChar = texture(DBTEX, vec2(textRow[tileColRow.y] + tileColRow.x, 0));
     int char = int(vChar.x);    // the char byte value is just the x component
 
     // TODO: Check 0xC007 to switch to alternate charset
