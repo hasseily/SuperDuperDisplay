@@ -71,11 +71,14 @@ void A2Window::Update()
 	{
 		// Associate the texture DBTEX in GL_TEXTURE0+_SDHR_TBO_TEXUNIT with the buffer
 		// This is the apple 2's memory which is mapped to a "texture"
+		uint32_t _h = datasize / 1024;
+		if ((_h * 1024) < datasize)
+			_h++;
 		glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
 		glBindTexture(GL_TEXTURE_2D, DBTEX);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI,
-			datasize % 1024,		// GL_R8UI is essentially an array of regular bytes (unbounded)
-			1+ (datasize / 1024),	// Split it by 1kB-sized rows
+			1024,					// GL_R8UI is essentially an array of regular bytes (unbounded)
+			_h,						// Split it by 1kB-sized rows
 			0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

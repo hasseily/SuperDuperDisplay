@@ -27,13 +27,13 @@ $E0..$FF Normal   Lowercase Letters (like ASCII + $80)
 // They're interlaced because WOZ chip optimization.
 const int textRow[24]= {
 0x0000, 0x0080, 0x0100, 0x0180, 0x0200, 0x0280, 0x0300, 0x0380, 
-0x0028, 0x00A8, 0x0128, 0x01A8, 0x0228, 0x26A8, 0x0328, 0x03A8, 
+0x0028, 0x00A8, 0x0128, 0x01A8, 0x0228, 0x02A8, 0x0328, 0x03A8, 
 0x0050, 0x00D0, 0x0150, 0x01D0, 0x0250, 0x02D0, 0x0350, 0x03D0
 };
 
 // Global uniforms assigned in A2VideoManager
 uniform sampler2D tilesTexture;
-uniform int ticks;      // ms since start
+uniform int ticks;                  // ms since start
 
 // Window-level uniforms assigned in SDHRWindow
 vec2 windowTopLeft = vec2(0);    // Corners of window in model coordinates (pixels)
@@ -42,7 +42,8 @@ uniform vec2 windowBottomRight;
 // Mesh-level uniforms assigned in MosaicMesh
 uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform uvec2 tileSize;
-uniform sampler2D DBTEX;        // Apple 2e's memory, starting at 0x400 for TEXT1 and 0x800 for TEXT2
+uniform usampler2D DBTEX;        // Apple 2e's memory, starting at 0x400 for TEXT1 and 0x800 for TEXT2
+                                 // Unsigned int sampler!
 
 in vec3 vFragPos;       // The fragment position in model coordinates (pixels)
 
@@ -64,10 +65,11 @@ void main()
     // No need to rescale values because we're using GL_R8UI
     // The "texture" is split by 1kB-sized rows
     uint offset = textRow[tileColRow.y] + tileColRow.x;
-    vec4 vChar = texture(DBTEX, vec2(offset % 1024, offset / 1024));
-    int char = int(vChar.r);    // the char byte value is just the r component
+    vec4 vChar = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0);
+    uint char = uint(vChar.r);    // the char byte value is just the r component
 
-    // TODO: Check 0xC007 to switch to alternate charset
+    // TODO:    Check 0xC007 to switch to alternate charset
+    //          Alternate charset doesn't do flashing
 
     // Determine from char which font glyph to use
     // and if we need to flash
@@ -78,12 +80,12 @@ void main()
 
     ivec2 textureSize2d = textureSize(tilesTexture,0);
     // what's our character's starting origin in the character map?
-    uvec2 charOrigin = uvec2(char % 0xF, char >> 4) * tileSize;
+    uvec2 charOrigin = uvec2(char & 0xF, char >> 4) * tileSize;
 
     // Now get the texture color, using the tile uv origin and this fragment's offset
     vec4 tex = texture(tilesTexture, (charOrigin + fragOffset) / textureSize2d);
 
-    float isFlashing =  a_flash * ((ticks / 500) % 2);    // Flash every half second
+    float isFlashing =  a_flash * ((ticks / 310) % 2);    // Flash every 310ms
     // get the color of flashing or the one above
     fragColor = ((1 - tex) * isFlashing) + (tex * (1 - isFlashing));
 }
