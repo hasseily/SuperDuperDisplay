@@ -84,7 +84,7 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _SDHR_DEFAULT_WIDTH, _SDHR_DEFAULT_HEIGHT, window_flags);
+    SDL_Window* window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _SCREEN_DEFAULT_WIDTH, _SCREEN_DEFAULT_HEIGHT, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
@@ -259,7 +259,7 @@ int main(int, char**)
             a2VideoManager->Render();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClearColor(0.f, 0.f, 0.f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// Start the Dear ImGui frame
@@ -351,10 +351,14 @@ int main(int, char**)
             }
         }
 
+        // Add the rendered image, using borders
+        int _w, _h;
+        SDL_GetWindowSize(window, &_w, &_h);
+        auto margin = ImVec2((_w - sdhrManager->rendererOutputWidth) / 2, (_h - sdhrManager->rendererOutputHeight) / 2);
 		ImGui::GetBackgroundDrawList()->AddImage(
 			(void*)glhelper->get_output_texture_id(),
-			ImVec2(0, 0),
-			ImVec2(sdhrManager->rendererOutputWidth, sdhrManager->rendererOutputHeight),
+			margin,
+			ImVec2(_w - margin.x, _h - margin.y),
 			ImVec2(0, 0),
 			ImVec2(1, 1)
 		);
