@@ -113,7 +113,7 @@ public:
 	SDHRWindow windows[_SDHR_MAX_WINDOWS];
 	// Camera for World -> View matrix transform
 	Camera camera = Camera(
-		_SDHR_DEFAULT_WIDTH/2.f, _SDHR_DEFAULT_HEIGHT/2.f,			// x,y
+		_SCREEN_DEFAULT_WIDTH /2.f, _SCREEN_DEFAULT_HEIGHT /2.f,			// x,y
 		_SDHR_MAX_WINDOWS,							// z
 		0.f, 1.f, 0.f,								// upVector xyz
 		-90.f,										// yaw
@@ -121,13 +121,13 @@ public:
 	);
 	// Projection matrix (left, right, bottom, top, near, far)
 	glm::mat4 mat_proj = glm::ortho<float>(
-		-_SDHR_DEFAULT_WIDTH/2, _SDHR_DEFAULT_WIDTH /2,
-		-_SDHR_DEFAULT_HEIGHT/2, _SDHR_DEFAULT_HEIGHT /2,
+		-_SCREEN_DEFAULT_WIDTH /2, _SCREEN_DEFAULT_WIDTH /2,
+		-_SCREEN_DEFAULT_HEIGHT /2, _SCREEN_DEFAULT_HEIGHT /2,
 		0, 256);
 
 	// Actual screen rendered output dimensions
-	int rendererOutputWidth = _SDHR_DEFAULT_WIDTH;
-	int rendererOutputHeight = _SDHR_DEFAULT_HEIGHT;
+	int rendererOutputWidth = _SCREEN_DEFAULT_WIDTH;
+	int rendererOutputHeight = _SCREEN_DEFAULT_HEIGHT;
 
 	// Debugging attributes
 	bool bDebugNoTextures = false;

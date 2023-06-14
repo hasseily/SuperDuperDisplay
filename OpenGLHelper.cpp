@@ -157,7 +157,7 @@ void OpenGLHelper::bind_framebuffer()
 {
 	
 	if (FBO == UINT_MAX)
-		create_framebuffer(_SDHR_DEFAULT_WIDTH, _SDHR_DEFAULT_HEIGHT);
+		create_framebuffer(_SCREEN_DEFAULT_WIDTH, _SCREEN_DEFAULT_HEIGHT);
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 	GLenum glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
