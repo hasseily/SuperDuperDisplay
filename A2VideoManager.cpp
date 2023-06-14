@@ -114,7 +114,7 @@ void A2VideoManager::Initialize()
 	windows[A2VIDEO_TEXT1].Define(
 		A2VIDEO_TEXT1,
 		uXY({ (uint32_t)rendererOutputWidth , (uint32_t)rendererOutputHeight }),
-		uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT }),
+		uXY({ _A2_TEXT40_CHAR_WIDTH*5, _A2_TEXT40_CHAR_HEIGHT*5 }),	// The charmap texture has tiles 5x the original size
 		uXY({ 40, 24 }),
 		SDHRManager::GetInstance()->GetApple2MemPtr() + 0x400,		// Pointer to TEXT1
 		0x400,														// Size of TEXT1
