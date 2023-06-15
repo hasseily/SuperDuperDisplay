@@ -345,10 +345,6 @@ void SDHRManager::Render()
 
 	oglh->setup_render();
 
-	if (bDidChangeResolution) {
-		oglh->rescale_framebuffer(rendererOutputWidth, rendererOutputHeight);
-	}
-
 	defaultWindowShaderProgram.use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL glUseProgram error: " << glerr << std::endl;
@@ -413,7 +409,6 @@ void SDHRManager::Render()
 		this->threadState = THREADCOMM_e::IDLE;
 	}
 
-
 	// Assign the list of all the textures to the shader's "tilesTexture" uniform
 	auto texUniformId = glGetUniformLocation(defaultWindowShaderProgram.ID, "tilesTexture");
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -425,44 +420,17 @@ void SDHRManager::Render()
 	}
 
 	// Assign the sdhr global (to all windows) uniforms
-	defaultWindowShaderProgram.setBool("iDebugNoTextures", bDebugNoTextures);
+	defaultWindowShaderProgram.setBool("iDebugNoTextures", oglHelper->bDebugNoTextures);
 	defaultWindowShaderProgram.setInt("ticks", SDL_GetTicks());
-
-	// bUsePerspective toggle:
-	// Test using a prespective so we can zoom back and forth easily
-	// perspective uses (fov, aspect, near, far)
-	// Default FOV is 45 degrees
-
-	if (bUsePerspective && (bDidChangeResolution || (!bIsUsingPerspective)))
-	{
-		camera.Position.x = rendererOutputWidth / 2.f;
-		camera.Position.y = rendererOutputHeight / 2.f;
-		camera.Position.z = glm::cos(glm::radians(ZOOM)) * rendererOutputWidth;
-		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)rendererOutputWidth / rendererOutputHeight, 0, 256);
-		bIsUsingPerspective = bUsePerspective;
-	}
-	else if ((!bUsePerspective) && (bDidChangeResolution || bIsUsingPerspective))
-	{
-		camera.Position.x = rendererOutputWidth / 2.f;
-		camera.Position.y = rendererOutputHeight / 2.f;
-		camera.Position.z = _SDHR_MAX_WINDOWS;
-		mat_proj = glm::ortho<float>(-rendererOutputWidth/2, rendererOutputWidth/2, -rendererOutputHeight/2, rendererOutputHeight/2, 0, 256);
-		bIsUsingPerspective = bUsePerspective;
-	}
-
-	// And always update the projection when in perspective due to the zoom state
-	if (bUsePerspective)
-		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)rendererOutputWidth / rendererOutputHeight, 0, 256);
 
 	// Render the windows (i.e. the meshes with the windows stencils)
 	for (auto& _w: this->windows) {
-		_w.Render(this->camera.GetViewMatrix(), mat_proj);
+		_w.Render(oglHelper->camera.GetViewMatrix(), oglHelper->mat_proj);
 	}
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
 	}
 	oglh->cleanup_render();
-	bDidChangeResolution = false;
 }
 
 // Define a tileset from the SDHR_CMD_DEFINE_TILESET commands
@@ -628,14 +596,6 @@ bool SDHRManager::ProcessCommands(void)
 			DefineWindowCmd* cmd = (DefineWindowCmd*)p;
 			SDHRWindow* r = windows + cmd->window_index;
 			auto sc = r->Get_screen_count();
-			if (sc.x > (uint32_t)rendererOutputWidth) {
-				CommandError("Window exceeds max x resolution");
-				return false;
-			}
-			if (sc.y > (uint32_t)rendererOutputHeight) {
-				CommandError("Window exceeds max y resolution");
-				return false;
-			}
 			r->Define(
 				uXY({ cmd->screen_xcount, cmd->screen_ycount }),
 				uXY({ cmd->tile_xdim, cmd->tile_ydim }),
@@ -828,11 +788,12 @@ bool SDHRManager::ProcessCommands(void)
 		case SDHR_CMD_CHANGE_RESOLUTION: {
 			if (!CheckCommandLength(p, end, sizeof(ChangeResolutionCmd))) return false;
 			ChangeResolutionCmd* cmd = (ChangeResolutionCmd*)p;
-			if ((rendererOutputWidth != (int)cmd->width) || (rendererOutputHeight != (int)cmd->height))
+			uint32_t maxW, maxH;
+			oglHelper->get_framebuffer_size(&maxW, &maxH);
+			if ((maxW != (int)cmd->width) || (maxH != (int)cmd->height))
 			{
-				rendererOutputWidth = (int)cmd->width;
-				rendererOutputHeight = (int)cmd->height;
-				bDidChangeResolution = true;		// Get the render method to update the resolution
+				// It will resize on the next main thread render
+				oglHelper->request_framebuffer_resize(cmd->width, cmd->height);
 			}
 		} break;
 		default:

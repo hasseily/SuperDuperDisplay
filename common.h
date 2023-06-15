@@ -28,8 +28,12 @@
 typedef struct uixy { uint32_t x; uint32_t y; } uXY;
 typedef struct ixy { int32_t x; int32_t y; } iXY;
 
-#define _SCREEN_DEFAULT_WIDTH  40*7*4 + 100
-#define _SCREEN_DEFAULT_HEIGHT 24*8*4 + 100
+#define _A2VIDEO_DEFAULT_ZOOM 5			// Show the Apple 2 video * this zoom level
+#define _A2VIDEO_MIN_WIDTH 40*7
+#define _A2VIDEO_MIN_HEIGHT 24*8
+
+#define _SCREEN_DEFAULT_WIDTH  _A2VIDEO_MIN_WIDTH *_A2VIDEO_DEFAULT_ZOOM + 100
+#define _SCREEN_DEFAULT_HEIGHT _A2VIDEO_MIN_HEIGHT *_A2VIDEO_DEFAULT_ZOOM + 100
 
 // DEFINITIONS OF SDHR SPECS
 #define _SDHR_SERVER_PORT 8080

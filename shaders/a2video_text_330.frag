@@ -46,6 +46,7 @@ uniform usampler2D DBTEX;        // Apple 2e's memory, starting at 0x400 for TEX
                                  // Unsigned int sampler!
 
 in vec3 vFragPos;       // The fragment position in model coordinates (pixels)
+in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
 
 out vec4 fragColor;
 
@@ -88,4 +89,5 @@ void main()
     float isFlashing =  a_flash * ((ticks / 310) % 2);    // Flash every 310ms
     // get the color of flashing or the one above
     fragColor = ((1 - tex) * isFlashing) + (tex * (1 - isFlashing));
+    fragColor = vec4(vColor, 1.f);
 }

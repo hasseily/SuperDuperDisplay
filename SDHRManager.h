@@ -12,7 +12,6 @@
 
 #include "common.h"
 #include "OpenGLHelper.h"
-#include "camera.h"
 #include "SDHRWindow.h"
 
 enum THREADCOMM_e
@@ -111,27 +110,10 @@ public:
 	ImageAsset image_assets[_SDHR_MAX_TEXTURES];
 	TilesetRecord tileset_records[_SDHR_MAX_WINDOWS];
 	SDHRWindow windows[_SDHR_MAX_WINDOWS];
-	// Camera for World -> View matrix transform
-	Camera camera = Camera(
-		_SCREEN_DEFAULT_WIDTH /2.f, _SCREEN_DEFAULT_HEIGHT /2.f,			// x,y
-		_SDHR_MAX_WINDOWS,							// z
-		0.f, 1.f, 0.f,								// upVector xyz
-		-90.f,										// yaw
-		0.f											// pitch
-	);
-	// Projection matrix (left, right, bottom, top, near, far)
-	glm::mat4 mat_proj = glm::ortho<float>(
-		-_SCREEN_DEFAULT_WIDTH /2, _SCREEN_DEFAULT_WIDTH /2,
-		-_SCREEN_DEFAULT_HEIGHT /2, _SCREEN_DEFAULT_HEIGHT /2,
-		0, 256);
 
-	// Actual screen rendered output dimensions
-	int rendererOutputWidth = _SCREEN_DEFAULT_WIDTH;
-	int rendererOutputHeight = _SCREEN_DEFAULT_HEIGHT;
+	// Margins when rendering in a window (pixels)
+	int windowMargins = 0;
 
-	// Debugging attributes
-	bool bDebugNoTextures = false;
-	bool bUsePerspective = false;		// see bIsUsingPerspective
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
@@ -142,7 +124,6 @@ public:
 	bool ProcessCommands(void);
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 memory pointer
 	uint8_t* GetUploadRegionPtr();
-	bool GetDidChangeResolution() { return bDidChangeResolution; };
 
 	void Render();	// render everything SDHR related
 
@@ -215,8 +196,6 @@ private:
 	uint8_t* a2mem;	// The current state of the Apple 2 memory ($0200-$BFFF)
 	
 	bool bSDHREnabled = false;	// is SDHR enabled?
-	bool bIsUsingPerspective = false;	// is it currently using perspective?
-	bool bDidChangeResolution = false;	// did the resolution change?
 
 	std::vector<uint8_t> command_buffer;
 	bool error_flag = false;

@@ -154,8 +154,8 @@ int main(int, char**)
     bool did_press_quit = false;
 	int _slotnum = 0;
 
-	static uint32_t oldWidth = 0;
-	static uint32_t oldHeight = 0;
+	static uint32_t fbWidth = 0;
+	static uint32_t fbHeight = 0;
 
 	auto sdhrManager = SDHRManager::GetInstance();
     auto a2VideoManager = A2VideoManager::GetInstance();
@@ -186,13 +186,22 @@ int main(int, char**)
 		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
         
         // In case the window was program-resized, tell SDL to change the window size
-        if (sdhrManager->GetDidChangeResolution())
-			SDL_SetWindowSize(window, sdhrManager->rendererOutputWidth, sdhrManager->rendererOutputHeight);
+        if (glhelper->GetDidChangeResolution())
+        {
+            glhelper->get_framebuffer_size(&fbWidth, &fbHeight);
+            if (sdhrManager->IsSdhrEnabled())
+            {
+                SDL_SetWindowSize(window,
+                    fbWidth + 2 * sdhrManager->windowMargins,
+                    fbHeight + 2 * sdhrManager->windowMargins);
+            }
+            else {
+				SDL_SetWindowSize(window,
+					fbWidth + 2 * a2VideoManager->windowMargins,
+					fbHeight + 2 * a2VideoManager->windowMargins);
+            }
+        }
 
-		// In case the window was user-resized, tell sdhrManager the size of the window
-        // This will be used to render the final frame,
-        // and also to calculate texel sizes for the fragment shaders
-        SDL_GetWindowSize(window, &sdhrManager->rendererOutputWidth, &sdhrManager->rendererOutputHeight);
 
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -203,11 +212,48 @@ int main(int, char**)
         while (SDL_PollEvent(&event))
         {
             ImGui_ImplSDL2_ProcessEvent(&event);
-            if (event.type == SDL_QUIT)
-                done = true;
-            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
-                done = true;
-            if (event.type == SDL_KEYDOWN) {
+            switch (event.type) {
+            case SDL_QUIT:
+				done = true;
+                break;
+            case SDL_WINDOWEVENT:
+			{
+				if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
+					done = true;
+				else if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                    // Window was resized. Depending on SDHR or regular A2 video modes, figure out the
+                    // max acceptable render size and request of the renderer to change the size
+                    uint32_t reqWidth = event.window.data1;
+                    uint32_t reqHeight = event.window.data2;
+                    if (sdhrManager->IsSdhrEnabled())
+                    {
+                        reqWidth -= (2 * sdhrManager->windowMargins);
+						reqHeight -= (2 * sdhrManager->windowMargins);
+                        // TODO: Keep the SDHR ratio provided by SDHR_CMD_CHANGE_RESOLUTION
+                        glhelper->rescale_framebuffer(reqWidth, reqHeight);
+                    }
+                    else {  // Regular Apple 2 video modes
+						reqWidth -= (2 * a2VideoManager->windowMargins);
+						reqHeight -= (2 * a2VideoManager->windowMargins);
+                        a2VideoManager->Resize(reqWidth, reqHeight);
+						glhelper->rescale_framebuffer(reqWidth, reqHeight);
+                    }
+				}
+			}
+                break;
+            case SDL_MOUSEMOTION:
+                if (event.motion.state & SDL_BUTTON_RMASK && !io.WantCaptureMouse) {
+                    // Move the camera when the right mouse button is pressed while moving the mouse
+                    glhelper->camera.ProcessMouseMovement(event.motion.xrel, event.motion.yrel);
+                }
+                break;
+            case SDL_MOUSEWHEEL:
+				if (!io.WantCaptureMouse) {
+					glhelper->camera.ProcessMouseScroll(event.wheel.y);
+				}
+                break;
+            case SDL_KEYDOWN:
+			{
 				if (event.key.keysym.sym == SDLK_F4) {  // Quit on Alt-F4
 					auto state = SDL_GetKeyboardState(NULL);
 					if (state[SDL_SCANCODE_LALT]) {
@@ -215,43 +261,40 @@ int main(int, char**)
 					}
 				}
 				else if (event.key.keysym.sym == SDLK_F1) {  // Toggle debug window with F1
-                    show_sdhrinfo_window = !show_sdhrinfo_window;
+					show_sdhrinfo_window = !show_sdhrinfo_window;
 				}
 				// Camera movement!
-                if (!io.WantCaptureKeyboard) {
+				if (!io.WantCaptureKeyboard) {
 					switch (event.key.keysym.sym)
 					{
 					case SDLK_w:
-						sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
+						glhelper->camera.ProcessKeyboard(FORWARD, deltaTime);
 						break;
 					case SDLK_s:
-						sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
+						glhelper->camera.ProcessKeyboard(BACKWARD, deltaTime);
 						break;
 					case SDLK_a:
-						sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
+						glhelper->camera.ProcessKeyboard(LEFT, deltaTime);
 						break;
 					case SDLK_d:
-						sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
+						glhelper->camera.ProcessKeyboard(RIGHT, deltaTime);
 						break;
 					case SDLK_q:
-						sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
+						glhelper->camera.ProcessKeyboard(CLIMB, deltaTime);
 						break;
 					case SDLK_z:
-						sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
+						glhelper->camera.ProcessKeyboard(DESCEND, deltaTime);
 						break;
 					default:
 						break;
 					};
-                }
-            }
-            else if (event.type == SDL_MOUSEMOTION && event.motion.state & SDL_BUTTON_RMASK && !io.WantCaptureMouse) {
-                // Move the camera when the right mouse button is pressed while moving the mouse
-				sdhrManager->camera.ProcessMouseMovement(event.motion.xrel, event.motion.yrel);
-            }
-            else if (event.type == SDL_MOUSEWHEEL && !io.WantCaptureMouse) {
-                sdhrManager->camera.ProcessMouseScroll(event.wheel.y);
-            }
-        }
+				}
+			}
+                break;
+            default:
+                break;
+            }   // switch event.type
+        }   // while SDL_PollEvent
 
         if (sdhrManager->IsSdhrEnabled())
             sdhrManager->Render();
@@ -276,15 +319,15 @@ int main(int, char**)
 			ImGui::Begin("Super Duper Display Debug", &show_sdhrinfo_window);
 			if (!ImGui::IsWindowCollapsed())
 			{
-				auto _c = sdhrManager->camera;
+				auto _c = glhelper->camera;
                 auto _pos = _c.Position;
                 ImGui::Text("Press F1 at any time to toggle this window");
                 ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 				ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
 				ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
 				ImGui::Separator();
-				ImGui::Checkbox("Untextured Geometry", &sdhrManager->bDebugNoTextures);             // Show textures toggle
-				ImGui::Checkbox("Perspective Projection", &sdhrManager->bUsePerspective);       // Change projection type
+				ImGui::Checkbox("Untextured Geometry", &glhelper->bDebugNoTextures);             // Show textures toggle
+				ImGui::Checkbox("Perspective Projection", &glhelper->bUsePerspective);       // Change projection type
                 ImGui::Checkbox("Rescale Framebuffer", &bRescaleSHDRFramebuffer);
 				ImGui::Separator();
 //				ImGui::Checkbox("Demo Window", &show_demo_window);
@@ -329,32 +372,14 @@ int main(int, char**)
 			ImGui::End();
 		}
 
-        // The SDHR framebuffer has a specific resolution
-        // If the resolution is lower than the window/monitor resolution,
-        // the image will be scaled in a fuzzy manner.
-        // Rescaling the framebuffer correctly will sharpen it at the cost of FPS
-        if (bRescaleSHDRFramebuffer)
-		{
-            if (oldWidth == 0)
-                glhelper->get_framebuffer_size(&oldWidth, &oldHeight);
-			glhelper->bind_framebuffer();
-			glhelper->rescale_framebuffer(sdhrManager->rendererOutputWidth, sdhrManager->rendererOutputHeight);
-			glhelper->unbind_framebuffer();
-        }
-        else
-        {
-            if (oldWidth > 0)
-            {
-				glhelper->bind_framebuffer();
-				glhelper->rescale_framebuffer(oldWidth, oldHeight);
-				glhelper->unbind_framebuffer();
-            }
-        }
-
         // Add the rendered image, using borders
         int _w, _h;
         SDL_GetWindowSize(window, &_w, &_h);
-        auto margin = ImVec2((_w - sdhrManager->rendererOutputWidth) / 2, (_h - sdhrManager->rendererOutputHeight) / 2);
+        auto margin = ImVec2(0,0);
+        if (sdhrManager->IsSdhrEnabled())
+            margin.x = margin.y = sdhrManager->windowMargins;
+        else
+			margin.x = margin.y = a2VideoManager->windowMargins;
 		ImGui::GetBackgroundDrawList()->AddImage(
 			(void*)glhelper->get_output_texture_id(),
 			margin,

@@ -1,8 +1,9 @@
 #include "A2Window.h"
+#include "common.h"
 
 void A2Window::Reset()
 {
-	enabled = 0;
+	enabled = false;
 	tile_dim = uXY({ 0,0 });
 	tile_count = uXY({ 0,0 });
 }
@@ -14,27 +15,52 @@ void A2Window::Define(uint8_t _index, uXY _screen_count,
 {
 	this->Reset();
 	index = _index;
-	screen_count = _screen_count;
 	tile_dim = _tile_dim;
 	tile_count = _tile_count;
 	data = _data;
 	datasize = _datasize;
 	shaderProgram = _shaderProgram;
+	bNeedsGPUDataUpdate = true;
 
-	// Create the vertices that make up a rectangle of the complete screen
-	auto width = _tile_count.x * _tile_dim.x;
-	auto height = _tile_count.y * _tile_dim.y;
+	this->Resize(_screen_count.x, _screen_count.y, true);
+}
+
+void A2Window::Resize(uint32_t max_width, uint32_t max_height, bool force)
+{
+	float ratio = 1.f;
+	if (force)
+	{
+		ratio = float(max_width) / max_height;
+	}
+	else {
+		if ((screen_count.x != 0) && (screen_count.y != 0))
+			ratio = ((float)screen_count.x) / screen_count.y;	// Keep the same ratio as before
+		else	// default normal (not double stuff)
+			ratio = ((float)_A2_TEXT40_CHAR_WIDTH) / _A2_TEXT40_CHAR_HEIGHT;
+	}
+	// Now determine the maximum size the window can have
+	// bound by max_width and max_height
+	float reqRatio = ((float)max_width) / max_height;
+	if (ratio > reqRatio)	// Asking to have bigger height
+	{
+		screen_count.x = max_width;
+		screen_count.y = screen_count.x / ratio;
+	}
+	else {		// Asking to have bigger width
+		screen_count.y = max_height;
+		screen_count.x = screen_count.y * ratio;
+	}
 
 	float z_val = (float)(index);	// z plane is 0-255.
-	this->vertices.push_back(glm::vec4(0, height, z_val, 1));
-	this->vertices.push_back(glm::vec4(width, 0, z_val, 0));
-	this->vertices.push_back(glm::vec4(width, height, z_val, 0));
-	this->vertices.push_back(glm::vec4(0, height, z_val, 1));
-	this->vertices.push_back(glm::vec4(0, 0, z_val, 0));
-	this->vertices.push_back(glm::vec4(width, 0, z_val, 0));
 
+	this->vertices.clear();
+	this->vertices.push_back(glm::vec4(0, screen_count.y, z_val, 1));
+	this->vertices.push_back(glm::vec4(screen_count.x, 0, z_val, 0));
+	this->vertices.push_back(glm::vec4(screen_count.x, screen_count.y, z_val, 0));
+	this->vertices.push_back(glm::vec4(0, screen_count.y, z_val, 1));
+	this->vertices.push_back(glm::vec4(0, 0, z_val, 0));
+	this->vertices.push_back(glm::vec4(screen_count.x, 0, z_val, 0));
 	bNeedsGPUVertexUpdate = true;
-	bNeedsGPUDataUpdate = true;
 }
 
 void A2Window::Update()

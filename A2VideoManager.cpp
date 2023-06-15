@@ -11,7 +11,6 @@
 #endif
 
 #include "OpenGLHelper.h"
-#include "camera.h"
 #include "SDHRManager.h"
 
 // below because "The declaration of a static data member in its class definition is not a definition"
@@ -19,7 +18,6 @@ A2VideoManager* A2VideoManager::s_instance;
 
 static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
 
-static Camera camera;
 static Shader shader_a2video_text = Shader();
 static Shader shader_a2video_lores = Shader();
 static Shader shader_a2video_hgr = Shader();
@@ -86,15 +84,6 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 
 void A2VideoManager::Initialize()
 {
-	// Reset the camera
-	camera = Camera(
-		rendererOutputWidth / 2.f,
-		rendererOutputHeight / 2.f,					// x,y
-		A2VIDEO_TOTAL_COUNT,						// z
-		0.f, 1.f, 0.f,								// upVector xyz
-		-90.f,										// yaw
-		0.f											// pitch
-	);
 
 	// Set up the image assets (textures)
 	// There's no need for tileset records since we know exactly
@@ -113,14 +102,23 @@ void A2VideoManager::Initialize()
 	// TEXT1
 	windows[A2VIDEO_TEXT1].Define(
 		A2VIDEO_TEXT1,
-		uXY({ (uint32_t)rendererOutputWidth , (uint32_t)rendererOutputHeight }),
-		uXY({ _A2_TEXT40_CHAR_WIDTH*5, _A2_TEXT40_CHAR_HEIGHT*5 }),	// The charmap texture has tiles 5x the original size
-		uXY({ 40, 24 }),
+		uXY({ (uint32_t)(
+			_A2VIDEO_MIN_WIDTH * _A2VIDEO_DEFAULT_ZOOM) ,
+			(uint32_t)(_A2VIDEO_MIN_HEIGHT * _A2VIDEO_DEFAULT_ZOOM) }),
+		uXY({
+			_A2_TEXT40_CHAR_WIDTH*5, 
+			_A2_TEXT40_CHAR_HEIGHT*5 }),	// The charmap texture has tiles 5x the original size
+		uXY({ 
+			40, 
+			24 }),
 		SDHRManager::GetInstance()->GetApple2MemPtr() + 0x400,		// Pointer to TEXT1
 		0x400,														// Size of TEXT1
 		&shader_a2video_text
 	);
-	// Activate TEXT1
+
+	// TODO: Make TEXT2, GR1, ...
+
+	// Activate TEXT1 by default
 	windows[A2VIDEO_TEXT1].enabled = true;
 	// tell the next Render() call to run initialization routines
 	bShouldInitializeRender = true;
@@ -192,10 +190,6 @@ void A2VideoManager::Render()
 
 	oglh->setup_render();
 
-	if (bDidChangeResolution) {
-		oglh->rescale_framebuffer(rendererOutputWidth, rendererOutputHeight);
-	}
-
 	// activate the correct shader
 	auto currentShader = windows[activeVideoMode].GetShaderProgram();
 	currentShader->use();
@@ -234,17 +228,21 @@ void A2VideoManager::Render()
 	// Assign the sdhr global (to all windows) uniforms
 	currentShader->setInt("ticks", SDL_GetTicks());
 
-	// Render the windows (i.e. the meshes with the windows stencils)
-	auto mat_proj = glm::ortho<float>(-rendererOutputWidth / 2, rendererOutputWidth / 2, 
-		-rendererOutputHeight / 2, rendererOutputHeight / 2, 0, 256);
-
 	for (auto& _w : this->windows) {
-		_w.Render(camera.GetViewMatrix(), mat_proj);
+		_w.Render(oglHelper->camera.GetViewMatrix(), oglHelper->mat_proj);
 	}
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
 	}
 	oglh->cleanup_render();
-	bDidChangeResolution = false;
+}
+
+void A2VideoManager::Resize(uint32_t max_width, uint32_t max_height)
+{
+	// TODO: Check behavior of double res
+	for (size_t i = 0; i < A2VIDEO_TOTAL_COUNT; i++)
+	{
+		windows[i].Resize(max_width, max_height);
+	}
 }
 

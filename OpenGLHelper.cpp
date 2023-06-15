@@ -10,9 +10,6 @@
 // below because "The declaration of a static data member in its class definition is not a definition"
 OpenGLHelper* OpenGLHelper::s_instance;
 
-static uint32_t fb_width = 0;
-static uint32_t fb_height = 0;
-
 //////////////////////////////////////////////////////////////////////////
 // Basic singleton methods
 //////////////////////////////////////////////////////////////////////////
@@ -86,41 +83,6 @@ size_t OpenGLHelper::get_texture_id_at_slot(uint8_t slot)
 	return texid;
 }
 
-// TODO: testing, remove
-/*
-void OpenGLHelper::create_vertices()
-{
-	// TODO: Create vertices from the window command
-	// Assign the texture id to each vertex as well
-
-	float quadVertices[] = { // vertex attributes for a quad
-		// positions   // texCoords
-		-0.4f,  0.4f,  0.0f, 0.4f,
-		-0.4f, -0.4f,  0.0f, 0.0f,
-		 0.4f, -0.4f,  0.4f, 0.0f,
-
-		-0.4f,  0.4f,  0.0f, 0.4f,
-		 0.4f, -0.4f,  0.4f, 0.0f,
-		 0.4f,  0.4f,  0.4f, 0.4f
-	};
-
-	glGenVertexArrays(1, &VAO);
-	glBindVertexArray(VAO);
-
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-
-}
-*/
-
 void OpenGLHelper::create_framebuffer(uint32_t width, uint32_t height)
 {
 	// regenerate the framebuffer if different size
@@ -134,20 +96,18 @@ void OpenGLHelper::create_framebuffer(uint32_t width, uint32_t height)
 
 	glGenFramebuffers(1, &FBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-	glViewport(0, 0, width, height);
-
-	fb_width = width;
-	fb_height = height;
+	glViewport(0, 0, fb_width, fb_height);
 
 	// bind the output texture
 	// every time the framebuffer is bound, the output texture will be already bound
 	glGenTextures(1, &output_texture_id);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, fb_width, fb_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);
+	bDidChangeResolution = true;
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!\n";
@@ -187,12 +147,7 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 	glBindTexture(GL_TEXTURE_2D, 0);
 	fb_width = width;
 	fb_height = height;
-}
-
-void OpenGLHelper::get_framebuffer_size(uint32_t* width, uint32_t* height)
-{
-	*width = fb_width;
-	*height = fb_height;
+	bDidChangeResolution = true;
 }
 
 void OpenGLHelper::setup_render()
@@ -204,11 +159,76 @@ void OpenGLHelper::setup_render()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL setup_render error: " << glerr << std::endl;
 	}
+
+	// Check if we need to resize
+	if ((fb_width_requested != UINT32_MAX) && (fb_height_requested != UINT32_MAX))
+	{
+		if ((fb_width_requested != fb_width) || (fb_height_requested == fb_height))
+		{
+			rescale_framebuffer(fb_width_requested, fb_height_requested);
+			fb_width_requested = UINT32_MAX;
+			fb_height_requested = UINT32_MAX;
+		}
+	}
+
+// bUsePerspective toggle:
+// Test using a prespective so we can zoom back and forth easily
+// perspective uses (fov, aspect, near, far)
+// Default FOV is 45 degrees
+
+	if (bUsePerspective && (bDidChangeResolution || (!bIsUsingPerspective)))
+	{
+		camera.Position.x = fb_width / 2.f;
+		camera.Position.y = fb_height / 2.f;
+		camera.Position.z = glm::cos(glm::radians(ZOOM)) * fb_width;
+		camera.Up = glm::vec3(0.f, 1.f, 0.f);
+		camera.Yaw = -90.f;
+		camera.Pitch = 0.f;
+		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)fb_width / fb_height, 0, 256);
+		bIsUsingPerspective = bUsePerspective;
+	}
+	else if ((!bUsePerspective) && (bDidChangeResolution || bIsUsingPerspective))
+	{
+		camera.Position.x = fb_width / 2.f;
+		camera.Position.y = fb_height / 2.f;
+		camera.Position.z = _SDHR_MAX_WINDOWS;
+		camera.Up = glm::vec3(0.f, 1.f, 0.f);
+		camera.Yaw = -90.f;
+		camera.Pitch = 0.f;
+		mat_proj = glm::ortho<float>(
+			-fb_width / 2, fb_width / 2,
+			-fb_height / 2, fb_height / 2,
+			0, 256);
+		bIsUsingPerspective = bUsePerspective;
+	}
+
+	// And always update the projection when in perspective due to the zoom state
+	if (bUsePerspective)
+		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)fb_width / fb_height, 0, 256);
+
 }
 
 void OpenGLHelper::cleanup_render()
 {
 	glUseProgram(0);
 	unbind_framebuffer();
+	bDidChangeResolution = false;
 }
 
+// METHODS THAT CAN BE CALLED FROM ANY THREAD
+bool OpenGLHelper::request_framebuffer_resize(uint32_t width, uint32_t height)
+{
+	if ((width == fb_width) && (height == fb_height))
+		return false;	// no change
+	if ((width == UINT32_MAX) || (height == UINT32_MAX))
+		return false;	// don't request ridiculous sizes that are used as "no resize requested"
+	fb_width_requested = width;
+	fb_height_requested = height;
+	return true;
+}
+
+void OpenGLHelper::get_framebuffer_size(uint32_t* width, uint32_t* height)
+{
+	*width = fb_width;
+	*height = fb_height;
+}

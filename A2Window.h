@@ -5,6 +5,9 @@
 #include <vector>
 #include "shader.h"
 
+#define _A2_TEXT40_CHAR_WIDTH 7
+#define _A2_TEXT40_CHAR_HEIGHT 8
+
 class A2Window
 {
 public:
@@ -28,6 +31,7 @@ public:
 		uXY _tile_dim, uXY _tile_count,
 		uint8_t* _data, uint32_t _datasize,
 		Shader* _shaderProgram);
+	void Resize(uint32_t max_width, uint32_t max_height, bool force = false);
 	void Update();
 	void Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj);
 
