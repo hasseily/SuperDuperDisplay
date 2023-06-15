@@ -129,9 +129,18 @@ void A2Window::Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 	if (!enabled)
 		return;
 	GLenum glerr;
-	glUseProgram(shaderProgram->ID);
+	shaderProgram->use();
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
+		return;
+	}
+
 	glBindVertexArray(VAO);
 
+	// Assign the textures
+	shaderProgram->setInt("a2FontTexture", _SDHR_START_TEXTURES - GL_TEXTURE0);
+
+	shaderProgram->setInt("ticks", SDL_GetTicks());
 	shaderProgram->setVec2("windowBottomRight", glm::vec2(screen_count.x, screen_count.y));
 	shaderProgram->setVec2u("tileCount", tile_count.x, tile_count.y);
 	shaderProgram->setVec2u("tileSize", tile_dim.x, tile_dim.y);

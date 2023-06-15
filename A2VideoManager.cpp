@@ -190,14 +190,6 @@ void A2VideoManager::Render()
 
 	oglh->setup_render();
 
-	// activate the correct shader
-	auto currentShader = windows[activeVideoMode].GetShaderProgram();
-	currentShader->use();
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
-		return;
-	}
-
 	// Initialization routine runs only once on init (or re-init)
 	// We do that here because we know the framebuffer is bound, and everything
 	// for drawing the SDHR stuff is active
@@ -218,16 +210,6 @@ void A2VideoManager::Render()
 	for (auto& _w : this->windows) {
 		_w.Update();
 	}
-
-	// Assign the list of all the textures to the shader's "tilesTexture" uniform
-	auto texUniformId = glGetUniformLocation(currentShader->ID, "tilesTexture");
-	glUniform1i(texUniformId, _SDHR_START_TEXTURES - GL_TEXTURE0);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
-	}
-
-	// Assign the sdhr global (to all windows) uniforms
-	currentShader->setInt("ticks", SDL_GetTicks());
 
 	for (auto& _w : this->windows) {
 		_w.Render(oglHelper->camera.GetViewMatrix(), oglHelper->mat_proj);

@@ -32,7 +32,7 @@ const int textRow[24]= int[24](
 );
 
 // Global uniforms assigned in A2VideoManager
-uniform sampler2D tilesTexture;
+uniform sampler2D a2FontTexture;
 uniform int ticks;                  // ms since start
 
 // Window-level uniforms assigned in SDHRWindow
@@ -79,12 +79,12 @@ void main()
     float a_inverse = 1.0 - step(float(0x40), charVal);
     float a_flash = (1.0 - step(float(0x40), charVal)) * (1.0 - a_inverse);
 
-    ivec2 textureSize2d = textureSize(tilesTexture,0);
+    ivec2 textureSize2d = textureSize(a2FontTexture,0);
     // what's our character's starting origin in the character map?
     uvec2 charOrigin = uvec2(charVal & 0xF, charVal >> 4) * tileSize;
 
     // Now get the texture color, using the tile uv origin and this fragment's offset
-    vec4 tex = texture(tilesTexture, (charOrigin + fragOffset) / textureSize2d);
+    vec4 tex = texture(a2FontTexture, (charOrigin + fragOffset) / textureSize2d);
 
     float isFlashing =  a_flash * ((ticks / 310) % 2);    // Flash every 310ms
     // get the color of flashing or the one above
