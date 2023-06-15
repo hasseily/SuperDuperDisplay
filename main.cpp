@@ -195,11 +195,6 @@ int main(int, char**)
                     fbWidth + 2 * sdhrManager->windowMargins,
                     fbHeight + 2 * sdhrManager->windowMargins);
             }
-            else {
-				SDL_SetWindowSize(window,
-					fbWidth + 2 * a2VideoManager->windowMargins,
-					fbHeight + 2 * a2VideoManager->windowMargins);
-            }
         }
 
 
@@ -220,25 +215,6 @@ int main(int, char**)
 			{
 				if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
 					done = true;
-				else if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    // Window was resized. Depending on SDHR or regular A2 video modes, figure out the
-                    // max acceptable render size and request of the renderer to change the size
-                    uint32_t reqWidth = event.window.data1;
-                    uint32_t reqHeight = event.window.data2;
-                    if (sdhrManager->IsSdhrEnabled())
-                    {
-                        reqWidth -= (2 * sdhrManager->windowMargins);
-						reqHeight -= (2 * sdhrManager->windowMargins);
-                        // TODO: Keep the SDHR ratio provided by SDHR_CMD_CHANGE_RESOLUTION
-                        glhelper->rescale_framebuffer(reqWidth, reqHeight);
-                    }
-                    else {  // Regular Apple 2 video modes
-						reqWidth -= (2 * a2VideoManager->windowMargins);
-						reqHeight -= (2 * a2VideoManager->windowMargins);
-                        a2VideoManager->Resize(reqWidth, reqHeight);
-						glhelper->rescale_framebuffer(reqWidth, reqHeight);
-                    }
-				}
 			}
                 break;
             case SDL_MOUSEMOTION:
@@ -302,7 +278,7 @@ int main(int, char**)
             a2VideoManager->Render();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glClearColor(0.f, 0.f, 0.f, 1.0f);
+		glClearColor(0.f, 0.f, 1.f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// Start the Dear ImGui frame
@@ -377,16 +353,50 @@ int main(int, char**)
         SDL_GetWindowSize(window, &_w, &_h);
         auto margin = ImVec2(0,0);
         if (sdhrManager->IsSdhrEnabled())
-            margin.x = margin.y = sdhrManager->windowMargins;
-        else
+        {
+			margin.x = margin.y = sdhrManager->windowMargins;
+			ImGui::GetBackgroundDrawList()->AddImage(
+				(void*)glhelper->get_output_texture_id(),
+				margin,
+				ImVec2(_w - margin.x, _h - margin.y),
+				ImVec2(0, 0),
+				ImVec2(1, 1)
+			);
+        }
+        else {
+            // In case of the Apple 2 video modes, let's make sure the
+            // rendered image is always in the proper ratio
+            // Start with the requested margins
 			margin.x = margin.y = a2VideoManager->windowMargins;
-		ImGui::GetBackgroundDrawList()->AddImage(
-			(void*)glhelper->get_output_texture_id(),
-			margin,
-			ImVec2(_w - margin.x, _h - margin.y),
-			ImVec2(0, 0),
-			ImVec2(1, 1)
-		);
+            auto _ss = a2VideoManager->ScreenSize();
+            float _rreq = (float)_w / _h;    // req ratio to use
+            int32_t _maxW = _w - (2 * margin.x);
+            int32_t _maxH = _h - (2 * margin.y);
+            if (_maxW < _A2VIDEO_MIN_WIDTH)
+                _maxW = _A2VIDEO_MIN_WIDTH;
+            if (_maxH < _A2VIDEO_MIN_HEIGHT)
+                _maxH = _A2VIDEO_MIN_HEIGHT;
+            float _r = (float)_ss.x / _ss.y;
+            int _newW, _newH;
+            if (_r < _rreq)    // requested a wider screen
+            {
+                _newW = _maxH * _r;
+                _newH = _maxH;
+            }
+            else {      // requested a narrower screen
+                _newW = _maxW;
+                _newH = _maxW / _r;
+            }
+			margin.x = (_w - _newW) / 2;
+			margin.y = (_h - _newH) / 2;
+			ImGui::GetBackgroundDrawList()->AddImage(
+				(void*)glhelper->get_output_texture_id(),
+				margin,
+				ImVec2(margin.x + _newW, margin.y + _newH),
+				ImVec2(0, 0),
+				ImVec2(1, 1)
+			);
+        }
 
 		// Rendering
 		ImGui::Render();

@@ -54,7 +54,7 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 	}
 	// NOTE: May need to generate mipmaps in case we want to allow zooming in-out
 	// But then we need to change the GL_TEXTURE_MIN_FILTER to GL_XXX_MIPMAP_XXX
-	glGenerateMipmap(GL_TEXTURE_2D);
+	//glGenerateMipmap(GL_TEXTURE_2D);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

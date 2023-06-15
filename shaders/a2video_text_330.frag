@@ -35,17 +35,13 @@ const int textRow[24]= int[24](
 uniform sampler2D a2FontTexture;
 uniform int ticks;                  // ms since start
 
-// Window-level uniforms assigned in SDHRWindow
-vec2 windowTopLeft = vec2(0);    // Corners of window in model coordinates (pixels)
-uniform vec2 windowBottomRight;
 
 // Mesh-level uniforms assigned in MosaicMesh
 uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform uvec2 tileSize;
 uniform usampler2D DBTEX;        // Apple 2e's memory, starting at 0x400 for TEXT1 and 0x800 for TEXT2
                                  // Unsigned int sampler!
-
-in vec3 vFragPos;       // The fragment position in model coordinates (pixels)
+in vec2 vFragPos;       // The fragment position in pixels
 in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
 
 out vec4 fragColor;
@@ -56,7 +52,7 @@ void main()
 {
     // first figure out which mosaic tile this fragment is part of
         // Calculate the position of the fragment in tile intervals
-    vec2 fTileColRow = (vFragPos).xy / tileSize;
+    vec2 fTileColRow = vFragPos / tileSize;
         // Row and column number of the tile containing this fragment
     ivec2 tileColRow = ivec2(floor(fTileColRow));
         // Fragment offset to tile origin, in pixels
@@ -89,5 +85,5 @@ void main()
     float isFlashing =  a_flash * ((ticks / 310) % 2);    // Flash every 310ms
     // get the color of flashing or the one above
     fragColor = ((1 - tex) * isFlashing) + (tex * (1 - isFlashing));
-    fragColor = vec4(vColor, 1.f);
+    // fragColor = vec4(vColor, 1.f);
 }

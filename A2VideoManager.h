@@ -70,9 +70,9 @@ public:
 	void SelectVideoMode(A2VideoMode_e mode);
 	void ToggleMixedMode();
 	A2VideoMode_e ActiveVideoMode();
+	uXY ScreenSize() { return windows[activeVideoMode].Get_screen_count(); }
 
 	void Render();	// render whatever mode is active (enabled windows)
-	void Resize(uint32_t max_width, uint32_t max_height);
 
 	// public singleton code
 	static A2VideoManager* GetInstance()

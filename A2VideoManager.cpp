@@ -100,6 +100,7 @@ void A2VideoManager::Initialize()
 	// Initialize windows and meshes
 	
 	// TEXT1
+	// TODO: REMOVE THE ZOOMS, AND REPLACE THE FONT TEXTURES WITH ORIGINAL SIZE
 	windows[A2VIDEO_TEXT1].Define(
 		A2VIDEO_TEXT1,
 		uXY({ (uint32_t)(
@@ -212,7 +213,7 @@ void A2VideoManager::Render()
 	}
 
 	for (auto& _w : this->windows) {
-		_w.Render(oglHelper->camera.GetViewMatrix(), oglHelper->mat_proj);
+		_w.Render();
 	}
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
@@ -220,12 +221,4 @@ void A2VideoManager::Render()
 	oglh->cleanup_render();
 }
 
-void A2VideoManager::Resize(uint32_t max_width, uint32_t max_height)
-{
-	// TODO: Check behavior of double res
-	for (size_t i = 0; i < A2VIDEO_TOTAL_COUNT; i++)
-	{
-		windows[i].Resize(max_width, max_height);
-	}
-}
 

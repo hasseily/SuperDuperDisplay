@@ -1,5 +1,6 @@
 #include "A2Window.h"
 #include "common.h"
+#include <SDL_timer.h>
 
 void A2Window::Reset()
 {
@@ -15,6 +16,7 @@ void A2Window::Define(uint8_t _index, uXY _screen_count,
 {
 	this->Reset();
 	index = _index;
+	screen_count = _screen_count;
 	tile_dim = _tile_dim;
 	tile_count = _tile_count;
 	data = _data;
@@ -22,45 +24,15 @@ void A2Window::Define(uint8_t _index, uXY _screen_count,
 	shaderProgram = _shaderProgram;
 	bNeedsGPUDataUpdate = true;
 
-	this->Resize(_screen_count.x, _screen_count.y, true);
-}
+	vertices[0].PixelPos = glm::vec2(0				, screen_count.y);	// top left
+	vertices[1].PixelPos = glm::vec2(screen_count.x	, 0				);	// bottom right
+	vertices[2].PixelPos = glm::vec2(screen_count.x	, screen_count.y);	// top right
+	vertices[3].PixelPos = glm::vec2(0				, screen_count.y);	// top left
+	vertices[4].PixelPos = glm::vec2(0				, 0				);	// bottom left
+	vertices[5].PixelPos = glm::vec2(screen_count.x	, 0				);	// bottom right
 
-void A2Window::Resize(uint32_t max_width, uint32_t max_height, bool force)
-{
-	float ratio = 1.f;
-	if (force)
-	{
-		ratio = float(max_width) / max_height;
-	}
-	else {
-		if ((screen_count.x != 0) && (screen_count.y != 0))
-			ratio = ((float)screen_count.x) / screen_count.y;	// Keep the same ratio as before
-		else	// default normal (not double stuff)
-			ratio = ((float)_A2_TEXT40_CHAR_WIDTH) / _A2_TEXT40_CHAR_HEIGHT;
-	}
-	// Now determine the maximum size the window can have
-	// bound by max_width and max_height
-	float reqRatio = ((float)max_width) / max_height;
-	if (ratio > reqRatio)	// Asking to have bigger height
-	{
-		screen_count.x = max_width;
-		screen_count.y = screen_count.x / ratio;
-	}
-	else {		// Asking to have bigger width
-		screen_count.y = max_height;
-		screen_count.x = screen_count.y * ratio;
-	}
-
-	float z_val = (float)(index);	// z plane is 0-255.
-
-	this->vertices.clear();
-	this->vertices.push_back(glm::vec4(0, screen_count.y, z_val, 1));
-	this->vertices.push_back(glm::vec4(screen_count.x, 0, z_val, 0));
-	this->vertices.push_back(glm::vec4(screen_count.x, screen_count.y, z_val, 0));
-	this->vertices.push_back(glm::vec4(0, screen_count.y, z_val, 1));
-	this->vertices.push_back(glm::vec4(0, 0, z_val, 0));
-	this->vertices.push_back(glm::vec4(screen_count.x, 0, z_val, 0));
 	bNeedsGPUVertexUpdate = true;
+
 }
 
 void A2Window::Update()
@@ -85,12 +57,17 @@ void A2Window::Update()
 	{
 		// load data into vertex buffers
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec4), &vertices[0], GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(A2Vertex), &vertices[0], GL_STATIC_DRAW);
 
 		// set the vertex attribute pointers
-		// vertex Positions: position 0, size 3
+		// vertex relative Positions: position 0, size 2
+		// (vec4 values x and y)
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec4), (void*)0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(A2Vertex), (void*)0);
+		// vertex pixel Positions: position 1, size 2
+		// (vec4 values z and w)
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(A2Vertex), (void*)offsetof(A2Vertex, PixelPos));
 	}
 
 	if (bNeedsGPUDataUpdate)
@@ -124,7 +101,7 @@ void A2Window::Update()
 	bNeedsGPUDataUpdate = false;
 }
 
-void A2Window::Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
+void A2Window::Render()
 {
 	if (!enabled)
 		return;
@@ -140,13 +117,10 @@ void A2Window::Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 	// Assign the textures
 	shaderProgram->setInt("a2FontTexture", _SDHR_START_TEXTURES - GL_TEXTURE0);
 
+	shaderProgram->setInt("index", this->index);
 	shaderProgram->setInt("ticks", SDL_GetTicks());
-	shaderProgram->setVec2("windowBottomRight", glm::vec2(screen_count.x, screen_count.y));
 	shaderProgram->setVec2u("tileCount", tile_count.x, tile_count.y);
 	shaderProgram->setVec2u("tileSize", tile_dim.x, tile_dim.y);
-
-	glm::mat4 mat_final = mat_proj * mat_camera;
-	shaderProgram->setMat4("transform", mat_final);
 
 	// point the uniform at the tiles data texture (GL_TEXTURE0 + _SDHR_TBO_TEXUNIT)
 	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
