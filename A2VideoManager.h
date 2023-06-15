@@ -54,7 +54,7 @@ public:
 	A2Window windows[A2VIDEO_TOTAL_COUNT];
 
 	// Margins when rendering in a window (pixels)
-	int windowMargins = 0;
+	int windowMargins = 30;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods

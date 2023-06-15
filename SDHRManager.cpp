@@ -347,7 +347,8 @@ void SDHRManager::Render()
 
 	defaultWindowShaderProgram.use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glUseProgram error: " << glerr << std::endl;
+		std::cerr << "OpenGL SDHR glUseProgram error: " << glerr << std::endl;
+		return;
 	}
 
 	// Initialization routine runs only once on init (or re-init)

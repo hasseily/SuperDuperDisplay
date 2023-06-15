@@ -194,7 +194,8 @@ void A2VideoManager::Render()
 	auto currentShader = windows[activeVideoMode].GetShaderProgram();
 	currentShader->use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glUseProgram error: " << glerr << std::endl;
+		std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
+		return;
 	}
 
 	// Initialization routine runs only once on init (or re-init)
