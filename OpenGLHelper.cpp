@@ -139,8 +139,8 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
 	glViewport(0, 0, width, height);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL rescale_framebuffer error: " << glerr << std::endl;
 	}
@@ -148,6 +148,8 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 	fb_width = width;
 	fb_height = height;
 	bDidChangeResolution = true;
+	if (callbackResolutionChange)
+		callbackResolutionChange();
 }
 
 void OpenGLHelper::setup_render()
@@ -196,8 +198,8 @@ void OpenGLHelper::setup_render()
 		camera.Yaw = -90.f;
 		camera.Pitch = 0.f;
 		mat_proj = glm::ortho<float>(
-			-fb_width / 2, fb_width / 2,
-			-fb_height / 2, fb_height / 2,
+			-(float)fb_width / 2, (float)fb_width / 2,
+			-(float)fb_height / 2, (float)fb_height / 2,
 			0, 256);
 		bIsUsingPerspective = bUsePerspective;
 	}
@@ -205,7 +207,6 @@ void OpenGLHelper::setup_render()
 	// And always update the projection when in perspective due to the zoom state
 	if (bUsePerspective)
 		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)fb_width / fb_height, 0, 256);
-
 }
 
 void OpenGLHelper::cleanup_render()

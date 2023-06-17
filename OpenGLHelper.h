@@ -34,7 +34,7 @@ public:
 	// METHODS THAT CAN BE CALLED FROM ANY THREAD
 	bool request_framebuffer_resize(uint32_t width, uint32_t height);
 	void get_framebuffer_size(uint32_t* width, uint32_t* height);
-	bool GetDidChangeResolution() { return bDidChangeResolution; };
+	void set_callback_changed_resolution(void(*func)()) { callbackResolutionChange = func; };
 
 	// The created texture ids (max is _SDHR_MAX_TEXTURES)
 	std::vector<GLuint>v_texture_ids;
@@ -49,8 +49,8 @@ public:
 	);
 	// Projection matrix (left, right, bottom, top, near, far)
 	glm::mat4 mat_proj = glm::ortho<float>(
-		-_SCREEN_DEFAULT_WIDTH / 2, _SCREEN_DEFAULT_WIDTH / 2,
-		-_SCREEN_DEFAULT_HEIGHT / 2, _SCREEN_DEFAULT_HEIGHT / 2,
+		-(float)_SCREEN_DEFAULT_WIDTH / 2, (float)_SCREEN_DEFAULT_WIDTH / 2,
+		-(float)_SCREEN_DEFAULT_HEIGHT / 2, (float)_SCREEN_DEFAULT_HEIGHT / 2,
 		0, 256);
 
 	// Debugging attributes
@@ -68,6 +68,8 @@ private:
 	{
 		Initialize();
 	}
+
+	void (*callbackResolutionChange)();
 
 	GLuint output_texture_id;
 //	GLuint VAO;	// for testing

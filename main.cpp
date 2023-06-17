@@ -28,7 +28,24 @@
 #include "A2VideoManager.h"
 #include "OpenGLHelper.h"
 
+static uint32_t fbWidth = 0;
+static uint32_t fbHeight = 0;
+static SDL_Window* window;
 
+void callback_resolutionChange()
+{
+	auto glhelper = OpenGLHelper::GetInstance();
+	auto sdhrManager = SDHRManager::GetInstance();
+	auto a2videoManager = A2VideoManager::GetInstance();
+	// In case the window was program-resized, tell SDL to change the window size
+	glhelper->get_framebuffer_size(&fbWidth, &fbHeight);
+	auto margins = (sdhrManager->IsSdhrEnabled()
+		? sdhrManager->windowMargins
+		: a2videoManager->windowMargins);
+	SDL_SetWindowSize(window,
+		fbWidth + 2 * margins,
+		fbHeight + 2 * margins);
+}
 
 // Main code
 int main(int, char**)
@@ -84,7 +101,7 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _SCREEN_DEFAULT_WIDTH, _SCREEN_DEFAULT_HEIGHT, window_flags);
+    window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _SCREEN_DEFAULT_WIDTH, _SCREEN_DEFAULT_HEIGHT, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
@@ -154,9 +171,6 @@ int main(int, char**)
     bool did_press_quit = false;
 	int _slotnum = 0;
 
-	static uint32_t fbWidth = 0;
-	static uint32_t fbHeight = 0;
-
 	auto sdhrManager = SDHRManager::GetInstance();
     auto a2VideoManager = A2VideoManager::GetInstance();
 	auto glhelper = OpenGLHelper::GetInstance();
@@ -169,6 +183,8 @@ int main(int, char**)
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
     uint64_t dt_LAST = 0;
 	float deltaTime = 0.f;
+
+    glhelper->set_callback_changed_resolution(&callback_resolutionChange);
 
     // Main loop
     bool done = false;
@@ -184,19 +200,6 @@ int main(int, char**)
         dt_LAST = dt_NOW;
         dt_NOW = SDL_GetPerformanceCounter();
 		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
-        
-        // In case the window was program-resized, tell SDL to change the window size
-        if (glhelper->GetDidChangeResolution())
-        {
-            glhelper->get_framebuffer_size(&fbWidth, &fbHeight);
-            if (sdhrManager->IsSdhrEnabled())
-            {
-                SDL_SetWindowSize(window,
-                    fbWidth + 2 * sdhrManager->windowMargins,
-                    fbHeight + 2 * sdhrManager->windowMargins);
-            }
-        }
-
 
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -350,7 +353,7 @@ int main(int, char**)
 
         // Add the rendered image, using borders
         int _w, _h;
-        SDL_GetWindowSize(window, &_w, &_h);
+        SDL_GL_GetDrawableSize(window, &_w, &_h);
         auto margin = ImVec2(0,0);
         if (sdhrManager->IsSdhrEnabled())
         {
