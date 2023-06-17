@@ -27,9 +27,9 @@ public:
 		, screen_count(uXY({ 0,0 }))
 		, tile_dim(uXY({ 0,0 }))
 		, tile_count(uXY({ 0,0 }))
+		, shaderProgram(nullptr)
 		, data(nullptr)
 		, datasize(0)
-		, shaderProgram(nullptr)
 	{
 		// Assign the vertex array.
 		// The first 2 values are the relative XY, bound from -1 to 1.

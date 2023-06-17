@@ -31,7 +31,7 @@ UNAME_S := $(shell uname -s)
 LINUX_GL_LIBS = -lGL
 
 CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -Iglad
-CXXFLAGS += -g -Wall -Wformat
+CXXFLAGS += -Wall -Wformat -Wno-unused-function
 CONFIGFLAGS =
 LIBS =
 

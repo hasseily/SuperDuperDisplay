@@ -596,7 +596,6 @@ bool SDHRManager::ProcessCommands(void)
 			if (!CheckCommandLength(p, end, sizeof(DefineWindowCmd))) return false;
 			DefineWindowCmd* cmd = (DefineWindowCmd*)p;
 			SDHRWindow* r = windows + cmd->window_index;
-			auto sc = r->Get_screen_count();
 			r->Define(
 				uXY({ cmd->screen_xcount, cmd->screen_ycount }),
 				uXY({ cmd->tile_xdim, cmd->tile_ydim }),
@@ -791,7 +790,7 @@ bool SDHRManager::ProcessCommands(void)
 			ChangeResolutionCmd* cmd = (ChangeResolutionCmd*)p;
 			uint32_t maxW, maxH;
 			oglHelper->get_framebuffer_size(&maxW, &maxH);
-			if ((maxW != (int)cmd->width) || (maxH != (int)cmd->height))
+			if ((maxW != cmd->width) || (maxH != cmd->height))
 			{
 				// It will resize on the next main thread render
 				oglHelper->request_framebuffer_resize(cmd->width, cmd->height);
