@@ -60,13 +60,8 @@ public:
 	// Methods
 	//////////////////////////////////////////////////////////////////////////
 
-	void ToggleA2Video(bool value) {
-		bA2VideoEnabled = value;
-		if (bA2VideoEnabled)
-			bShouldInitializeRender = true;
-	}
-
 	void NotifyA2MemoryDidChange(uint32_t addr);	// Apple 2's memory changed at addr
+	void ToggleA2Video(bool value);
 	void SelectVideoMode(A2VideoMode_e mode);
 	void ToggleMixedMode();
 	A2VideoMode_e ActiveVideoMode();
@@ -106,7 +101,6 @@ private:
 	bool bA2VideoEnabled = true;			// Is standard Apple 2 video enabled?
 	bool bIsMixedMode = false;				// Mixed graphics and text mode
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
-	// routines like clearing out the image assets
 
 	A2VideoMode_e activeVideoMode = A2VIDEO_TEXT1;
 };

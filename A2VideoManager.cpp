@@ -136,6 +136,17 @@ void A2VideoManager::NotifyA2MemoryDidChange(uint32_t addr)
 		windows[A2VIDEO_TEXT1].bNeedsGPUDataUpdate = true;
 }
 
+void A2VideoManager::ToggleA2Video(bool value)
+{
+	bA2VideoEnabled = value;
+	if (bA2VideoEnabled)
+	{
+		auto scrSz = ScreenSize();
+		oglHelper->request_framebuffer_resize(scrSz.x, scrSz.y);
+		bShouldInitializeRender = true;
+	}
+}
+
 void A2VideoManager::SelectVideoMode(A2VideoMode_e mode)
 {
 	activeVideoMode = mode;
@@ -168,6 +179,8 @@ void A2VideoManager::SelectVideoMode(A2VideoMode_e mode)
 	default:
 		break;
 	}
+	auto scrSz = ScreenSize();
+	oglHelper->request_framebuffer_resize(scrSz.x, scrSz.y);
 }
 
 void A2VideoManager::ToggleMixedMode()
