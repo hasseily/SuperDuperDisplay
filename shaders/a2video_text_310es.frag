@@ -1,6 +1,7 @@
-#version 330 core
+#version 310 es
 
 precision mediump float;
+precision highp usampler2D;
 
 /*
 Regular Charset:
@@ -52,18 +53,19 @@ void main()
 {
     // first figure out which mosaic tile this fragment is part of
         // Calculate the position of the fragment in tile intervals
-    vec2 fTileColRow = vFragPos / tileSize;
+    vec2 fTileColRow = vFragPos / vec2(tileSize);
         // Row and column number of the tile containing this fragment
     ivec2 tileColRow = ivec2(floor(fTileColRow));
         // Fragment offset to tile origin, in pixels
-    vec2 fragOffset = ((fTileColRow - tileColRow) * tileSize);
+    vec2 fragOffset = ((fTileColRow - vec2(tileColRow)) * vec2(tileSize));
 
     // Next grab the data for that tile from the tilesBuffer
     // No need to rescale values because we're using GL_R8UI
     // The "texture" is split by 1kB-sized rows
     int offset = textRow[tileColRow.y] + tileColRow.x;
-    vec4 vChar = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0);
-    int charVal = int(vChar.r);    // the char byte value is just the r component
+    unsigned int charVal = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
+        // the char byte value is just the r component
+    float vCharVal = float(charVal);
 
     // TODO:    Check 0xC007 to switch to alternate charset
     //          Alternate charset doesn't do flashing
@@ -72,15 +74,15 @@ void main()
     // and if we need to flash
     // Determine if it's inverse when the char is below 0x40
     // And then if the char is below 0x80 and not inverse, it's flashing
-    float a_inverse = 1.0 - step(float(0x40), charVal);
-    float a_flash = (1.0 - step(float(0x40), charVal)) * (1.0 - a_inverse);
+    float a_inverse = 1.0 - step(float(0x40f), vCharVal);
+    float a_flash = (1.0 - step(float(0x40), vCharVal)) * (1.0 - a_inverse);
 
     ivec2 textureSize2d = textureSize(a2FontTexture,0);
     // what's our character's starting origin in the character map?
-    uvec2 charOrigin = uvec2(charVal & 0xF, charVal >> 4) * tileSize;
+    uvec2 charOrigin = uvec2(charVal & 0xFu, charVal >> 4) * tileSize;
 
     // Now get the texture color, using the tile uv origin and this fragment's offset
-    vec4 tex = texture(a2FontTexture, (charOrigin + fragOffset) / textureSize2d);
+    vec4 tex = texture(a2FontTexture, (vec2(charOrigin) + fragOffset) / vec2(textureSize2d));
 
     float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
     // get the color of flashing or the one above
