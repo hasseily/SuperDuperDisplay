@@ -2,6 +2,7 @@
 
 precision mediump float;
 precision highp usampler2D;
+precision highp int;
 
 /*
 Regular Charset:
@@ -47,8 +48,6 @@ in vec2 vFragPos;       // The fragment position in pixels
 
 out vec4 fragColor;
 
-in vec4 gl_FragCoord;
-
 void main()
 {
     // first figure out which mosaic tile this fragment is part of
@@ -63,7 +62,7 @@ void main()
     // No need to rescale values because we're using GL_R8UI
     // The "texture" is split by 1kB-sized rows
     int offset = textRow[tileColRow.y] + tileColRow.x;
-    unsigned int charVal = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
+    uint charVal = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
         // the char byte value is just the r component
     float vCharVal = float(charVal);
 

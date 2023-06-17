@@ -100,6 +100,7 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _SCREEN_DEFAULT_WIDTH, _SCREEN_DEFAULT_HEIGHT, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
@@ -167,7 +168,6 @@ int main(int, char**)
 	bool show_mem_upload_window = false;
 	bool show_sdhrinfo_window = true;
 	bool show_texture_window = false;
-    bool bRescaleSHDRFramebuffer = true;
     bool did_press_quit = false;
 	int _slotnum = 0;
 
@@ -307,7 +307,6 @@ int main(int, char**)
 				ImGui::Separator();
 				ImGui::Checkbox("Untextured Geometry", &glhelper->bDebugNoTextures);             // Show textures toggle
 				ImGui::Checkbox("Perspective Projection", &glhelper->bUsePerspective);       // Change projection type
-                ImGui::Checkbox("Rescale Framebuffer", &bRescaleSHDRFramebuffer);
 				ImGui::Separator();
 //				ImGui::Checkbox("Demo Window", &show_demo_window);
 				ImGui::Checkbox("Textures Window", &show_texture_window);
