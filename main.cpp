@@ -32,7 +32,7 @@ static uint32_t fbWidth = 0;
 static uint32_t fbHeight = 0;
 static SDL_Window* window;
 
-void callback_resolutionChange()
+void callback_resolutionChange(int w, int h)
 {
 	auto glhelper = OpenGLHelper::GetInstance();
 	auto sdhrManager = SDHRManager::GetInstance();
@@ -42,9 +42,11 @@ void callback_resolutionChange()
 	auto margins = (sdhrManager->IsSdhrEnabled()
 		? sdhrManager->windowMargins
 		: a2videoManager->windowMargins);
-	SDL_SetWindowSize(window,
-		fbWidth + 2 * margins,
-		fbHeight + 2 * margins);
+	SDL_DisplayMode displayMode;
+	SDL_GetWindowDisplayMode(window, &displayMode);
+    displayMode.w = w + 2 * margins;
+    displayMode.h = h + 2 * margins;
+    SDL_SetWindowDisplayMode(window, &displayMode);
 }
 
 // Main code
@@ -101,7 +103,7 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN | SDL_WINDOW_SHOWN);
     window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _SCREEN_DEFAULT_WIDTH, _SCREEN_DEFAULT_HEIGHT, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);

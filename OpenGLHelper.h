@@ -34,7 +34,7 @@ public:
 	// METHODS THAT CAN BE CALLED FROM ANY THREAD
 	bool request_framebuffer_resize(uint32_t width, uint32_t height);
 	void get_framebuffer_size(uint32_t* width, uint32_t* height);
-	void set_callback_changed_resolution(void(*func)()) { callbackResolutionChange = func; };
+	void set_callback_changed_resolution(void(*func)(int w, int h)) { callbackResolutionChange = func; };
 
 	// The created texture ids (max is _SDHR_MAX_TEXTURES)
 	std::vector<GLuint>v_texture_ids;
@@ -69,7 +69,7 @@ private:
 		Initialize();
 	}
 
-	void (*callbackResolutionChange)();
+	void (*callbackResolutionChange)(int w, int h);
 
 	GLuint output_texture_id;
 //	GLuint VAO;	// for testing

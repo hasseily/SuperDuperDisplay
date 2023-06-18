@@ -27,6 +27,7 @@
 *.lib
 
 # Executables
+SuperDuperDisplay
 *.exe
 *.out
 *.app

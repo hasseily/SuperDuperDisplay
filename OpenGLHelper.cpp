@@ -149,7 +149,7 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 	fb_height = height;
 	bDidChangeResolution = true;
 	if (callbackResolutionChange)
-		callbackResolutionChange();
+		callbackResolutionChange(width, height);
 }
 
 void OpenGLHelper::setup_render()
