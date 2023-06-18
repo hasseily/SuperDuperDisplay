@@ -107,7 +107,7 @@ int main(int, char**)
     window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _SCREEN_DEFAULT_WIDTH, _SCREEN_DEFAULT_HEIGHT, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
-    SDL_GL_SetSwapInterval(1); // Enable vsync
+    SDL_GL_SetSwapInterval(0); // Enable/disable vsync
 
     // Get the actual display size
 	SDL_DisplayMode displayMode;
