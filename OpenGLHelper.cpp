@@ -108,6 +108,7 @@ void OpenGLHelper::create_framebuffer(uint32_t width, uint32_t height)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);
 	bDidChangeResolution = true;
+	callbackResolutionChange(fb_width, fb_height);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!\n";
@@ -149,7 +150,7 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 	fb_height = height;
 	bDidChangeResolution = true;
 	if (callbackResolutionChange)
-		callbackResolutionChange(width, height);
+		callbackResolutionChange(fb_width, fb_height);
 }
 
 void OpenGLHelper::setup_render()
