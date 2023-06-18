@@ -24,12 +24,12 @@ void A2Window::Define(uint8_t _index, uXY _screen_count,
 	shaderProgram = _shaderProgram;
 	bNeedsGPUDataUpdate = true;
 
-	vertices[0].PixelPos = glm::vec2(0				, screen_count.y);	// top left
-	vertices[1].PixelPos = glm::vec2(screen_count.x	, 0				);	// bottom right
-	vertices[2].PixelPos = glm::vec2(screen_count.x	, screen_count.y);	// top right
-	vertices[3].PixelPos = glm::vec2(0				, screen_count.y);	// top left
-	vertices[4].PixelPos = glm::vec2(0				, 0				);	// bottom left
-	vertices[5].PixelPos = glm::vec2(screen_count.x	, 0				);	// bottom right
+	vertices[0].PixelPos = glm::vec2(0				, 0);	// top left
+	vertices[1].PixelPos = glm::vec2(screen_count.x	, screen_count.y);	// bottom right
+	vertices[2].PixelPos = glm::vec2(screen_count.x	, 0);	// top right
+	vertices[3].PixelPos = glm::vec2(0				, 0);	// top left
+	vertices[4].PixelPos = glm::vec2(0				, screen_count.y);	// bottom left
+	vertices[5].PixelPos = glm::vec2(screen_count.x	, screen_count.y);	// bottom right
 
 	bNeedsGPUVertexUpdate = true;
 
@@ -120,7 +120,7 @@ void A2Window::Render()
 	shaderProgram->setInt("index", this->index);
 	shaderProgram->setInt("ticks", SDL_GetTicks());
 	shaderProgram->setVec2u("tileCount", tile_count.x, tile_count.y);
-	shaderProgram->setVec2u("tileSize", tile_dim.x, tile_dim.y);
+	shaderProgram->setVec2u("tileSize", tile_dim.x * _A2VIDEO_DEFAULT_ZOOM, tile_dim.y * _A2VIDEO_DEFAULT_ZOOM);
 
 	// point the uniform at the tiles data texture (GL_TEXTURE0 + _SDHR_TBO_TEXUNIT)
 	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);

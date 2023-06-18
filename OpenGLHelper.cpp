@@ -10,6 +10,8 @@
 // below because "The declaration of a static data member in its class definition is not a definition"
 OpenGLHelper* OpenGLHelper::s_instance;
 
+static GLint currentShaderProgram = 0;
+
 //////////////////////////////////////////////////////////////////////////
 // Basic singleton methods
 //////////////////////////////////////////////////////////////////////////
@@ -156,6 +158,7 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 void OpenGLHelper::setup_render()
 {
 	GLenum glerr;
+/*
 	bind_framebuffer();
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -172,12 +175,14 @@ void OpenGLHelper::setup_render()
 			fb_width_requested = UINT32_MAX;
 			fb_height_requested = UINT32_MAX;
 		}
-	}
+	}*/
 
 // bUsePerspective toggle:
 // Test using a prespective so we can zoom back and forth easily
 // perspective uses (fov, aspect, near, far)
 // Default FOV is 45 degrees
+
+	glGetIntegerv(GL_CURRENT_PROGRAM, &currentShaderProgram);
 
 	if (bUsePerspective && (bDidChangeResolution || (!bIsUsingPerspective)))
 	{
@@ -212,8 +217,8 @@ void OpenGLHelper::setup_render()
 
 void OpenGLHelper::cleanup_render()
 {
-	glUseProgram(0);
-	unbind_framebuffer();
+	glUseProgram(currentShaderProgram);
+	// unbind_framebuffer();
 	bDidChangeResolution = false;
 }
 
