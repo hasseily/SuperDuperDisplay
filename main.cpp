@@ -103,7 +103,13 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN | SDL_WINDOW_SHOWN);
+#else
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
+		| SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALLOW_HIGHDPI
+		| SDL_WINDOW_SHOWN);
+#endif
     window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _SCREEN_DEFAULT_WIDTH, _SCREEN_DEFAULT_HEIGHT, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
@@ -168,12 +174,14 @@ int main(int, char**)
 	bool bShouldTerminateNetworking = false;
     bool show_demo_window = false;
     bool show_metrics_window = false;
-	bool show_mem_apple2_window = false;
-	bool show_mem_upload_window = false;
 	bool show_sdhrinfo_window = true;
 	bool show_texture_window = false;
     bool did_press_quit = false;
 	int _slotnum = 0;
+
+	static MemoryEditor mem_edit_a2e;
+	static MemoryEditor mem_edit_upload;
+
 
 	auto sdhrManager = SDHRManager::GetInstance();
     auto a2VideoManager = A2VideoManager::GetInstance();
@@ -316,8 +324,8 @@ int main(int, char**)
 //				ImGui::Checkbox("Demo Window", &show_demo_window);
 				ImGui::Checkbox("Textures Window", &show_texture_window);
 				ImGui::Checkbox("Metrics Window", &show_metrics_window);
-				ImGui::Checkbox("Apple //e Memory Window", &show_mem_apple2_window);
-				ImGui::Checkbox("Upload Region Memory Window", &show_mem_upload_window);
+				ImGui::Checkbox("Apple //e Memory Window", &mem_edit_a2e.Open);
+				ImGui::Checkbox("Upload Region Memory Window", &mem_edit_upload.Open);
                 ImGui::Separator();
 				did_press_quit = ImGui::Button("Quit App (Alt-F4)");
 				if (did_press_quit)
@@ -331,16 +339,14 @@ int main(int, char**)
 			ImGui::ShowMetricsWindow(&show_metrics_window);
 
         // Show the Apple //e memory
-        if (show_mem_apple2_window)
+        if (mem_edit_a2e.Open)
         {
-            static MemoryEditor mem_edit_a2e;
             mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000)", sdhrManager->GetApple2MemPtr(), 0xc000);
         }
 
 		// Show the upload data region memory
-		if (show_mem_upload_window)
+		if (mem_edit_upload.Open)
 		{
-			static MemoryEditor mem_edit_upload;
             mem_edit_upload.DrawWindow("Memory Editor: Upload memory", sdhrManager->GetUploadRegionPtr(), _SDHR_UPLOAD_REGION_SIZE);
 		}
         
