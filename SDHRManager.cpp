@@ -434,6 +434,15 @@ void SDHRManager::Render()
 	oglh->cleanup_render();
 }
 
+void SDHRManager::ToggleSdhr(bool value) {
+	bSDHREnabled = value;
+	if (bSDHREnabled)
+	{
+		oglHelper->request_framebuffer_resize(sdhr_width, sdhr_height);
+		bShouldInitializeRender = true;
+	}
+}
+
 // Define a tileset from the SDHR_CMD_DEFINE_TILESET commands
 // The tileset data is kept in the CPU's memory while waiting for window data
 // Once window data comes in, the tileset data is used to allocate the UVs to each vertex
@@ -788,9 +797,7 @@ bool SDHRManager::ProcessCommands(void)
 		case SDHR_CMD_CHANGE_RESOLUTION: {
 			if (!CheckCommandLength(p, end, sizeof(ChangeResolutionCmd))) return false;
 			ChangeResolutionCmd* cmd = (ChangeResolutionCmd*)p;
-			uint32_t maxW, maxH;
-			oglHelper->get_framebuffer_size(&maxW, &maxH);
-			if ((maxW != cmd->width) || (maxH != cmd->height))
+			if ((sdhr_width != cmd->width) || (sdhr_width != cmd->height))
 			{
 				// It will resize on the next main thread render
 				oglHelper->request_framebuffer_resize(cmd->width, cmd->height);

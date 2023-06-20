@@ -22,6 +22,9 @@ void OpenGLHelper::Initialize()
 	{
 		v_texture_ids.push_back(UINT_MAX);
 	}
+	request_framebuffer_resize(
+		_A2VIDEO_DEFAULT_ZOOM * _A2VIDEO_MIN_WIDTH,
+		_A2VIDEO_DEFAULT_ZOOM * _A2VIDEO_MIN_HEIGHT);
 }
 
 OpenGLHelper::~OpenGLHelper()
@@ -110,7 +113,7 @@ void OpenGLHelper::create_framebuffer(uint32_t width, uint32_t height)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);
 	bDidChangeResolution = true;
-	callbackResolutionChange(fb_width, fb_height);
+	callbackResolutionChange();
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!\n";
@@ -152,12 +155,18 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 	fb_height = height;
 	bDidChangeResolution = true;
 	if (callbackResolutionChange)
-		callbackResolutionChange(fb_width, fb_height);
+		callbackResolutionChange();
 }
 
 void OpenGLHelper::setup_render()
 {
 	GLenum glerr;
+
+	if (bDidChangeResolution)
+	{
+		if (callbackResolutionChange)
+			callbackResolutionChange();
+	}
 /*
 	bind_framebuffer();
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
@@ -177,8 +186,8 @@ void OpenGLHelper::setup_render()
 		}
 	}*/
 
-// bUsePerspective toggle:
-// Test using a prespective so we can zoom back and forth easily
+// bUsePerspective toggle for SDHR only:
+// Using a prespective so we can zoom back and forth easily
 // perspective uses (fov, aspect, near, far)
 // Default FOV is 45 degrees
 
@@ -186,26 +195,26 @@ void OpenGLHelper::setup_render()
 
 	if (bUsePerspective && (bDidChangeResolution || (!bIsUsingPerspective)))
 	{
-		camera.Position.x = fb_width / 2.f;
-		camera.Position.y = fb_height / 2.f;
-		camera.Position.z = glm::cos(glm::radians(ZOOM)) * fb_width;
+		camera.Position.x = fb_width_requested / 2.f;
+		camera.Position.y = fb_height_requested / 2.f;
+		camera.Position.z = glm::cos(glm::radians(ZOOM)) * fb_width_requested;
 		camera.Up = glm::vec3(0.f, 1.f, 0.f);
 		camera.Yaw = -90.f;
 		camera.Pitch = 0.f;
-		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)fb_width / fb_height, 0, 256);
+		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)fb_width_requested / fb_height_requested, 0, 256);
 		bIsUsingPerspective = bUsePerspective;
 	}
 	else if ((!bUsePerspective) && (bDidChangeResolution || bIsUsingPerspective))
 	{
-		camera.Position.x = fb_width / 2.f;
-		camera.Position.y = fb_height / 2.f;
+		camera.Position.x = fb_width_requested / 2.f;
+		camera.Position.y = fb_height_requested / 2.f;
 		camera.Position.z = _SDHR_MAX_WINDOWS;
 		camera.Up = glm::vec3(0.f, 1.f, 0.f);
 		camera.Yaw = -90.f;
 		camera.Pitch = 0.f;
 		mat_proj = glm::ortho<float>(
-			-(float)fb_width / 2, (float)fb_width / 2,
-			-(float)fb_height / 2, (float)fb_height / 2,
+			-(float)fb_width_requested / 2, (float)fb_width_requested / 2,
+			-(float)fb_height_requested / 2, (float)fb_height_requested / 2,
 			0, 256);
 		bIsUsingPerspective = bUsePerspective;
 	}
@@ -225,17 +234,20 @@ void OpenGLHelper::cleanup_render()
 // METHODS THAT CAN BE CALLED FROM ANY THREAD
 bool OpenGLHelper::request_framebuffer_resize(uint32_t width, uint32_t height)
 {
-	if ((width == fb_width) && (height == fb_height))
+	if ((width == fb_width_requested) && (height == fb_height_requested))
 		return false;	// no change
 	if ((width == UINT32_MAX) || (height == UINT32_MAX))
 		return false;	// don't request ridiculous sizes that are used as "no resize requested"
-	fb_width_requested = width;
-	fb_height_requested = height;
+
+	// Force a fixed ratio resolution which encompasses the requested resize
+	// but isn't more than 1080p
+	GetScreenResolution(&fb_width_requested, &fb_height_requested, width, height);
+	bDidChangeResolution = true;
 	return true;
 }
 
 void OpenGLHelper::get_framebuffer_size(uint32_t* width, uint32_t* height)
 {
-	*width = fb_width;
-	*height = fb_height;
+	*width = fb_width_requested;
+	*height = fb_height_requested;
 }

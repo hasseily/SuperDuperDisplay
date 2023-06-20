@@ -34,7 +34,7 @@ public:
 	// METHODS THAT CAN BE CALLED FROM ANY THREAD
 	bool request_framebuffer_resize(uint32_t width, uint32_t height);
 	void get_framebuffer_size(uint32_t* width, uint32_t* height);
-	void set_callback_changed_resolution(void(*func)(int w, int h)) { callbackResolutionChange = func; };
+	void set_callback_changed_resolution(void(*func)()) { callbackResolutionChange = func; };
 
 	// The created texture ids (max is _SDHR_MAX_TEXTURES)
 	std::vector<GLuint>v_texture_ids;
@@ -47,7 +47,7 @@ public:
 		-90.f,										// yaw
 		0.f											// pitch
 	);
-	// Projection matrix (left, right, bottom, top, near, far)
+	// Projection matrix for SDHR (left, right, bottom, top, near, far)
 	glm::mat4 mat_proj = glm::ortho<float>(
 		-(float)_SCREEN_DEFAULT_WIDTH / 2, (float)_SCREEN_DEFAULT_WIDTH / 2,
 		-(float)_SCREEN_DEFAULT_HEIGHT / 2, (float)_SCREEN_DEFAULT_HEIGHT / 2,
@@ -56,6 +56,11 @@ public:
 	// Debugging attributes
 	bool bDebugNoTextures = false;
 	bool bUsePerspective = false;		// see bIsUsingPerspective
+
+	// Origin in the viewport, as relative 0-1 to the viewport
+	// Used to have margins within the SDL window for the Apple2Video
+	float originX = 0.f;
+	float originY = 0.f;
 
 private:
 //////////////////////////////////////////////////////////////////////////
@@ -69,7 +74,7 @@ private:
 		Initialize();
 	}
 
-	void (*callbackResolutionChange)(int w, int h);
+	void (*callbackResolutionChange)();
 
 	GLuint output_texture_id;
 //	GLuint VAO;	// for testing

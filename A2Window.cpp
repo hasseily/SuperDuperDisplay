@@ -1,6 +1,7 @@
 #include "A2Window.h"
 #include "common.h"
 #include <SDL_timer.h>
+#include "OpenGLHelper.h"
 
 void A2Window::Reset()
 {
@@ -105,6 +106,9 @@ void A2Window::Render()
 {
 	if (!enabled)
 		return;
+
+	auto oglHelper = OpenGLHelper::GetInstance();
+
 	GLenum glerr;
 	shaderProgram->use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -121,6 +125,7 @@ void A2Window::Render()
 	shaderProgram->setInt("ticks", SDL_GetTicks());
 	shaderProgram->setVec2u("tileCount", tile_count.x, tile_count.y);
 	shaderProgram->setVec2u("tileSize", tile_dim.x * _A2VIDEO_DEFAULT_ZOOM, tile_dim.y * _A2VIDEO_DEFAULT_ZOOM);
+	shaderProgram->setVec2("margins", oglHelper->originX, oglHelper->originY);	// Just apply the margins translation
 
 	// point the uniform at the tiles data texture (GL_TEXTURE0 + _SDHR_TBO_TEXUNIT)
 	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);

@@ -111,10 +111,6 @@ public:
 	TilesetRecord tileset_records[_SDHR_MAX_WINDOWS];
 	SDHRWindow windows[_SDHR_MAX_WINDOWS];
 
-	// Margins when rendering in a window (pixels)
-	int windowMargins = 0;
-
-
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
 	//////////////////////////////////////////////////////////////////////////
@@ -130,11 +126,7 @@ public:
 	TileTex* GetTilesetRecordData(uint8_t tileset_index) { return tileset_records[tileset_index].tile_data; };
 	TileTex GetTilesetTileTex(uint8_t tileset_index, uint8_t tile_index) { return tileset_records[tileset_index].tile_data[tile_index]; };
 
-	void ToggleSdhr(bool value) {
-		bSDHREnabled = value;
-		if (bSDHREnabled)
-			bShouldInitializeRender = true;
-	}
+	void ToggleSdhr(bool value);
 
 	bool IsSdhrEnabled(void) {
 		return bSDHREnabled;
@@ -196,6 +188,9 @@ private:
 	uint8_t* a2mem;	// The current state of the Apple 2 memory ($0200-$BFFF)
 	
 	bool bSDHREnabled = false;	// is SDHR enabled?
+
+	uint32_t sdhr_width = 640;
+	uint32_t sdhr_height = 360;
 
 	std::vector<uint8_t> command_buffer;
 	bool error_flag = false;

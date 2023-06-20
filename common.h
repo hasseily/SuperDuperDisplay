@@ -32,8 +32,9 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _A2VIDEO_MIN_WIDTH 40*7
 #define _A2VIDEO_MIN_HEIGHT 24*8
 
-#define _SCREEN_DEFAULT_WIDTH  1920
-#define _SCREEN_DEFAULT_HEIGHT 1080
+constexpr uint32_t _SCREEN_DEFAULT_WIDTH = 1920;
+constexpr uint32_t _SCREEN_DEFAULT_HEIGHT = 1080;
+constexpr float _SCREEN_FIXED_RATIO = (float)_SCREEN_DEFAULT_WIDTH / (float)_SCREEN_DEFAULT_HEIGHT;
 
 // DEFINITIONS OF SDHR SPECS
 #define _SDHR_SERVER_PORT 8080
@@ -57,6 +58,32 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _SHADER_SDHR_FRAGMENT_DEFAULT "shaders/sdhr_default_330.frag"
 #define _SHADER_TEXT_VERTEX_DEFAULT "shaders/a2video_text_330.vert"
 #define _SHADER_TEXT_FRAGMENT_DEFAULT "shaders/a2video_text_330.frag"
+#endif
+
+#ifndef MIN(a,b)
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define __DEFMIN
+#endif
+
+// Return the screen resolution we can have, given a fixed 1.875 ratio and a max resolution
+// of 1920x1024
+static void GetScreenResolution(uint32_t* w, uint32_t* h, uint32_t req_w, uint32_t req_h)
+{
+	float req_ratio = (1.f * req_w) / req_h;
+	if (req_ratio > _SCREEN_FIXED_RATIO) // wider than acceptable
+	{
+		*w = MIN(1920, req_w);
+		*h = *w / _SCREEN_FIXED_RATIO;
+	}
+	else {
+		*h = MIN(1080, req_h);
+		*w = *h * _SCREEN_FIXED_RATIO;
+	}
+}
+
+#ifdef __DEFMIN
+#undef MIN(a,b)
+#undef __DEFMIN
 #endif
 
 #endif	// COMMON_H

@@ -32,7 +32,7 @@ static uint32_t fbWidth = 0;
 static uint32_t fbHeight = 0;
 static SDL_Window* window;
 
-void callback_resolutionChange(int w, int h)
+void callback_resolutionChange()
 {
 	auto glhelper = OpenGLHelper::GetInstance();
 	auto sdhrManager = SDHRManager::GetInstance();
@@ -40,13 +40,23 @@ void callback_resolutionChange(int w, int h)
 	// In case the window was program-resized, tell SDL to change the window size
 	glhelper->get_framebuffer_size(&fbWidth, &fbHeight);
 	auto margins = (sdhrManager->IsSdhrEnabled()
-		? sdhrManager->windowMargins
+		? 0     // no margins in SDHR
 		: a2videoManager->windowMargins);
+	SDL_SetWindowSize(window, fbWidth + 2 * margins, fbHeight + 2 * margins);
+    SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    // TODO: Tell glhelper where the origin is in the window
+    //       so that it can have all the shaders use it for translation
+    int _w, _h;
+    SDL_GetWindowSize(window, &_w, &_h);
+	glhelper->originX = (_w - fbWidth) / ( 2.f * _w);
+	glhelper->originY = (_h - fbHeight) / (2.f * _h);
+
+/*
 	SDL_DisplayMode displayMode;
 	SDL_GetWindowDisplayMode(window, &displayMode);
-    displayMode.w = w + 2 * margins;
-    displayMode.h = h + 2 * margins;
-    SDL_SetWindowDisplayMode(window, &displayMode);
+    displayMode.w = fbWidth + 2 * margins;
+    displayMode.h = fbHeight + 2 * margins;
+*/
 }
 
 // Main code
@@ -110,7 +120,8 @@ int main(int, char**)
 		| SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALLOW_HIGHDPI
 		| SDL_WINDOW_SHOWN);
 #endif
-    window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _SCREEN_DEFAULT_WIDTH, _SCREEN_DEFAULT_HEIGHT, window_flags);
+    window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
+        _A2VIDEO_DEFAULT_ZOOM * _A2VIDEO_MIN_WIDTH, _A2VIDEO_DEFAULT_ZOOM * _A2VIDEO_MIN_HEIGHT, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(0); // Enable/disable vsync
@@ -198,6 +209,7 @@ int main(int, char**)
 	float deltaTime = 0.f;
 
     glhelper->set_callback_changed_resolution(&callback_resolutionChange);
+    callback_resolutionChange();
 
     // Main loop
     bool done = false;
