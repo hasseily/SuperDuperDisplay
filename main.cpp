@@ -174,7 +174,7 @@ int main(int, char**)
 	bool bShouldTerminateNetworking = false;
     bool show_demo_window = false;
     bool show_metrics_window = false;
-	bool show_sdhrinfo_window = true;
+	bool show_sdhrinfo_window = false;
 	bool show_texture_window = false;
     bool did_press_quit = false;
 	int _slotnum = 0;
