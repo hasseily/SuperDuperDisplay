@@ -181,7 +181,8 @@ int main(int, char**)
 
 	static MemoryEditor mem_edit_a2e;
 	static MemoryEditor mem_edit_upload;
-
+    mem_edit_a2e.Open = false;
+	mem_edit_upload.Open = false;
 
 	auto sdhrManager = SDHRManager::GetInstance();
     auto a2VideoManager = A2VideoManager::GetInstance();
