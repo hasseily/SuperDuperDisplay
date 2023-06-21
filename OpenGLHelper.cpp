@@ -161,12 +161,6 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 void OpenGLHelper::setup_render()
 {
 	GLenum glerr;
-
-	if (bDidChangeResolution)
-	{
-		if (callbackResolutionChange)
-			callbackResolutionChange();
-	}
 /*
 	bind_framebuffer();
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
@@ -228,6 +222,11 @@ void OpenGLHelper::cleanup_render()
 {
 	glUseProgram(currentShaderProgram);
 	// unbind_framebuffer();
+	if (bDidChangeResolution)
+	{
+		if (callbackResolutionChange)
+			callbackResolutionChange();
+	}
 	bDidChangeResolution = false;
 }
 
