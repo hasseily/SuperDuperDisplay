@@ -29,12 +29,28 @@ typedef int        __SOCKET;
 #endif
 
 #pragma pack(push, 1)
-struct SDHRPacket {
-	uint16_t addr;
-	uint8_t data;
-	uint8_t pad;
+struct SDHRPacketHeader {
+	uint8_t seqno[4];
+	uint8_t cmdtype;
+};
+
+struct SDHRBusChunk {
+	uint8_t rwflags;
+	uint8_t seqflags;
+	uint8_t data[8];
+	uint8_t addrs[16];
 };
 #pragma pack(pop)
+
+struct SDHREvent {
+	bool rw; // read == 1, write == 0
+	uint16_t addr;
+	uint8_t data;
+	SDHREvent(bool rw_, uint16_t addr_, uint8_t data_) :
+		rw(rw_),
+		addr(addr_),
+		data(data_) {}
+};
 
 enum class ENET_RES
 {
@@ -42,8 +58,8 @@ enum class ENET_RES
 	ERR = 1
 };
 
-#define CXSDHR_CTRL 0xC0B0	// SDHR command
-#define CXSDHR_DATA 0xC0B1	// SDHR data
+#define CXSDHR_CTRL 0xC0A0	// SDHR command
+#define CXSDHR_DATA 0xC0A1	// SDHR data
 
 // Call this method as a new thread
 // It loops infinitely and waits for packets
