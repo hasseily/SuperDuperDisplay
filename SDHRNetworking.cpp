@@ -4,9 +4,20 @@
 #include <time.h>
 #include <fcntl.h>
 
+static std::vector<SDHREvent> events;
+static SDHRManager* sdhrMgr;
+static A2VideoManager* a2VideoMgr;
+uint8_t* a2mem;
 
 ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_addr)
 {
+	events.clear();
+	events.reserve(1000000);
+
+	sdhrMgr = SDHRManager::GetInstance();
+	a2VideoMgr = A2VideoManager::GetInstance();
+	a2mem = sdhrMgr->GetApple2MemPtr();
+
 #ifdef __NETWORKING_WINDOWS__
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -21,6 +32,12 @@ ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_a
 	BOOL optval = true;
 	setsockopt(*server_fd, SOL_SOCKET, SO_REUSEADDR,
 		(const char*)&optval, sizeof(BOOL));
+	int rcvbuf = 1024 * 1024;
+	int result = setsockopt(*server_fd, SOL_SOCKET, SO_RCVBUF, (const char*)&rcvbuf, sizeof(int));
+	if (result == SOCKET_ERROR) {
+		printf("setsockopt for SO_RCVBUF failed with error: %u\n", WSAGetLastError());
+	}
+
 	if (bind(*server_fd, (SOCKADDR*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
 		std::cerr << "Error binding socket" << std::endl;
 		closesocket(*server_fd);
@@ -55,6 +72,107 @@ ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_a
 	return ENET_RES::OK;
 }
 
+// platform-independent event processing
+void process_events()
+{
+	for (const auto& e : events) {
+		//std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
+		if (e.rw) {
+			// ignoring all read events
+			continue;
+		}
+		if ((e.addr >= 0x200) && (e.addr <= 0xbfff)) {
+			a2mem[e.addr] = e.data;
+			a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
+			continue;
+		}
+		if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
+			// ignore non-control
+			continue;
+		}
+		//std::cerr << "cmd " << e.addr << " " << (uint32_t) e.data << std::endl;
+		SDHRCtrl_e _ctrl;
+		switch (e.addr & 0x0f)
+		{
+		case 0x00:
+			// std::cout << "This is a control packet!" << std::endl;
+			_ctrl = (SDHRCtrl_e)e.data;
+			switch (_ctrl)
+			{
+			case SDHR_CTRL_DISABLE:
+				//#ifdef DEBUG
+				std::cout << "CONTROL: Disable SDHR" << std::endl;
+				//#endif
+				sdhrMgr->ToggleSdhr(false);
+				a2VideoMgr->ToggleA2Video(true);
+				break;
+			case SDHR_CTRL_ENABLE:
+				//#ifdef DEBUG
+				std::cout << "CONTROL: Enable SDHR" << std::endl;
+				//#endif
+				sdhrMgr->ToggleSdhr(true);
+				a2VideoMgr->ToggleA2Video(false);
+				break;
+			case SDHR_CTRL_RESET:
+				//#ifdef DEBUG
+				std::cout << "CONTROL: Reset SDHR" << std::endl;
+				//#endif
+				sdhrMgr->ResetSdhr();
+				break;
+			case SDHR_CTRL_PROCESS:
+			{
+				/*
+				At this point we have a complete set of commands to process.
+				Some more data may be in the kernel socket receive buffer, but we don't care.
+				They'll be processed in the next batch.
+				Wait for the main thread to finish loading the current state (if any), then process
+				the commands.
+				*/
+
+				while (sdhrMgr->threadState != THREADCOMM_e::SOCKET_LOCK)
+				{
+					if (sdhrMgr->threadState == THREADCOMM_e::IDLE)
+						sdhrMgr->threadState = THREADCOMM_e::SOCKET_LOCK;
+				}
+				//#ifdef DEBUG
+				std::cout << "CONTROL: Process SDHR" << std::endl;
+				//#endif
+				bool processingSucceeded = sdhrMgr->ProcessCommands();
+				// Whether or not the processing worked, clear the buffer. If the processing failed,
+				// the data was corrupt and shouldn't be reprocessed
+				sdhrMgr->ClearBuffer();
+				sdhrMgr->dataState = DATASTATE_e::COMMAND_READY;
+				sdhrMgr->threadState = THREADCOMM_e::IDLE;
+				if (processingSucceeded)
+				{
+					//#ifdef DEBUG
+					std::cout << "Processing succeeded!" << std::endl;
+					//#endif
+				}
+				else {
+					//#ifdef DEBUG
+					std::cerr << "ERROR: Processing failed!" << std::endl;
+					//#endif
+				}
+				break;
+			}
+			default:
+				std::cerr << "ERROR: Unknown control packet type: " << std::hex << (uint32_t)e.data << std::endl;
+				break;
+			}
+			break;
+		case 0x01:
+			// std::cout << "This is a data packet" << std::endl;
+			sdhrMgr->AddPacketDataToBuffer(e.data);
+			break;
+		default:
+			std::cerr << "ERROR: Unknown packet type: " << std::hex << e.addr << std::endl;
+			break;
+		}
+	}
+	events.clear();
+}
+
 int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 {
 	// commands socket and descriptors
@@ -75,21 +193,18 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	serveraddr.sin_port = htons((unsigned short)port);
 	serveraddr.sin_addr.s_addr = INADDR_ANY;
 
+	uint8_t RecvBuf[BUFSZ];
+	int BufLen = BUFSZ;
+
 	if (socket_bind_and_listen(&sockfd, serveraddr) == ENET_RES::ERR)
 		return 1;
 
-	WSAMSG msgs[VLEN];
-	WSABUF iovecs[VLEN];
-	uint8_t bufs[VLEN][BUFSZ];
-	DWORD bytesReceived = 0;
-	DWORD flags = 0;
+	WSAPOLLFD fdArray[1];  // 1 connection
+	// Set up the fd_set for WSAPoll()
+	fdArray[0].fd = sockfd;
+	fdArray[0].events = POLLRDNORM;
 
-	for (int i = 0; i < VLEN; ++i) {
-		iovecs[i].buf = reinterpret_cast<CHAR*>(bufs[i]);
-		iovecs[i].len = BUFSZ;
-		msgs[i].lpBuffers = &iovecs[i];
-		msgs[i].dwBufferCount = 1;
-	}
+	DWORD flags = 0;
 
 	u_long mode = 1;  // 1 to enable non-blocking socket
 	ioctlsocket(sockfd, FIONBIO, &mode);
@@ -104,8 +219,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	bool first_drop = true;
 	uint32_t prev_seqno = 0;
 	uint16_t prev_addr = 0;
-	std::vector<SDHREvent> events;
-	events.reserve(1000000);
 	int64_t last_recv_nsec;
 
 	while (!(*shouldTerminateNetworking)) {
@@ -115,36 +228,29 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		QueryPerformanceCounter(&t1);
 		int64_t nsec = t1.QuadPart * 1000000000ll / frequency.QuadPart;
 		int retval = 0;
-		DWORD msgs_size[VLEN];
-		msgs_size[0] = 0;
-		retval = WSARecv(sockfd, msgs[0].lpBuffers, msgs[0].dwBufferCount, &bytesReceived, &flags, NULL, NULL);
-		msgs_size[0] = bytesReceived;
-		if (retval < 0 && WSAGetLastError() != WSAEWOULDBLOCK) {
-			std::cerr << "Error in recvmmsg" << std::endl;
-			return 1;
-		}
-		if (connected && nsec > last_recv_nsec + 10000000000ll) {
-			std::cout << "Client disconnected" << std::endl;
-			connected = false;
-			first_drop = true;
-			continue;
-		}
-		if (retval == -1) {
-			continue;
-		}
-		if (!connected) {
-			connected = true;
-			std::cout << "Client connected" << std::endl;
-		}
-		last_recv_nsec = nsec;
 
-		events.clear();
-		for (int i = 0; i < retval; ++i) {
-			SDHRPacketHeader* h = (SDHRPacketHeader*)bufs[i];
+		// Use WSAPoll() to wait for an incoming UDP packet
+		WSAPoll(fdArray, 1, -1);  // -1 means infinite timeout
+
+		if (fdArray[0].revents & POLLRDNORM)  // if any event occurred
+		{
+			sockaddr_in SenderAddr;
+			int SenderAddrSize = sizeof(SenderAddr);
+
+			// Receive a datagram
+			recvfrom(sockfd, (char*)RecvBuf, BufLen, 0, (SOCKADDR*)&SenderAddr, &SenderAddrSize);
+
+			last_recv_nsec = nsec;
+
+			retval = 1;
+			SDHRPacketHeader* h = (SDHRPacketHeader*)RecvBuf;
 			uint32_t seqno = h->seqno[0];
 			seqno += (uint32_t)h->seqno[1] << 8;
 			seqno += (uint32_t)h->seqno[2] << 16;
 			seqno += (uint32_t)h->seqno[3] << 24;
+
+			if (seqno < prev_seqno)
+				std::cerr << "FOUND EARLIER PACKET" << std::endl;
 			if (seqno != prev_seqno + 1) {
 				if (first_drop) {
 					first_drop = false;
@@ -161,9 +267,9 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 				// currently ignoring anything not a bus event
 				continue;
 			}
-			uint8_t* p = bufs[i] + sizeof(SDHRPacketHeader);
+			uint8_t* p = RecvBuf + sizeof(SDHRPacketHeader);
 
-			while (p - bufs[i] < msgs_size[i]) {
+			while (p - RecvBuf < BufLen) {
 				SDHRBusChunk* c = (SDHRBusChunk*)p;
 				size_t chunk_len = 10;
 				uint32_t addr_count = 0;
@@ -187,100 +293,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 				}
 				p += chunk_len;
 			}
-		}
-		for (const auto& e : events) {
-			//std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
-			if (e.rw) {
-				// ignoring all read events
-				continue;
-			}
-			if ((e.addr >= 0x200) && (e.addr <= 0xbfff)) {
-				a2mem[e.addr] = e.data;
-				continue;
-			}
-			if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
-				// ignore non-control
-				continue;
-			}
-			//std::cerr << "cmd " << e.addr << " " << (uint32_t) e.data << std::endl;
-			SDHRCtrl_e _ctrl;
-			switch (e.addr & 0x0f)
-			{
-			case 0x00:
-				// std::cout << "This is a control packet!" << std::endl;
-				_ctrl = (SDHRCtrl_e)e.data;
-				switch (_ctrl)
-				{
-				case SDHR_CTRL_DISABLE:
-#ifdef DEBUG
-					std::cout << "CONTROL: Disable SDHR" << std::endl;
-#endif
-					sdhrMgr->ToggleSdhr(false);
-					a2VideoMgr->ToggleA2Video(true);
-					break;
-				case SDHR_CTRL_ENABLE:
-#ifdef DEBUG
-					std::cout << "CONTROL: Enable SDHR" << std::endl;
-#endif
-					sdhrMgr->ToggleSdhr(true);
-					a2VideoMgr->ToggleA2Video(false);
-					break;
-				case SDHR_CTRL_RESET:
-#ifdef DEBUG
-					std::cout << "CONTROL: Reset SDHR" << std::endl;
-#endif
-					sdhrMgr->ResetSdhr();
-					break;
-				case SDHR_CTRL_PROCESS:
-				{
-					/*
-					At this point we have a complete set of commands to process.
-					Some more data may be in the kernel socket receive buffer, but we don't care.
-					They'll be processed in the next batch.
-					Wait for the main thread to finish loading the current state (if any), then process
-					the commands.
-					*/
-
-					while (sdhrMgr->threadState != THREADCOMM_e::SOCKET_LOCK)
-					{
-						if (sdhrMgr->threadState == THREADCOMM_e::IDLE)
-							sdhrMgr->threadState = THREADCOMM_e::SOCKET_LOCK;
-					}
-#ifdef DEBUG
-					std::cout << "CONTROL: Process SDHR" << std::endl;
-#endif
-					bool processingSucceeded = sdhrMgr->ProcessCommands();
-					// Whether or not the processing worked, clear the buffer. If the processing failed,
-					// the data was corrupt and shouldn't be reprocessed
-					sdhrMgr->ClearBuffer();
-					sdhrMgr->dataState = DATASTATE_e::COMMAND_READY;
-					sdhrMgr->threadState = THREADCOMM_e::IDLE;
-					if (processingSucceeded)
-					{
-#ifdef DEBUG
-						std::cout << "Processing succeeded!" << std::endl;
-#endif
-					}
-					else {
-#ifdef DEBUG
-						std::cerr << "ERROR: Processing failed!" << std::endl;
-#endif
-					}
-					break;
-				}
-				default:
-					std::cerr << "ERROR: Unknown control packet type: " << std::hex << (uint32_t)e.data << std::endl;
-					break;
-				}
-				break;
-			case 0x01:
-				// std::cout << "This is a data packet" << std::endl;
-				sdhrMgr->AddPacketDataToBuffer(e.data);
-				break;
-			default:
-				std::cerr << "ERROR: Unknown packet type: " << std::hex << e.addr << std::endl;
-				break;
-			}
+			process_events();
 		}
 	}
 
@@ -402,102 +415,9 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 					events.emplace_back(e);
 				}
 				p += chunk_len;
-}
-		}
-		for (const auto& e : events) {
-			//std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
-			if (e.rw) {
-				// ignoring all read events
-				continue;
-			}
-			if ((e.addr >= 0x200) && (e.addr <= 0xbfff)) {
-				a2mem[e.addr] = e.data;
-				continue;
-			}
-			if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
-				// ignore non-control
-				continue;
-			}
-			//std::cerr << "cmd " << e.addr << " " << (uint32_t) e.data << std::endl;
-			SDHRCtrl_e _ctrl;
-			switch (e.addr & 0x0f)
-			{
-			case 0x00:
-				// std::cout << "This is a control packet!" << std::endl;
-				_ctrl = (SDHRCtrl_e)e.data;
-				switch (_ctrl)
-				{
-				case SDHR_CTRL_DISABLE:
-#ifdef DEBUG
-					std::cout << "CONTROL: Disable SDHR" << std::endl;
-#endif
-					sdhrMgr->ToggleSdhr(false);
-					a2VideoMgr->ToggleA2Video(true);
-					break;
-				case SDHR_CTRL_ENABLE:
-#ifdef DEBUG
-					std::cout << "CONTROL: Enable SDHR" << std::endl;
-#endif
-					sdhrMgr->ToggleSdhr(true);
-					a2VideoMgr->ToggleA2Video(false);
-					break;
-				case SDHR_CTRL_RESET:
-#ifdef DEBUG
-					std::cout << "CONTROL: Reset SDHR" << std::endl;
-#endif
-					sdhrMgr->ResetSdhr();
-					break;
-				case SDHR_CTRL_PROCESS:
-				{
-					/*
-					At this point we have a complete set of commands to process.
-					Some more data may be in the kernel socket receive buffer, but we don't care.
-					They'll be processed in the next batch.
-					Wait for the main thread to finish loading the current state (if any), then process
-					the commands.
-					*/
-
-					while (sdhrMgr->threadState != THREADCOMM_e::SOCKET_LOCK)
-					{
-						if (sdhrMgr->threadState == THREADCOMM_e::IDLE)
-							sdhrMgr->threadState = THREADCOMM_e::SOCKET_LOCK;
-					}
-#ifdef DEBUG
-					std::cout << "CONTROL: Process SDHR" << std::endl;
-#endif
-					bool processingSucceeded = sdhrMgr->ProcessCommands();
-					// Whether or not the processing worked, clear the buffer. If the processing failed,
-					// the data was corrupt and shouldn't be reprocessed
-					sdhrMgr->ClearBuffer();
-					sdhrMgr->dataState = DATASTATE_e::COMMAND_READY;
-					sdhrMgr->threadState = THREADCOMM_e::IDLE;
-					if (processingSucceeded)
-					{
-#ifdef DEBUG
-						std::cout << "Processing succeeded!" << std::endl;
-#endif
-					}
-					else {
-#ifdef DEBUG
-						std::cerr << "ERROR: Processing failed!" << std::endl;
-#endif
-					}
-					break;
-				}
-				default:
-					std::cerr << "ERROR: Unknown control packet type: " << std::hex << (uint32_t)e.data << std::endl;
-					break;
-				}
-				break;
-			case 0x01:
-				// std::cout << "This is a data packet" << std::endl;
-				sdhrMgr->AddPacketDataToBuffer(e.data);
-				break;
-			default:
-				std::cerr << "ERROR: Unknown packet type: " << std::hex << e.addr << std::endl;
-				break;
 			}
 		}
+		process_events();
 	}
 
 	std::cout << "Client Closing" << std::endl;
