@@ -489,9 +489,9 @@ bool SDHRManager::ProcessCommands(void)
 	uint8_t* end = begin + command_buffer.size();
 	uint8_t* p = begin;
 
-//#ifdef DEBUG
+#ifdef DEBUG
 	std::cerr << "Command buffer size: " << command_buffer.size() << std::endl;
-//#endif
+#endif
 
 	while (p < end) {
 		// Header (2 bytes) giving the size in bytes of the command
