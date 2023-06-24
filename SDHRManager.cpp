@@ -505,12 +505,6 @@ bool SDHRManager::ProcessCommands(void)
 		// Command ID (1 byte)
 		uint8_t _cmd = *p++;
 		
-		std::cerr << "+++ NEW COMMAND " << (uint32_t) _cmd << "  LENGTH: " << (uint32_t)message_length << std::endl;
-		for (int i = -3; i < (message_length - 3); i++)
-		{
-			std::cerr << "    data: " << std::dec << i << "    " << std::hex << (uint32_t)(*(p + i)) << std::endl;
-		}
-		
 		// Command data (variable)
 		switch (_cmd) {
 		case SDHR_CMD_UPLOAD_DATA: {

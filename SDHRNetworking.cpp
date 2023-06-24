@@ -134,9 +134,9 @@ void process_events()
 					if (sdhrMgr->threadState == THREADCOMM_e::IDLE)
 						sdhrMgr->threadState = THREADCOMM_e::SOCKET_LOCK;
 				}
-				//#ifdef DEBUG
+				#ifdef DEBUG
 				std::cout << "CONTROL: Process SDHR" << std::endl;
-				//#endif
+				#endif
 				bool processingSucceeded = sdhrMgr->ProcessCommands();
 				// Whether or not the processing worked, clear the buffer. If the processing failed,
 				// the data was corrupt and shouldn't be reprocessed
@@ -145,14 +145,14 @@ void process_events()
 				sdhrMgr->threadState = THREADCOMM_e::IDLE;
 				if (processingSucceeded)
 				{
-					//#ifdef DEBUG
+					#ifdef DEBUG
 					std::cout << "Processing succeeded!" << std::endl;
-					//#endif
+					#endif
 				}
 				else {
-					//#ifdef DEBUG
+					#ifdef DEBUG
 					std::cerr << "ERROR: Processing failed!" << std::endl;
-					//#endif
+					#endif
 				}
 				break;
 			}
@@ -238,11 +238,26 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			int SenderAddrSize = sizeof(SenderAddr);
 
 			// Receive a datagram
-			recvfrom(sockfd, (char*)RecvBuf, BufLen, 0, (SOCKADDR*)&SenderAddr, &SenderAddrSize);
-
+			int retval = recvfrom(sockfd, (char*)RecvBuf, BufLen, 0, (SOCKADDR*)&SenderAddr, &SenderAddrSize);
+			if (retval < 0 && errno != EWOULDBLOCK) {
+				std::cerr << "Error in recvmmsg" << std::endl;
+				return 1;
+			}
+			if (connected && nsec > last_recv_nsec + 10000000000ll) {
+				std::cout << "Client disconnected" << std::endl;
+				connected = false;
+				first_drop = true;
+				continue;
+			}
+			if (retval == -1) {
+				continue;
+			}
+			if (!connected) {
+				connected = true;
+				std::cout << "Client connected" << std::endl;
+			}
 			last_recv_nsec = nsec;
 
-			retval = 1;
 			SDHRPacketHeader* h = (SDHRPacketHeader*)RecvBuf;
 			uint32_t seqno = h->seqno[0];
 			seqno += (uint32_t)h->seqno[1] << 8;
@@ -269,7 +284,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			}
 			uint8_t* p = RecvBuf + sizeof(SDHRPacketHeader);
 
-			while (p - RecvBuf < BufLen) {
+			while (p - RecvBuf < retval) {
 				SDHRBusChunk* c = (SDHRBusChunk*)p;
 				size_t chunk_len = 10;
 				uint32_t addr_count = 0;
