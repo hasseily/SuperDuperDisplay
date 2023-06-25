@@ -436,6 +436,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	}
 
 	std::cout << "Client Closing" << std::endl;
+	close(sockfd);
 	std::cout << "    Client Closed" << std::endl;
 	return 0;
 #endif // __NETWORKING_WINDOWS__
