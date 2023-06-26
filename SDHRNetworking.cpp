@@ -359,8 +359,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	bool first_drop = true;
 	uint32_t prev_seqno = 0;
 	uint16_t prev_addr = 0;
-	std::vector<SDHREvent> events;
-	events.reserve(1000000);
 	int64_t last_recv_nsec;
 
 	while (!(*shouldTerminateNetworking)) {
