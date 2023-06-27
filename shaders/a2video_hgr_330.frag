@@ -1,0 +1,75 @@
+#version 330 core
+
+precision mediump float;
+
+/*
+HGR fragment shader.
+There's an HGR texture that will return 2 pixels at a time for each combination
+of 3 bits.
+*/
+
+// Apple 2 text row offsets in memory. The rows aren't contiguous in Apple 2 RAM.
+// They're interlaced because WOZ chip optimization.
+const int textRow[24]= int[24](
+0x0000, 0x0080, 0x0100, 0x0180, 0x0200, 0x0280, 0x0300, 0x0380, 
+0x0028, 0x00A8, 0x0128, 0x01A8, 0x0228, 0x02A8, 0x0328, 0x03A8, 
+0x0050, 0x00D0, 0x0150, 0x01D0, 0x0250, 0x02D0, 0x0350, 0x03D0
+);
+
+// Global uniforms assigned in A2VideoManager
+uniform sampler2D a2FontTexture;
+uniform int ticks;                  // ms since start
+
+
+// Mesh-level uniforms assigned in MosaicMesh
+uniform uvec2 tileCount;         // Count of tiles (cols, rows)
+uniform uvec2 tileSize;
+uniform usampler2D DBTEX;        // Apple 2e's memory, starting at 0x400 for TEXT1 and 0x800 for TEXT2
+                                 // Unsigned int sampler!
+in vec2 vFragPos;       // The fragment position in pixels
+// in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
+
+out vec4 fragColor;
+
+layout(pixel_center_integer) in vec4 gl_FragCoord;
+
+void main()
+{
+    // first figure out which mosaic tile this fragment is part of
+        // Calculate the position of the fragment in tile intervals
+    vec2 fTileColRow = vFragPos / tileSize;
+        // Row and column number of the tile containing this fragment
+    ivec2 tileColRow = ivec2(floor(fTileColRow));
+        // Fragment offset to tile origin, in pixels
+    vec2 fragOffset = ((fTileColRow - tileColRow) * tileSize);
+
+    // Next grab the data for that tile from the tilesBuffer
+    // No need to rescale values because we're using GL_R8UI
+    // The "texture" is split by 1kB-sized rows
+    int offset = textRow[tileColRow.y] + tileColRow.x;
+    vec4 vChar = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0);
+    int charVal = int(vChar.r);    // the char byte value is just the r component
+
+    // TODO:    Check 0xC007 to switch to alternate charset
+    //          Alternate charset doesn't do flashing
+
+    // Determine from char which font glyph to use
+    // and if we need to flash
+    // Determine if it's inverse when the char is below 0x40
+    // And then if the char is below 0x80 and not inverse, it's flashing
+    float a_inverse = 1.0 - step(float(0x40), charVal);
+    float a_flash = (1.0 - step(float(0x40), charVal)) * (1.0 - a_inverse);
+
+    ivec2 textureSize2d = textureSize(a2FontTexture,0);
+    // what's our character's starting origin in the character map?
+    uvec2 charOrigin = uvec2(charVal & 0xF, charVal >> 4) * tileSize;
+
+    // Now get the texture color, using the tile uv origin and this fragment's offset
+    vec4 tex = texture(a2FontTexture, (charOrigin + fragOffset) / textureSize2d);
+
+    float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
+    // get the color of flashing or the one above
+    fragColor = ((1.f - tex) * isFlashing) + (tex * (1.f - isFlashing));
+
+    // fragColor = vec4(vColor, 1.f);   // for debugging
+}

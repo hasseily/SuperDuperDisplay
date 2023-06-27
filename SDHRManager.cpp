@@ -127,58 +127,43 @@ struct ChangeResolutionCmd {
 // Image Asset Methods
 //////////////////////////////////////////////////////////////////////////
 
-// NOTE:	Both the below image asset methods use OpenGL 
-//			so they _must_ be called from the main thread
+// NOTE:	Both the below image asset methods parse the textures
+//			internally. It's up to the rendering thread to load the texture
+//			into the GPU
 void SDHRManager::ImageAsset::AssignByFilename(SDHRManager* owner, const char* filename) {
-	int width;
-	int height;
-	int channels;
-	unsigned char* data = stbi_load(filename, &width, &height, &channels, 4);
+	data = stbi_load(filename, &image_xcount, &image_ycount, &channels, 4);
 	if (data == NULL) {
 		owner->CommandError(stbi_failure_reason());
 		owner->error_flag = true;
 		return;
 	}
-	if (tex_id != UINT_MAX)
-	{
-		oglHelper->load_texture(data, width, height, channels, tex_id);
-		stbi_image_free(data);
-	}
-	else {
-		std::cerr << "ERROR: Could not bind texture, all slots filled!" << '\n';
-		return;
-	}
-	GLenum glerr;
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "ImageAsset::AssignByMemory error: " << glerr << std::endl;
-	}
-	image_xcount = width;
-	image_ycount = height;
 }
 
 void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* buffer, int size) {
-	int width = 0;
-	int height = 0;
-	int channels = 0;
-	unsigned char* data = stbi_load_from_memory(buffer, size, &width, &height, &channels, 4);
+	data = stbi_load_from_memory(buffer, size, &image_xcount, &image_ycount, &channels, 4);
 	if (data == NULL) {
 		owner->CommandError(stbi_failure_reason());
 		return;
 	}
+}
+
+// This method must be called by the main thread
+void SDHRManager::ImageAsset::LoadIntoGPU()
+{
 	if (tex_id != UINT_MAX)
 	{
-		oglHelper->load_texture(data, width, height, channels, tex_id);
+		oglHelper->load_texture(data, image_xcount, image_ycount, channels, tex_id);
 		stbi_image_free(data);
-	} else {
-		std::cerr << "ERROR: Could not bind texture, all slots filled!" << '\n';
+		data = nullptr;
+	}
+	else {
+		std::cerr << "ERROR: No texture id assigned to image asset! All slots filled." << '\n';
 		return;
 	}
 	GLenum glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "ImageAsset::AssignByMemory error: " << glerr << std::endl;
 	}
-	image_xcount = width;
-	image_ycount = height;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -285,8 +270,7 @@ void SDHRManager::Initialize()
 	if (!defaultWindowShaderProgram.isReady)
 		defaultWindowShaderProgram.build(_SHADER_SDHR_VERTEX_DEFAULT, _SHADER_SDHR_FRAGMENT_DEFAULT);
 	bShouldInitializeRender = true;
-	threadState = THREADCOMM_e::IDLE;
-	dataState = DATASTATE_e::NODATA;
+	dataState = DATASTATE_e::DATA_IDLE;
 }
 
 SDHRManager::~SDHRManager()
@@ -370,6 +354,7 @@ void SDHRManager::Render()
 				image_assets[i].AssignByFilename(this, "Texture_Default3.png");
 			else
 				image_assets[i].AssignByFilename(this, "Texture_Default.png");
+			image_assets[i].LoadIntoGPU();
 			texSamplers[i] = (_SDHR_START_TEXTURES - GL_TEXTURE0) + i;
 			if ((glerr = glGetError()) != GL_NO_ERROR) {
 				std::cerr << "OpenGL AssignByFilename error: " << i << " - " << glerr << std::endl;
@@ -378,36 +363,34 @@ void SDHRManager::Render()
 		glActiveTexture(GL_TEXTURE0);
 	}
 
-	if (this->dataState == DATASTATE_e::COMMAND_READY)
+	if (this->dataState == DATASTATE_e::DATA_UPDATED)
 	{
 		// Check to see if we need to upload data to the GPU
-		this->threadState = THREADCOMM_e::MAIN_LOCK;
-		while (!fifo_upload_image_data.empty()) {
-			auto _uidata = fifo_upload_image_data.front();
-			glActiveTexture(_SDHR_START_TEXTURES + _uidata.asset_index);
-			image_assets[_uidata.asset_index].AssignByMemory(this, uploaded_data_region + _uidata.upload_start_addr, _uidata.upload_data_size);
-			if (error_flag) {
-				std::cerr << "AssignByMemory failed!" << std::endl;
+
+		// First loop through all image_assets to see if there's data to upload
+		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++)
+		{
+			if (image_assets[_SDHR_MAX_TEXTURES].data != nullptr)
+			{
+				glActiveTexture(_SDHR_START_TEXTURES + i);
+				image_assets[i].LoadIntoGPU();
+				glActiveTexture(GL_TEXTURE0);
 			}
-			fifo_upload_image_data.pop();
-#ifdef _DEBUG
-			std::cout << "AssignByMemory: " << _uidata.upload_data_size << " for index: " << (uint32_t)_uidata.asset_index << std::endl;
-#endif
-			glActiveTexture(GL_TEXTURE0);
 		}
 		GLenum glerr;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL error BEFORE window update: " << glerr << std::endl;
 		}
-		// Update windows and meshes
+
+		// Then Update windows and meshes.
+		// The GPU will need updated vertex buffers and more
 		for (auto& _w: this->windows) {
 			_w.Update();
 		}
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL render SDHRManager error: " << glerr << std::endl;
 		}
-		this->dataState = DATASTATE_e::NODATA;
-		this->threadState = THREADCOMM_e::IDLE;
+		this->dataState = DATASTATE_e::DATA_IDLE;
 	}
 
 	// Assign the list of all the textures to the shader's "tilesTexture" uniform
@@ -487,10 +470,10 @@ bool SDHRManager::ProcessCommands(void)
 	}
 	uint8_t* begin = &command_buffer[0];
 	uint8_t* end = begin + command_buffer.size();
-	uint8_t* p = begin;
+		uint8_t* p = begin;
 
 #ifdef DEBUG
-	std::cerr << "Command buffer size: " << command_buffer.size() << std::endl;
+	std::cerr << "Command Buffer size: " << command_buffer.size() << std::endl;
 #endif
 
 	while (p < end) {
@@ -516,10 +499,6 @@ bool SDHRManager::ProcessCommands(void)
 				std::cerr << "DataSizeCheck failed!" << std::endl;
 				return false;
 			}
-			// Check if there's a pending image upload 
-			// Wait until it's done
-			//while (!fifo_upload_image_data.empty()) {};
-			while (this->dataState == DATASTATE_e::COMMAND_READY) {}
 			/*
 			std::cout << std::hex << "Uploaded from: " << (uint32_t)(cmd->source_addr) 
 				<< " To: " << (uint32_t)(uploaded_data_region + dest_offset)
@@ -542,7 +521,8 @@ bool SDHRManager::ProcessCommands(void)
 			_uidata.asset_index = cmd->asset_index;
 			_uidata.upload_start_addr = upload_start_addr;
 			_uidata.upload_data_size = upload_data_size;
-			fifo_upload_image_data.push(_uidata);
+			while (image_assets[_uidata.asset_index].data != nullptr) {}	// Wait until GPU has loaded previous data
+			image_assets[_uidata.asset_index].AssignByMemory(this, uploaded_data_region + _uidata.upload_start_addr, _uidata.upload_data_size);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_DEFINE_IMAGE_ASSET: Success:" 
 				<< std::dec << cmd->asset_index << " x " << std::hex << upload_start_addr << std::endl;

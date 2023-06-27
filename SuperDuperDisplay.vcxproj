@@ -179,6 +179,7 @@
     <ClInclude Include="A2Window.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="common.h" />
+    <ClInclude Include="ConcurrentQueue.h" />
     <ClInclude Include="glad\glad.h" />
     <ClInclude Include="glad\khrplatform.h" />
     <ClInclude Include="imgui_memory_editor.h" />

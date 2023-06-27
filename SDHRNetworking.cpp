@@ -4,15 +4,14 @@
 #include <time.h>
 #include <fcntl.h>
 
-static std::vector<SDHREvent> events;
+static ConcurrentQueue<SDHREvent> events;
 static SDHRManager* sdhrMgr;
 static A2VideoManager* a2VideoMgr;
-uint8_t* a2mem;
+static uint8_t* a2mem;
 
 ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_addr)
 {
 	events.clear();
-	events.reserve(1000000);
 
 	sdhrMgr = SDHRManager::GetInstance();
 	a2VideoMgr = A2VideoManager::GetInstance();
@@ -44,13 +43,6 @@ ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_a
 		WSACleanup();
 		return ENET_RES::ERR;
 	}
-/*
-	if (listen(*server_fd, 1) == SOCKET_ERROR) {
-		std::cerr << "Error listening on socket" << std::endl;
-		closesocket(*server_fd);
-		WSACleanup();
-		return ENET_RES::ERR;
-	}*/
 #else // not __NETWORKING_WINDOWS__
 	if ((*server_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		std::cerr << "Error creating socket" << std::endl;
@@ -63,19 +55,20 @@ ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_a
 		std::cerr << "Error binding socket" << std::endl;
 		return ENET_RES::ERR;
 	}
-	if (listen(*server_fd, 1) == -1) {
-		std::cerr << "Error listening on socket" << std::endl;
-		return ENET_RES::ERR;
-	}
 #endif
 
 	return ENET_RES::OK;
 }
 
-// platform-independent event processing
-void process_events()
+// Platform-independent event processing
+// Filters and assigns events to memory, control or data
+// Events assigned to data have their data bytes appended to a command_buffer
+// The command_buffer is then further processed by SDHRManager
+int process_events_thread(bool* shouldTerminateProcessing)
 {
-	for (const auto& e : events) {
+	std::cout << "Starting Processing Thread\n";
+	while (!(*shouldTerminateProcessing)) {
+		auto e = events.pop();	// The thread will wait until there's an event to pop
 		//std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
 		if (e.rw) {
 			// ignoring all read events
@@ -123,36 +116,26 @@ void process_events()
 			{
 				/*
 				At this point we have a complete set of commands to process.
-				Some more data may be in the kernel socket receive buffer, but we don't care.
-				They'll be processed in the next batch.
-				Wait for the main thread to finish loading the current state (if any), then process
+				Wait for the main thread to finish loading any previous changes into the GPU, then process
 				the commands.
 				*/
 
-				while (sdhrMgr->threadState != THREADCOMM_e::SOCKET_LOCK)
-				{
-					if (sdhrMgr->threadState == THREADCOMM_e::IDLE)
-						sdhrMgr->threadState = THREADCOMM_e::SOCKET_LOCK;
-				}
 				#ifdef DEBUG
 				std::cout << "CONTROL: Process SDHR" << std::endl;
 				#endif
+				while (sdhrMgr->dataState != DATASTATE_e::DATA_IDLE) {};
 				bool processingSucceeded = sdhrMgr->ProcessCommands();
-				// Whether or not the processing worked, clear the buffer. If the processing failed,
-				// the data was corrupt and shouldn't be reprocessed
-				sdhrMgr->ClearBuffer();
-				sdhrMgr->dataState = DATASTATE_e::COMMAND_READY;
-				sdhrMgr->threadState = THREADCOMM_e::IDLE;
+				sdhrMgr->dataState = DATASTATE_e::DATA_UPDATED;
 				if (processingSucceeded)
 				{
 					#ifdef DEBUG
-					std::cout << "Processing succeeded!" << std::endl;
+					std::cout << "Processing SDHR succeeded!" << std::endl;
 					#endif
 				}
 				else {
-					#ifdef DEBUG
-					std::cerr << "ERROR: Processing failed!" << std::endl;
-					#endif
+					//#ifdef DEBUG
+					std::cerr << "ERROR: Processing SDHR failed!" << std::endl;
+					//#endif
 				}
 				break;
 			}
@@ -170,7 +153,8 @@ void process_events()
 			break;
 		}
 	}
-	events.clear();
+	std::cout << "Stopping Processing Thread\n";
+	return 0;
 }
 
 int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
@@ -179,6 +163,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	//__SOCKET server_fd, client_fd;
 	//struct sockaddr_in server_addr, client_addr;
 	//socklen_t client_len = sizeof(client_addr);
+	std::cout << "Starting Network Thread\n";
 
 #ifdef __NETWORKING_WINDOWS__
 
@@ -209,10 +194,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	u_long mode = 1;  // 1 to enable non-blocking socket
 	ioctlsocket(sockfd, FIONBIO, &mode);
 
-	auto sdhrMgr = SDHRManager::GetInstance();
-	auto a2VideoMgr = A2VideoManager::GetInstance();
-	uint8_t* a2mem = sdhrMgr->GetApple2MemPtr();
-
 	std::cout << "Waiting for connection..." << std::endl;
 	bool connected = false;
 
@@ -238,7 +219,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			int SenderAddrSize = sizeof(SenderAddr);
 
 			// Receive a datagram
-			int retval = recvfrom(sockfd, (char*)RecvBuf, BufLen, 0, (SOCKADDR*)&SenderAddr, &SenderAddrSize);
+			retval = recvfrom(sockfd, (char*)RecvBuf, BufLen, 0, (SOCKADDR*)&SenderAddr, &SenderAddrSize);
 			if (retval < 0 && errno != EWOULDBLOCK) {
 				std::cerr << "Error in recvmmsg" << std::endl;
 				return 1;
@@ -308,11 +289,10 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 					}
 					prev_addr = addr;
 					SDHREvent e(rw, addr, c->data[j]);
-					events.emplace_back(e);
+					events.push(e);
 				}
 				p += chunk_len;
 			}
-			process_events();
 		}
 	}
 
@@ -348,10 +328,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	int flags = fcntl(sockfd, F_GETFL, 0);
 	flags |= O_NONBLOCK;
 	fcntl(sockfd, F_SETFL, flags);
-
-	auto sdhrMgr = SDHRManager::GetInstance();
-	auto a2VideoMgr = A2VideoManager::GetInstance();
-	uint8_t* a2mem = sdhrMgr->GetApple2MemPtr();
 
 	std::cout << "Waiting for connection..." << std::endl;
 	bool connected = false;
@@ -433,12 +409,11 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 					}
 					prev_addr = addr;
 					SDHREvent e(rw, addr, c->data[j]);
-					events.emplace_back(e);
+					events.push(e);
 				}
 				p += chunk_len;
 			}
 		}
-		process_events();
 	}
 
 	std::cout << "Client Closing" << std::endl;
@@ -447,57 +422,3 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	return 0;
 #endif // __NETWORKING_WINDOWS__
 }
-
-bool socket_unblock_accept(uint16_t port)
-{
-#ifdef __NETWORKING_WINDOWS__
-	WSADATA wsaData;
-	int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
-	if (result != 0) {
-		std::cerr << "WSAStartup failed: " << result << std::endl;
-		return false;
-	}
-#endif
-
-	struct sockaddr_in server_addr;
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = htons(port);
-#ifdef __NETWORKING_WINDOWS__
-	InetPton(AF_INET, ("127.0.0.1"), &server_addr.sin_addr.s_addr);
-#else
-	inet_pton(AF_INET, ("127.0.0.1"), &server_addr.sin_addr.s_addr);
-#endif
-
-	auto client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-#ifdef __NETWORKING_WINDOWS__
-	if (client_socket == INVALID_SOCKET) {
-		std::cerr << "Error creating socket: " << WSAGetLastError() << std::endl;
-		WSACleanup();
-#else
-	if (client_socket == -1) {
-		std::cerr << "Error creating socket!" << std::endl;
-#endif
-		return false;
-	}
-#ifdef __NETWORKING_WINDOWS__
-	if (connect(client_socket, (SOCKADDR*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
-		closesocket(client_socket);
-		std::cerr << "Error connecting to server: " << WSAGetLastError() << std::endl;
-		WSACleanup();
-#else
-	if (connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
-		close(client_socket);
-		std::cerr << "Error connecting to server!" << std::endl;
-#endif
-		return false;
-	}
-	// Do nothing, we've already unblocked the server's accept()
-	// so it will quit if shouldTerminateNetworking is true
-#ifdef __NETWORKING_WINDOWS__
-	closesocket(client_socket);
-	WSACleanup();
-#else
-	close(client_socket);
-#endif
-	return true;
-	}

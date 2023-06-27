@@ -7,24 +7,16 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <vector>
 #include <queue>
 
 #include "common.h"
 #include "OpenGLHelper.h"
 #include "SDHRWindow.h"
 
-enum THREADCOMM_e
-{
-	IDLE = 0,			// SDHR data and GPU are in sync
-	SOCKET_LOCK,		// Socket thread is updating the SDHR data
-	MAIN_LOCK			// Main thread is updating GPU data
-};
-
 enum DATASTATE_e
 {
-	NODATA = 0,			// No command to process
-	COMMAND_READY		// Command is ready for processing
+	DATA_IDLE = 0,			// CPU and GPU are in sync
+	DATA_UPDATED			// Updated data in memory. Needs sync to GPU
 };
 
 enum SDHRCtrl_e
@@ -71,11 +63,15 @@ public:
 	struct ImageAsset {
 		void AssignByFilename(SDHRManager* owner, const char* filename);
 		void AssignByMemory(SDHRManager* owner, const uint8_t* buffer, int size);
+		// This method to be called by the main thread only
+		void LoadIntoGPU();
 
 		// image assets are full 32-bit bitmap files, uploaded from PNG
-		uint32_t image_xcount = 0;	// width and height of asset in pixels
-		uint32_t image_ycount = 0;
+		int image_xcount = 0;	// width and height of asset in pixels
+		int image_ycount = 0;
 		GLuint tex_id = 0;	// Texture ID on the GPU that holds the image data
+		int channels;
+		unsigned char* data;
 	};
 
 	struct TileTex {				// Tile texture starting coordinates
@@ -103,7 +99,6 @@ public:
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
 
-	volatile THREADCOMM_e threadState;
 	volatile DATASTATE_e dataState;
 	// NOTE:	Maximum of 16 image assets.
 	//			They're always concomitantly available as textures in the GPU

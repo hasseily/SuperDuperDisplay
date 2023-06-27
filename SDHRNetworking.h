@@ -63,8 +63,12 @@ enum class ENET_RES
 
 // Call this method as a new thread
 // It loops infinitely and waits for packets
-// It instantly updates memory, and only updates
-// other data when a PROCESS_COMMAND packet arrives
+// And puts it in an events queue
 int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking);
 
-bool socket_unblock_accept(uint16_t port);
+// Call this method as a new thread
+// It loops indefinitely and processes the events queue
+// If the events are SDHR data, it appends them to a command_buffer
+// When it parses a SDHR_PROCESS_EVENTS event, it calls SDHRManager
+// which itself processes the command_buffer
+int process_events_thread(bool* shouldTerminateProcessing);

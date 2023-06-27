@@ -170,6 +170,7 @@ int main(int, char**)
 
     // Our state
 	bool bShouldTerminateNetworking = false;
+	bool bShouldTerminateProcessing = false;
     bool show_demo_window = false;
     bool show_metrics_window = false;
 	bool show_mem_apple2_window = false;
@@ -185,7 +186,8 @@ int main(int, char**)
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
 	std::thread thread_server(socket_server_thread, (uint16_t)_SDHR_SERVER_PORT, &bShouldTerminateNetworking);
-
+    // And run the processing thread
+	std::thread thread_processor(process_events_thread, &bShouldTerminateProcessing);
 
     // Delta Time
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
@@ -422,9 +424,10 @@ int main(int, char**)
     EMSCRIPTEN_MAINLOOP_END;
 #endif
 
-    // Network cleanup
+    // Stop all threads
+	bShouldTerminateProcessing = true;
+	thread_processor.join();
     bShouldTerminateNetworking = true;
-    socket_unblock_accept(_SDHR_SERVER_PORT);
     thread_server.join();
 
     // Cleanup
