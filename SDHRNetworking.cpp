@@ -355,13 +355,16 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		}
 		last_recv_nsec = nsec;
 
-		events.clear();
 		for (int i = 0; i < retval; ++i) {
 			SDHRPacketHeader* h = (SDHRPacketHeader*)bufs[i];
 			uint32_t seqno = h->seqno[0];
 			seqno += (uint32_t)h->seqno[1] << 8;
 			seqno += (uint32_t)h->seqno[2] << 16;
 			seqno += (uint32_t)h->seqno[3] << 24;
+
+			if (seqno < prev_seqno)
+				std::cerr << "FOUND EARLIER PACKET" << std::endl;
+
 			if (seqno != prev_seqno + 1) {
 				if (first_drop) {
 					first_drop = false;
