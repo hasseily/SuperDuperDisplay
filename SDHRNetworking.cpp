@@ -65,15 +65,11 @@ int process_events_thread(bool* shouldTerminateProcessing)
 	uint8_t* a2mem = sdhrMgr->GetApple2MemPtr();
 	while (!(*shouldTerminateProcessing)) {
 		auto e = events.pop();	// The thread will wait until there's an event to pop
-		if (e.rw) {
-			// ignoring all read events
-			continue;
-		}
+		// std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
 		if ((e.addr >= 0x200) && (e.addr < 0xc000)) {
 			a2mem[e.addr] = e.data;
 			a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
 			if ((e.addr >= 0x400) && (e.addr < 0x800))
-				std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
 			continue;
 		}	
 		if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
