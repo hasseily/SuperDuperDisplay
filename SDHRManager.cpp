@@ -370,7 +370,7 @@ void SDHRManager::Render()
 		// First loop through all image_assets to see if there's data to upload
 		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++)
 		{
-			if (image_assets[_SDHR_MAX_TEXTURES].data != nullptr)
+			if (image_assets[i].data != nullptr)
 			{
 				glActiveTexture(_SDHR_START_TEXTURES + i);
 				image_assets[i].LoadIntoGPU();
