@@ -339,10 +339,10 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		if (fdArray[0].revents & POLLIN)  // if any event occurred
 		{
 			sockaddr_in SenderAddr;
-			int SenderAddrSize = sizeof(SenderAddr);
+			socklen_t SenderAddrSize = sizeof(SenderAddr);
 
 			// Receive a datagram
-			retval = recvfrom(sockfd, (char*)RecvBuf, BufLen, 0, (SOCKADDR*)&SenderAddr, &SenderAddrSize);
+			retval = recvfrom(sockfd, (char*)RecvBuf, BufLen, 0, (sockaddr*)&SenderAddr, &SenderAddrSize);
 			if (retval < 0 && errno != EWOULDBLOCK) {
 				std::cerr << "Error in recvmmsg" << std::endl;
 				return 1;
