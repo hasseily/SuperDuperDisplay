@@ -384,10 +384,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 				uint32_t addr_count = 0;
 				for (int j = 0; j < 8; ++j) {
 					bool rw = (c->rwflags & (1 << j)) != 0;
-					if (rw) {
-						// ignoring all read events
-						continue;
-					}
 					uint16_t addr;
 					bool addr_flag = (c->seqflags & (1 << j)) != 0;
 					if (addr_flag) {
@@ -401,6 +397,10 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 						addr = ++prev_addr;
 					}
 					prev_addr = addr;
+					if (rw) {
+						// ignoring all read events
+						continue;
+					}
 					SDHREvent e(rw, addr, c->data[j]);
 					events.push(e);
 				}
