@@ -169,8 +169,8 @@ int main(int, char**)
     //IM_ASSERT(font != nullptr);
 
     // Our state
-	bool bShouldTerminateNetworking = false;
-	bool bShouldTerminateProcessing = false;
+	static bool bShouldTerminateNetworking = false;
+	static bool bShouldTerminateProcessing = false;
     bool show_demo_window = false;
     bool show_metrics_window = false;
 	bool show_mem_apple2_window = false;
