@@ -161,7 +161,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 
 #ifdef __NETWORKING_WINDOWS__
 
-#define VLEN 16
 #define BUFSZ 2048
 
 	__SOCKET sockfd;
@@ -295,7 +294,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	std::cout << "    Client Closed" << std::endl;
 	return 0;
 #else
-#define VLEN 16
+
 #define BUFSZ 2048
 
 	__SOCKET sockfd;
@@ -306,22 +305,19 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	serveraddr.sin_port = htons((unsigned short)port);
 	serveraddr.sin_addr.s_addr = INADDR_ANY;
 
+	uint8_t RecvBuf[BUFSZ];
+	ssize_t BufLen = BUFSZ;
+
 	if (socket_bind_and_listen(&sockfd, serveraddr) == ENET_RES::ERR)
 		return 1;
 
-	struct mmsghdr msgs[VLEN];
-	struct iovec iovecs[VLEN];
-	uint8_t bufs[VLEN][BUFSZ];
-	for (int i = 0; i < VLEN; ++i) {
-		iovecs[i].iov_base = bufs[i];
-		iovecs[i].iov_len = BUFSZ;
-		msgs[i].msg_hdr.msg_iov = &iovecs[i];
-		msgs[i].msg_hdr.msg_iovlen = 1;
-	}
+	struct pollfd fdArray[1];  // 1 connection
+	// Set up the pollfd for poll()
+	fdArray[0].fd = sockfd;
+	fdArray[0].events = POLLIN;
 
 	int flags = fcntl(sockfd, F_GETFL, 0);
-	flags |= O_NONBLOCK;
-	fcntl(sockfd, F_SETFL, flags);
+	fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 
 	std::cout << "Waiting for connection..." << std::endl;
 	bool connected = false;
@@ -335,79 +331,91 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		struct timespec ts;
 		clock_gettime(CLOCK_REALTIME, &ts);
 		int64_t nsec = ts.tv_sec * 1000000000ll + ts.tv_nsec;
-		int retval = recvmmsg(sockfd, msgs, VLEN, 0, NULL);
-		if (retval < 0 && errno != EWOULDBLOCK) {
-			std::cerr << "Error in recvmmsg" << std::endl;
-			return 1;
-		}
-		if (connected && nsec > last_recv_nsec + 10000000000ll) {
-			std::cout << "Client disconnected" << std::endl;
-			connected = false;
-			first_drop = true;
-			continue;
-		}
-		if (retval == -1) {
-			continue;
-		}
-		if (!connected) {
-			connected = true;
-			std::cout << "Client connected" << std::endl;
-		}
-		last_recv_nsec = nsec;
+		int retval = 0;
 
-		SDHRPacketHeader* h = (SDHRPacketHeader*)RecvBuf;
-		uint32_t seqno = h->seqno[0];
-		seqno += (uint32_t)h->seqno[1] << 8;
-		seqno += (uint32_t)h->seqno[2] << 16;
-		seqno += (uint32_t)h->seqno[3] << 24;
+		// Use poll() to wait for an incoming UDP packet
+		poll(fdArray, 1, -1);  // -1 means infinite timeout
 
-		if (seqno < prev_seqno)
-			std::cerr << "FOUND EARLIER PACKET" << std::endl;
-		if (seqno != prev_seqno + 1) {
-			if (first_drop) {
-				first_drop = false;
+		if (fdArray[0].revents & POLLIN)  // if any event occurred
+		{
+			sockaddr_in SenderAddr;
+			int SenderAddrSize = sizeof(SenderAddr);
+
+			// Receive a datagram
+			retval = recvfrom(sockfd, (char*)RecvBuf, BufLen, 0, (SOCKADDR*)&SenderAddr, &SenderAddrSize);
+			if (retval < 0 && errno != EWOULDBLOCK) {
+				std::cerr << "Error in recvmmsg" << std::endl;
+				return 1;
 			}
-			else {
-				std::cerr << "seqno drops: "
-					<< seqno - prev_seqno + 1 << std::endl;
-				// this is pretty bad, should probably go into error
+			if (connected && nsec > last_recv_nsec + 10000000000ll) {
+				std::cout << "Client disconnected" << std::endl;
+				connected = false;
+				first_drop = true;
+				continue;
 			}
-		}
-		prev_seqno = seqno;
-		if (h->cmdtype != 0) {
-			std::cerr << "ignoring cmd" << std::endl;
-			// currently ignoring anything not a bus event
-			continue;
-		}
-		uint8_t* p = RecvBuf + sizeof(SDHRPacketHeader);
+			if (retval == -1) {
+				continue;
+			}
+			if (!connected) {
+				connected = true;
+				std::cout << "Client connected" << std::endl;
+			}
+			last_recv_nsec = nsec;
 
-		while (p - RecvBuf < retval) {
-			SDHRBusChunk* c = (SDHRBusChunk*)p;
-			size_t chunk_len = 10;
-			uint32_t addr_count = 0;
-			for (int j = 0; j < 8; ++j) {
-				bool rw = (c->rwflags & (1 << j)) != 0;
-				uint16_t addr;
-				bool addr_flag = (c->seqflags & (1 << j)) != 0;
-				if (addr_flag) {
-					chunk_len += 2;
-					addr = c->addrs[addr_count * 2 + 1];
-					addr <<= 8;
-					addr += c->addrs[addr_count * 2];
-					++addr_count;
+			SDHRPacketHeader* h = (SDHRPacketHeader*)RecvBuf;
+			uint32_t seqno = h->seqno[0];
+			seqno += (uint32_t)h->seqno[1] << 8;
+			seqno += (uint32_t)h->seqno[2] << 16;
+			seqno += (uint32_t)h->seqno[3] << 24;
+
+			if (seqno < prev_seqno)
+				std::cerr << "FOUND EARLIER PACKET" << std::endl;
+			if (seqno != prev_seqno + 1) {
+				if (first_drop) {
+					first_drop = false;
 				}
 				else {
-					addr = ++prev_addr;
+					std::cerr << "seqno drops: "
+						<< seqno - prev_seqno + 1 << std::endl;
+					// this is pretty bad, should probably go into error
 				}
-				prev_addr = addr;
-				if (rw) {
-					// ignoring all read events
-					continue;
-				}
-				SDHREvent e(rw, addr, c->data[j]);
-				events.push(e);
 			}
-			p += chunk_len;
+			prev_seqno = seqno;
+			if (h->cmdtype != 0) {
+				std::cerr << "ignoring cmd" << std::endl;
+				// currently ignoring anything not a bus event
+				continue;
+			}
+			uint8_t* p = RecvBuf + sizeof(SDHRPacketHeader);
+
+			while (p - RecvBuf < retval) {
+				SDHRBusChunk* c = (SDHRBusChunk*)p;
+				size_t chunk_len = 10;
+				uint32_t addr_count = 0;
+				for (int j = 0; j < 8; ++j) {
+					bool rw = (c->rwflags & (1 << j)) != 0;
+					uint16_t addr;
+					bool addr_flag = (c->seqflags & (1 << j)) != 0;
+					if (addr_flag) {
+						chunk_len += 2;
+						addr = c->addrs[addr_count * 2 + 1];
+						addr <<= 8;
+						addr += c->addrs[addr_count * 2];
+						++addr_count;
+					}
+					else {
+						addr = ++prev_addr;
+					}
+					prev_addr = addr;
+					if (rw) {
+						// ignoring all read events
+						continue;
+					}
+					SDHREvent e(rw, addr, c->data[j]);
+					events.push(e);
+				}
+				p += chunk_len;
+			}
 		}
 	}
 
