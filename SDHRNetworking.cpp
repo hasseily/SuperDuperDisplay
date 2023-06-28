@@ -355,58 +355,59 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		}
 		last_recv_nsec = nsec;
 
-		events.clear();
-		for (int i = 0; i < retval; ++i) {
-			SDHRPacketHeader* h = (SDHRPacketHeader*)bufs[i];
-			uint32_t seqno = h->seqno[0];
-			seqno += (uint32_t)h->seqno[1] << 8;
-			seqno += (uint32_t)h->seqno[2] << 16;
-			seqno += (uint32_t)h->seqno[3] << 24;
-			if (seqno != prev_seqno + 1) {
-				if (first_drop) {
-					first_drop = false;
+		SDHRPacketHeader* h = (SDHRPacketHeader*)RecvBuf;
+		uint32_t seqno = h->seqno[0];
+		seqno += (uint32_t)h->seqno[1] << 8;
+		seqno += (uint32_t)h->seqno[2] << 16;
+		seqno += (uint32_t)h->seqno[3] << 24;
+
+		if (seqno < prev_seqno)
+			std::cerr << "FOUND EARLIER PACKET" << std::endl;
+		if (seqno != prev_seqno + 1) {
+			if (first_drop) {
+				first_drop = false;
+			}
+			else {
+				std::cerr << "seqno drops: "
+					<< seqno - prev_seqno + 1 << std::endl;
+				// this is pretty bad, should probably go into error
+			}
+		}
+		prev_seqno = seqno;
+		if (h->cmdtype != 0) {
+			std::cerr << "ignoring cmd" << std::endl;
+			// currently ignoring anything not a bus event
+			continue;
+		}
+		uint8_t* p = RecvBuf + sizeof(SDHRPacketHeader);
+
+		while (p - RecvBuf < retval) {
+			SDHRBusChunk* c = (SDHRBusChunk*)p;
+			size_t chunk_len = 10;
+			uint32_t addr_count = 0;
+			for (int j = 0; j < 8; ++j) {
+				bool rw = (c->rwflags & (1 << j)) != 0;
+				uint16_t addr;
+				bool addr_flag = (c->seqflags & (1 << j)) != 0;
+				if (addr_flag) {
+					chunk_len += 2;
+					addr = c->addrs[addr_count * 2 + 1];
+					addr <<= 8;
+					addr += c->addrs[addr_count * 2];
+					++addr_count;
 				}
 				else {
-					std::cerr << "seqno drops: "
-						<< seqno - prev_seqno + 1 << std::endl;
-					// this is pretty bad, should probably go into error
+					addr = ++prev_addr;
 				}
-			}
-			prev_seqno = seqno;
-			if (h->cmdtype != 0) {
-				std::cerr << "ignoring cmd" << std::endl;
-				// currently ignoring anything not a bus event
-				continue;
-			}
-			uint8_t* p = bufs[i] + sizeof(SDHRPacketHeader);
-			while (p - bufs[i] < msgs[i].msg_len) {
-				SDHRBusChunk* c = (SDHRBusChunk*)p;
-				size_t chunk_len = 10;
-				uint32_t addr_count = 0;
-				for (int j = 0; j < 8; ++j) {
-					bool rw = (c->rwflags & (1 << j)) != 0;
-					uint16_t addr;
-					bool addr_flag = (c->seqflags & (1 << j)) != 0;
-					if (addr_flag) {
-						chunk_len += 2;
-						addr = c->addrs[addr_count * 2 + 1];
-						addr <<= 8;
-						addr += c->addrs[addr_count * 2];
-						++addr_count;
-					}
-					else {
-						addr = ++prev_addr;
-					}
-					prev_addr = addr;
-					if (rw) {
-						// ignoring all read events
-						continue;
-					}
-					SDHREvent e(rw, addr, c->data[j]);
-					events.push(e);
+				prev_addr = addr;
+				if (rw) {
+					// ignoring all read events
+					continue;
 				}
-				p += chunk_len;
+				SDHREvent e(rw, addr, c->data[j]);
+				events.push(e);
 			}
+			p += chunk_len;
 		}
 	}
 
