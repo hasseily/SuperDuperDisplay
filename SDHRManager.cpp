@@ -252,7 +252,7 @@ void SDHRManager::Initialize()
 	}
 
 	command_buffer.clear();
-	command_buffer.reserve(64 * 1024);
+	command_buffer.reserve(32 * 1024 * 1024);
 
 	// Initialize the Apple 2 memory duplicate
 	// Whenever memory is written from the Apple2

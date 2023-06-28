@@ -5,17 +5,10 @@
 #include <fcntl.h>
 
 static ConcurrentQueue<SDHREvent> events;
-static SDHRManager* sdhrMgr;
-static A2VideoManager* a2VideoMgr;
-static uint8_t* a2mem;
 
 ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_addr)
 {
 	events.clear();
-
-	sdhrMgr = SDHRManager::GetInstance();
-	a2VideoMgr = A2VideoManager::GetInstance();
-	a2mem = sdhrMgr->GetApple2MemPtr();
 
 #ifdef __NETWORKING_WINDOWS__
 	WSADATA wsaData;
@@ -67,18 +60,22 @@ ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_a
 int process_events_thread(bool* shouldTerminateProcessing)
 {
 	std::cout << "Starting Processing Thread\n";
+	SDHRManager* sdhrMgr = SDHRManager::GetInstance();
+	A2VideoManager* a2VideoMgr = A2VideoManager::GetInstance();
+	uint8_t* a2mem = sdhrMgr->GetApple2MemPtr();
 	while (!(*shouldTerminateProcessing)) {
 		auto e = events.pop();	// The thread will wait until there's an event to pop
-		//std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
 		if (e.rw) {
 			// ignoring all read events
 			continue;
 		}
-		if ((e.addr >= 0x200) && (e.addr <= 0xbfff)) {
+		if ((e.addr >= 0x200) && (e.addr < 0xc000)) {
 			a2mem[e.addr] = e.data;
 			a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
+			if ((e.addr >= 0x400) && (e.addr < 0x800))
+				std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
 			continue;
-		}
+		}	
 		if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
 			// ignore non-control
 			continue;
