@@ -130,6 +130,7 @@ int process_events_thread(bool* shouldTerminateProcessing)
 					std::cerr << "ERROR: Processing SDHR failed!" << std::endl;
 					//#endif
 				}
+				sdhrMgr->ClearBuffer();
 				break;
 			}
 			default:
