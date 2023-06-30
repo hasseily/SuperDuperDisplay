@@ -305,7 +305,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	std::cout << "    Client Closed" << std::endl;
 	return 0;
 #else
-#define VLEN 16
+#define VLEN 1024
 #define BUFSZ 2048
 
 	__SOCKET sockfd;
@@ -345,7 +345,10 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		struct timespec ts;
 		clock_gettime(CLOCK_REALTIME, &ts);
 		int64_t nsec = ts.tv_sec * 1000000000ll + ts.tv_nsec;
-		int retval = recvmmsg(sockfd, msgs, VLEN, 0, NULL);
+		struct timespec wait_ts;
+		wait_ts.tv_sec = 1;
+		wait_ts.tv_nsec = 0;
+		int retval = recvmmsg(sockfd, msgs, VLEN, 0, &wait_ts);
 		if (retval < 0 && errno != EWOULDBLOCK) {
 			std::cerr << "Error in recvmmsg" << std::endl;
 			return 1;
