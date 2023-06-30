@@ -129,15 +129,16 @@ public:
 		bSDHREnabled = value;
 		if (bSDHREnabled)
 			bShouldInitializeRender = true;
+		else
+			ResetSdhr();
 	}
 
 	bool IsSdhrEnabled(void) {
 		return bSDHREnabled;
 	}
 
-	void ResetSdhr() {
-		Initialize();
-	}
+	void ResetSdhr();
+
 	// public singleton code
 	static SDHRManager* GetInstance()
 	{

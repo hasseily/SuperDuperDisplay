@@ -13,6 +13,7 @@ void SDHRWindow::Reset()
 
 	if (mesh) {
 		delete mesh;
+		mesh = nullptr;
 	}
 };
 

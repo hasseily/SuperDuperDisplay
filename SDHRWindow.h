@@ -23,11 +23,13 @@ public:
 
 	~SDHRWindow()
 	{
-		if (mesh)
+		if (mesh) {
 			delete mesh;
+			mesh = nullptr;
+		}
 	};
 
-	MosaicMesh* mesh = NULL;
+	MosaicMesh* mesh = nullptr;
 
 	void Define(uXY _screen_count, uXY _tile_dim, uXY _tile_count, Shader* _shaderProgram);
 	void ShiftTiles(iXY _direction);
@@ -37,6 +39,7 @@ public:
 
 	void Update();
 	void Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj);
+	void Reset();
 
 	bool IsEmpty() { return (tile_count.x == 0 || tile_count.y == 0); };
 
@@ -49,8 +52,6 @@ public:
 	uXY Get_tile_count() const { return tile_count; }
 
 private:
-	void Reset();
-
 	uint8_t index;		// index of window (is also the z-value: higher is closer to camera)
 	uXY screen_count;	// width in pixels of visible screen area of window
 	iXY screen_begin;	// pixel xy coordinate where window begins

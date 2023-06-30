@@ -67,6 +67,9 @@
     <ClCompile Include="A2VideoManager.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="A2Window.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imgui\imconfig.h">
@@ -86,12 +89,6 @@
     </ClInclude>
     <ClInclude Include="imgui\imgui\imgui_internal.h">
       <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="stb_image.h">
-      <Filter>sources</Filter>
-    </ClInclude>
-    <ClInclude Include="imgui_memory_editor.h">
-      <Filter>sources</Filter>
     </ClInclude>
     <ClInclude Include="camera.h">
       <Filter>headers</Filter>
@@ -126,7 +123,21 @@
     <ClInclude Include="SDHRWindow.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="A2VideoManager.h" />
+    <ClInclude Include="imgui_memory_editor.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ConcurrentQueue.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="A2VideoManager.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="A2Window.h">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
@@ -149,18 +160,21 @@
     <None Include="shaders\a2video_text_330.vert">
       <Filter>shaders</Filter>
     </None>
+    <None Include="shaders\a2video_text_310es.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\a2video_text_310es.vert">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Texture_Default.png">
       <Filter>assets</Filter>
     </Image>
-    <Image Include="Texture_Default1.png">
+    <Image Include="Apple2eFont7x8 - Regular.png">
       <Filter>assets</Filter>
     </Image>
-    <Image Include="Texture_Default2.png">
-      <Filter>assets</Filter>
-    </Image>
-    <Image Include="Texture_Default3.png">
+    <Image Include="Apple2eFont7x8 - Alternate.png">
       <Filter>assets</Filter>
     </Image>
   </ItemGroup>
