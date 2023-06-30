@@ -99,7 +99,6 @@ void SDHRWindow::Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 			if (this->black_or_wrap)
 			{
 				// if it wraps, draw the meshes around it that matter
-				auto mcoords = mesh->GetWorldCoordinates();
 				glm::vec2 msize = glm::vec2(mesh->width, mesh->height);
 				glm::mat4 mat_trans;
 				bool isX = false;

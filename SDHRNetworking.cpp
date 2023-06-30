@@ -379,7 +379,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 				if (first_drop) {
 					first_drop = false;
 				}
-				else {.....data...........
+				else {
 					std::cerr << "seqno drops: "
 						<< seqno - prev_seqno + 1 << std::endl;
 					// this is pretty bad, should probably go into error
