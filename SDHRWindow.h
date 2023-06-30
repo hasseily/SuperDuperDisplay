@@ -12,7 +12,7 @@ public:
 	// TODO: Enable black_or_wrap functionality. Currently only black.
 
 	SDHRWindow()
-		: enabled(false), black_or_wrap(false)
+		: enabled(false), black_or_wrap(true)
 		, index(UINT8_MAX)
 		, screen_count(uXY({ 0,0 }))
 		, screen_begin(iXY({ 0,0 }))

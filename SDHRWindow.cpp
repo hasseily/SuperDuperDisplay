@@ -4,7 +4,7 @@
 void SDHRWindow::Reset()
 {
 	enabled = 0;
-	black_or_wrap = false;
+	black_or_wrap = true;
 	screen_count = uXY({ 0,0 });
 	screen_begin = iXY({ 0,0 });
 	tile_begin = iXY({ 0,0 });
@@ -93,7 +93,39 @@ void SDHRWindow::Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 				std::cerr << "SDHRWindow draw error: " << glerr << std::endl;
 			}
 
+			// draw the main mesh
 			mesh->Draw(mat_camera, mat_proj);
+
+			if (this->black_or_wrap)
+			{
+				// if it wraps, draw the meshes around it that matter
+				auto mcoords = mesh->GetWorldCoordinates();
+				glm::vec2 msize = glm::vec2(mesh->width, mesh->height);
+				glm::mat4 mat_trans;
+				bool isX = false;
+				bool isY = false;
+				if (window_bottomright.x > msize.x)
+				{
+					// need to draw right
+					mat_trans = glm::translate(glm::mat4(1.0f), glm::vec3(msize.x, 0.f, 0.0f));
+					mesh->Draw(mat_camera * mat_trans, mat_proj);
+					isX = true;
+				}
+				if (window_bottomright.y > msize.y)
+				{
+					// need to draw right
+					mat_trans = glm::translate(glm::mat4(1.0f), glm::vec3(0.f, msize.y, 0.0f));
+					mesh->Draw(mat_camera * mat_trans, mat_proj);
+					isY = true;
+				}
+				if (isX && isY)
+				{
+					// Need to draw bottom right
+					mat_trans = glm::translate(glm::mat4(1.0f), glm::vec3(msize.x, msize.y, 0.0f));
+					mesh->Draw(mat_camera * mat_trans, mat_proj);
+					isY = true;
+				}
+			}
 		}
 	}
 }

@@ -17,8 +17,6 @@ uniform uvec2 meshSize;          // mesh size in model coordinates (pixels)
 uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform sampler2D TBTEX;
 
-vec4 vStencilFailColor = vec4(0);   // Change this to show the stencil cutouts in color
-
 in vec3 vFragPos;       // The fragment position in model coordinates (pixels)
 in vec4 vTintColor;     // The mixed vertex colors for tinting
 in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
@@ -68,14 +66,6 @@ void main()
     // Now get the texture color, using the tile uv origin and this fragment's offset (with scaling)
     vec4 tex = texture(tilesTexture[texIdx], mosaicTile.xy + (fragOffset * scale) / textureSize2d);
 
-    // Check if the fragment is inside the window (stencil culling)
-    // All of those are relative to the mesh origin
-    float t = isInsideWindow(
-        vFragPos.xy,
-        windowTopLeft,
-        windowBottomRight
-    );
-    
-    fragColor = (t * tex * vTintColor + (1 - t) * vStencilFailColor) * (1 - iDebugNoTextures)
-                                         + vec4(vColor, 1.f) * iDebugNoTextures;
+    fragColor = tex * vTintColor * (1 - iDebugNoTextures)
+                  + vec4(vColor, 1.f) * iDebugNoTextures;
 }
