@@ -243,9 +243,9 @@ int main(int, char**)
                 break;
             case SDL_KEYDOWN:
 			{
-				if (event.key.keysym.sym == SDLK_F4) {  // Quit on Alt-F4
+				if (event.key.keysym.sym == SDLK_c) {  // Quit on Ctrl-c
 					auto state = SDL_GetKeyboardState(NULL);
-					if (state[SDL_SCANCODE_LALT]) {
+					if (state[SDL_SCANCODE_LCTRL]) {
 						done = true;
 					}
 				}
@@ -324,7 +324,7 @@ int main(int, char**)
 				ImGui::Checkbox("Apple //e Memory Window", &show_mem_apple2_window);
 				ImGui::Checkbox("Upload Region Memory Window", &show_mem_upload_window);
                 ImGui::Separator();
-				did_press_quit = ImGui::Button("Quit App (Alt-F4)");
+				did_press_quit = ImGui::Button("Quit App (Ctrl-c)");
 				if (did_press_quit)
 					done = true;
             }
@@ -426,6 +426,7 @@ int main(int, char**)
 
     // Stop all threads
 	bShouldTerminateProcessing = true;
+	terminate_processing_thread();
 	thread_processor.join();
     bShouldTerminateNetworking = true;
     thread_server.join();

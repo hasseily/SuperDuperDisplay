@@ -53,6 +53,14 @@ ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_a
 	return ENET_RES::OK;
 }
 
+void terminate_processing_thread()
+{
+	// Force a dummy event to process, so that shouldTerminateProcessing is triggered
+	// and the loop is closed cleanly.
+	SDHREvent e = SDHREvent(1, 0, 0);
+	events.push(e);
+}
+
 // Platform-independent event processing
 // Filters and assigns events to memory, control or data
 // Events assigned to data have their data bytes appended to a command_buffer
@@ -65,6 +73,8 @@ int process_events_thread(bool* shouldTerminateProcessing)
 	uint8_t* a2mem = sdhrMgr->GetApple2MemPtr();
 	while (!(*shouldTerminateProcessing)) {
 		auto e = events.pop();	// The thread will wait until there's an event to pop
+		if (e.rw == 1)	// read or dummy event, disregard
+			continue;
 		// std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
 		if ((e.addr >= 0x200) && (e.addr < 0xc000)) {
 			a2mem[e.addr] = e.data;
@@ -147,7 +157,7 @@ int process_events_thread(bool* shouldTerminateProcessing)
 			break;
 		}
 	}
-	std::cout << "Stopping Processing Thread\n";
+	std::cout << "Stopped Processing Thread\n";
 	return 0;
 }
 
@@ -205,7 +215,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		int retval = 0;
 
 		// Use WSAPoll() to wait for an incoming UDP packet
-		WSAPoll(fdArray, 1, -1);  // -1 means infinite timeout
+		WSAPoll(fdArray, 1, 1000);  // Poll and timeout every second to allow for thread termination
 
 		if (fdArray[0].revents & POLLRDNORM)  // if any event occurred
 		{
@@ -369,7 +379,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 				if (first_drop) {
 					first_drop = false;
 				}
-				else {
+				else {.....data...........
 					std::cerr << "seqno drops: "
 						<< seqno - prev_seqno + 1 << std::endl;
 					// this is pretty bad, should probably go into error

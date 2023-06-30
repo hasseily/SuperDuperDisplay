@@ -72,3 +72,4 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking);
 // When it parses a SDHR_PROCESS_EVENTS event, it calls SDHRManager
 // which itself processes the command_buffer
 int process_events_thread(bool* shouldTerminateProcessing);
+void terminate_processing_thread();
