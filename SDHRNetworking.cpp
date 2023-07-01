@@ -72,89 +72,91 @@ int process_events_thread(bool* shouldTerminateProcessing)
 	A2VideoManager* a2VideoMgr = A2VideoManager::GetInstance();
 	uint8_t* a2mem = sdhrMgr->GetApple2MemPtr();
 	while (!(*shouldTerminateProcessing)) {
-		auto e = events.pop();	// The thread will wait until there's an event to pop
-		if (e.rw == 1)	// read or dummy event, disregard
-			continue;
-		// std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
-		if ((e.addr >= 0x200) && (e.addr < 0xc000)) {
-			a2mem[e.addr] = e.data;
-			a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
-			if ((e.addr >= 0x400) && (e.addr < 0x800))
-			continue;
-		}	
-		if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
-			// ignore non-control
-			continue;
-		}
-		//std::cerr << "cmd " << e.addr << " " << (uint32_t) e.data << std::endl;
-		SDHRCtrl_e _ctrl;
-		switch (e.addr & 0x0f)
-		{
-		case 0x00:
-			// std::cout << "This is a control packet!" << std::endl;
-			_ctrl = (SDHRCtrl_e)e.data;
-			switch (_ctrl)
+		auto event_list = events.drain();
+		for (auto& e : event_list) {
+			if (e.rw == 1)	// read or dummy event, disregard
+				continue;
+			// std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
+			if ((e.addr >= 0x200) && (e.addr < 0xc000)) {
+				a2mem[e.addr] = e.data;
+				a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
+				if ((e.addr >= 0x400) && (e.addr < 0x800))
+				continue;
+			}	
+			if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
+				// ignore non-control
+				continue;
+			}
+			//std::cerr << "cmd " << e.addr << " " << (uint32_t) e.data << std::endl;
+			SDHRCtrl_e _ctrl;
+			switch (e.addr & 0x0f)
 			{
-			case SDHR_CTRL_DISABLE:
-				//#ifdef DEBUG
-				std::cout << "CONTROL: Disable SDHR" << std::endl;
-				//#endif
-				sdhrMgr->ToggleSdhr(false);
-				a2VideoMgr->ToggleA2Video(true);
-				break;
-			case SDHR_CTRL_ENABLE:
-				//#ifdef DEBUG
-				std::cout << "CONTROL: Enable SDHR" << std::endl;
-				//#endif
-				sdhrMgr->ToggleSdhr(true);
-				a2VideoMgr->ToggleA2Video(false);
-				break;
-			case SDHR_CTRL_RESET:
-				//#ifdef DEBUG
-				std::cout << "CONTROL: Reset SDHR" << std::endl;
-				//#endif
-				sdhrMgr->ResetSdhr();
-				break;
-			case SDHR_CTRL_PROCESS:
-			{
-				/*
-				At this point we have a complete set of commands to process.
-				Wait for the main thread to finish loading any previous changes into the GPU, then process
-				the commands.
-				*/
-
-				#ifdef DEBUG
-				std::cout << "CONTROL: Process SDHR" << std::endl;
-				#endif
-				while (sdhrMgr->dataState != DATASTATE_e::DATA_IDLE) {};
-				bool processingSucceeded = sdhrMgr->ProcessCommands();
-				sdhrMgr->dataState = DATASTATE_e::DATA_UPDATED;
-				if (processingSucceeded)
+			case 0x00:
+				// std::cout << "This is a control packet!" << std::endl;
+				_ctrl = (SDHRCtrl_e)e.data;
+				switch (_ctrl)
 				{
-					#ifdef DEBUG
-					std::cout << "Processing SDHR succeeded!" << std::endl;
-					#endif
-				}
-				else {
+				case SDHR_CTRL_DISABLE:
 					//#ifdef DEBUG
-					std::cerr << "ERROR: Processing SDHR failed!" << std::endl;
+					std::cout << "CONTROL: Disable SDHR" << std::endl;
 					//#endif
+					sdhrMgr->ToggleSdhr(false);
+					a2VideoMgr->ToggleA2Video(true);
+					break;
+				case SDHR_CTRL_ENABLE:
+					//#ifdef DEBUG
+					std::cout << "CONTROL: Enable SDHR" << std::endl;
+					//#endif
+					sdhrMgr->ToggleSdhr(true);
+					a2VideoMgr->ToggleA2Video(false);
+					break;
+				case SDHR_CTRL_RESET:
+					//#ifdef DEBUG
+					std::cout << "CONTROL: Reset SDHR" << std::endl;
+					//#endif
+					sdhrMgr->ResetSdhr();
+					break;
+				case SDHR_CTRL_PROCESS:
+				{
+					/*
+					At this point we have a complete set of commands to process.
+					Wait for the main thread to finish loading any previous changes into the GPU, then process
+					the commands.
+					*/
+	
+					#ifdef DEBUG
+					std::cout << "CONTROL: Process SDHR" << std::endl;
+					#endif
+					while (sdhrMgr->dataState != DATASTATE_e::DATA_IDLE) {};
+					bool processingSucceeded = sdhrMgr->ProcessCommands();
+					sdhrMgr->dataState = DATASTATE_e::DATA_UPDATED;
+					if (processingSucceeded)
+					{
+						#ifdef DEBUG
+						std::cout << "Processing SDHR succeeded!" << std::endl;
+						#endif
+					}
+					else {
+						//#ifdef DEBUG
+						std::cerr << "ERROR: Processing SDHR failed!" << std::endl;
+						//#endif
+					}
+					sdhrMgr->ClearBuffer();
+					break;
 				}
-				sdhrMgr->ClearBuffer();
+				default:
+					std::cerr << "ERROR: Unknown control packet type: " << std::hex << (uint32_t)e.data << std::endl;
+					break;
+				}
 				break;
-			}
+			case 0x01:
+				// std::cout << "This is a data packet" << std::endl;
+				sdhrMgr->AddPacketDataToBuffer(e.data);
+				break;
 			default:
-				std::cerr << "ERROR: Unknown control packet type: " << std::hex << (uint32_t)e.data << std::endl;
+				std::cerr << "ERROR: Unknown packet type: " << std::hex << e.addr << std::endl;
 				break;
 			}
-			break;
-		case 0x01:
-			// std::cout << "This is a data packet" << std::endl;
-			sdhrMgr->AddPacketDataToBuffer(e.data);
-			break;
-		default:
-			std::cerr << "ERROR: Unknown packet type: " << std::hex << e.addr << std::endl;
-			break;
 		}
 	}
 	std::cout << "Stopped Processing Thread\n";
