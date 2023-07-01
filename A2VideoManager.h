@@ -76,9 +76,7 @@ public:
 
 	void NotifyA2MemoryDidChange(uint16_t addr);	// Apple 2's memory changed at addr
 	void ToggleA2Video(bool value);
-	void SelectVideoMode(A2VideoMode_e mode);
-	void ToggleMixedMode();
-	A2VideoMode_e ActiveVideoMode();
+	void SelectVideoModes();			// Based on soft switches, decided on video modes
 	uXY ScreenSize() { return windows[activeVideoMode].Get_screen_count(); }
 	void ProcessSoftSwitch(uint16_t addr);
 	bool IsSoftSwitch(A2SoftSwitch_e ss);

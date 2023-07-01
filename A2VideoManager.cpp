@@ -119,7 +119,7 @@ void A2VideoManager::Initialize()
 	// TODO: Make TEXT2, GR1, ...
 
 	// Activate TEXT1 by default
-	windows[A2VIDEO_TEXT1].enabled = true;
+	SelectVideoModes();
 	// tell the next Render() call to run initialization routines
 	bShouldInitializeRender = true;
 }
@@ -131,6 +131,8 @@ A2VideoManager::~A2VideoManager()
 
 void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 {
+	// TODO: Handle soft switches
+	// TODO: Handle video modes
 	if (addr >= 0x400 && addr < 0x800)
 		windows[A2VIDEO_TEXT1].bNeedsGPUDataUpdate = true;
 }
@@ -143,56 +145,9 @@ void A2VideoManager::ToggleA2Video(bool value)
 		auto scrSz = ScreenSize();
 		oglHelper->request_framebuffer_resize(scrSz.x, scrSz.y);
 		bShouldInitializeRender = true;
+		SelectVideoModes();
 	}
 }
-
-void A2VideoManager::SelectVideoMode(A2VideoMode_e mode)
-{
-	activeVideoMode = mode;
-	bShouldInitializeRender = true;
-	for (auto& _w : this->windows) {
-		_w.enabled = false;
-	}
-	this->windows[activeVideoMode].enabled = true;
-	if (!bIsMixedMode)
-		return;
-
-	// Now handle mixed mode
-	switch (mode)
-	{
-	case A2VIDEO_LORES:
-		this->windows[A2VIDEO_TEXT1].enabled = true;
-		break;
-	case A2VIDEO_HGR1:
-		this->windows[A2VIDEO_TEXT1].enabled = true;
-		break;
-	case A2VIDEO_HGR2:
-		this->windows[A2VIDEO_TEXT1].enabled = true;
-		break;
-	case A2VIDEO_DLORES:
-		this->windows[A2VIDEO_DTEXT].enabled = true;
-		break;
-	case A2VIDEO_DHGR:
-		this->windows[A2VIDEO_DTEXT].enabled = true;
-		break;
-	default:
-		break;
-	}
-	auto scrSz = ScreenSize();
-	oglHelper->request_framebuffer_resize(scrSz.x, scrSz.y);
-}
-
-void A2VideoManager::ToggleMixedMode()
-{
-	bIsMixedMode = !bIsMixedMode;
-	SelectVideoMode(activeVideoMode);	// Force reinitialization
-}
-
-A2VideoMode_e A2VideoManager::ActiveVideoMode()
-{
-	return activeVideoMode;
-}
-
 
 void A2VideoManager::ProcessSoftSwitch(uint16_t addr)
 {
@@ -255,6 +210,14 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr)
 		break;
 	default:
 		break;
+	}
+	SelectVideoModes();
+}
+
+void A2VideoManager::SelectVideoModes()
+{
+	for (auto& _w : this->windows) {
+		_w.enabled = false;
 	}
 	if (!(a2SoftSwitches & A2SS_TEXT))
 	{
