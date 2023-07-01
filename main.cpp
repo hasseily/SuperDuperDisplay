@@ -113,8 +113,11 @@ int main(int, char**)
     window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
-    SDL_GL_SetSwapInterval(0); // Enable/disable vsync
-
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+    SDL_GL_SetSwapInterval(0); // get max performance from ES2 machines
+#else
+	SDL_GL_SetSwapInterval(1); // Anything not ES2 should be vsynced to conserve power
+#endif
     // Get the actual display size
 	SDL_DisplayMode displayMode;
 	SDL_GetCurrentDisplayMode(0, &displayMode);
@@ -291,7 +294,7 @@ int main(int, char**)
             a2VideoManager->Render();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glClearColor(0.f, 0.f, 1.f, 1.0f);
+		glClearColor(0.f, 0.f, 0.f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// Start the Dear ImGui frame
