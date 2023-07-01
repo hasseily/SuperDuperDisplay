@@ -9,7 +9,7 @@ class SDHRWindow
 public:
 	bool enabled;
 	bool black_or_wrap;      // false: viewport is black outside of tile range, true: viewport wraps
-	// TODO: Enable black_or_wrap functionality. Currently only black.
+	// TODO: Enable black_or_wrap functionality. Currently only wrap.
 
 	SDHRWindow()
 		: enabled(false), black_or_wrap(true)
