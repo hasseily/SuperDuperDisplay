@@ -256,7 +256,33 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr)
 	default:
 		break;
 	}
-	if (a2SoftSwitches & A2SS_TEXT)
+	if (!(a2SoftSwitches & A2SS_TEXT))
+	{
+		if (a2SoftSwitches & A2SS_HIRES)
+		{
+			if (a2SoftSwitches & A2SS_80COL)
+				this->windows[A2VIDEO_DHGR].enabled = true;
+			else
+			{
+				if (a2SoftSwitches & A2SS_PAGE2)
+					this->windows[A2VIDEO_HGR2].enabled = true;
+				else
+					this->windows[A2VIDEO_HGR1].enabled = true;
+			}
+		}
+		else {
+			if (a2SoftSwitches & A2SS_80COL)
+				this->windows[A2VIDEO_DLORES].enabled = true;
+			else
+			{
+				if (a2SoftSwitches & A2SS_PAGE2)
+					this->windows[A2VIDEO_LORES2].enabled = true;
+				else
+					this->windows[A2VIDEO_LORES1].enabled = true;
+			}
+		}
+	}
+	if ((a2SoftSwitches & A2SS_TEXT) || (a2SoftSwitches & A2SS_MIXED))
 	{
 		if (a2SoftSwitches & A2SS_80COL)
 			this->windows[A2VIDEO_DTEXT].enabled = true;
