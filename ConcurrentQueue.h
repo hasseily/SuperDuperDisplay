@@ -22,16 +22,16 @@ public:
 	void push(T const& value) {
 		{
 			std::unique_lock<std::mutex> lock(this->d_mutex);
-			this->d_queue.push_front(value);
+			this->d_queue.push_back(value);
 		}
 		this->d_condition.notify_one();
 	}
-	T pop() {
+	std::deque<T> drain() {
 		std::unique_lock<std::mutex> lock(this->d_mutex);
 		this->d_condition.wait(lock, [=] { return !this->d_queue.empty(); });
-		T rc(std::move(this->d_queue.back()));
-		this->d_queue.pop_back();
-		return rc;
+		std::deque<T> ret;
+		std::swap(ret, this->d_queue);
+		return ret;
 	}
 	void resize(int size) {
 		this->d_queue.resize(size);
