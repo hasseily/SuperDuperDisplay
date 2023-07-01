@@ -22,6 +22,19 @@ enum A2VideoMode_e
 	A2VIDEO_TOTAL_COUNT
 };
 
+enum A2SoftSwitch_e
+{
+	A2SS_80STORE	= 0b000000001,
+	A2SS_RAMRD		= 0b000000010,
+	A2SS_RAMWRT		= 0b000000100,
+	A2SS_80COL		= 0b000001000,
+	A2SS_ALTCHARSET = 0b000010000,
+	A2SS_TEXT		= 0b000100000,
+	A2SS_MIXED		= 0b001000000,
+	A2SS_PAGE2		= 0b010000000,
+	A2SS_HIRES		= 0b100000000,
+};
+
 class A2VideoManager
 {
 public:
@@ -60,12 +73,14 @@ public:
 	// Methods
 	//////////////////////////////////////////////////////////////////////////
 
-	void NotifyA2MemoryDidChange(uint32_t addr);	// Apple 2's memory changed at addr
+	void NotifyA2MemoryDidChange(uint16_t addr);	// Apple 2's memory changed at addr
 	void ToggleA2Video(bool value);
 	void SelectVideoMode(A2VideoMode_e mode);
 	void ToggleMixedMode();
 	A2VideoMode_e ActiveVideoMode();
 	uXY ScreenSize() { return windows[activeVideoMode].Get_screen_count(); }
+	void ProcessSoftSwitch(uint16_t addr);
+	bool IsSoftSwitch(A2SoftSwitch_e ss);
 
 	void Render();	// render whatever mode is active (enabled windows)
 
@@ -101,6 +116,8 @@ private:
 	bool bA2VideoEnabled = true;			// Is standard Apple 2 video enabled?
 	bool bIsMixedMode = false;				// Mixed graphics and text mode
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
+
+	uint16_t a2SoftSwitches = 0;			// Soft switches states
 
 	A2VideoMode_e activeVideoMode = A2VIDEO_TEXT1;
 };

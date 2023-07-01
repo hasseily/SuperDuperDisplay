@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <map>
 #include "SDL.h"
 #ifdef _DEBUGTIMINGS
 #include <chrono>
@@ -22,8 +23,6 @@ static Shader shader_a2video_text = Shader();
 static Shader shader_a2video_lores = Shader();
 static Shader shader_a2video_hgr = Shader();
 
-
-// TODO:
 /*
 	For TEXT1 support:
 		- create a font texture Apple2eFont7x8.png. That's all we'll use for the shader
@@ -130,7 +129,7 @@ A2VideoManager::~A2VideoManager()
 
 }
 
-void A2VideoManager::NotifyA2MemoryDidChange(uint32_t addr)
+void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 {
 	if (addr >= 0x400 && addr < 0x800)
 		windows[A2VIDEO_TEXT1].bNeedsGPUDataUpdate = true;
@@ -194,6 +193,89 @@ A2VideoMode_e A2VideoManager::ActiveVideoMode()
 	return activeVideoMode;
 }
 
+
+void A2VideoManager::ProcessSoftSwitch(uint16_t addr)
+{
+	throw std::logic_error("The method or operation is not implemented.");
+	switch (addr)
+	{
+	case 0xC000:	// 80STOREOFF
+		a2SoftSwitches &= ~A2SS_80STORE;
+		break;
+	case 0xC001:	// 80STOREON
+		a2SoftSwitches |= A2SS_80STORE;
+		break;
+	case 0xC002:	// RAMRDOFF
+		a2SoftSwitches &= ~A2SS_RAMRD;
+		break;
+	case 0xC003:	// RAMRDON
+		a2SoftSwitches |= A2SS_RAMRD;
+		break;
+	case 0xC004:	// RAMWRTOFF
+		a2SoftSwitches &= ~A2SS_RAMWRT;
+		break;
+	case 0xC005:	// RAMWRTON
+		a2SoftSwitches |= A2SS_RAMWRT;
+		break;
+	case 0xC00C:	// 80COLOFF
+		a2SoftSwitches &= ~A2SS_80COL;
+		break;
+	case 0xC00D:	// 80COLON
+		a2SoftSwitches |= A2SS_80COL;
+		break;
+	case 0xC00E:	// ALTCHARSETOFF
+		a2SoftSwitches &= ~A2SS_ALTCHARSET;
+		break;
+	case 0xC00F:	// ALTCHARSETON
+		a2SoftSwitches |= A2SS_ALTCHARSET;
+		break;
+	case 0xC050:	// TEXTOFF
+		a2SoftSwitches &= ~A2SS_TEXT;
+		break;
+	case 0xC051:	// TEXTON
+		a2SoftSwitches |= A2SS_TEXT;
+		break;
+	case 0xC052:	// MIXEDOFF
+		a2SoftSwitches &= ~A2SS_MIXED;
+		break;
+	case 0xC053:	// MIXEDON
+		a2SoftSwitches |= A2SS_MIXED;
+		break;
+	case 0xC054:	// PAGE2OFF
+		a2SoftSwitches &= ~A2SS_PAGE2;
+		break;
+	case 0xC055:	// PAGE2ON
+		a2SoftSwitches |= A2SS_PAGE2;
+		break;
+	case 0xC056:	// HIRESOFF
+		a2SoftSwitches &= ~A2SS_HIRES;
+		break;
+	case 0xC057:	// HIRESON
+		a2SoftSwitches |= A2SS_HIRES;
+		break;
+	default:
+		break;
+	}
+	if (a2SoftSwitches & A2SS_TEXT)
+	{
+		if (a2SoftSwitches & A2SS_80COL)
+			this->windows[A2VIDEO_DTEXT].enabled = true;
+		else
+		{
+			if (a2SoftSwitches & A2SS_PAGE2)
+				this->windows[A2VIDEO_TEXT2].enabled = true;
+			else
+				this->windows[A2VIDEO_TEXT1].enabled = true;
+		}
+	}
+	return;
+}
+
+bool A2VideoManager::IsSoftSwitch(A2SoftSwitch_e ss)
+{
+	return (a2SoftSwitches & ss);
+}
+
 void A2VideoManager::Render()
 {
 	if (!bA2VideoEnabled)
@@ -213,6 +295,12 @@ void A2VideoManager::Render()
 		// image asset 0: The apple 2e US font
 		glActiveTexture(_SDHR_START_TEXTURES);
 		image_assets[0].AssignByFilename(this, "Apple2eFont7x8 - Regular.png");
+		// image asset 1: The alternate font
+		glActiveTexture(_SDHR_START_TEXTURES + 1);
+		image_assets[0].AssignByFilename(this, "Apple2eFont7x8 - Alternate.png");
+		// image asset 2: The HGR texture
+		glActiveTexture(_SDHR_START_TEXTURES + 2);
+		image_assets[1].AssignByFilename(this, "Texture_HGR.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL AssignByFilename error: " 
 				<< 0 << " - " << glerr << std::endl;
