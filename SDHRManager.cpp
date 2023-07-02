@@ -355,7 +355,7 @@ void SDHRManager::Render()
 		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
 			glActiveTexture(_SDHR_START_TEXTURES + i);	// AssignByFilename() will bind to the active texture slot
 			// the default tex0 and tex4..16 are the same, but the others are unique for better testing
-			image_assets[i].AssignByFilename(this, "Texture_Default.png");
+			image_assets[i].AssignByFilename(this, "textures/Texture_Default.png");
 			image_assets[i].LoadIntoGPU();
 			texSamplers[i] = (_SDHR_START_TEXTURES - GL_TEXTURE0) + i;
 			if ((glerr = glGetError()) != GL_NO_ERROR) {

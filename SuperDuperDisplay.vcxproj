@@ -203,31 +203,54 @@
     <None Include="imgui\imgui\misc\debuggers\imgui.natvis" />
     <None Include="packages.config" />
     <None Include="README.md" />
-    <CopyFileToFolders Include="shaders\sdhr_default_330.frag">
+    <Media Include="shaders\sdhr_default_330.frag">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
       <FileType>Document</FileType>
-    </CopyFileToFolders>
-    <CopyFileToFolders Include="shaders\sdhr_default_330.vert">
+    </Media>
+    <Media Include="shaders\sdhr_default_330.vert">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
       <FileType>Document</FileType>
-    </CopyFileToFolders>
-    <None Include="shaders\a2video_text_310es.frag" />
-    <None Include="shaders\a2video_text_310es.vert" />
-    <None Include="shaders\a2video_text_330.frag" />
-    <None Include="shaders\a2video_text_330.vert" />
-    <None Include="shaders\sdhr_default_310es.frag" />
-    <None Include="shaders\sdhr_default_310es.vert" />
+    </Media>
+    <Media Include="shaders\a2video_text_310es.frag">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+      <FileType>Document</FileType>
+    </Media>
+    <Media Include="shaders\a2video_text_310es.vert">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+      <FileType>Document</FileType>
+    </Media>
+    <Media Include="shaders\a2video_text_330.frag">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+      <FileType>Document</FileType>
+    </Media>
+    <Media Include="shaders\a2video_text_330.vert">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+      <FileType>Document</FileType>
+    </Media>
+    <Media Include="shaders\sdhr_default_310es.frag">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+      <FileType>Document</FileType>
+    </Media>
+    <Media Include="shaders\sdhr_default_310es.vert">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+      <FileType>Document</FileType>
+    </Media>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Apple2eFont7x8 - Alternate.png" />
-    <Image Include="Apple2eFont7x8 - Regular.png" />
-    <Image Include="Texture_Default.png">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-    </Image>
-    <Image Include="Texture_HGR.png" />
+    <Content Include="shaders\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="textures\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="textures\Apple2eFont7x8 - Alternate.png" />
+    <Image Include="textures\Apple2eFont7x8 - Regular.png" />
+    <Image Include="textures\Texture_Default.png" />
+    <Image Include="textures\Texture_HGR.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

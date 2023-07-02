@@ -16,6 +16,7 @@
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
+uint16_t A2VideoManager::a2SoftSwitches = 0;
 
 static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
 
@@ -83,6 +84,7 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 
 void A2VideoManager::Initialize()
 {
+	a2SoftSwitches = A2SS_TEXT; // default to TEXT1
 
 	// Set up the image assets (textures)
 	// There's no need for tileset records since we know exactly
@@ -260,11 +262,6 @@ void A2VideoManager::SelectVideoModes()
 	return;
 }
 
-bool A2VideoManager::IsSoftSwitch(A2SoftSwitch_e ss)
-{
-	return (a2SoftSwitches & ss);
-}
-
 void A2VideoManager::Render()
 {
 	if (!bA2VideoEnabled)
@@ -283,13 +280,13 @@ void A2VideoManager::Render()
 
 		// image asset 0: The apple 2e US font
 		glActiveTexture(_SDHR_START_TEXTURES);
-		image_assets[0].AssignByFilename(this, "Apple2eFont7x8 - Regular.png");
+		image_assets[0].AssignByFilename(this, "textures/Apple2eFont7x8 - Regular.png");
 		// image asset 1: The alternate font
 		glActiveTexture(_SDHR_START_TEXTURES + 1);
-		image_assets[0].AssignByFilename(this, "Apple2eFont7x8 - Alternate.png");
+		image_assets[1].AssignByFilename(this, "textures/Apple2eFont7x8 - Alternate.png");
 		// image asset 2: The HGR texture
 		glActiveTexture(_SDHR_START_TEXTURES + 2);
-		image_assets[1].AssignByFilename(this, "Texture_HGR.png");
+		image_assets[2].AssignByFilename(this, "textures/Texture_HGR.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL AssignByFilename error: " 
 				<< 0 << " - " << glerr << std::endl;

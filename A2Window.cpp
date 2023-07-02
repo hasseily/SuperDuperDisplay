@@ -3,8 +3,6 @@
 #include <SDL_timer.h>
 #include "A2VideoManager.h"
 
-static A2VideoManager* a2VideoMgr;
-
 void A2Window::Reset()
 {
 	enabled = false;
@@ -17,7 +15,6 @@ void A2Window::Define(uint8_t _index, uXY _screen_count,
 	uint8_t* _data, uint32_t _datasize, 
 	Shader* _shaderProgram)
 {
-	a2VideoMgr = A2VideoManager::GetInstance();
 	this->Reset();
 	index = _index;
 	screen_count = _screen_count;
@@ -119,7 +116,7 @@ void A2Window::Render()
 	glBindVertexArray(VAO);
 
 	// Assign the textures
-	if (a2VideoMgr->IsSoftSwitch(A2SS_ALTCHARSET))
+	if (A2VideoManager::IsSoftSwitch(A2SS_ALTCHARSET))
 		shaderProgram->setInt("a2FontTexture", _SDHR_START_TEXTURES + 1 - GL_TEXTURE0);
 	else
 		shaderProgram->setInt("a2FontTexture", _SDHR_START_TEXTURES - GL_TEXTURE0);

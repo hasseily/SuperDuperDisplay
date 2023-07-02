@@ -20,6 +20,9 @@
     <Filter Include="glad">
       <UniqueIdentifier>{c076ead4-8be1-43cd-b5cd-5b6d1e4e6d81}</UniqueIdentifier>
     </Filter>
+    <Filter Include="textures">
+      <UniqueIdentifier>{af4e1558-efb6-497b-b5aa-45c58b265b4e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -148,42 +151,45 @@
       <Filter>imgui</Filter>
     </None>
     <None Include="packages.config" />
-    <None Include="shaders\sdhr_default_310es.frag">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\sdhr_default_310es.vert">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\a2video_text_330.frag">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\a2video_text_330.vert">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\a2video_text_310es.frag">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\a2video_text_310es.vert">
-      <Filter>shaders</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Texture_Default.png">
-      <Filter>assets</Filter>
-    </Image>
-    <Image Include="Apple2eFont7x8 - Regular.png">
-      <Filter>assets</Filter>
-    </Image>
-    <Image Include="Apple2eFont7x8 - Alternate.png">
-      <Filter>assets</Filter>
-    </Image>
+    <Media Include="shaders\sdhr_default_330.vert">
+      <Filter>shaders</Filter>
+    </Media>
+    <Media Include="shaders\sdhr_default_310es.frag">
+      <Filter>shaders</Filter>
+    </Media>
+    <Media Include="shaders\sdhr_default_310es.vert">
+      <Filter>shaders</Filter>
+    </Media>
+    <Media Include="shaders\sdhr_default_330.frag">
+      <Filter>shaders</Filter>
+    </Media>
+    <Media Include="shaders\a2video_text_330.vert">
+      <Filter>shaders</Filter>
+    </Media>
+    <Media Include="shaders\a2video_text_310es.vert">
+      <Filter>shaders</Filter>
+    </Media>
+    <Media Include="shaders\a2video_text_310es.frag">
+      <Filter>shaders</Filter>
+    </Media>
+    <Media Include="shaders\a2video_text_330.frag">
+      <Filter>shaders</Filter>
+    </Media>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="shaders\sdhr_default_330.frag">
-      <Filter>shaders</Filter>
-    </CopyFileToFolders>
-    <CopyFileToFolders Include="shaders\sdhr_default_330.vert">
-      <Filter>shaders</Filter>
-    </CopyFileToFolders>
+    <Image Include="textures\Apple2eFont7x8 - Alternate.png">
+      <Filter>textures</Filter>
+    </Image>
+    <Image Include="textures\Apple2eFont7x8 - Regular.png">
+      <Filter>textures</Filter>
+    </Image>
+    <Image Include="textures\Texture_Default.png">
+      <Filter>textures</Filter>
+    </Image>
+    <Image Include="textures\Texture_HGR.png">
+      <Filter>textures</Filter>
+    </Image>
   </ItemGroup>
 </Project>
