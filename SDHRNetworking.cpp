@@ -174,7 +174,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 
 #ifdef __NETWORKING_WINDOWS__
 
-#define VLEN 16
 #define BUFSZ 2048
 
 	__SOCKET sockfd;
@@ -308,7 +307,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	std::cout << "    Client Closed" << std::endl;
 	return 0;
 #else
-#define VLEN 16
+#define VLEN 256
 #define BUFSZ 2048
 
 	__SOCKET sockfd;
