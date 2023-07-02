@@ -79,7 +79,6 @@ int process_events_thread(bool* shouldTerminateProcessing)
 		if ((e.addr >= _SDHR_MEMORY_SHADOW_BEGIN) && (e.addr < _SDHR_MEMORY_SHADOW_END)) {
 			a2mem[e.addr] = e.data;
 			a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
-			if ((e.addr >= 0x400) && (e.addr < 0x800))
 			continue;
 		}	
 		if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
