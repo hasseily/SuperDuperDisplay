@@ -30,7 +30,7 @@
 typedef struct uixy { uint32_t x; uint32_t y; } uXY;
 typedef struct ixy { int32_t x; int32_t y; } iXY;
 
-#define _A2VIDEO_DEFAULT_ZOOM 5			// Show the Apple 2 video * this zoom level
+#define _A2VIDEO_DEFAULT_ZOOM 1			// Show the Apple 2 video * this zoom level
 #define _A2VIDEO_MIN_WIDTH 40*7
 #define _A2VIDEO_MIN_HEIGHT 24*8
 

@@ -108,8 +108,8 @@ void A2VideoManager::Initialize()
 			_A2VIDEO_MIN_WIDTH * _A2VIDEO_DEFAULT_ZOOM) ,
 			(uint32_t)(_A2VIDEO_MIN_HEIGHT * _A2VIDEO_DEFAULT_ZOOM) }),
 		uXY({
-			_A2_TEXT40_CHAR_WIDTH*5, 
-			_A2_TEXT40_CHAR_HEIGHT*5 }),	// The charmap texture has tiles 5x the original size
+			_A2_TEXT40_CHAR_WIDTH, 
+			_A2_TEXT40_CHAR_HEIGHT }),
 		uXY({ 
 			40, 
 			24 }),
