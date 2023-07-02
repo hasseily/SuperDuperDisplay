@@ -76,7 +76,7 @@ int process_events_thread(bool* shouldTerminateProcessing)
 		if (e.rw == 1)	// read or dummy event, disregard
 			continue;
 		// std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
-		if ((e.addr >= 0x200) && (e.addr < 0xc000)) {
+		if ((e.addr >= _SDHR_MEMORY_SHADOW_BEGIN) && (e.addr < _SDHR_MEMORY_SHADOW_END)) {
 			a2mem[e.addr] = e.data;
 			a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
 			if ((e.addr >= 0x400) && (e.addr < 0x800))
