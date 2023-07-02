@@ -80,7 +80,7 @@ int process_events_thread(bool* shouldTerminateProcessing)
 			a2mem[e.addr] = e.data;
 			a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
 			continue;
-		}	
+		}
 		if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
 			// Send soft switches to the A2VideoManager
 			if (e.addr >> 8 == 0xc0)

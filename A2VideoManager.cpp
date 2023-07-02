@@ -101,7 +101,6 @@ void A2VideoManager::Initialize()
 	// Initialize windows and meshes
 	
 	// TEXT1
-	// TODO: REMOVE THE ZOOMS, AND REPLACE THE FONT TEXTURES WITH ORIGINAL SIZE
 	windows[A2VIDEO_TEXT1].Define(
 		A2VIDEO_TEXT1,
 		uXY({ (uint32_t)(
@@ -117,6 +116,22 @@ void A2VideoManager::Initialize()
 		0x400,														// Size of TEXT1
 		&shader_a2video_text
 	);
+	// TEXT2
+	windows[A2VIDEO_TEXT2].Define(
+		A2VIDEO_TEXT2,
+		uXY({ (uint32_t)(
+			_A2VIDEO_MIN_WIDTH * _A2VIDEO_DEFAULT_ZOOM) ,
+			(uint32_t)(_A2VIDEO_MIN_HEIGHT * _A2VIDEO_DEFAULT_ZOOM) }),
+		uXY({
+			_A2_TEXT40_CHAR_WIDTH,
+			_A2_TEXT40_CHAR_HEIGHT }),
+			uXY({
+				40,
+				24 }),
+				SDHRManager::GetInstance()->GetApple2MemPtr() + 0x800,		// Pointer to TEXT2
+				0x400,														// Size of TEXT2
+				&shader_a2video_text
+				);
 
 	// TODO: Make TEXT2, GR1, ...
 
@@ -137,6 +152,8 @@ void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 	// TODO: Handle video modes
 	if (addr >= 0x400 && addr < 0x800)
 		windows[A2VIDEO_TEXT1].bNeedsGPUDataUpdate = true;
+	else if (addr >= 0x800 && addr < 0xB00)
+		windows[A2VIDEO_TEXT2].bNeedsGPUDataUpdate = true;
 }
 
 void A2VideoManager::ToggleA2Video(bool value)
@@ -153,7 +170,6 @@ void A2VideoManager::ToggleA2Video(bool value)
 
 void A2VideoManager::ProcessSoftSwitch(uint16_t addr)
 {
-	throw std::logic_error("The method or operation is not implemented.");
 	switch (addr)
 	{
 	case 0xC000:	// 80STOREOFF
