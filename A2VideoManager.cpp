@@ -14,6 +14,35 @@
 #include "OpenGLHelper.h"
 #include "SDHRManager.h"
 
+static glm::vec4 SETRGBCOLOR(uint8_t r, uint8_t g, uint8_t b)
+{
+	return glm::vec4(
+		static_cast<const float>(r) / 0xFF,
+		static_cast<const float>(g) / 0xFF,
+		static_cast<const float>(b) / 0xFF,
+		1.f
+	);
+}
+
+static glm::vec4 PaletteRGB[] =
+{
+	SETRGBCOLOR(/*HGR_BLACK, */ 0x00,0x00,0x00),
+	SETRGBCOLOR(/*HGR_WHITE, */ 0xFF,0xFF,0xFF),
+	SETRGBCOLOR(/*BLUE,      */ 0x00,0x8A,0xB5),
+	SETRGBCOLOR(/*ORANGE,    */ 0xFF,0x72,0x47),
+	SETRGBCOLOR(/*GREEN,     */ 0x6F,0xE6,0x2C),
+	SETRGBCOLOR(/*MAGENTA,   */ 0xAA,0x1A,0xD1),
+
+	// TV emu
+	// TODO: Later do TV fringe colors
+	SETRGBCOLOR(/*HGR_GREY1, */ 0x80,0x80,0x80),
+	SETRGBCOLOR(/*HGR_GREY2, */ 0x80,0x80,0x80),
+	SETRGBCOLOR(/*HGR_YELLOW,*/ 0x9E,0x9E,0x00),
+	SETRGBCOLOR(/*HGR_AQUA,  */ 0x00,0xCD,0x4A),
+	SETRGBCOLOR(/*HGR_PURPLE,*/ 0x61,0x61,0xFF),
+	SETRGBCOLOR(/*HGR_PINK,  */ 0xFF,0x32,0xB5),
+};
+
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
 uint16_t A2VideoManager::a2SoftSwitches = 0;
