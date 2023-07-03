@@ -137,13 +137,13 @@ void A2VideoManager::Initialize()
 	windows[A2VIDEO_HGR1].Define(
 		A2VIDEO_HGR1,
 		uXY({ (uint32_t)(
-			_A2VIDEO_MIN_WIDTH * 2 * _A2VIDEO_DEFAULT_ZOOM) ,	// in dots
+			_A2VIDEO_MIN_WIDTH * _A2VIDEO_DEFAULT_ZOOM) ,	// in dots
 			(uint32_t)(_A2VIDEO_MIN_HEIGHT * _A2VIDEO_DEFAULT_ZOOM) }),
 		uXY({
 			1,
 			1 }),
 			uXY({
-				_A2VIDEO_MIN_WIDTH * 2,			// in dots
+				_A2VIDEO_MIN_WIDTH,			// in dots
 				_A2VIDEO_MIN_HEIGHT }),		// 192 lines
 				SDHRManager::GetInstance()->GetApple2MemPtr() + 0x2000,
 				0x2000,
