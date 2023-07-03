@@ -97,6 +97,7 @@ void A2VideoManager::Initialize()
 
 	// Generate shaders
 	shader_a2video_text.build(_SHADER_TEXT_VERTEX_DEFAULT, _SHADER_TEXT_FRAGMENT_DEFAULT);
+	shader_a2video_hgr.build(_SHADER_HGR_VERTEX_DEFAULT, _SHADER_HGR_FRAGMENT_DEFAULT);
 
 	// Initialize windows and meshes
 	
@@ -107,15 +108,15 @@ void A2VideoManager::Initialize()
 			_A2VIDEO_MIN_WIDTH * _A2VIDEO_DEFAULT_ZOOM) ,
 			(uint32_t)(_A2VIDEO_MIN_HEIGHT * _A2VIDEO_DEFAULT_ZOOM) }),
 		uXY({
-			_A2_TEXT40_CHAR_WIDTH, 
+			_A2_TEXT40_CHAR_WIDTH,
 			_A2_TEXT40_CHAR_HEIGHT }),
-		uXY({ 
-			40, 
-			24 }),
-		SDHRManager::GetInstance()->GetApple2MemPtr() + 0x400,		// Pointer to TEXT1
-		0x400,														// Size of TEXT1
-		&shader_a2video_text
-	);
+			uXY({
+				40,
+				24 }),
+				SDHRManager::GetInstance()->GetApple2MemPtr() + 0x400,		// Pointer to TEXT1
+				0x400,														// Size of TEXT1
+				&shader_a2video_text
+				);
 	// TEXT2
 	windows[A2VIDEO_TEXT2].Define(
 		A2VIDEO_TEXT2,
@@ -132,8 +133,24 @@ void A2VideoManager::Initialize()
 				0x400,														// Size of TEXT2
 				&shader_a2video_text
 				);
+	// HGR1
+	windows[A2VIDEO_HGR1].Define(
+		A2VIDEO_HGR1,
+		uXY({ (uint32_t)(
+			_A2VIDEO_MIN_WIDTH * 2 * _A2VIDEO_DEFAULT_ZOOM) ,	// in dots
+			(uint32_t)(_A2VIDEO_MIN_HEIGHT * _A2VIDEO_DEFAULT_ZOOM) }),
+		uXY({
+			1,
+			1 }),
+			uXY({
+				_A2VIDEO_MIN_WIDTH * 2,			// in dots
+				_A2VIDEO_MIN_HEIGHT }),		// 192 lines
+				SDHRManager::GetInstance()->GetApple2MemPtr() + 0x2000,
+				0x2000,
+				&shader_a2video_hgr
+				);
 
-	// TODO: Make TEXT2, GR1, ...
+	// TODO: Make the other modes
 
 	// Activate TEXT1 by default
 	SelectVideoModes();
@@ -154,6 +171,8 @@ void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 		windows[A2VIDEO_TEXT1].bNeedsGPUDataUpdate = true;
 	else if (addr >= 0x800 && addr < 0xB00)
 		windows[A2VIDEO_TEXT2].bNeedsGPUDataUpdate = true;
+	else if (addr >= 0x2000 && addr < 0x4000)
+		windows[A2VIDEO_HGR1].bNeedsGPUDataUpdate = true;
 }
 
 void A2VideoManager::ToggleA2Video(bool value)
