@@ -110,6 +110,8 @@ public:
 
 	void Render();	// render whatever mode is active (enabled windows)
 
+	void UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
+
 	// public singleton code
 	static A2VideoManager* GetInstance()
 	{
@@ -146,6 +148,11 @@ private:
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
 
 	static uint16_t a2SoftSwitches;			// Soft switches states
+
+	// framebuffers for HGR
+	std::vector<uint32_t>v_fbhgr1;			// HGR1 framebuffer
+	std::vector<uint32_t>v_fbhgr2;			// HGR1 framebuffer
+	std::vector<uint32_t>v_fbdhgr;			// HGR1 framebuffer
 
 	A2VideoMode_e activeVideoMode = A2VIDEO_TEXT1;
 };
