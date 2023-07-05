@@ -13,6 +13,7 @@
 
 #include "OpenGLHelper.h"
 #include "SDHRManager.h"
+#include "HGRAddr2XY.h"
 
 static inline uint32_t SETRGBCOLOR(uint8_t r, uint8_t g, uint8_t b)
 {
@@ -36,33 +37,6 @@ static uint32_t gPaletteRGB[] =
 	SETRGBCOLOR(/*HGR_AQUA,  */ 0x00,0xCD,0x4A),
 	SETRGBCOLOR(/*HGR_PURPLE,*/ 0x61,0x61,0xFF),
 	SETRGBCOLOR(/*HGR_PINK,  */ 0xFF,0x32,0xB5),
-};
-
-static const std::map<uint16_t, uint8_t> mapHGRRows = {
-{0x0000, 0}, {0x0400, 1}, {0x0800, 2}, {0x0C00, 3}, {0x1000, 4}, {0x1400, 5}, {0x1800, 6}, {0x1C00, 7},
-{0x0080, 8}, {0x0480, 9}, {0x0880, 10}, {0x0C80, 11}, {0x1080, 12}, {0x1480, 13}, {0x1880, 14}, {0x1C80, 15},
-{0x0100, 16}, {0x0500, 17}, {0x0900, 18}, {0x0D00, 19}, {0x1100, 20}, {0x1500, 21}, {0x1900, 22}, {0x1D00, 23},
-{0x0180, 24}, {0x0580, 25}, {0x0980, 26}, {0x0D80, 27}, {0x1180, 28}, {0x1580, 29}, {0x1980, 30}, {0x1D80, 31},
-{0x0200, 32}, {0x0600, 33}, {0x0A00, 34}, {0x0E00, 35}, {0x1200, 36}, {0x1600, 37}, {0x1A00, 38}, {0x1E00, 39},
-{0x0280, 40}, {0x0680, 41}, {0x0A80, 42}, {0x0E80, 43}, {0x1280, 44}, {0x1680, 45}, {0x1A80, 46}, {0x1E80, 47},
-{0x0300, 48}, {0x0700, 49}, {0x0B00, 50}, {0x0F00, 51}, {0x1300, 52}, {0x1700, 53}, {0x1B00, 54}, {0x1F00, 55},
-{0x0380, 56}, {0x0780, 57}, {0x0B80, 58}, {0x0F80, 59}, {0x1380, 60}, {0x1780, 61}, {0x1B80, 62}, {0x1F80, 63},
-{0x0028, 64}, {0x0428, 65}, {0x0828, 66}, {0x0C28, 67}, {0x1028, 68}, {0x1428, 69}, {0x1828, 70}, {0x1C28, 71},
-{0x00A8, 72}, {0x04A8, 73}, {0x08A8, 74}, {0x0CA8, 75}, {0x10A8, 76}, {0x14A8, 77}, {0x18A8, 78}, {0x1CA8, 79},
-{0x0128, 80}, {0x0528, 81}, {0x0928, 82}, {0x0D28, 83}, {0x1128, 84}, {0x1528, 85}, {0x1928, 86}, {0x1D28, 87},
-{0x01A8, 88}, {0x05A8, 89}, {0x09A8, 90}, {0x0DA8, 91}, {0x11A8, 92}, {0x15A8, 93}, {0x19A8, 94}, {0x1DA8, 95},
-{0x0228, 96}, {0x0628, 97}, {0x0A28, 98}, {0x0E28, 99}, {0x1228, 100}, {0x1628, 101}, {0x1A28, 102}, {0x1E28, 103},
-{0x02A8, 104}, {0x06A8, 105}, {0x0AA8, 106}, {0x0EA8, 107}, {0x12A8, 108}, {0x16A8, 109}, {0x1AA8, 110}, {0x1EA8, 111},
-{0x0328, 112}, {0x0728, 113}, {0x0B28, 114}, {0x0F28, 115}, {0x1328, 116}, {0x1728, 117}, {0x1B28, 118}, {0x1F28, 119},
-{0x03A8, 120}, {0x07A8, 121}, {0x0BA8, 122}, {0x0FA8, 123}, {0x13A8, 124}, {0x17A8, 125}, {0x1BA8, 126}, {0x1FA8, 127},
-{0x0050, 128}, {0x0450, 129}, {0x0850, 130}, {0x0C50, 131}, {0x1050, 132}, {0x1450, 133}, {0x1850, 134}, {0x1C50, 135},
-{0x00D0, 136}, {0x04D0, 137}, {0x08D0, 138}, {0x0CD0, 139}, {0x10D0, 140}, {0x14D0, 141}, {0x18D0, 142}, {0x1CD0, 143},
-{0x0150, 144}, {0x0550, 145}, {0x0950, 146}, {0x0D50, 147}, {0x1150, 148}, {0x1550, 149}, {0x1950, 150}, {0x1D50, 151},
-{0x01D0, 152}, {0x05D0, 153}, {0x09D0, 154}, {0x0DD0, 155}, {0x11D0, 156}, {0x15D0, 157}, {0x19D0, 158}, {0x1DD0, 159},
-{0x0250, 160}, {0x0650, 161}, {0x0A50, 162}, {0x0E50, 163}, {0x1250, 164}, {0x1650, 165}, {0x1A50, 166}, {0x1E50, 167},
-{0x02D0, 168}, {0x06D0, 169}, {0x0AD0, 170}, {0x0ED0, 171}, {0x12D0, 172}, {0x16D0, 173}, {0x1AD0, 174}, {0x1ED0, 175},
-{0x0350, 176}, {0x0750, 177}, {0x0B50, 178}, {0x0F50, 179}, {0x1350, 180}, {0x1750, 181}, {0x1B50, 182}, {0x1F50, 183},
-{0x03D0, 184}, {0x07D0, 185}, {0x0BD0, 186}, {0x0FD0, 187}, {0x13D0, 188}, {0x17D0, 189}, {0x1BD0, 190}, {0x1FD0, 191}
 };
 
 // below because "The declaration of a static data member in its class definition is not a definition"
@@ -134,12 +108,9 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 
 void A2VideoManager::Initialize()
 {
-	v_fbhgr1.reserve(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT);
-	v_fbhgr2.reserve(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT);
-	v_fbdhgr.reserve(_A2VIDEO_MIN_WIDTH * 2 * _A2VIDEO_MIN_HEIGHT);
-	v_fbhgr1.clear();
-	v_fbhgr2.clear();
-	v_fbdhgr.clear();
+	std::fill(v_fbhgr1.begin(), v_fbhgr1.begin() + (_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT), 0);
+	std::fill(v_fbhgr2.begin(), v_fbhgr2.begin() + (_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT), 0);
+	std::fill(v_fbdhgr.begin(), v_fbdhgr.begin() + (_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2), 0);
 
 	a2SoftSwitches = A2SS_TEXT; // default to TEXT1
 
@@ -161,51 +132,33 @@ void A2VideoManager::Initialize()
 	// TEXT1
 	windows[A2VIDEO_TEXT1].Define(
 		A2VIDEO_TEXT1,
-		uXY({ (uint32_t)(
-			_A2VIDEO_MIN_WIDTH * _A2VIDEO_DEFAULT_ZOOM) ,
-			(uint32_t)(_A2VIDEO_MIN_HEIGHT * _A2VIDEO_DEFAULT_ZOOM) }),
-		uXY({
-			_A2_TEXT40_CHAR_WIDTH,
-			_A2_TEXT40_CHAR_HEIGHT }),
-			uXY({
-				40,
-				24 }),
-				SDHRManager::GetInstance()->GetApple2MemPtr() + 0x400,		// Pointer to TEXT1
-				0x400,														// Size of TEXT1
-				&shader_a2video_text
-				);
+		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
+		uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT }),
+		uXY({ 40, 24 }),
+		SDHRManager::GetInstance()->GetApple2MemPtr() + 0x400,		// Pointer to TEXT1
+		0x400,														// Size of TEXT1
+		&shader_a2video_text
+	);
 	// TEXT2
 	windows[A2VIDEO_TEXT2].Define(
 		A2VIDEO_TEXT2,
-		uXY({ (uint32_t)(
-			_A2VIDEO_MIN_WIDTH * _A2VIDEO_DEFAULT_ZOOM) ,
-			(uint32_t)(_A2VIDEO_MIN_HEIGHT * _A2VIDEO_DEFAULT_ZOOM) }),
-		uXY({
-			_A2_TEXT40_CHAR_WIDTH,
-			_A2_TEXT40_CHAR_HEIGHT }),
-			uXY({
-				40,
-				24 }),
-				SDHRManager::GetInstance()->GetApple2MemPtr() + 0x800,		// Pointer to TEXT2
-				0x400,														// Size of TEXT2
-				&shader_a2video_text
-				);
+		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
+		uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT }),
+		uXY({ 40, 24 }),
+		SDHRManager::GetInstance()->GetApple2MemPtr() + 0x800,		// Pointer to TEXT2
+		0x400,														// Size of TEXT2
+		&shader_a2video_text
+	);
 	// HGR1
 	windows[A2VIDEO_HGR1].Define(
 		A2VIDEO_HGR1,
-		uXY({ (uint32_t)(
-			_A2VIDEO_MIN_WIDTH * 2 * _A2VIDEO_DEFAULT_ZOOM) ,	// in dots
-			(uint32_t)(_A2VIDEO_MIN_HEIGHT * _A2VIDEO_DEFAULT_ZOOM) }),
-		uXY({
-			1,
-			1 }),
-			uXY({
-				_A2VIDEO_MIN_WIDTH * 2,			// in dots
-				_A2VIDEO_MIN_HEIGHT }),		// 192 lines
-				SDHRManager::GetInstance()->GetApple2MemPtr() + 0x2000,
-				0x2000,
-				&shader_a2video_hgr
-				);
+		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
+		uXY({ 1, 1 }),
+		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
+		SDHRManager::GetInstance()->GetApple2MemPtr() + 0x2000,
+		0x2000,
+		&shader_a2video_hgr
+	);
 
 	// TODO: Make the other modes
 
@@ -413,16 +366,10 @@ void A2VideoManager::Render()
 // The "cell" is 7 consecutive bits
 void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer)
 {
-	// first get the number of bytes from the start of the lines, i.e. the x value
-	const uint8_t x = ((addr - addr_start) & 0x7F) % 0x28;
-	auto _res = mapHGRRows.find((addr - addr_start) - x);
-	if (_res != mapHGRRows.end())
-	{
-		std::cerr << "ERROR: Couldn't find HGR row value. Something is very wrong" << std::endl;
-		return;
-	}
-	const uint8_t y = _res->second;
-	int xoffset = x & 1; // offset to start of the 2 bytes
+	// first get the number of bytes from the start of the lines, i.e. the xb value
+	uint8_t x = HGR_ADDR2X[addr - addr_start];	// x start in pixels
+	uint8_t y = HGR_ADDR2Y[addr - addr_start];	// y in pixels
+	int xoffset = x & 1; // offset to start of the 2 bytes. Always start with the even byte
 	addr -= xoffset;
 
 	uint8_t* pMain = SDHRManager::GetInstance()->GetApple2MemPtr() + addr;
@@ -472,7 +419,7 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 	// In all other cases, it's black if 0 and white if 1
 	// The value of 'color' is defined on a 2-bits basis
 
-	uint32_t* pDst = (uint32_t*)framebuffer;
+	uint32_t dst = y * _A2VIDEO_MIN_WIDTH + x;	// destination offset in the pixel framebuffer
 
 	if (xoffset)
 	{
@@ -486,23 +433,23 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 		// remove bleed if a 0 pixel is between 2 white pixels ( 11 0 11 )
 		if ((dwordval & mask0) == chck01)
 		{
-			*(pDst) = bw[0];
-			*(pDst + 1) = *(pDst);
-			pDst += 2;
+			framebuffer->at(dst) = bw[0];
+			framebuffer->at(dst+1) = bw[0];
+			dst += 2;
 		}
 		else if (((dwordval & mask) == chck1) || ((dwordval & mask) == chck2))
 		{
 			// Color pixel
-			*(pDst) = colors[i];
-			*(pDst + 1) = *(pDst);
-			pDst += 2;
+			framebuffer->at(dst) = colors[i];
+			framebuffer->at(dst+1) = colors[i];
+			dst += 2;
 		}
 		else
 		{
 			// B&W pixel
-			*(pDst) = bw[(dwordval & chck2 ? 1 : 0)];
-			*(pDst + 1) = *(pDst);
-			pDst += 2;
+			framebuffer->at(dst) = bw[(dwordval & chck2 ? 1 : 0)];
+			framebuffer->at(dst + 1) = framebuffer->at(dst);
+			dst += 2;
 		}
 		// Next pixel
 		dwordval = dwordval >> 1;
