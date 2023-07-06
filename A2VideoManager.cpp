@@ -108,9 +108,9 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 
 void A2VideoManager::Initialize()
 {
-	std::fill(v_fbhgr1.begin(), v_fbhgr1.begin() + (_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT), 0);
-	std::fill(v_fbhgr2.begin(), v_fbhgr2.begin() + (_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT), 0);
-	std::fill(v_fbdhgr.begin(), v_fbdhgr.begin() + (_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2), 0);
+	v_fbhgr1 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
+	v_fbhgr2 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
+	v_fbdhgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
 
 	a2SoftSwitches = A2SS_TEXT; // default to TEXT1
 
@@ -135,8 +135,8 @@ void A2VideoManager::Initialize()
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
 		uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT }),
 		uXY({ 40, 24 }),
-		SDHRManager::GetInstance()->GetApple2MemPtr() + 0x400,		// Pointer to TEXT1
-		0x400,														// Size of TEXT1
+		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT1_START,
+		_A2VIDEO_TEXT_SIZE,
 		&shader_a2video_text
 	);
 	// TEXT2
@@ -145,8 +145,8 @@ void A2VideoManager::Initialize()
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
 		uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT }),
 		uXY({ 40, 24 }),
-		SDHRManager::GetInstance()->GetApple2MemPtr() + 0x800,		// Pointer to TEXT2
-		0x400,														// Size of TEXT2
+		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT2_START,
+		_A2VIDEO_TEXT_SIZE,
 		&shader_a2video_text
 	);
 	// HGR1
@@ -155,8 +155,18 @@ void A2VideoManager::Initialize()
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
 		uXY({ 1, 1 }),
 		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
-		SDHRManager::GetInstance()->GetApple2MemPtr() + 0x2000,
-		0x2000,
+		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_HGR1_START,
+		_A2VIDEO_HGR_SIZE,
+		&shader_a2video_hgr
+	);
+	// HGR2
+	windows[A2VIDEO_HGR2].Define(
+		A2VIDEO_HGR2,
+		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
+		uXY({ 1, 1 }),
+		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
+		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_HGR2_START,
+		_A2VIDEO_HGR_SIZE,
 		&shader_a2video_hgr
 	);
 
@@ -350,6 +360,19 @@ void A2VideoManager::Render()
 	for (auto& _w : this->windows) {
 		_w.Render();
 	}
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, oglHelper->get_output_texture_id());
+
+	if (this->windows[A2VIDEO_HGR1].enabled)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr1[0]));
+	}
+	if (this->windows[A2VIDEO_HGR2].enabled)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr2[0]));
+	}
+
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
 	}
@@ -367,9 +390,9 @@ void A2VideoManager::Render()
 void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer)
 {
 	// first get the number of bytes from the start of the lines, i.e. the xb value
-	uint8_t x = HGR_ADDR2X[addr - addr_start];	// x start in pixels
-	uint8_t y = HGR_ADDR2Y[addr - addr_start];	// y in pixels
-	int xoffset = x & 1; // offset to start of the 2 bytes. Always start with the even byte
+	uint16_t x = HGR_ADDR2X[addr - addr_start];	// x start in pixels
+	uint16_t y = HGR_ADDR2Y[addr - addr_start];	// y in pixels
+	uint8_t xoffset = x & 1; // offset to start of the 2 bytes. Always start with the even byte
 	addr -= xoffset;
 
 	uint8_t* pMain = SDHRManager::GetInstance()->GetApple2MemPtr() + addr;
