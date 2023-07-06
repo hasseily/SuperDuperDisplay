@@ -389,7 +389,9 @@ int main(int, char**)
             float _rreq = (float)_w / _h;    // req ratio to use
             int32_t _maxW = _w - (2 * margin.x);
             int32_t _maxH = _h - (2 * margin.y);
-            // TODO: Force integer scaling to have totally proper scanlines
+            // Force integer scaling to have totally proper scanlines
+            _maxW = _A2VIDEO_MIN_WIDTH * (_maxW / (_A2VIDEO_MIN_WIDTH));
+			_maxH = _A2VIDEO_MIN_HEIGHT * (_maxH / (_A2VIDEO_MIN_HEIGHT));
             if (_maxW < _A2VIDEO_MIN_WIDTH)
                 _maxW = _A2VIDEO_MIN_WIDTH;
             if (_maxH < _A2VIDEO_MIN_HEIGHT)
