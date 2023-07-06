@@ -191,6 +191,7 @@ void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 		windows[A2VIDEO_TEXT1].bNeedsGPUDataUpdate = true;
 	else if (addr >= _A2VIDEO_TEXT2_START && addr < (_A2VIDEO_TEXT2_START + _A2VIDEO_TEXT_SIZE))
 		windows[A2VIDEO_TEXT2].bNeedsGPUDataUpdate = true;
+/*
 	else if (addr >= _A2VIDEO_HGR1_START && addr < (_A2VIDEO_HGR1_START + _A2VIDEO_HGR_SIZE))
 	{
 		UpdateHiResRGBCell(addr, _A2VIDEO_HGR1_START, &v_fbhgr1);
@@ -201,6 +202,7 @@ void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 		UpdateHiResRGBCell(addr, _A2VIDEO_HGR2_START, &v_fbhgr2);
 		//windows[A2VIDEO_HGR2].bNeedsGPUDataUpdate = true;
 	}
+	*/
 }
 
 void A2VideoManager::ToggleA2Video(bool value)
@@ -347,7 +349,7 @@ void A2VideoManager::Render()
 		// image asset 1: The alternate font
 		glActiveTexture(_SDHR_START_TEXTURES + 1);
 		image_assets[1].AssignByFilename(this, "textures/Apple2eFont7x8 - Alternate.png");
-		// image asset 2: The HGR texture
+		// image asset 2: The Scanline texture
 		glActiveTexture(_SDHR_START_TEXTURES + 2);
 		image_assets[2].AssignByFilename(this, "textures/Texture_Scanlines.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -371,10 +373,18 @@ void A2VideoManager::Render()
 
 	if (this->windows[A2VIDEO_HGR1].enabled)
 	{
+		for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
+		{
+			UpdateHiResRGBCell(_A2VIDEO_HGR1_START + i, _A2VIDEO_HGR1_START, &v_fbhgr1);
+		}
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr1[0]));
 	}
 	if (this->windows[A2VIDEO_HGR2].enabled)
 	{
+		for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
+		{
+			UpdateHiResRGBCell(_A2VIDEO_HGR2_START + i, _A2VIDEO_HGR2_START, &v_fbhgr2);
+		}
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr2[0]));
 	}
 
@@ -415,6 +425,8 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 	uint8_t byteval2 = *pMain;
 	uint8_t byteval3 = *(pMain + 1);
 	uint8_t byteval4 = (xb >= 38 ? 0 : *(pMain + 2));
+	if (xb >= 38)
+		std::cerr << "bleh" << std::endl;
 
 	// all 28 bits chained
 	uint32_t dwordval = (byteval1 & 0x7F) | ((byteval2 & 0x7F) << 7) | ((byteval3 & 0x7F) << 14) | ((byteval4 & 0x7F) << 21);
@@ -489,6 +501,7 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 		// Next pixel
 		dwordval = dwordval >> 1;
 	}
+	// duplicate the row (it may be overridden by the scanlines)
 	for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
 	{
 		framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + i) = framebuffer->at(y * _A2VIDEO_MIN_WIDTH + i);
