@@ -133,7 +133,7 @@ void A2VideoManager::Initialize()
 	windows[A2VIDEO_TEXT1].Define(
 		A2VIDEO_TEXT1,
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT }),
+		uXY({ _A2_TEXT40_CHAR_WIDTH*2, _A2_TEXT40_CHAR_HEIGHT*2 }),
 		uXY({ 40, 24 }),
 		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT1_START,
 		_A2VIDEO_TEXT_SIZE,
@@ -409,6 +409,7 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 	uint8_t xoffset = xb & 1; // offset to start of the 2 bytes. Always start with the even byte
 	addr -= xoffset;
 	x = HGR_ADDR2X[addr - addr_start];
+	// Everything is double the resolution
 	x *= 2;
 	y *= 2;
 
