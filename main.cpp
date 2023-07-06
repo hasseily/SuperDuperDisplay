@@ -181,6 +181,7 @@ int main(int, char**)
 	bool show_sdhrinfo_window = false;
 	bool show_texture_window = false;
     bool did_press_quit = false;
+	bool show_scanlines = true;
 	int _slotnum = 0;
 
 	auto sdhrManager = SDHRManager::GetInstance();
@@ -320,6 +321,7 @@ int main(int, char**)
 				ImGui::Separator();
 				ImGui::Checkbox("Untextured Geometry", &glhelper->bDebugNoTextures);             // Show textures toggle
 				ImGui::Checkbox("Perspective Projection", &glhelper->bUsePerspective);       // Change projection type
+				ImGui::Checkbox("Apple 2 Scan Lines", &show_scanlines);
 				ImGui::Separator();
 //				ImGui::Checkbox("Demo Window", &show_demo_window);
 				ImGui::Checkbox("Textures Window", &show_texture_window);
@@ -387,6 +389,7 @@ int main(int, char**)
             float _rreq = (float)_w / _h;    // req ratio to use
             int32_t _maxW = _w - (2 * margin.x);
             int32_t _maxH = _h - (2 * margin.y);
+            // TODO: Force integer scaling to have totally proper scanlines
             if (_maxW < _A2VIDEO_MIN_WIDTH)
                 _maxW = _A2VIDEO_MIN_WIDTH;
             if (_maxH < _A2VIDEO_MIN_HEIGHT)
@@ -411,6 +414,16 @@ int main(int, char**)
 				ImVec2(0, 0),
 				ImVec2(1, 1)
 			);
+            if (show_scanlines)
+            {
+				ImGui::GetBackgroundDrawList()->AddImage(
+					(void*)glhelper->get_texture_id_at_slot(2),
+					margin,
+					ImVec2(margin.x + _newW, margin.y + _newH),
+					ImVec2(0, 0),
+					ImVec2(1, 1)
+				);
+            }
         }
 
 		// Rendering

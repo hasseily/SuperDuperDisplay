@@ -193,12 +193,12 @@ void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 		windows[A2VIDEO_TEXT2].bNeedsGPUDataUpdate = true;
 	else if (addr >= _A2VIDEO_HGR1_START && addr < (_A2VIDEO_HGR1_START + _A2VIDEO_HGR_SIZE))
 	{
-		// UpdateHiResRGBCell(addr, _A2VIDEO_HGR1_START, &v_fbhgr1);
+		UpdateHiResRGBCell(addr, _A2VIDEO_HGR1_START, &v_fbhgr1);
 		//windows[A2VIDEO_HGR1].bNeedsGPUDataUpdate = true;
 	}
 	else if (addr >= _A2VIDEO_HGR2_START && addr < (_A2VIDEO_HGR2_START + _A2VIDEO_HGR_SIZE))
 	{
-		// UpdateHiResRGBCell(addr, _A2VIDEO_HGR2_START, &v_fbhgr2);
+		UpdateHiResRGBCell(addr, _A2VIDEO_HGR2_START, &v_fbhgr2);
 		//windows[A2VIDEO_HGR2].bNeedsGPUDataUpdate = true;
 	}
 }
@@ -349,7 +349,7 @@ void A2VideoManager::Render()
 		image_assets[1].AssignByFilename(this, "textures/Apple2eFont7x8 - Alternate.png");
 		// image asset 2: The HGR texture
 		glActiveTexture(_SDHR_START_TEXTURES + 2);
-		image_assets[2].AssignByFilename(this, "textures/Texture_HGR.png");
+		image_assets[2].AssignByFilename(this, "textures/Texture_Scanlines.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL AssignByFilename error: " 
 				<< 0 << " - " << glerr << std::endl;
@@ -371,20 +371,14 @@ void A2VideoManager::Render()
 
 	if (this->windows[A2VIDEO_HGR1].enabled)
 	{
-		for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
-		{
-			UpdateHiResRGBCell(_A2VIDEO_HGR1_START + i, _A2VIDEO_HGR1_START, &v_fbhgr1);
-		}
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr1[0]));
 	}
 	if (this->windows[A2VIDEO_HGR2].enabled)
 	{
-		for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
-		{
-			UpdateHiResRGBCell(_A2VIDEO_HGR2_START + i, _A2VIDEO_HGR2_START, &v_fbhgr2);
-		}
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr2[0]));
 	}
+
+	// Render scanlines on top
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
@@ -417,7 +411,7 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 
 	// We need all 28 bits because each pixel needs a three bit evaluation
 	// Anything outside the bounds of the row is 0
-	uint8_t byteval1 = (xb < 2 ? 0 : *(pMain - 1));	// XXX: should be xb < 1 ?
+	uint8_t byteval1 = (xb < 2 ? 0 : *(pMain - 1));
 	uint8_t byteval2 = *pMain;
 	uint8_t byteval3 = *(pMain + 1);
 	uint8_t byteval4 = (xb >= 38 ? 0 : *(pMain + 2));

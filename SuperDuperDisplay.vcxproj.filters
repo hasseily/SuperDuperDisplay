@@ -197,7 +197,7 @@
     <Image Include="textures\Texture_Default.png">
       <Filter>textures</Filter>
     </Image>
-    <Image Include="textures\Texture_HGR.png">
+    <Image Include="textures\Texture_Scanlines.png">
       <Filter>textures</Filter>
     </Image>
   </ItemGroup>

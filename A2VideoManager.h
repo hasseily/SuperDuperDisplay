@@ -146,7 +146,6 @@ private:
 	bool bA2VideoEnabled = true;			// Is standard Apple 2 video enabled?
 	bool bIsMixedMode = false;				// Mixed graphics and text mode
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
-
 	static uint16_t a2SoftSwitches;			// Soft switches states
 
 	// framebuffers for HGR
