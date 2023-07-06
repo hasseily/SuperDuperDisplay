@@ -125,7 +125,6 @@ void A2VideoManager::Initialize()
 
 	// Generate shaders
 	shader_a2video_text.build(_SHADER_TEXT_VERTEX_DEFAULT, _SHADER_TEXT_FRAGMENT_DEFAULT);
-	shader_a2video_hgr.build(_SHADER_HGR_VERTEX_DEFAULT, _SHADER_HGR_FRAGMENT_DEFAULT);
 
 	// Initialize windows and meshes
 	
