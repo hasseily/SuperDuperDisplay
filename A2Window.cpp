@@ -106,6 +106,8 @@ void A2Window::Render()
 {
 	if (!enabled)
 		return;
+	if (shaderProgram == nullptr)
+		return;
 	GLenum glerr;
 	shaderProgram->use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {

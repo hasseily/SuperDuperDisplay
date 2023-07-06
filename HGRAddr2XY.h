@@ -563,7 +563,7 @@ const int HGR_ADDR2X[] =
 	224,231,238,245,252,259,266,273,  0,  0,  0,  0,  0,  0,  0,  0    // [$3FF0]
 };
 
-// Y row value of a given HGR memory address
+// Y pixel start value of a given HGR memory address
 const int HGR_ADDR2Y[] =
 {
 	  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   // [$2000]

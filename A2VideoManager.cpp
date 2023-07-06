@@ -155,9 +155,9 @@ void A2VideoManager::Initialize()
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
 		uXY({ 1, 1 }),
 		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
-		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_HGR1_START,
-		_A2VIDEO_HGR_SIZE,
-		&shader_a2video_hgr
+		(uint8_t*)(&v_fbhgr1[0]),
+		v_fbhgr1.size() * sizeof(v_fbhgr1[0]),
+		nullptr		// do not render in the window. Rendering is done here
 	);
 	// HGR2
 	windows[A2VIDEO_HGR2].Define(
@@ -165,9 +165,9 @@ void A2VideoManager::Initialize()
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
 		uXY({ 1, 1 }),
 		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
-		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_HGR2_START,
-		_A2VIDEO_HGR_SIZE,
-		&shader_a2video_hgr
+		(uint8_t*)(&v_fbhgr2[1]),
+		v_fbhgr2.size() * sizeof(v_fbhgr2[0]),
+		nullptr		// do not render in the window. Rendering is done here
 	);
 
 	// TODO: Make the other modes
@@ -193,8 +193,13 @@ void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 		windows[A2VIDEO_TEXT2].bNeedsGPUDataUpdate = true;
 	else if (addr >= _A2VIDEO_HGR1_START && addr < (_A2VIDEO_HGR1_START + _A2VIDEO_HGR_SIZE))
 	{
-		UpdateHiResRGBCell(addr, _A2VIDEO_HGR1_START, &v_fbhgr1);
-		windows[A2VIDEO_HGR1].bNeedsGPUDataUpdate = true;
+		// UpdateHiResRGBCell(addr, _A2VIDEO_HGR1_START, &v_fbhgr1);
+		//windows[A2VIDEO_HGR1].bNeedsGPUDataUpdate = true;
+	}
+	else if (addr >= _A2VIDEO_HGR2_START && addr < (_A2VIDEO_HGR2_START + _A2VIDEO_HGR_SIZE))
+	{
+		// UpdateHiResRGBCell(addr, _A2VIDEO_HGR2_START, &v_fbhgr2);
+		//windows[A2VIDEO_HGR2].bNeedsGPUDataUpdate = true;
 	}
 }
 
@@ -366,10 +371,18 @@ void A2VideoManager::Render()
 
 	if (this->windows[A2VIDEO_HGR1].enabled)
 	{
+		for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
+		{
+			UpdateHiResRGBCell(_A2VIDEO_HGR1_START + i, _A2VIDEO_HGR1_START, &v_fbhgr1);
+		}
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr1[0]));
 	}
 	if (this->windows[A2VIDEO_HGR2].enabled)
 	{
+		for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
+		{
+			UpdateHiResRGBCell(_A2VIDEO_HGR2_START + i, _A2VIDEO_HGR2_START, &v_fbhgr2);
+		}
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr2[0]));
 	}
 
@@ -392,17 +405,21 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 	// first get the number of bytes from the start of the lines, i.e. the xb value
 	uint16_t x = HGR_ADDR2X[addr - addr_start];	// x start in pixels
 	uint16_t y = HGR_ADDR2Y[addr - addr_start];	// y in pixels
-	uint8_t xoffset = x & 1; // offset to start of the 2 bytes. Always start with the even byte
+	uint8_t xb = x / 7;	// x in bytes
+	uint8_t xoffset = xb & 1; // offset to start of the 2 bytes. Always start with the even byte
 	addr -= xoffset;
+	x = HGR_ADDR2X[addr - addr_start];
+	x *= 2;
+	y *= 2;
 
 	uint8_t* pMain = SDHRManager::GetInstance()->GetApple2MemPtr() + addr;
 
 	// We need all 28 bits because each pixel needs a three bit evaluation
 	// Anything outside the bounds of the row is 0
-	uint8_t byteval1 = (x < 2 ? 0 : *(pMain - 1));
+	uint8_t byteval1 = (xb < 2 ? 0 : *(pMain - 1));	// XXX: should be xb < 1 ?
 	uint8_t byteval2 = *pMain;
 	uint8_t byteval3 = *(pMain + 1);
-	uint8_t byteval4 = (x >= 38 ? 0 : *(pMain + 2));
+	uint8_t byteval4 = (xb >= 38 ? 0 : *(pMain + 2));
 
 	// all 28 bits chained
 	uint32_t dwordval = (byteval1 & 0x7F) | ((byteval2 & 0x7F) << 7) | ((byteval3 & 0x7F) << 14) | ((byteval4 & 0x7F) << 21);
@@ -442,14 +459,14 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 	// In all other cases, it's black if 0 and white if 1
 	// The value of 'color' is defined on a 2-bits basis
 
-	uint32_t dst = y * _A2VIDEO_MIN_WIDTH + x;	// destination offset in the pixel framebuffer
-
 	if (xoffset)
 	{
 		// Second byte of the 14 pixels block
 		dwordval = dwordval >> 7;
 		xoffset = 7;
 	}
+
+	uint32_t dst = (y * _A2VIDEO_MIN_WIDTH) + x + (xoffset * 2);	// destination offset in the pixel framebuffer
 
 	for (int i = xoffset; i < xoffset + 7; i++)
 	{
@@ -476,5 +493,9 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 		}
 		// Next pixel
 		dwordval = dwordval >> 1;
+	}
+	for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
+	{
+		framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + i) = framebuffer->at(y * _A2VIDEO_MIN_WIDTH + i);
 	}
 }
