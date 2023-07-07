@@ -32,6 +32,7 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 
 #define _A2VIDEO_MIN_WIDTH 40*7*2
 #define _A2VIDEO_MIN_HEIGHT 24*8*2
+#define _A2VIDEO_MIN_MIXED_HEIGHT 20*8*2
 
 #define _A2VIDEO_TEXT1_START 0x400
 #define _A2VIDEO_TEXT2_START 0x800

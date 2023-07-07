@@ -39,6 +39,8 @@ static uint32_t gPaletteRGB[] =
 	SETRGBCOLOR(/*HGR_PINK,  */ 0xFF,0x32,0xB5),
 };
 
+static uint32_t gRGBTransparent = 0;
+
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
 uint16_t A2VideoManager::a2SoftSwitches = 0;
@@ -376,7 +378,14 @@ void A2VideoManager::Render()
 		{
 			UpdateHiResRGBCell(_A2VIDEO_HGR1_START + i, _A2VIDEO_HGR1_START, &v_fbhgr1);
 		}
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr1[0]));
+		if (IsSoftSwitch(A2SS_MIXED))
+			glTexSubImage2D(GL_TEXTURE_2D, 0,
+				0,0,_A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_MIXED_HEIGHT, 
+				GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr1[0]));
+		else
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
+				_A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT,
+				0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr1[0]));
 	}
 	if (this->windows[A2VIDEO_HGR2].enabled)
 	{
@@ -384,7 +393,14 @@ void A2VideoManager::Render()
 		{
 			UpdateHiResRGBCell(_A2VIDEO_HGR2_START + i, _A2VIDEO_HGR2_START, &v_fbhgr2);
 		}
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr2[0]));
+		if (IsSoftSwitch(A2SS_MIXED))
+			glTexSubImage2D(GL_TEXTURE_2D, 0,
+				0, 0, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_MIXED_HEIGHT,
+				GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr2[0]));
+		else
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 
+				_A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT,
+				0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr2[0]));
 	}
 
 	// Render scanlines on top
@@ -424,8 +440,6 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 	uint8_t byteval2 = *pMain;
 	uint8_t byteval3 = *(pMain + 1);
 	uint8_t byteval4 = (xb >= 38 ? 0 : *(pMain + 2));
-	if (xb >= 38)
-		std::cerr << "bleh" << std::endl;
 
 	// all 28 bits chained
 	uint32_t dwordval = (byteval1 & 0x7F) | ((byteval2 & 0x7F) << 7) | ((byteval3 & 0x7F) << 14) | ((byteval4 & 0x7F) << 21);
@@ -500,7 +514,7 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 		// Next pixel
 		dwordval = dwordval >> 1;
 	}
-	// duplicate the row (it may be overridden by the scanlines)
+	// duplicate on the next row (it may be overridden by the scanlines)
 	for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
 	{
 		framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + i) = framebuffer->at(y * _A2VIDEO_MIN_WIDTH + i);
