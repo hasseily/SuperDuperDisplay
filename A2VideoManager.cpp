@@ -461,8 +461,10 @@ void A2VideoManager::RenderSubMixed(std::vector<uint32_t>* framebuffer)
 
 void A2VideoManager::UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer)
 {
-	uint16_t x = LGR_ADDR2X[addr - addr_start];	// x start in pixels
-	uint16_t y = LGR_ADDR2Y[addr - addr_start];	// y in pixels
+	int x = LGR_ADDR2X[addr - addr_start];	// x start in pixels
+	int y = LGR_ADDR2Y[addr - addr_start];	// y in pixels
+	if (x < 0 || y < 0)
+		return;
 
 	// Everything is double the resolution
 	x *= 2;
@@ -471,7 +473,7 @@ void A2VideoManager::UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start
 
 	uint8_t colorIdx;
 	// Set all 14 dots in the top 4 rows for the low 4 bits color
-	// and the bottom 4 rows for the hight bits color
+	// and the bottom 4 rows for the high bits color
 	// Duplicate each row for the double resolution rows
 	for (size_t j = 0; j < 8; j++)
 	{
