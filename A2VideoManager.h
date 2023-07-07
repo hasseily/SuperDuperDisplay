@@ -13,12 +13,12 @@ enum A2VideoMode_e
 {
 	A2VIDEO_TEXT1 = 0,
 	A2VIDEO_TEXT2,
-	A2VIDEO_LORES1,
-	A2VIDEO_LORES2,
+	A2VIDEO_LGR1,
+	A2VIDEO_LGR2,
 	A2VIDEO_HGR1,
 	A2VIDEO_HGR2,
 	A2VIDEO_DTEXT,
-	A2VIDEO_DLORES,
+	A2VIDEO_DLGR,
 	A2VIDEO_DHGR,
 	A2VIDEO_TOTAL_COUNT
 };
@@ -110,8 +110,6 @@ public:
 
 	void Render();	// render whatever mode is active (enabled windows)
 
-	void UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
-
 	// public singleton code
 	static A2VideoManager* GetInstance()
 	{
@@ -138,8 +136,11 @@ private:
 	// Internal methods
 	//////////////////////////////////////////////////////////////////////////
 
+	// Renders graphics mode depending on mixed mode switch
+	void RenderSubMixed(std::vector<uint32_t>*framebuffer);
 
-
+	void UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
+	void UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
 	//////////////////////////////////////////////////////////////////////////
 	// Internal data
 	//////////////////////////////////////////////////////////////////////////
@@ -147,10 +148,13 @@ private:
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
 	static uint16_t a2SoftSwitches;			// Soft switches states
 
-	// framebuffers for HGR
-	std::vector<uint32_t>v_fbhgr1;			// HGR1 framebuffer
-	std::vector<uint32_t>v_fbhgr2;			// HGR1 framebuffer
-	std::vector<uint32_t>v_fbdhgr;			// HGR1 framebuffer
+	// framebuffers for graphics modes
+	std::vector<uint32_t>v_fblgr1;
+	std::vector<uint32_t>v_fblgr2;
+	std::vector<uint32_t>v_fbdlgr;
+	std::vector<uint32_t>v_fbhgr1;
+	std::vector<uint32_t>v_fbhgr2;
+	std::vector<uint32_t>v_fbdhgr;
 
 	A2VideoMode_e activeVideoMode = A2VIDEO_TEXT1;
 };

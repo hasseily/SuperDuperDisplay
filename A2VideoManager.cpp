@@ -13,7 +13,7 @@
 
 #include "OpenGLHelper.h"
 #include "SDHRManager.h"
-#include "HGRAddr2XY.h"
+#include "GRAddr2XY.h"
 
 static inline uint32_t SETRGBCOLOR(uint8_t r, uint8_t g, uint8_t b)
 {
@@ -22,6 +22,7 @@ static inline uint32_t SETRGBCOLOR(uint8_t r, uint8_t g, uint8_t b)
 
 static uint32_t gPaletteRGB[] =
 {
+	// HiRes
 	SETRGBCOLOR(/*HGR_BLACK, */ 0x00,0x00,0x00),
 	SETRGBCOLOR(/*HGR_WHITE, */ 0xFF,0xFF,0xFF),
 	SETRGBCOLOR(/*BLUE,      */ 0x00,0x8A,0xB5),
@@ -37,6 +38,24 @@ static uint32_t gPaletteRGB[] =
 	SETRGBCOLOR(/*HGR_AQUA,  */ 0x00,0xCD,0x4A),
 	SETRGBCOLOR(/*HGR_PURPLE,*/ 0x61,0x61,0xFF),
 	SETRGBCOLOR(/*HGR_PINK,  */ 0xFF,0x32,0xB5),
+
+	// LoRes
+	SETRGBCOLOR(/*BLACK,*/      0x00,0x00,0x00),
+	SETRGBCOLOR(/*DEEP_RED,*/   0xAC,0x12,0x4C),
+	SETRGBCOLOR(/*DARK_BLUE,*/  0x00,0x07,0x83),
+	SETRGBCOLOR(/*MAGENTA,*/    0xAA,0x1A,0xD1),
+	SETRGBCOLOR(/*DARK_GREEN,*/ 0x00,0x83,0x2F),
+	SETRGBCOLOR(/*DARK_GRAY,*/  0x9F,0x97,0x7E),
+	SETRGBCOLOR(/*BLUE,*/       0x00,0x8A,0xB5),
+	SETRGBCOLOR(/*LIGHT_BLUE,*/ 0x9F,0x9E,0xFF),
+	SETRGBCOLOR(/*BROWN,*/      0x7A,0x5F,0x00),
+	SETRGBCOLOR(/*ORANGE,*/     0xFF,0x72,0x47),
+	SETRGBCOLOR(/*LIGHT_GRAY,*/ 0x78,0x68,0x7F),
+	SETRGBCOLOR(/*PINK,*/       0xFF,0x7A,0xCF),
+	SETRGBCOLOR(/*GREEN,*/      0x6F,0xE6,0x2C),
+	SETRGBCOLOR(/*YELLOW,*/     0xFF,0xF6,0x7B),
+	SETRGBCOLOR(/*AQUA,*/       0x6C,0xEE,0xB2),
+	SETRGBCOLOR(/*WHITE,*/      0xFF,0xFF,0xFF),
 };
 
 static uint32_t gRGBTransparent = 0;
@@ -110,6 +129,9 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 
 void A2VideoManager::Initialize()
 {
+	v_fblgr1 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
+	v_fblgr2 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
+	v_fbdlgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
 	v_fbhgr1 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
 	v_fbhgr2 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
 	v_fbdhgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
@@ -150,6 +172,26 @@ void A2VideoManager::Initialize()
 		_A2VIDEO_TEXT_SIZE,
 		&shader_a2video_text
 	);
+	// LGR1
+	windows[A2VIDEO_LGR1].Define(
+		A2VIDEO_LGR1,
+		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
+		uXY({ 1, 1 }),
+		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
+		(uint8_t*)(&v_fblgr1[0]),
+		v_fblgr1.size() * sizeof(v_fblgr1[0]),
+		nullptr		// do not render in the window. Rendering is done here
+	);
+	// LGR2
+	windows[A2VIDEO_LGR2].Define(
+		A2VIDEO_LGR2,
+		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
+		uXY({ 1, 1 }),
+		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
+		(uint8_t*)(&v_fblgr2[0]),
+		v_fblgr2.size() * sizeof(v_fblgr2[0]),
+		nullptr		// do not render in the window. Rendering is done here
+	);
 	// HGR1
 	windows[A2VIDEO_HGR1].Define(
 		A2VIDEO_HGR1,
@@ -186,24 +228,13 @@ A2VideoManager::~A2VideoManager()
 
 void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 {
-	// TODO: Handle soft switches
-	// TODO: Handle video modes
+	// Note: We could do delta updates here for the video modes
+	// but for better reliability we do full updates of the video modes
+	// every frame in the render method
 	if (addr >= _A2VIDEO_TEXT1_START && addr < (_A2VIDEO_TEXT1_START + _A2VIDEO_TEXT_SIZE))
 		windows[A2VIDEO_TEXT1].bNeedsGPUDataUpdate = true;
 	else if (addr >= _A2VIDEO_TEXT2_START && addr < (_A2VIDEO_TEXT2_START + _A2VIDEO_TEXT_SIZE))
 		windows[A2VIDEO_TEXT2].bNeedsGPUDataUpdate = true;
-/*
-	else if (addr >= _A2VIDEO_HGR1_START && addr < (_A2VIDEO_HGR1_START + _A2VIDEO_HGR_SIZE))
-	{
-		UpdateHiResRGBCell(addr, _A2VIDEO_HGR1_START, &v_fbhgr1);
-		//windows[A2VIDEO_HGR1].bNeedsGPUDataUpdate = true;
-	}
-	else if (addr >= _A2VIDEO_HGR2_START && addr < (_A2VIDEO_HGR2_START + _A2VIDEO_HGR_SIZE))
-	{
-		UpdateHiResRGBCell(addr, _A2VIDEO_HGR2_START, &v_fbhgr2);
-		//windows[A2VIDEO_HGR2].bNeedsGPUDataUpdate = true;
-	}
-	*/
 }
 
 void A2VideoManager::ToggleA2Video(bool value)
@@ -303,13 +334,13 @@ void A2VideoManager::SelectVideoModes()
 		}
 		else {
 			if (a2SoftSwitches & A2SS_80COL)
-				this->windows[A2VIDEO_DLORES].enabled = true;
+				this->windows[A2VIDEO_DLGR].enabled = true;
 			else
 			{
 				if (a2SoftSwitches & A2SS_PAGE2)
-					this->windows[A2VIDEO_LORES2].enabled = true;
+					this->windows[A2VIDEO_LGR2].enabled = true;
 				else
-					this->windows[A2VIDEO_LORES1].enabled = true;
+					this->windows[A2VIDEO_LGR1].enabled = true;
 			}
 		}
 	}
@@ -372,38 +403,38 @@ void A2VideoManager::Render()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, oglHelper->get_output_texture_id());
 
+	if (this->windows[A2VIDEO_LGR1].enabled)
+	{
+		for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
+		{
+			this->UpdateLoResRGBCell(_A2VIDEO_TEXT1_START + i, _A2VIDEO_TEXT1_START, &v_fblgr1);
+		}
+		this->RenderSubMixed(&v_fblgr1);
+	}
+	if (this->windows[A2VIDEO_LGR2].enabled)
+	{
+		for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
+		{
+			this->UpdateLoResRGBCell(_A2VIDEO_TEXT1_START + i, _A2VIDEO_TEXT1_START, &v_fblgr2);
+		}
+		this->RenderSubMixed(&v_fblgr2);
+	}
 	if (this->windows[A2VIDEO_HGR1].enabled)
 	{
 		for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
 		{
-			UpdateHiResRGBCell(_A2VIDEO_HGR1_START + i, _A2VIDEO_HGR1_START, &v_fbhgr1);
+			this->UpdateHiResRGBCell(_A2VIDEO_HGR1_START + i, _A2VIDEO_HGR1_START, &v_fbhgr1);
 		}
-		if (IsSoftSwitch(A2SS_MIXED))
-			glTexSubImage2D(GL_TEXTURE_2D, 0,
-				0,0,_A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_MIXED_HEIGHT, 
-				GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr1[0]));
-		else
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
-				_A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT,
-				0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr1[0]));
+		this->RenderSubMixed(&v_fbhgr1);
 	}
 	if (this->windows[A2VIDEO_HGR2].enabled)
 	{
 		for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
 		{
-			UpdateHiResRGBCell(_A2VIDEO_HGR2_START + i, _A2VIDEO_HGR2_START, &v_fbhgr2);
+			this->UpdateHiResRGBCell(_A2VIDEO_HGR2_START + i, _A2VIDEO_HGR2_START, &v_fbhgr2);
 		}
-		if (IsSoftSwitch(A2SS_MIXED))
-			glTexSubImage2D(GL_TEXTURE_2D, 0,
-				0, 0, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_MIXED_HEIGHT,
-				GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr2[0]));
-		else
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 
-				_A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT,
-				0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&v_fbhgr2[0]));
+		this->RenderSubMixed(&v_fbhgr2);
 	}
-
-	// Render scanlines on top
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
@@ -411,11 +442,48 @@ void A2VideoManager::Render()
 	oglh->cleanup_render();
 }
 
+void A2VideoManager::RenderSubMixed(std::vector<uint32_t>* framebuffer)
+{
+	if (IsSoftSwitch(A2SS_MIXED))
+		glTexSubImage2D(GL_TEXTURE_2D, 0,
+			0, 0, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_MIXED_HEIGHT,
+			GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&framebuffer->at(0)));
+	else
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
+			_A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT,
+			0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&framebuffer->at(0)));
+}
 
 //////////////////////////////////////////////////////////////////////////
-// HGR METHODS
+// GRAPHICS METHODS
 // RGB Videocard code from AppleWin
 //////////////////////////////////////////////////////////////////////////
+
+void A2VideoManager::UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer)
+{
+	uint16_t x = LGR_ADDR2X[addr - addr_start];	// x start in pixels
+	uint16_t y = LGR_ADDR2Y[addr - addr_start];	// y in pixels
+
+	// Everything is double the resolution
+	x *= 2;
+	y *= 2;
+	uint8_t val = *(SDHRManager::GetInstance()->GetApple2MemPtr() + addr);
+
+	uint8_t colorIdx;
+	// Set all 14 dots in the top 4 rows for the low 4 bits color
+	// and the bottom 4 rows for the hight bits color
+	// Duplicate each row for the double resolution rows
+	for (size_t j = 0; j < 8; j++)
+	{
+		colorIdx = (j < 4) ? (val & 0xF) : (val & 0xF0) >> 4;
+		for (size_t i = 0; i < 14; i++)
+		{
+			framebuffer->at(y * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];	// LoRes colors start at index 12
+			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
+		}
+		y += 2;
+	}
+}
 
 // Updates a single cell given a memory byte change
 // The "cell" is 7 consecutive bits

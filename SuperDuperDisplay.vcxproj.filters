@@ -141,7 +141,7 @@
     <ClInclude Include="A2Window.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="HGRAddr2XY.h">
+    <ClInclude Include="GRAddr2XY.h">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

@@ -182,7 +182,7 @@
     <ClInclude Include="ConcurrentQueue.h" />
     <ClInclude Include="glad\glad.h" />
     <ClInclude Include="glad\khrplatform.h" />
-    <ClInclude Include="HGRAddr2XY.h" />
+    <ClInclude Include="GRAddr2XY.h" />
     <ClInclude Include="imgui_memory_editor.h" />
     <ClInclude Include="imgui\imgui\imconfig.h" />
     <ClInclude Include="imgui\imgui\imgui.h" />
