@@ -463,7 +463,7 @@ void A2VideoManager::UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start
 {
 	int x = LGR_ADDR2X[addr - addr_start];	// x start in pixels
 	int y = LGR_ADDR2Y[addr - addr_start];	// y in pixels
-	if (x < 0 || y < 0)
+	if (x < 0 || y < 0)	// the holes!
 		return;
 
 	// Everything is double the resolution
@@ -492,8 +492,10 @@ void A2VideoManager::UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start
 void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer)
 {
 	// first get the number of bytes from the start of the lines, i.e. the xb value
-	uint16_t x = HGR_ADDR2X[addr - addr_start];	// x start in pixels
-	uint16_t y = HGR_ADDR2Y[addr - addr_start];	// y in pixels
+	int x = HGR_ADDR2X[addr - addr_start];	// x start in pixels
+	int y = HGR_ADDR2Y[addr - addr_start];	// y in pixels
+	if (x < 0 || y < 0)	// the holes!
+		return;
 	uint8_t xb = x / 7;	// x in bytes
 	uint8_t xoffset = xb & 1; // offset to start of the 2 bytes. Always start with the even byte
 	addr -= xoffset;
