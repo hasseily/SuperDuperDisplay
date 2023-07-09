@@ -25,45 +25,55 @@ enum A2VideoMode_e
 
 /*
 MEMORY MANAGEMENT SOFT SWITCHES
-$C000 W 80STOREOFF Allow page2 to switch video page1 page2
-$C001 W 80STOREON Allow page2 to switch main & aux video memory
-$C002 W RAMRDOFF Read enable main memory from $0200-$BFFF
-$C003 W RAMDRON Read enable aux memory from $0200-$BFFF
-$C004 W RAMWRTOFF Write enable main memory from $0200-$BFFF
-$C005 W RAMWRTON Write enable aux memory from $0200-$BFFF
-$C006 W INTCXROMOFF Enable slot ROM from $C100-$CFFF
-$C007 W INTCXROMON Enable main ROM from $C100-$CFFF
-$C008 W ALZTPOFF Enable main memory from $0000-$01FF & avl BSR
-$C009 W ALTZPON Enable aux memory from $0000-$01FF & avl BSR
-$C00A W SLOTC3ROMOFF Enable main ROM from $C300-$C3FF
-$C00B W SLOTC3ROMON Enable slot ROM from $C300-$C3FF
+ $C000   W       80STOREOFF      Allow page2 to switch video page1 page2
+ $C001   W       80STOREON       Allow page2 to switch main & aux video memory
+ $C002   W       RAMRDOFF        Read enable main memory from $0200-$BFFF
+ $C003   W       RAMRDON         Read enable aux memory from $0200-$BFFF
+ $C004   W       RAMWRTOFF       Write enable main memory from $0200-$BFFF
+ $C005   W       RAMWRTON        Write enable aux memory from $0200-$BFFF
+ $C006   W       INTCXROMOFF     Enable slot ROM from $C100-$C7FF (but $C800-$CFFF depends on INTC8ROM)
+ $C007   W       INTCXROMON      Enable main ROM from $C100-$CFFF
+ $C008   W       ALTZPOFF        Enable main memory from $0000-$01FF & avl BSR
+ $C009   W       ALTZPON         Enable aux memory from $0000-$01FF & avl BSR
+ $C00A   W       SLOTC3ROMOFF    Enable main ROM from $C300-$C3FF
+ $C00B   W       SLOTC3ROMON     Enable slot ROM from $C300-$C3FF
+ $C07E   W       IOUDIS          [//c] On: disable IOU access for addresses $C058 to $C05F; enable access to DHIRES switch
+ $C07F   W       IOUDIS          [//c] Off: enable IOU access for addresses $C058 to $C05F; disable access to DHIRES switch
+
 VIDEO SOFT SWITCHES
-$C00C W 80COLOFF Turn off 80 column display
-$C00D W 80COLON Turn on 80 column display
-$C00E W ALTCHARSETOFF Turn off alternate characters
-$C00F W ALTCHARSETON Turn on alternate characters
-$C050 R/W TEXTOFF Select graphics mode
-$C051 R/W TEXTON Select text mode
-$C052 R/W MIXEDOFF Use full screen for graphics
-$C053 R/W MIXEDON Use graphics with 4 lines of text
-$C054 R/W PAGE2OFF Select page1 display (or main video memory)
-$C055 R/W PAGE2ON Select page2 display (or aux video memory)
-$C056 R/W HIRESOFF Select low resolution graphics
-$C057 R/W HIRESON Select high resolution graphics
+ $C00C   W       80COLOFF        Turn off 80 column display
+ $C00D   W       80COLON         Turn on 80 column display
+ $C00E   W       ALTCHARSETOFF   Turn off alternate characters
+ $C00F   W       ALTCHARSETON    Turn on alternate characters
+ $C022   R/W     SCREENCOLOR     [IIgs] text foreground and background colors (also VidHD)
+ $C029   R/W     NEWVIDEO        [IIgs] Select new video modes (also VidHD)
+ $C034   R/W     BORDERCOLOR     [IIgs] b3:0 are border color (also VidHD)
+ $C035   R/W     SHADOW          [IIgs] auxmem-to-bank-E1 shadowing (also VidHD)
+ $C050   R/W     TEXTOFF         Select graphics mode
+ $C051   R/W     TEXTON          Select text mode
+ $C052   R/W     MIXEDOFF        Use full screen for graphics
+ $C053   R/W     MIXEDON         Use graphics with 4 lines of text
+ $C054   R/W     PAGE2OFF        Select panel display (or main video memory)
+ $C055   R/W     PAGE2ON         Select page2 display (or aux video memory)
+ $C056   R/W     HIRESOFF        Select low resolution graphics
+ $C057   R/W     HIRESON         Select high resolution graphics
+ $C05E   R/W     DHIRESON        Select double (14M) resolution graphics (DLGR or DHGR)
+ $C05F   R/W     DHIRESOFF       Select single (7M) resolution graphics
 */
 enum A2SoftSwitch_e
 {
-	A2SS_80STORE	= 0b00000000001,
-	A2SS_RAMRD		= 0b00000000010,
-	A2SS_RAMWRT		= 0b00000000100,
-	A2SS_80COL		= 0b00000001000,
-	A2SS_ALTCHARSET = 0b00000010000,
-	A2SS_INTCXROM	= 0b00000100000,
-	A2SS_SLOTC3ROM	= 0b00001000000,
-	A2SS_TEXT		= 0b00010000000,
-	A2SS_MIXED		= 0b00100000000,
-	A2SS_PAGE2		= 0b01000000000,
-	A2SS_HIRES		= 0b10000000000,
+	A2SS_80STORE	= 0b000000000001,
+	A2SS_RAMRD		= 0b000000000010,
+	A2SS_RAMWRT		= 0b000000000100,
+	A2SS_80COL		= 0b000000001000,
+	A2SS_ALTCHARSET = 0b000000010000,
+	A2SS_INTCXROM	= 0b000000100000,
+	A2SS_SLOTC3ROM	= 0b000001000000,
+	A2SS_TEXT		= 0b000010000000,
+	A2SS_MIXED		= 0b000100000000,
+	A2SS_PAGE2		= 0b001000000000,
+	A2SS_HIRES		= 0b010000000000,
+	A2SS_DRES		= 0b100000000000,
 };
 
 class A2VideoManager
@@ -140,6 +150,7 @@ private:
 	void RenderSubMixed(std::vector<uint32_t>*framebuffer);
 
 	void UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
+	void UpdateDLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
 	void UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
 	//////////////////////////////////////////////////////////////////////////
 	// Internal data

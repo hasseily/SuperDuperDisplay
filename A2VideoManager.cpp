@@ -181,6 +181,16 @@ void A2VideoManager::Initialize()
 		v_fblgr2.size() * sizeof(v_fblgr2[0]),
 		nullptr		// do not render in the window. Rendering is done here
 	);
+	// DLGR
+	windows[A2VIDEO_DLGR].Define(
+		A2VIDEO_DLGR,
+		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
+		uXY({ 1, 1 }),
+		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
+		(uint8_t*)(&v_fbdlgr[0]),
+		v_fbdlgr.size() * sizeof(v_fbdlgr[0]),
+		nullptr		// do not render in the window. Rendering is done here
+	);
 	// HGR1
 	windows[A2VIDEO_HGR1].Define(
 		A2VIDEO_HGR1,
@@ -318,6 +328,12 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr)
 	case 0xC057:	// HIRESON
 		a2SoftSwitches |= A2SS_HIRES;
 		break;
+	case 0xC05E:	// DRESOFF
+		a2SoftSwitches &= ~A2SS_DRES;
+		break;
+	case 0xC05F:	// DRESON
+		a2SoftSwitches |= A2SS_DRES;
+		break;
 	default:
 		break;
 	}
@@ -331,37 +347,35 @@ void A2VideoManager::SelectVideoModes()
 	}
 	if (!(a2SoftSwitches & A2SS_TEXT))
 	{
-		if (a2SoftSwitches & A2SS_HIRES)
+		if (a2SoftSwitches & A2SS_80COL)	// double resolution
 		{
-			if (a2SoftSwitches & (A2SS_80COL))
+			if (a2SoftSwitches & A2SS_DRES)
 				this->windows[A2VIDEO_DHGR].SetEnabled(true);
 			else
-			{
-				if (a2SoftSwitches & A2SS_PAGE2 & ~A2SS_80STORE)
-					this->windows[A2VIDEO_HGR2].SetEnabled(true);
-				else
-					this->windows[A2VIDEO_HGR1].SetEnabled(true);
-			}
-		}
-		else {
-			if (a2SoftSwitches & (A2SS_80COL))
 				this->windows[A2VIDEO_DLGR].SetEnabled(true);
+		}
+		else if (a2SoftSwitches & A2SS_HIRES)	// standard hires
+		{
+			if (a2SoftSwitches & A2SS_PAGE2)
+				this->windows[A2VIDEO_HGR2].SetEnabled(true);
 			else
-			{
-				if (a2SoftSwitches & A2SS_PAGE2 & ~A2SS_80STORE)
-					this->windows[A2VIDEO_LGR2].SetEnabled(true);
-				else
-					this->windows[A2VIDEO_LGR1].SetEnabled(true);
-			}
+				this->windows[A2VIDEO_HGR1].SetEnabled(true);
+		}
+		else {	// standard lores
+			if (a2SoftSwitches & A2SS_PAGE2)
+				this->windows[A2VIDEO_LGR2].SetEnabled(true);
+			else
+				this->windows[A2VIDEO_LGR1].SetEnabled(true);
 		}
 	}
+	// Now check the text modes
 	if ((a2SoftSwitches & A2SS_TEXT) || (a2SoftSwitches & A2SS_MIXED))
 	{
 		if (a2SoftSwitches & (A2SS_80COL))
 			this->windows[A2VIDEO_DTEXT].SetEnabled(true);
 		else
 		{
-			if (a2SoftSwitches & A2SS_PAGE2 & ~A2SS_80STORE)
+			if ((a2SoftSwitches & A2SS_PAGE2) && !(a2SoftSwitches & A2SS_80STORE))
 				this->windows[A2VIDEO_TEXT2].SetEnabled(true);
 			else
 				this->windows[A2VIDEO_TEXT1].SetEnabled(true);
@@ -432,9 +446,17 @@ void A2VideoManager::Render()
 	{
 		for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
 		{
-			this->UpdateLoResRGBCell(_A2VIDEO_TEXT1_START + i, _A2VIDEO_TEXT1_START, &v_fblgr2);
+			this->UpdateLoResRGBCell(_A2VIDEO_TEXT2_START + i, _A2VIDEO_TEXT2_START, &v_fblgr2);
 		}
 		this->RenderSubMixed(&v_fblgr2);
+	}
+	if (this->windows[A2VIDEO_DLGR].IsEnabled())
+	{
+		for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
+		{
+			this->UpdateDLoResRGBCell(_A2VIDEO_TEXT1_START + i, _A2VIDEO_TEXT1_START, &v_fbdlgr);
+		}
+		this->RenderSubMixed(&v_fbdlgr);
 	}
 	if (this->windows[A2VIDEO_HGR1].IsEnabled())
 	{
@@ -500,6 +522,49 @@ void A2VideoManager::UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start
 			framebuffer->at(y * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];	// LoRes colors start at index 12
 			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
 		}
+		y += 2;
+	}
+}
+
+#define ROL_NIB(x) ( (((x)<<1)&0xF) | (((x)>>3)&1) )
+
+void A2VideoManager::UpdateDLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer)
+{
+	int x = LGR_ADDR2X[addr - addr_start];	// x start in pixels
+	int y = LGR_ADDR2Y[addr - addr_start];	// y in pixels
+	if (x < 0 || y < 0)	// the holes!
+		return;
+
+	// Everything is double the resolution
+	x *= 2;
+	y *= 2;
+	uint8_t mainval = *(SDHRManager::GetInstance()->GetApple2MemPtr() + addr);
+	uint8_t auxval = *(SDHRManager::GetInstance()->GetApple2MemAuxPtr() + addr);
+
+	const uint8_t auxval_h = auxval >> 4;
+	const uint8_t auxval_l = auxval & 0xF;
+	auxval = (ROL_NIB(auxval_h) << 4) | ROL_NIB(auxval_l);
+
+	uint8_t colorIdx;
+	// Set all 7 dots of aux mem in the top 4 rows for the low 4 bits color
+	// and the bottom 4 rows for the high bits color
+	// Duplicate each row for the double resolution rows
+	// And do it again for the 7 dots of main mem
+	for (size_t j = 0; j < 8; j++)
+	{
+		colorIdx = (j < 4) ? (auxval & 0xF) : (auxval & 0xF0) >> 4;
+		for (size_t i = 0; i < 7; i++)
+		{
+			framebuffer->at(y * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];	// LoRes colors start at index 12
+			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
+		}
+		colorIdx = (j < 4) ? (mainval & 0xF) : (mainval & 0xF0) >> 4;
+		for (size_t i = 7; i < 14; i++)
+		{
+			framebuffer->at(y * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];	// LoRes colors start at index 12
+			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
+		}
+
 		y += 2;
 	}
 }
