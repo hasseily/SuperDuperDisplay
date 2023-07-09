@@ -336,11 +336,11 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr)
 	case 0xC057:	// HIRESON
 		a2SoftSwitches |= A2SS_HIRES;
 		break;
-	case 0xC05E:	// DRESOFF
-		a2SoftSwitches &= ~A2SS_DRES;
-		break;
-	case 0xC05F:	// DRESON
+	case 0xC05E:	// DRESN
 		a2SoftSwitches |= A2SS_DRES;
+		break;
+	case 0xC05F:	// DRESOFF
+		a2SoftSwitches &= ~A2SS_DRES;
 		break;
 	default:
 		break;
