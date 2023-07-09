@@ -554,6 +554,9 @@ void A2VideoManager::UpdateDLoResRGBCell(uint16_t addr, const uint16_t addr_star
 	// Everything is double the resolution
 	x *= 2;
 	y *= 2;
+
+	if (IsSoftSwitch(A2SS_PAGE2))
+		addr += 0x2000;
 	uint8_t mainval = *(SDHRManager::GetInstance()->GetApple2MemPtr() + addr);
 	uint8_t auxval = *(SDHRManager::GetInstance()->GetApple2MemAuxPtr() + addr);
 
