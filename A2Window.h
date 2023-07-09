@@ -18,7 +18,12 @@ struct A2Vertex {
 class A2Window
 {
 public:
-	bool enabled;
+	bool IsEnabled() const { return enabled; }
+	void SetEnabled(bool val) { 
+		enabled = val;
+		if (enabled)
+			bNeedsGPUDataUpdate = true;
+	}
 	bool bNeedsGPUVertexUpdate = false;	// Update the GPU if the vertex data has changed
 	bool bNeedsGPUDataUpdate = false;	// Update the GPU if the underlying data has changed
 
@@ -75,9 +80,12 @@ private:
 	uint8_t* data;		// The underlying data that will be used by the shader
 	uint32_t datasize;	// Data size in bytes
 
+	unsigned int DBTEX = UINT_MAX;
+
 	std::vector<A2Vertex> vertices;		// Vertices with XYRelative and XYPixels
 	unsigned int VAO = UINT_MAX;		// Vertex Array Object (holds buffers that are vertex related)
 	unsigned int VBO = UINT_MAX;		// Vertex Buffer Object (holds vertices)
+	bool enabled;
 };
 
 #endif // A2WINDOW_H

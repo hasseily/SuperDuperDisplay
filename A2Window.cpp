@@ -3,11 +3,11 @@
 #include <SDL_timer.h>
 #include "A2VideoManager.h"
 
-static unsigned int DBTEX = UINT_MAX;		// Data Buffer Texture (holds Apple 2 memory data)
+// static unsigned int DBTEX = UINT_MAX;		// Data Buffer Texture (holds Apple 2 memory data)
 
 void A2Window::Reset()
 {
-	enabled = false;
+	SetEnabled(false);
 	tile_dim = uXY({ 0,0 });
 	tile_count = uXY({ 0,0 });
 }
@@ -107,7 +107,7 @@ void A2Window::Update()
 
 void A2Window::Render()
 {
-	if (!enabled)
+	if (!IsEnabled())
 		return;
 	if (shaderProgram == nullptr)
 		return;

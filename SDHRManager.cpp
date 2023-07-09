@@ -328,7 +328,7 @@ uint8_t* SDHRManager::GetApple2MemPtr()
 // Return a pointer to the shadowed apple 2 aux memory
 uint8_t* SDHRManager::GetApple2MemAuxPtr()
 {
-	return a2mem+0xC000;
+	return a2mem+ _SDHR_MEMORY_SHADOW_END;
 }
 
 uint8_t* SDHRManager::GetUploadRegionPtr()

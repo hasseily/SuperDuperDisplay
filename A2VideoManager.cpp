@@ -158,7 +158,7 @@ void A2VideoManager::Initialize()
 		uXY({ _A2_TEXT80_CHAR_WIDTH, _A2_TEXT80_CHAR_HEIGHT }),
 		uXY({ 80, 24 }),
 		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT1_START,
-		2*_A2VIDEO_TEXT_SIZE + 0x10000,
+		_A2VIDEO_TEXT_SIZE + _SDHR_MEMORY_SHADOW_END,
 		&shader_a2video_dtext
 	);
 	// LGR1
@@ -227,7 +227,7 @@ void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 	}
 	else {
 		if (addr >= _A2VIDEO_TEXT1_START && addr < (_A2VIDEO_TEXT1_START + _A2VIDEO_TEXT_SIZE))
-			if (IsSoftSwitch(A2SS_80COL) && IsSoftSwitch(A2SS_PAGE2))	// writing to aux text and video memory
+			if (IsSoftSwitch(A2SS_80STORE) && IsSoftSwitch(A2SS_PAGE2))	// writing to aux text and video memory
 				windows[A2VIDEO_DTEXT].bNeedsGPUDataUpdate = true;
 			else
 				windows[A2VIDEO_TEXT1].bNeedsGPUDataUpdate = true;
@@ -269,6 +269,18 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr)
 		break;
 	case 0xC005:	// RAMWRTON
 		a2SoftSwitches |= A2SS_RAMWRT;
+		break;
+	case 0xC006:	// INTCXROMOFF
+		a2SoftSwitches &= ~A2SS_INTCXROM;
+		break;
+	case 0xC007:	// INTCXROMON
+		a2SoftSwitches |= A2SS_INTCXROM;
+		break;
+	case 0xC00A:	// SLOTC3ROMOFF
+		a2SoftSwitches &= ~A2SS_SLOTC3ROM;
+		break;
+	case 0xC00B:	// SLOTC3ROMOFF
+		a2SoftSwitches |= A2SS_SLOTC3ROM;
 		break;
 	case 0xC00C:	// 80COLOFF
 		a2SoftSwitches &= ~A2SS_80COL;
@@ -315,44 +327,44 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr)
 void A2VideoManager::SelectVideoModes()
 {
 	for (auto& _w : this->windows) {
-		_w.enabled = false;
+		_w.SetEnabled(false);
 	}
 	if (!(a2SoftSwitches & A2SS_TEXT))
 	{
 		if (a2SoftSwitches & A2SS_HIRES)
 		{
-			if (a2SoftSwitches & A2SS_80COL)
-				this->windows[A2VIDEO_DHGR].enabled = true;
+			if (a2SoftSwitches & (A2SS_80COL))
+				this->windows[A2VIDEO_DHGR].SetEnabled(true);
 			else
 			{
-				if (a2SoftSwitches & A2SS_PAGE2)
-					this->windows[A2VIDEO_HGR2].enabled = true;
+				if (a2SoftSwitches & A2SS_PAGE2 & ~A2SS_80STORE)
+					this->windows[A2VIDEO_HGR2].SetEnabled(true);
 				else
-					this->windows[A2VIDEO_HGR1].enabled = true;
+					this->windows[A2VIDEO_HGR1].SetEnabled(true);
 			}
 		}
 		else {
-			if (a2SoftSwitches & A2SS_80COL)
-				this->windows[A2VIDEO_DLGR].enabled = true;
+			if (a2SoftSwitches & (A2SS_80COL))
+				this->windows[A2VIDEO_DLGR].SetEnabled(true);
 			else
 			{
-				if (a2SoftSwitches & A2SS_PAGE2)
-					this->windows[A2VIDEO_LGR2].enabled = true;
+				if (a2SoftSwitches & A2SS_PAGE2 & ~A2SS_80STORE)
+					this->windows[A2VIDEO_LGR2].SetEnabled(true);
 				else
-					this->windows[A2VIDEO_LGR1].enabled = true;
+					this->windows[A2VIDEO_LGR1].SetEnabled(true);
 			}
 		}
 	}
 	if ((a2SoftSwitches & A2SS_TEXT) || (a2SoftSwitches & A2SS_MIXED))
 	{
-		if (a2SoftSwitches & A2SS_80COL)
-			this->windows[A2VIDEO_DTEXT].enabled = true;
+		if (a2SoftSwitches & (A2SS_80COL))
+			this->windows[A2VIDEO_DTEXT].SetEnabled(true);
 		else
 		{
-			if (a2SoftSwitches & A2SS_PAGE2)
-				this->windows[A2VIDEO_TEXT2].enabled = true;
+			if (a2SoftSwitches & A2SS_PAGE2 & ~A2SS_80STORE)
+				this->windows[A2VIDEO_TEXT2].SetEnabled(true);
 			else
-				this->windows[A2VIDEO_TEXT1].enabled = true;
+				this->windows[A2VIDEO_TEXT1].SetEnabled(true);
 		}
 	}
 	return;
@@ -408,7 +420,7 @@ void A2VideoManager::Render()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, oglHelper->get_output_texture_id());
 
-	if (this->windows[A2VIDEO_LGR1].enabled)
+	if (this->windows[A2VIDEO_LGR1].IsEnabled())
 	{
 		for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
 		{
@@ -416,7 +428,7 @@ void A2VideoManager::Render()
 		}
 		this->RenderSubMixed(&v_fblgr1);
 	}
-	if (this->windows[A2VIDEO_LGR2].enabled)
+	if (this->windows[A2VIDEO_LGR2].IsEnabled())
 	{
 		for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
 		{
@@ -424,7 +436,7 @@ void A2VideoManager::Render()
 		}
 		this->RenderSubMixed(&v_fblgr2);
 	}
-	if (this->windows[A2VIDEO_HGR1].enabled)
+	if (this->windows[A2VIDEO_HGR1].IsEnabled())
 	{
 		for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
 		{
@@ -432,7 +444,7 @@ void A2VideoManager::Render()
 		}
 		this->RenderSubMixed(&v_fbhgr1);
 	}
-	if (this->windows[A2VIDEO_HGR2].enabled)
+	if (this->windows[A2VIDEO_HGR2].IsEnabled())
 	{
 		for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
 		{
