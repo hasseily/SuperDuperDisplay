@@ -70,14 +70,14 @@ int process_events_thread(bool* shouldTerminateProcessing)
 	std::cout << "Starting Processing Thread\n";
 	SDHRManager* sdhrMgr = SDHRManager::GetInstance();
 	A2VideoManager* a2VideoMgr = A2VideoManager::GetInstance();
-	uint8_t* a2mem = sdhrMgr->GetApple2MemPtr();
 	while (!(*shouldTerminateProcessing)) {
 		auto e = events.pop();	// The thread will wait until there's an event to pop
-		if (e.rw == 1)	// read or dummy event, disregard
-			continue;
 		// std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
 		if ((e.addr >= _SDHR_MEMORY_SHADOW_BEGIN) && (e.addr < _SDHR_MEMORY_SHADOW_END)) {
-			a2mem[e.addr] = e.data;
+			if (a2VideoMgr->IsSoftSwitch(A2SS_RAMWRT))
+				sdhrMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
+			else
+				sdhrMgr->GetApple2MemPtr()[e.addr] = e.data;
 			a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
 			continue;
 		}
@@ -289,8 +289,8 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 						addr = ++prev_addr;
 					}
 					prev_addr = addr;
-					if (rw) {
-						// ignoring all read events
+					if (rw && ((addr & 0xF000) != 0xC000)) {
+						// ignoring all read events not softswitches
 						continue;
 					}
 					SDHREvent e(rw, addr, c->data[j]);
@@ -412,8 +412,8 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 						addr = ++prev_addr;
 					}
 					prev_addr = addr;
-					if (rw) {
-						// ignoring all read events
+					if (rw && ((addr & 0xF000) != 0xC000)) {
+						// ignoring all read events not softswitches
 						continue;
 					}
 					SDHREvent e(rw, addr, c->data[j]);
