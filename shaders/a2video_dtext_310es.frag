@@ -57,14 +57,13 @@ void main()
     ivec2 tileColRow = ivec2(floor(fTileColRow));
         // Fragment offset to tile origin, in pixels
     vec2 fragOffset = ((fTileColRow - vec2(tileColRow)) * vec2(tileSize));
-        // divide by 2 to only take half the pixels
-    fragOffset.x /= 2.0;
+
     // Next grab the data for that tile from the tilesBuffer
     // No need to rescale values because we're using GL_R8UI
     // The "texture" is split by 1kB-sized rows
-    int offset = (textRow[tileColRow.y] + tileColRow.x) + (0x10000 * (tileColRow.x & 1));
+    int offset = (textRow[tileColRow.y] + tileColRow.x / 2) + (0xC000 * (1 - (tileColRow.x & 1)));
     uint charVal = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
-        // the char byte value is just the r component
+    // the char byte value is just the r component
     float vCharVal = float(charVal);
 
     // Determine from char which font glyph to use

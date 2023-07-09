@@ -76,8 +76,18 @@ int process_events_thread(bool* shouldTerminateProcessing)
 		if ((e.addr >= _SDHR_MEMORY_SHADOW_BEGIN) && (e.addr < _SDHR_MEMORY_SHADOW_END)) {
 			if (a2VideoMgr->IsSoftSwitch(A2SS_RAMWRT))
 				sdhrMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
-			else
-				sdhrMgr->GetApple2MemPtr()[e.addr] = e.data;
+			else {
+				if (a2VideoMgr->IsSoftSwitch(A2SS_80COL) && a2VideoMgr->IsSoftSwitch(A2SS_PAGE2))
+				{
+					// the 80COL switch allows the PAGE2 switch to write to aux video mem
+					if ((e.addr >= 0x400 && e.addr < 0x800) || (e.addr >= 0x2000 && e.addr < 0x4000))
+						sdhrMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
+					else
+						sdhrMgr->GetApple2MemPtr()[e.addr] = e.data;
+				}
+				else
+					sdhrMgr->GetApple2MemPtr()[e.addr] = e.data;
+			}
 			a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
 			continue;
 		}

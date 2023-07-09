@@ -227,7 +227,10 @@ void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 	}
 	else {
 		if (addr >= _A2VIDEO_TEXT1_START && addr < (_A2VIDEO_TEXT1_START + _A2VIDEO_TEXT_SIZE))
-			windows[A2VIDEO_TEXT1].bNeedsGPUDataUpdate = true;
+			if (IsSoftSwitch(A2SS_80COL) && IsSoftSwitch(A2SS_PAGE2))	// writing to aux text and video memory
+				windows[A2VIDEO_DTEXT].bNeedsGPUDataUpdate = true;
+			else
+				windows[A2VIDEO_TEXT1].bNeedsGPUDataUpdate = true;
 		else if (addr >= _A2VIDEO_TEXT2_START && addr < (_A2VIDEO_TEXT2_START + _A2VIDEO_TEXT_SIZE))
 			windows[A2VIDEO_TEXT2].bNeedsGPUDataUpdate = true;
 	}

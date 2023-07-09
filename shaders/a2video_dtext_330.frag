@@ -61,9 +61,12 @@ void main()
     // Next grab the data for that tile from the tilesBuffer
     // No need to rescale values because we're using GL_R8UI
     // The "texture" is split by 1kB-sized rows
-    int offset = (textRow[tileColRow.y] + tileColRow.x/2) + (0x10000 * (tileColRow.x & 1));
+    // In 80-col mode, the even bytes are pulled from aux mem,
+    // and the odd bytes from main mem
+    int offset = (textRow[tileColRow.y] + tileColRow.x / 2) + (0xC000 * (1 - (tileColRow.x & 1)));
     vec4 vChar = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0);
-    int charVal = int(vChar.r);    // the char byte value is just the r component
+    // the char byte value is just the r component
+    int charVal = int(vChar.r);
 
     // Determine from char which font glyph to use
     // and if we need to flash
