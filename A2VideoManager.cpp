@@ -211,8 +211,16 @@ void A2VideoManager::Initialize()
 		v_fbhgr2.size() * sizeof(v_fbhgr2[0]),
 		nullptr		// do not render in the window. Rendering is done here
 	);
-
-	// TODO: Make the other modes
+	// DHGR
+	windows[A2VIDEO_DHGR].Define(
+		A2VIDEO_DHGR,
+		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
+		uXY({ 1, 1 }),
+		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
+		(uint8_t*)(&v_fbdhgr[1]),
+		v_fbdhgr.size() * sizeof(v_fbdhgr[0]),
+		nullptr		// do not render in the window. Rendering is done here
+	);
 
 	// Activate TEXT1 by default
 	SelectVideoModes();
@@ -345,37 +353,37 @@ void A2VideoManager::SelectVideoModes()
 	for (auto& _w : this->windows) {
 		_w.SetEnabled(false);
 	}
-	if (!(a2SoftSwitches & A2SS_TEXT))
+	if (!IsSoftSwitch(A2SS_TEXT))
 	{
-		if (a2SoftSwitches & A2SS_80COL)	// double resolution
+		if (IsSoftSwitch(A2SS_80COL))	// double resolution
 		{
-			if (a2SoftSwitches & A2SS_DRES)
+			if (IsSoftSwitch(A2SS_DRES))
 				this->windows[A2VIDEO_DHGR].SetEnabled(true);
 			else
 				this->windows[A2VIDEO_DLGR].SetEnabled(true);
 		}
-		else if (a2SoftSwitches & A2SS_HIRES)	// standard hires
+		else if (IsSoftSwitch(A2SS_HIRES))	// standard hires
 		{
-			if (a2SoftSwitches & A2SS_PAGE2)
+			if (IsSoftSwitch(A2SS_PAGE2))
 				this->windows[A2VIDEO_HGR2].SetEnabled(true);
 			else
 				this->windows[A2VIDEO_HGR1].SetEnabled(true);
 		}
 		else {	// standard lores
-			if (a2SoftSwitches & A2SS_PAGE2)
+			if (IsSoftSwitch(A2SS_PAGE2))
 				this->windows[A2VIDEO_LGR2].SetEnabled(true);
 			else
 				this->windows[A2VIDEO_LGR1].SetEnabled(true);
 		}
 	}
 	// Now check the text modes
-	if ((a2SoftSwitches & A2SS_TEXT) || (a2SoftSwitches & A2SS_MIXED))
+	if (IsSoftSwitch(A2SS_TEXT) || IsSoftSwitch(A2SS_MIXED))
 	{
-		if (a2SoftSwitches & (A2SS_80COL))
+		if (IsSoftSwitch(A2SS_80COL))
 			this->windows[A2VIDEO_DTEXT].SetEnabled(true);
 		else
 		{
-			if ((a2SoftSwitches & A2SS_PAGE2) && !(a2SoftSwitches & A2SS_80STORE))
+			if (IsSoftSwitch(A2SS_PAGE2) && !IsSoftSwitch(A2SS_80STORE))
 				this->windows[A2VIDEO_TEXT2].SetEnabled(true);
 			else
 				this->windows[A2VIDEO_TEXT1].SetEnabled(true);
@@ -473,6 +481,14 @@ void A2VideoManager::Render()
 			this->UpdateHiResRGBCell(_A2VIDEO_HGR2_START + i, _A2VIDEO_HGR2_START, &v_fbhgr2);
 		}
 		this->RenderSubMixed(&v_fbhgr2);
+	}
+	if (this->windows[A2VIDEO_DHGR].IsEnabled())
+	{
+		for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
+		{
+			this->UpdateDHiResRGBCell(_A2VIDEO_HGR1_START + i, _A2VIDEO_HGR1_START, &v_fbdhgr);
+		}
+		this->RenderSubMixed(&v_fbdhgr);
 	}
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -668,6 +684,201 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 		// Next pixel
 		dwordval = dwordval >> 1;
 	}
+	// duplicate on the next row (it may be overridden by the scanlines)
+	for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
+	{
+		framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + i) = framebuffer->at(y * _A2VIDEO_MIN_WIDTH + i);
+	}
+}
+
+static bool g_dhgrLastCellIsColor = true;
+static int g_dhgrLastBit = 0;
+
+void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer)
+{
+	// first get the number of bytes from the start of the lines, i.e. the xb value
+	int x = HGR_ADDR2X[addr - addr_start];	// x start in pixels
+	int y = HGR_ADDR2Y[addr - addr_start];	// y in pixels
+	if (x < 0 || y < 0)	// the holes!
+		return;
+	uint8_t xb = x / 7;	// x in bytes
+	uint8_t xoffset = xb & 1; // offset to start of the 2 bytes. Always start with the even byte
+	addr -= xoffset;
+	x = HGR_ADDR2X[addr - addr_start];
+	// Everything is double the resolution
+	x *= 2;
+	y *= 2;
+
+	uint8_t* pMain = SDHRManager::GetInstance()->GetApple2MemPtr() + addr;
+	uint8_t* pAux = SDHRManager::GetInstance()->GetApple2MemAuxPtr() + addr;
+
+
+	// We need all 28 bits because one 4-bits pixel overlaps two 14-bits cells
+	uint8_t byteval1 = *pAux;
+	uint8_t byteval2 = *pMain;
+	uint8_t byteval3 = *(pAux + 1);
+	uint8_t byteval4 = *(pMain + 1);
+
+	// all 28 bits chained
+	uint32_t dwordval = (byteval1 & 0x7F) | ((byteval2 & 0x7F) << 7) | ((byteval3 & 0x7F) << 14) | ((byteval4 & 0x7F) << 21);
+
+	// Extraction of 7 color pixels and 7x4 bits
+	int bits[7];
+	uint32_t colors[7];
+	int color = 0;
+	uint32_t dwordval_tmp = dwordval;
+	for (int i = 0; i < 7; i++)
+	{
+		bits[i] = dwordval_tmp & 0xF;
+		color = ((bits[i] & 7) << 1) | ((bits[i] & 8) >> 3); // DHGR colors are rotated 1 bit to the right
+		colors[i] = *reinterpret_cast<const uint32_t*>(&gPaletteRGB[12 + color]);
+		dwordval_tmp >>= 4;
+	}
+	uint32_t bw[2];
+	bw[0] = *reinterpret_cast<const uint32_t*>(&gPaletteRGB[12 + 0]);
+	bw[1] = *reinterpret_cast<const uint32_t*>(&gPaletteRGB[12 + 15]);
+
+	uint32_t dst = (y * _A2VIDEO_MIN_WIDTH) + x + (xoffset * 2);	// destination offset in the pixel framebuffer
+	uint32_t* pDst = &framebuffer->at(dst);
+	if (xoffset == 0)	// First cell
+	{
+		if (byteval1 & 0x80)
+		{
+			// Color
+
+			// Color cell 0
+			*(pDst++) = colors[0];
+			*(pDst++) = colors[0];
+			*(pDst++) = colors[0];
+			*(pDst++) = colors[0];
+			// Color cell 1
+			*(pDst++) = colors[1];
+			*(pDst++) = colors[1];
+			*(pDst++) = colors[1];
+
+			dwordval >>= 7;
+			g_dhgrLastCellIsColor = true;
+		}
+		else
+		{
+			// BW
+			for (int i = 0; i < 7; i++)
+			{
+				g_dhgrLastBit = dwordval & 1;
+				*(pDst++) = bw[g_dhgrLastBit];
+				dwordval >>= 1;
+			}
+			g_dhgrLastCellIsColor = false;
+		}
+
+		if (byteval2 & 0x80)
+		{
+			// Remaining of color cell 1
+			if (g_dhgrLastCellIsColor)
+			{
+				*(pDst++) = colors[1];
+			}
+			else
+			{
+				// Repeat last BW bit once
+				*(pDst++) = bw[g_dhgrLastBit];
+			}
+			// Color cell 2
+			*(pDst++) = colors[2];
+			*(pDst++) = colors[2];
+			*(pDst++) = colors[2];
+			*(pDst++) = colors[2];
+			// Color cell 3
+			*(pDst++) = colors[3];
+			*(pDst++) = colors[3];
+			g_dhgrLastCellIsColor = true;
+		}
+		else
+		{
+			for (int i = 0; i < 7; i++)
+			{
+				g_dhgrLastBit = dwordval & 1;
+				*(pDst++) = bw[g_dhgrLastBit];
+				dwordval >>= 1;
+			}
+			g_dhgrLastCellIsColor = false;
+		}
+	}
+	else  // Second cell
+	{
+		dwordval >>= 14;
+
+		if (byteval3 & 0x80)
+		{
+			// Remaining of color cell 3
+			if (g_dhgrLastCellIsColor)
+			{
+				*(pDst++) = colors[3];
+				*(pDst++) = colors[3];
+			}
+			else
+			{
+				// Repeat last BW bit twice
+				*(pDst++) = bw[g_dhgrLastBit];
+				*(pDst++) = bw[g_dhgrLastBit];
+			}
+			// Color cell 4
+			*(pDst++) = colors[4];
+			*(pDst++) = colors[4];
+			*(pDst++) = colors[4];
+			*(pDst++) = colors[4];
+			// Color cell 5
+			*(pDst++) = colors[5];
+
+			dwordval >>= 7;
+			g_dhgrLastCellIsColor = true;
+		}
+		else
+		{
+			for (int i = 0; i < 7; i++)
+			{
+				g_dhgrLastBit = dwordval & 1;
+				*(pDst++) = bw[g_dhgrLastBit];
+				dwordval >>= 1;
+			}
+			g_dhgrLastCellIsColor = false;
+		}
+
+		if (byteval4 & 0x80)
+		{
+			// Remaining of color cell 5
+			if (g_dhgrLastCellIsColor)
+			{
+				*(pDst++) = colors[5];
+				*(pDst++) = colors[5];
+				*(pDst++) = colors[5];
+			}
+			else
+			{
+				// Repeat last BW bit three times
+				*(pDst++) = bw[g_dhgrLastBit];
+				*(pDst++) = bw[g_dhgrLastBit];
+				*(pDst++) = bw[g_dhgrLastBit];
+			}
+			// Color cell 6
+			*(pDst++) = colors[6];
+			*(pDst++) = colors[6];
+			*(pDst++) = colors[6];
+			*(pDst++) = colors[6];
+			g_dhgrLastCellIsColor = true;
+		}
+		else
+		{
+			for (int i = 0; i < 7; i++)
+			{
+				g_dhgrLastBit = dwordval & 1;
+				*(pDst++) = bw[g_dhgrLastBit];
+				dwordval >>= 1;
+			}
+			g_dhgrLastCellIsColor = false;
+		}
+	}
+
 	// duplicate on the next row (it may be overridden by the scanlines)
 	for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
 	{
