@@ -701,14 +701,13 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 	uint8_t xb = x / 7;	// x in bytes
 	uint8_t xoffset = xb & 1; // offset to start of the 2 bytes. Always start with the even byte
 	addr -= xoffset;
-	if (IsSoftSwitch(A2SS_PAGE2))
-		x = HGR_ADDR2X[_SDHR_MEMORY_SHADOW_END + addr - addr_start];
-	else
-		x = HGR_ADDR2X[addr - addr_start];
+	x = HGR_ADDR2X[addr - addr_start];
 	// Everything is double the resolution
 	x *= 2;
 	y *= 2;
 
+	if (IsSoftSwitch(A2SS_PAGE2))
+		addr += _SDHR_MEMORY_SHADOW_END;
 	uint8_t* pMain = SDHRManager::GetInstance()->GetApple2MemPtr() + addr;
 	uint8_t* pAux = SDHRManager::GetInstance()->GetApple2MemAuxPtr() + addr;
 
