@@ -707,7 +707,7 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 	y *= 2;
 
 	if (IsSoftSwitch(A2SS_PAGE2))
-		addr += _SDHR_MEMORY_SHADOW_END;
+		addr += 0x2000;
 	uint8_t* pMain = SDHRManager::GetInstance()->GetApple2MemPtr() + addr;
 	uint8_t* pAux = SDHRManager::GetInstance()->GetApple2MemAuxPtr() + addr;
 
