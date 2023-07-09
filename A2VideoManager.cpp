@@ -336,7 +336,7 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr)
 	case 0xC057:	// HIRESON
 		a2SoftSwitches |= A2SS_HIRES;
 		break;
-	case 0xC05E:	// DRESN
+	case 0xC05E:	// DRESON
 		a2SoftSwitches |= A2SS_DRES;
 		break;
 	case 0xC05F:	// DRESOFF
@@ -691,9 +691,6 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 	}
 }
 
-static bool g_dhgrLastCellIsColor = true;
-static int g_dhgrLastBit = 0;
-
 void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer)
 {
 	// first get the number of bytes from the start of the lines, i.e. the xb value
@@ -711,7 +708,6 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 
 	uint8_t* pMain = SDHRManager::GetInstance()->GetApple2MemPtr() + addr;
 	uint8_t* pAux = SDHRManager::GetInstance()->GetApple2MemAuxPtr() + addr;
-
 
 	// We need all 28 bits because one 4-bits pixel overlaps two 14-bits cells
 	uint8_t byteval1 = *pAux;
@@ -734,149 +730,62 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 		colors[i] = *reinterpret_cast<const uint32_t*>(&gPaletteRGB[12 + color]);
 		dwordval_tmp >>= 4;
 	}
-	uint32_t bw[2];
-	bw[0] = *reinterpret_cast<const uint32_t*>(&gPaletteRGB[12 + 0]);
-	bw[1] = *reinterpret_cast<const uint32_t*>(&gPaletteRGB[12 + 15]);
 
-	uint32_t dst = (y * _A2VIDEO_MIN_WIDTH) + x + (xoffset * 2);	// destination offset in the pixel framebuffer
+	// destination offset in the pixel framebuffer
+	// We process a complete byte very time, so the offset for even/odd is 7 pixels * 2
+	uint32_t dst = (y * _A2VIDEO_MIN_WIDTH) + x + (xoffset * 14);
 	uint32_t* pDst = &framebuffer->at(dst);
 	if (xoffset == 0)	// First cell
 	{
-		if (byteval1 & 0x80)
-		{
-			// Color
+		// Color
 
-			// Color cell 0
-			*(pDst++) = colors[0];
-			*(pDst++) = colors[0];
-			*(pDst++) = colors[0];
-			*(pDst++) = colors[0];
-			// Color cell 1
-			*(pDst++) = colors[1];
-			*(pDst++) = colors[1];
-			*(pDst++) = colors[1];
+		// Color cell 0
+		*(pDst++) = colors[0];
+		*(pDst++) = colors[0];
+		*(pDst++) = colors[0];
+		*(pDst++) = colors[0];
+		// Color cell 1
+		*(pDst++) = colors[1];
+		*(pDst++) = colors[1];
+		*(pDst++) = colors[1];
 
-			dwordval >>= 7;
-			g_dhgrLastCellIsColor = true;
-		}
-		else
-		{
-			// BW
-			for (int i = 0; i < 7; i++)
-			{
-				g_dhgrLastBit = dwordval & 1;
-				*(pDst++) = bw[g_dhgrLastBit];
-				dwordval >>= 1;
-			}
-			g_dhgrLastCellIsColor = false;
-		}
+		// Remaining of color cell 1
+		*(pDst++) = colors[1];
 
-		if (byteval2 & 0x80)
-		{
-			// Remaining of color cell 1
-			if (g_dhgrLastCellIsColor)
-			{
-				*(pDst++) = colors[1];
-			}
-			else
-			{
-				// Repeat last BW bit once
-				*(pDst++) = bw[g_dhgrLastBit];
-			}
-			// Color cell 2
-			*(pDst++) = colors[2];
-			*(pDst++) = colors[2];
-			*(pDst++) = colors[2];
-			*(pDst++) = colors[2];
-			// Color cell 3
-			*(pDst++) = colors[3];
-			*(pDst++) = colors[3];
-			g_dhgrLastCellIsColor = true;
-		}
-		else
-		{
-			for (int i = 0; i < 7; i++)
-			{
-				g_dhgrLastBit = dwordval & 1;
-				*(pDst++) = bw[g_dhgrLastBit];
-				dwordval >>= 1;
-			}
-			g_dhgrLastCellIsColor = false;
-		}
+		// Color cell 2
+		*(pDst++) = colors[2];
+		*(pDst++) = colors[2];
+		*(pDst++) = colors[2];
+		*(pDst++) = colors[2];
+		// Color cell 3
+		*(pDst++) = colors[3];
+		*(pDst++) = colors[3];
 	}
 	else  // Second cell
 	{
-		dwordval >>= 14;
 
-		if (byteval3 & 0x80)
-		{
-			// Remaining of color cell 3
-			if (g_dhgrLastCellIsColor)
-			{
-				*(pDst++) = colors[3];
-				*(pDst++) = colors[3];
-			}
-			else
-			{
-				// Repeat last BW bit twice
-				*(pDst++) = bw[g_dhgrLastBit];
-				*(pDst++) = bw[g_dhgrLastBit];
-			}
-			// Color cell 4
-			*(pDst++) = colors[4];
-			*(pDst++) = colors[4];
-			*(pDst++) = colors[4];
-			*(pDst++) = colors[4];
-			// Color cell 5
-			*(pDst++) = colors[5];
+		// Remaining of color cell 3
+		*(pDst++) = colors[3];
+		*(pDst++) = colors[3];
 
-			dwordval >>= 7;
-			g_dhgrLastCellIsColor = true;
-		}
-		else
-		{
-			for (int i = 0; i < 7; i++)
-			{
-				g_dhgrLastBit = dwordval & 1;
-				*(pDst++) = bw[g_dhgrLastBit];
-				dwordval >>= 1;
-			}
-			g_dhgrLastCellIsColor = false;
-		}
+		// Color cell 4
+		*(pDst++) = colors[4];
+		*(pDst++) = colors[4];
+		*(pDst++) = colors[4];
+		*(pDst++) = colors[4];
+		// Color cell 5
+		*(pDst++) = colors[5];
 
-		if (byteval4 & 0x80)
-		{
-			// Remaining of color cell 5
-			if (g_dhgrLastCellIsColor)
-			{
-				*(pDst++) = colors[5];
-				*(pDst++) = colors[5];
-				*(pDst++) = colors[5];
-			}
-			else
-			{
-				// Repeat last BW bit three times
-				*(pDst++) = bw[g_dhgrLastBit];
-				*(pDst++) = bw[g_dhgrLastBit];
-				*(pDst++) = bw[g_dhgrLastBit];
-			}
-			// Color cell 6
-			*(pDst++) = colors[6];
-			*(pDst++) = colors[6];
-			*(pDst++) = colors[6];
-			*(pDst++) = colors[6];
-			g_dhgrLastCellIsColor = true;
-		}
-		else
-		{
-			for (int i = 0; i < 7; i++)
-			{
-				g_dhgrLastBit = dwordval & 1;
-				*(pDst++) = bw[g_dhgrLastBit];
-				dwordval >>= 1;
-			}
-			g_dhgrLastCellIsColor = false;
-		}
+		// Remaining of color cell 5
+		*(pDst++) = colors[5];
+		*(pDst++) = colors[5];
+		*(pDst++) = colors[5];
+
+		// Color cell 6
+		*(pDst++) = colors[6];
+		*(pDst++) = colors[6];
+		*(pDst++) = colors[6];
+		*(pDst++) = colors[6];
 	}
 
 	// duplicate on the next row (it may be overridden by the scanlines)
