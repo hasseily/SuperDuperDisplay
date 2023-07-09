@@ -236,6 +236,8 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
       <FileType>Document</FileType>
     </Media>
+    <None Include="shaders\a2video_dtext_310es.frag" />
+    <None Include="shaders\a2video_dtext_330.frag" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="shaders\**">

@@ -36,7 +36,7 @@ const int textRow[24]= int[24](
 // Global uniforms assigned in A2VideoManager
 uniform sampler2D a2FontTexture;
 uniform int ticks;                  // ms since start
-
+uniform float hasFlashing;
 
 // Mesh-level uniforms assigned in MosaicMesh
 uniform uvec2 tileCount;         // Count of tiles (cols, rows)
@@ -66,15 +66,12 @@ void main()
         // the char byte value is just the r component
     float vCharVal = float(charVal);
 
-    // TODO:    Check 0xC007 to switch to alternate charset
-    //          Alternate charset doesn't do flashing
-
     // Determine from char which font glyph to use
     // and if we need to flash
     // Determine if it's inverse when the char is below 0x40
     // And then if the char is below 0x80 and not inverse, it's flashing
     float a_inverse = 1.0 - step(float(0x40f), vCharVal);
-    float a_flash = (1.0 - step(float(0x40), vCharVal)) * (1.0 - a_inverse);
+    float a_flash = (1.0 - step(float(0x80), vCharVal)) * (1.0 - a_inverse) * hasFlashing;
 
     ivec2 textureSize2d = textureSize(a2FontTexture,0);
     // what's our character's starting origin in the character map?

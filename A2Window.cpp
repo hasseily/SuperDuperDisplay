@@ -119,9 +119,14 @@ void A2Window::Render()
 
 	// Assign the textures
 	if (A2VideoManager::IsSoftSwitch(A2SS_ALTCHARSET))
+	{
+		shaderProgram->setFloat("hasFlashing", 0.f);
 		shaderProgram->setInt("a2FontTexture", _SDHR_START_TEXTURES + 1 - GL_TEXTURE0);
-	else
+	}
+	else {
+		shaderProgram->setFloat("hasFlashing", 1.f);
 		shaderProgram->setInt("a2FontTexture", _SDHR_START_TEXTURES - GL_TEXTURE0);
+	}
 
 	shaderProgram->setInt("index", this->index);
 	shaderProgram->setInt("ticks", SDL_GetTicks());

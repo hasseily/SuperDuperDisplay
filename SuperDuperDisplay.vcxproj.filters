@@ -154,6 +154,12 @@
       <Filter>imgui</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="shaders\a2video_dtext_310es.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\a2video_dtext_330.frag">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Media Include="shaders\sdhr_default_330.vert">

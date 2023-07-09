@@ -256,9 +256,10 @@ void SDHRManager::Initialize()
 
 	// Initialize the Apple 2 memory duplicate
 	// Whenever memory is written from the Apple2
-	// in the main bank between $200 and $BFFF it will
+	// in any of the 2 banks between $200 and $BFFF it will
 	// be sent through the socket and this buffer will be updated
-	memset(a2mem, 0, _SDHR_MEMORY_SHADOW_END);
+	// memory of both banks is concatenated into one buffer
+	memset(a2mem, 0, _SDHR_MEMORY_SHADOW_END*2);
 
 	// tell the next Render() call to run initialization routines
 	// Assign to the GPU the default pink image to all 16 image assets
@@ -322,6 +323,12 @@ bool SDHRManager::CheckCommandLength(uint8_t* p, uint8_t* e, size_t sz) {
 uint8_t* SDHRManager::GetApple2MemPtr()
 {
 	return a2mem;
+}
+
+// Return a pointer to the shadowed apple 2 aux memory
+uint8_t* SDHRManager::GetApple2MemAuxPtr()
+{
+	return a2mem+0xC000;
 }
 
 uint8_t* SDHRManager::GetUploadRegionPtr()

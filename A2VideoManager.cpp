@@ -67,8 +67,7 @@ uint16_t A2VideoManager::a2SoftSwitches = 0;
 static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
 
 static Shader shader_a2video_text = Shader();
-static Shader shader_a2video_lores = Shader();
-static Shader shader_a2video_hgr = Shader();
+static Shader shader_a2video_dtext = Shader();
 
 /*
 	For TEXT1/2 support:
@@ -149,6 +148,7 @@ void A2VideoManager::Initialize()
 
 	// Generate shaders
 	shader_a2video_text.build(_SHADER_TEXT_VERTEX_DEFAULT, _SHADER_TEXT_FRAGMENT_DEFAULT);
+	shader_a2video_dtext.build(_SHADER_TEXT_VERTEX_DEFAULT, _SHADER_DTEXT_FRAGMENT);
 
 	// Initialize windows and meshes
 	
@@ -166,11 +166,21 @@ void A2VideoManager::Initialize()
 	windows[A2VIDEO_TEXT2].Define(
 		A2VIDEO_TEXT2,
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT }),
+		uXY({ _A2_TEXT40_CHAR_WIDTH*2, _A2_TEXT40_CHAR_HEIGHT*2 }),
 		uXY({ 40, 24 }),
 		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT2_START,
 		_A2VIDEO_TEXT_SIZE,
 		&shader_a2video_text
+	);
+	// DTEXT
+	windows[A2VIDEO_DTEXT].Define(
+		A2VIDEO_DTEXT,
+		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
+		uXY({ _A2_TEXT40_CHAR_WIDTH*2, _A2_TEXT40_CHAR_HEIGHT*2 }),
+		uXY({ 80, 24 }),
+		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT1_START,
+		_A2VIDEO_TEXT_SIZE + 0x10000,
+		&shader_a2video_dtext
 	);
 	// LGR1
 	windows[A2VIDEO_LGR1].Define(
@@ -231,10 +241,17 @@ void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 	// Note: We could do delta updates here for the video modes
 	// but for better reliability we do full updates of the video modes
 	// every frame in the render method
-	if (addr >= _A2VIDEO_TEXT1_START && addr < (_A2VIDEO_TEXT1_START + _A2VIDEO_TEXT_SIZE))
-		windows[A2VIDEO_TEXT1].bNeedsGPUDataUpdate = true;
-	else if (addr >= _A2VIDEO_TEXT2_START && addr < (_A2VIDEO_TEXT2_START + _A2VIDEO_TEXT_SIZE))
-		windows[A2VIDEO_TEXT2].bNeedsGPUDataUpdate = true;
+	if (IsSoftSwitch(A2SS_RAMWRT))
+	{
+		if (addr >= _A2VIDEO_TEXT1_START && addr < (_A2VIDEO_TEXT1_START + _A2VIDEO_TEXT_SIZE))
+			windows[A2VIDEO_DTEXT].bNeedsGPUDataUpdate = true;
+	}
+	else {
+		if (addr >= _A2VIDEO_TEXT1_START && addr < (_A2VIDEO_TEXT1_START + _A2VIDEO_TEXT_SIZE))
+			windows[A2VIDEO_TEXT1].bNeedsGPUDataUpdate = true;
+		else if (addr >= _A2VIDEO_TEXT2_START && addr < (_A2VIDEO_TEXT2_START + _A2VIDEO_TEXT_SIZE))
+			windows[A2VIDEO_TEXT2].bNeedsGPUDataUpdate = true;
+	}
 }
 
 void A2VideoManager::ToggleA2Video(bool value)
