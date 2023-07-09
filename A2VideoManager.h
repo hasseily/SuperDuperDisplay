@@ -90,9 +90,7 @@ public:
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
 
-	// Won't need more than 3 image assets for the Apple 2 video modes
-	// Probably only 1 just for the text
-	ImageAsset image_assets[3];
+	ImageAsset image_assets[5];
 	A2Window windows[A2VIDEO_TOTAL_COUNT];
 
 	// Margins when rendering in a window (pixels)

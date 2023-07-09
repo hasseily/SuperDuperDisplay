@@ -3,6 +3,8 @@
 #include <SDL_timer.h>
 #include "A2VideoManager.h"
 
+static unsigned int DBTEX = UINT_MAX;		// Data Buffer Texture (holds Apple 2 memory data)
+
 void A2Window::Reset()
 {
 	enabled = false;
@@ -44,12 +46,13 @@ void A2Window::Update()
 		return;				// doesn't need updating on the GPU
 
 	GLenum glerr;
+	if (DBTEX == UINT_MAX)
+		glGenTextures(1, &DBTEX);
 
 	if (VAO == UINT_MAX)
 	{
 		glGenVertexArrays(1, &VAO);
 		glGenBuffers(1, &VBO);
-		glGenTextures(1, &DBTEX);
 	}
 
 	glBindVertexArray(VAO);
@@ -118,17 +121,19 @@ void A2Window::Render()
 	glBindVertexArray(VAO);
 
 	// Assign the textures
+	int _80colOffset = 0;
+	if (A2VideoManager::IsSoftSwitch(A2SS_80COL))
+		_80colOffset = 2;
 	if (A2VideoManager::IsSoftSwitch(A2SS_ALTCHARSET))
 	{
 		shaderProgram->setFloat("hasFlashing", 0.f);
-		shaderProgram->setInt("a2FontTexture", _SDHR_START_TEXTURES + 1 - GL_TEXTURE0);
+		shaderProgram->setInt("a2FontTexture", _SDHR_START_TEXTURES + _80colOffset + 1 - GL_TEXTURE0);
 	}
 	else {
 		shaderProgram->setFloat("hasFlashing", 1.f);
-		shaderProgram->setInt("a2FontTexture", _SDHR_START_TEXTURES - GL_TEXTURE0);
+		shaderProgram->setInt("a2FontTexture", _SDHR_START_TEXTURES + _80colOffset - GL_TEXTURE0);
 	}
 
-	shaderProgram->setInt("index", this->index);
 	shaderProgram->setInt("ticks", SDL_GetTicks());
 	shaderProgram->setVec2u("tileCount", tile_count.x, tile_count.y);
 	shaderProgram->setVec2u("tileSize", tile_dim.x, tile_dim.y);

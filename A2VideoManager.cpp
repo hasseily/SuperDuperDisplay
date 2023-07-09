@@ -69,27 +69,6 @@ static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
 static Shader shader_a2video_text = Shader();
 static Shader shader_a2video_dtext = Shader();
 
-/*
-	For TEXT1/2 support:
-		- create a font texture Apple2eFont7x8.png. That's all we'll use for the shader
-		- Create a window and a related mesh, both 40*7 x 24*8
-		- Create a tileset of 40*24 7x8 tiles
-		- Change the MosaicTile structure to use a normal/flashing/inverse flag instead of a tile texture
-		- Default shader is the TEXT shader. Give it access to the ticks t variable (for flashing)
-		- When toggling TEXT1 mode, request to initialize textures and set the update flag for all cells
-		- If in TEXT1 mode, when receiving a memory packet from $400 to $800, set a flag for needing update for that cell
-		- If need update on the next render, update the mesh's UpdateMosaicUV:
-			- For each changed cell, determine its row via a screen mapping table, its column, and update the MosaicUV
-		- When rendering, let the fragment shader do the job and modify the look of the tile given the n/f/i flag
-
-	For other modes support:
-		- For GR mode, do the same as TEXT1 but instead of char glyphs, use 2-color rectangles
-		- For HGR modes, no tilesets. There are 2 uint32_t framebuffers of rgba.
-			- The framebuffers are updated when a memory loc of HGR1/2 is updated
-			- The framebuffers are then uploaded to the GPU as necessary
-			- The shaders just use the framebuffers as textures
-*/
-
 //////////////////////////////////////////////////////////////////////////
 // Image Asset Methods
 //////////////////////////////////////////////////////////////////////////
@@ -156,7 +135,7 @@ void A2VideoManager::Initialize()
 	windows[A2VIDEO_TEXT1].Define(
 		A2VIDEO_TEXT1,
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ _A2_TEXT40_CHAR_WIDTH*2, _A2_TEXT40_CHAR_HEIGHT*2 }),
+		uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT }),
 		uXY({ 40, 24 }),
 		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT1_START,
 		_A2VIDEO_TEXT_SIZE,
@@ -166,7 +145,7 @@ void A2VideoManager::Initialize()
 	windows[A2VIDEO_TEXT2].Define(
 		A2VIDEO_TEXT2,
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ _A2_TEXT40_CHAR_WIDTH*2, _A2_TEXT40_CHAR_HEIGHT*2 }),
+		uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT }),
 		uXY({ 40, 24 }),
 		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT2_START,
 		_A2VIDEO_TEXT_SIZE,
@@ -176,10 +155,10 @@ void A2VideoManager::Initialize()
 	windows[A2VIDEO_DTEXT].Define(
 		A2VIDEO_DTEXT,
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ _A2_TEXT40_CHAR_WIDTH*2, _A2_TEXT40_CHAR_HEIGHT*2 }),
+		uXY({ _A2_TEXT80_CHAR_WIDTH, _A2_TEXT80_CHAR_HEIGHT }),
 		uXY({ 80, 24 }),
 		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT1_START,
-		_A2VIDEO_TEXT_SIZE + 0x10000,
+		2*_A2VIDEO_TEXT_SIZE + 0x10000,
 		&shader_a2video_dtext
 	);
 	// LGR1
@@ -394,13 +373,19 @@ void A2VideoManager::Render()
 
 		// image asset 0: The apple 2e US font
 		glActiveTexture(_SDHR_START_TEXTURES);
-		image_assets[0].AssignByFilename(this, "textures/Apple2eFont7x8 - Regular.png");
+		image_assets[0].AssignByFilename(this, "textures/Apple2eFont14x16 - Regular.png");
 		// image asset 1: The alternate font
 		glActiveTexture(_SDHR_START_TEXTURES + 1);
-		image_assets[1].AssignByFilename(this, "textures/Apple2eFont7x8 - Alternate.png");
-		// image asset 2: The Scanline texture
+		image_assets[1].AssignByFilename(this, "textures/Apple2eFont14x16 - Alternate.png");
+		// image asset 0: The apple 2e US font 80COL
 		glActiveTexture(_SDHR_START_TEXTURES + 2);
-		image_assets[2].AssignByFilename(this, "textures/Texture_Scanlines.png");
+		image_assets[2].AssignByFilename(this, "textures/Apple2eFont7x16 - Regular.png");
+		// image asset 1: The alternate font 80COL
+		glActiveTexture(_SDHR_START_TEXTURES + 3);
+		image_assets[3].AssignByFilename(this, "textures/Apple2eFont7x16 - Alternate.png");
+		// image asset 4: The Scanline texture
+		glActiveTexture(_SDHR_START_TEXTURES + 4);
+		image_assets[4].AssignByFilename(this, "textures/Texture_Scanlines.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL AssignByFilename error: " 
 				<< 0 << " - " << glerr << std::endl;

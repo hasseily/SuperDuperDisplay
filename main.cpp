@@ -344,7 +344,7 @@ int main(int, char**)
         if (show_mem_apple2_window)
         {
             static MemoryEditor mem_edit_a2e;
-            mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", sdhrManager->GetApple2MemPtr(), _SDHR_MEMORY_SHADOW_END);
+            mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", sdhrManager->GetApple2MemPtr(), 2*_SDHR_MEMORY_SHADOW_END);
         }
 
 		// Show the upload data region memory
@@ -419,7 +419,7 @@ int main(int, char**)
             if (show_scanlines)
             {
 				ImGui::GetBackgroundDrawList()->AddImage(
-					(void*)glhelper->get_texture_id_at_slot(2),
+					(void*)glhelper->get_texture_id_at_slot(4),
 					margin,
 					ImVec2(margin.x + _newW, margin.y + _newH),
 					ImVec2(0, 0),

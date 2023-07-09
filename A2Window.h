@@ -5,8 +5,10 @@
 #include <vector>
 #include "shader.h"
 
-#define _A2_TEXT40_CHAR_WIDTH 7
-#define _A2_TEXT40_CHAR_HEIGHT 8
+#define _A2_TEXT80_CHAR_WIDTH 7
+#define _A2_TEXT80_CHAR_HEIGHT 16
+#define _A2_TEXT40_CHAR_WIDTH _A2_TEXT80_CHAR_WIDTH*2
+#define _A2_TEXT40_CHAR_HEIGHT _A2_TEXT80_CHAR_HEIGHT
 
 struct A2Vertex {
 	glm::vec2 RelPos;		// Relative position of the vertex
@@ -17,7 +19,6 @@ class A2Window
 {
 public:
 	bool enabled;
-	unsigned int DBTEX = UINT_MAX;		// Data Buffer Texture (holds Apple 2 memory data)
 	bool bNeedsGPUVertexUpdate = false;	// Update the GPU if the vertex data has changed
 	bool bNeedsGPUDataUpdate = false;	// Update the GPU if the underlying data has changed
 
