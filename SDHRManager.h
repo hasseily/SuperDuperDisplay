@@ -147,12 +147,12 @@ public:
 			s_instance = new SDHRManager();
 		return s_instance;
 	}
+	void Initialize();
 	~SDHRManager();
 private:
 //////////////////////////////////////////////////////////////////////////
 // Singleton pattern
 //////////////////////////////////////////////////////////////////////////
-	void Initialize();
 
 	static SDHRManager* s_instance;
 	SDHRManager()

@@ -288,8 +288,8 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 				continue;
 			default:
 				std::cerr << "ignoring cmd" << std::endl;
-				continue
-			}
+				continue;
+			};
 
 			// bus event
 			uint8_t* p = RecvBuf + sizeof(SDHRPacketHeader);
@@ -411,11 +411,23 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 				}
 			}
 			prev_seqno = seqno;
-			if (h->cmdtype != 0) {
-				std::cerr << "ignoring cmd" << std::endl;
-				// currently ignoring anything not a bus event
+			switch (h->cmdtype)
+			{
+			case 0:	// bus event
+				break;
+			case 1:	// echo
+				// TODO
 				continue;
-			}
+			case 2: // computer reset
+				A2VideoManager::GetInstance()->ResetComputer();
+				continue;
+			case 3: // datetime request
+				// TODO
+				continue;
+			default:
+				std::cerr << "ignoring cmd" << std::endl;
+				continue;
+			};
 			uint8_t* p = bufs[i] + sizeof(SDHRPacketHeader);
 			while (p - bufs[i] < msgs[i].msg_len) {
 				SDHRBusChunk* c = (SDHRBusChunk*)p;
