@@ -130,6 +130,7 @@ public:
 	~A2VideoManager();
 
 	inline static bool IsSoftSwitch(A2SoftSwitch_e ss) { return (a2SoftSwitches & ss); };
+	void ResetComputer();
 private:
 	//////////////////////////////////////////////////////////////////////////
 	// Singleton pattern

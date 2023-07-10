@@ -233,6 +233,11 @@ A2VideoManager::~A2VideoManager()
 
 }
 
+void A2VideoManager::ResetComputer()
+{
+	this->Initialize();
+}
+
 void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 {
 	// Note: We could do delta updates here for the video modes
