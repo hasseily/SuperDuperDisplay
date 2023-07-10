@@ -105,6 +105,8 @@ public:
 	ImageAsset image_assets[5];
 	A2Window windows[A2VIDEO_TOTAL_COUNT];
 
+	bool bShowScanLines = true;
+
 	// Margins when rendering in a window (pixels)
 	int windowMargins = 30;
 

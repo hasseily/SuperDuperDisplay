@@ -542,7 +542,8 @@ void A2VideoManager::UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start
 		for (size_t i = 0; i < 14; i++)
 		{
 			framebuffer->at(y * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];	// LoRes colors start at index 12
-			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
+			if (!bShowScanLines)
+				framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
 		}
 		y += 2;
 	}
@@ -581,13 +582,15 @@ void A2VideoManager::UpdateDLoResRGBCell(uint16_t addr, const uint16_t addr_star
 		for (size_t i = 0; i < 7; i++)
 		{
 			framebuffer->at(y * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];	// LoRes colors start at index 12
-			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
+			if (!bShowScanLines)
+				framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
 		}
 		colorIdx = (j < 4) ? (mainval & 0xF) : (mainval & 0xF0) >> 4;
 		for (size_t i = 7; i < 14; i++)
 		{
 			framebuffer->at(y * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];	// LoRes colors start at index 12
-			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
+			if (!bShowScanLines)
+				framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
 		}
 
 		y += 2;
@@ -694,9 +697,12 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 		dwordval = dwordval >> 1;
 	}
 	// duplicate on the next row (it may be overridden by the scanlines)
-	for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
+	if (!bShowScanLines)
 	{
-		framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + i) = framebuffer->at(y * _A2VIDEO_MIN_WIDTH + i);
+		for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
+		{
+			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + i) = framebuffer->at(y * _A2VIDEO_MIN_WIDTH + i);
+		}
 	}
 }
 
@@ -800,8 +806,11 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 	}
 
 	// duplicate on the next row (it may be overridden by the scanlines)
-	for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
+	if (!bShowScanLines)
 	{
-		framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + i) = framebuffer->at(y * _A2VIDEO_MIN_WIDTH + i);
+		for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
+		{
+			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + i) = framebuffer->at(y * _A2VIDEO_MIN_WIDTH + i);
+		}
 	}
 }
