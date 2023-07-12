@@ -69,11 +69,8 @@ void SDHRWindow::SetSize(uXY _size)
 
 void SDHRWindow::Update()
 {
-	if (enabled)
-	{
-		if (mesh)
-			mesh->updateMesh();
-	}
+	if (mesh)
+		mesh->updateMesh();
 };
 
 // NOTE: This (and any methods with OpenGL calls) must be called from the main thread
