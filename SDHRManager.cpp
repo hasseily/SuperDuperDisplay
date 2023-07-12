@@ -108,6 +108,7 @@ struct UpdateWindowAdjustWindowViewCommand {
 struct UpdateWindowEnableCmd {
 	uint8_t window_index;
 	uint8_t enabled;
+	uint32_t anim_ms_frame;
 };
 
 struct UpdateWindowSetWindowSizeCommand {
@@ -770,6 +771,10 @@ bool SDHRManager::ProcessCommands(void)
 				return false;
 			}
 			r->enabled = cmd->enabled;
+			if (cmd->anim_ms_frame > 100000)	// more than 100s animation makes no sense
+				r->anim_ms_frame = 100000;
+			else
+				r->anim_ms_frame = cmd->anim_ms_frame;
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_ENABLE: Success! "
 				<< std::dec << (uint32_t)cmd->window_index << std::endl;

@@ -85,6 +85,7 @@ void SDHRWindow::Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 			mesh->SetupDraw();
 			mesh->shaderProgram->setVec2("windowTopLeft", window_topleft);
 			mesh->shaderProgram->setVec2("windowBottomRight", window_bottomright);
+			mesh->shaderProgram->setInt("anim_ms_frame", anim_ms_frame);
 
 			GLenum glerr;
 			if ((glerr = glGetError()) != GL_NO_ERROR) {

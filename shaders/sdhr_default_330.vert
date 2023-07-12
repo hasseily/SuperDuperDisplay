@@ -10,10 +10,12 @@ out vec4 vTintColor;
 out vec3 vColor;    // DEBUG for non-textured display
 
 out vec3 vFragPos;
+out int iAnimTexId; // Animation texture id. Chooses 1 of the first 4 textures
 
 uniform int ticks;      // ms since start
 uniform mat4 model;     // model matrix
 uniform mat4 transform; // Final mesh transform matrix from model to world space
+uniform int anim_ms_frame; // number of ms to animate per frame for textures 0-3
 
 void main()
 {
@@ -35,4 +37,6 @@ void main()
     vColor = vec3(      // DEBUG: Change the colors of each triangle to be better visible
         r, g, b
     );
+
+    iAnimTexId = (ticks / anim_ms_frame) % 4; // Rotates through 0-3 every anim_ms_frame
 }
