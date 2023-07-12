@@ -10,7 +10,7 @@ out vec4 vTintColor;
 out vec3 vColor;    // DEBUG for non-textured display
 
 out vec3 vFragPos;
-out int iAnimTexId; // Animation texture id. Chooses 1 of the first 4 textures
+flat out int iAnimTexId; // Animation texture id. Chooses 1 of the first 4 textures
 
 uniform int ticks;      // ms since start
 uniform mat4 model;     // model matrix
