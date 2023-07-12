@@ -156,14 +156,21 @@ void MosaicMesh::updateMesh()
 	bNeedsGPUUpdate = false;
 }
 
+// call before Draw to activate shader and bind vertices
+// NOTE: This (and any methods with OpenGL calls) must be called from the main thread
+void MosaicMesh::SetupDraw()
+{
+	shaderProgram->use();
+	glBindVertexArray(VAO);
+}
+
 // render the mesh
 // NOTE: This (and any methods with OpenGL calls) must be called from the main thread
-// NOTE: It assumes the textures have been already bound to _SDHR_START_TEXTURES forward
+// NOTE: It assumes both that SetupDraw() has been called 
+//		 and that the textures have been already bound to _SDHR_START_TEXTURES forward
 void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 {
 	GLenum glerr;
-	glUseProgram(shaderProgram->ID);
-	glBindVertexArray(VAO);
 
 	// Assign the scales so that we can get the proper original
 	// values for each mosaic tile

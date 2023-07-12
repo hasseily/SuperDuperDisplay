@@ -72,6 +72,8 @@ public:
 	// updates all the buffer objects/arrays
 	void updateMesh();
 
+	// call before Draw to activate shader and bind vertices
+	void SetupDraw();
 	// render the mesh
 	void Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj);
 
