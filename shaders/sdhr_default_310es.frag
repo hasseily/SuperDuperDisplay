@@ -21,6 +21,8 @@ in vec3 vFragPos;       // The fragment position in model coordinates (pixels)
 in vec4 vTintColor;     // The mixed vertex colors for tinting
 in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
 
+flat in int iAnimTexId; // Animation texture id. Chooses 1 of the first 4 textures
+
 out vec4 fragColor;
 
 /*
@@ -63,21 +65,30 @@ void main()
     vec4 tex = vec4(0);
     switch (texIdx) {
         case 0:
-            textureSize2d = textureSize(tilesTexture[0],0);
-            tex = texture(tilesTexture[0], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
-            break;
         case 1:
-            textureSize2d = textureSize(tilesTexture[1],0);
-            tex = texture(tilesTexture[1], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
-            break;
         case 2:
-            textureSize2d = textureSize(tilesTexture[2],0);
-            tex = texture(tilesTexture[2], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
-            break;
         case 3:
-            textureSize2d = textureSize(tilesTexture[3],0);
-            tex = texture(tilesTexture[3], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+        {
+            switch (iAnimTexId) {
+                case 0:
+                    textureSize2d = textureSize(tilesTexture[0],0);
+                    tex = texture(tilesTexture[0], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+                    break;
+                case 1:
+                    textureSize2d = textureSize(tilesTexture[1],0);
+                    tex = texture(tilesTexture[1], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+                    break;
+                case 2:
+                    textureSize2d = textureSize(tilesTexture[2],0);
+                    tex = texture(tilesTexture[2], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+                    break;
+                case 3:
+                    textureSize2d = textureSize(tilesTexture[3],0);
+                    tex = texture(tilesTexture[3], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
+                    break;
+            }
             break;
+        }
         case 4:
             textureSize2d = textureSize(tilesTexture[4],0);
             tex = texture(tilesTexture[4], mosaicTile.xy + (fragOffset * scale) / vec2(textureSize2d));
