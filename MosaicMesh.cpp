@@ -161,7 +161,6 @@ void MosaicMesh::updateMesh()
 void MosaicMesh::SetupDraw()
 {
 	shaderProgram->use();
-	glBindVertexArray(VAO);
 }
 
 // render the mesh
@@ -171,7 +170,7 @@ void MosaicMesh::SetupDraw()
 void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 {
 	GLenum glerr;
-
+	glBindVertexArray(VAO);
 	// Assign the scales so that we can get the proper original
 	// values for each mosaic tile
 	shaderProgram->setFloat("maxTextures", _SDHR_MAX_TEXTURES);
