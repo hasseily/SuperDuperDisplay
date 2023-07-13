@@ -122,6 +122,11 @@ struct ChangeResolutionCmd {
 	uint32_t height;
 };
 
+struct UpdateWindowDisplayImageCommand {
+	uint8_t window_index;
+	uint8_t asset_index;
+};
+
 #pragma pack(pop)
 
 //////////////////////////////////////////////////////////////////////////
@@ -487,6 +492,9 @@ bool SDHRManager::ProcessCommands(void)
 #endif
 
 	while (p < end) {
+#ifdef DEBUG
+		std::cerr << "==== starting command ====" << std::endl;
+#endif
 		// Header (2 bytes) giving the size in bytes of the command
 		if (!CheckCommandLength(p, end, 2)) {
 			std::cerr << "CheckCommandLength failed!" << std::endl;
@@ -595,8 +603,7 @@ bool SDHRManager::ProcessCommands(void)
 			);
 
 #ifdef DEBUG
-			std::cout << "SDHR_CMD_DEFINE_WINDOW: Success! " 
-				<< std::dec << cmd->window_index << ';' << (uint32_t)cmd->tile_xcount << ';' << (uint32_t)cmd->tile_ycount << std::endl;
+			std::cout << "SDHR_CMD_DEFINE_WINDOW: Success! " << std::dec << cmd->window_index << ';' << (uint32_t)cmd->tile_xcount << ';' << (uint32_t)cmd->tile_ycount << std::endl;
 #endif
 		} break;
 		case SDHR_CMD_UPDATE_WINDOW_SET_IMMEDIATE: {
@@ -790,6 +797,25 @@ bool SDHRManager::ProcessCommands(void)
 				// It will resize on the next main thread render
 				oglHelper->request_framebuffer_resize(cmd->width, cmd->height);
 			}
+		} break;
+		case SDHR_CMD_UPDATE_WINDOW_DISPLAY_IMAGE: {
+			if (!CheckCommandLength(p, end, sizeof(UpdateWindowDisplayImageCommand))) return false;
+			UpdateWindowDisplayImageCommand* cmd = (UpdateWindowDisplayImageCommand*)p;
+			SDHRWindow* r = windows + cmd->window_index;
+			
+			// Reformat the window to display a single image fully inside itself
+			r->Define(
+				r->Get_screen_count(),
+				r->Get_screen_count(),
+				uXY({ 1, 1 }),
+				&defaultWindowShaderProgram
+			);
+			auto mesh = r->mesh;
+			mesh->UpdateMosaicUV(0, 0, 0, cmd->asset_index);
+
+#ifdef DEBUG
+			std::cout << "SDHR_CMD_UPDATE_WINDOW_DISPLAY_IMAGE: Success! " << (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->asset_index << std::endl;
+#endif
 		} break;
 		default:
 			CommandError("unrecognized command");
