@@ -94,7 +94,7 @@ int process_events_thread(bool* shouldTerminateProcessing)
 		if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
 			// Send soft switches to the A2VideoManager
 			if (e.addr >> 8 == 0xc0)
-				a2VideoMgr->ProcessSoftSwitch(e.addr);
+				a2VideoMgr->ProcessSoftSwitch(e.addr, e.data, e.rw);
 			// ignore non-control
 			continue;
 		}

@@ -114,6 +114,10 @@ void A2VideoManager::Initialize()
 	v_fbhgr2 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
 	v_fbdhgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
 
+	color_border = 0;
+	color_foreground = UINT32_MAX;
+	color_background = 0;
+
 	a2SoftSwitches = A2SS_TEXT; // default to TEXT1
 
 	// Set up the image assets (textures)
@@ -272,7 +276,7 @@ void A2VideoManager::ToggleA2Video(bool value)
 	}
 }
 
-void A2VideoManager::ProcessSoftSwitch(uint16_t addr)
+void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, uint8_t rw)
 {
 	switch (addr)
 	{
@@ -347,6 +351,15 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr)
 		break;
 	case 0xC05F:	// DRESOFF
 		a2SoftSwitches &= ~A2SS_DRES;
+		break;
+	// $C022   R / W     SCREENCOLOR[IIgs] text foreground and background colors(also VidHD)
+	case 0xC022:	// Set border color on bits 3:0
+		color_foreground = gPaletteRGB[12 + (val & 0x0F)];
+		color_background = gPaletteRGB[12 + (val & 0xF0)];
+		break;
+	// $C034   R / W     BORDERCOLOR[IIgs] b3:0 are border color(also VidHD)
+	case 0xC034:	// Set border color on bits 3:0
+		color_border = gPaletteRGB[12 + (val & 0x0F)];
 		break;
 	default:
 		break;

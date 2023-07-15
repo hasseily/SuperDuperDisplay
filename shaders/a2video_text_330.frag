@@ -41,6 +41,8 @@ uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform uvec2 tileSize;
 uniform usampler2D DBTEX;        // Apple 2e's memory, starting at 0x400 for TEXT1 and 0x800 for TEXT2
                                  // Unsigned int sampler!
+uniform vec4 colorTint;
+
 in vec2 vFragPos;       // The fragment position in pixels
 // in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
 
@@ -77,7 +79,7 @@ void main()
     uvec2 charOrigin = uvec2(charVal & 0xF, charVal >> 4) * tileSize;
 
     // Now get the texture color, using the tile uv origin and this fragment's offset
-    vec4 tex = texture(a2FontTexture, (charOrigin + fragOffset) / textureSize2d);
+    vec4 tex = texture(a2FontTexture, (vec2(charOrigin) + fragOffset) / vec2(textureSize2d)) * colorTint;
 
     float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
     // get the color of flashing or the one above

@@ -110,6 +110,10 @@ public:
 	// Margins when rendering in a window (pixels)
 	int windowMargins = 30;
 
+	uint32_t color_border = 0;
+	uint32_t color_foreground = UINT32_MAX;
+	uint32_t color_background = 0;
+
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
 	//////////////////////////////////////////////////////////////////////////
@@ -118,7 +122,7 @@ public:
 	void ToggleA2Video(bool value);
 	void SelectVideoModes();			// Based on soft switches, decided on video modes
 	uXY ScreenSize() { return windows[activeVideoMode].Get_screen_count(); }
-	void ProcessSoftSwitch(uint16_t addr);
+	void ProcessSoftSwitch(uint16_t addr, uint8_t val, uint8_t rw);
 
 	void Render();	// render whatever mode is active (enabled windows)
 
