@@ -139,7 +139,7 @@ void A2Window::Render()
 	shaderProgram->setVec2u("tileSize", tile_dim.x, tile_dim.y);
 
 	auto cf = A2VideoManager::GetInstance()->color_foreground;
-	shaderProgram->setVec4("colorTint", (cf & 0xFF) / 256.0, (cf & 0xFF00) / 256.0, (cf & 0xFF0000) / 256.0, (cf & 0xFF000000) / 256.0);
+	shaderProgram->setVec4("colorTint", (cf & 0xFF) / 256.0, (cf >> 8 & 0xFF) / 256.0, (cf >> 16 & 0xFF) / 256.0, (cf >> 24 & 0xFF) / 256.0);
 
 	// point the uniform at the tiles data texture (GL_TEXTURE0 + _SDHR_TBO_TEXUNIT)
 	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);

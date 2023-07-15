@@ -295,7 +295,7 @@ int main(int, char**)
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
         uint32_t bc = a2VideoManager->color_border;
-		glClearColor((bc & 0xFF) / 256.0, (bc & 0xFF00) / 256.0, (bc & 0xFF0000) / 256.0, (bc & 0xFF000000) / 256.0);
+		glClearColor((bc & 0xFF) / 256.0, (bc >> 8 & 0xFF) / 256.0, (bc >> 16 & 0xFF) / 256.0, (bc >> 24 & 0xFF) / 256.0);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// Start the Dear ImGui frame
