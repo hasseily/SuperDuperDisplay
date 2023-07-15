@@ -55,9 +55,14 @@ public:
 	// A vector of uvec3 for each tile, specifying texture index + uv coords of each tile
 	vector<MosaicTile> mosaicTiles;
 
+	float pixelSize = 1.f;					// For pixelization effect of pixelization shader
 	Shader* shaderProgram = NULL;		// Shader program for the mesh. Starts with a default shader
 
 	unsigned int TBTEX = UINT_MAX;		// MosaicTile Buffer Texture
+
+	// Texture samplers of the 16 textures the meshe will use
+	// That's just 16 consecutive integers starting at _SDHR_START_TEXTURES
+	GLint texSamplers[_SDHR_MAX_TEXTURES];
 
 	MosaicMesh(uint32_t tile_xcount, uint32_t tile_ycount, uint32_t tile_xdim, uint32_t tile_ydim, uint8_t win_index);
 	MosaicMesh() = delete; // Disallow default constructor
@@ -84,6 +89,9 @@ private:
 	float world_x = 0.f;		// top-left position in the world space
 	float world_y = 0.f;		// which is also the view (camera) space
 	glm::mat4 mat_trans = glm::mat4(1.0f);	// Model->World translation matrix. Changes when the mesh is moved in the world
+
+	uint32_t ticks_since_first_render;
+	bool bIsFirstDraw = true;		// Resets when mesh data is updated
 
 	bool bNeedsGPUUpdate = true;	// the mesh data was updated, it needs to be pushed to the GPU
 };

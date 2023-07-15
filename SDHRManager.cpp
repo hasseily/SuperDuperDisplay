@@ -18,6 +18,8 @@ SDHRManager* SDHRManager::s_instance;
 static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
 // The standard default shader for the windows and their mosaics
 static Shader defaultWindowShaderProgram = Shader();
+// Pixelization shader
+static Shader pixelizationShaderProgram = Shader();
 
 //////////////////////////////////////////////////////////////////////////
 // Commands structs
@@ -125,6 +127,7 @@ struct ChangeResolutionCmd {
 struct UpdateWindowDisplayImageCommand {
 	uint8_t window_index;
 	uint8_t asset_index;
+	uint8_t pixel_size;
 };
 
 #pragma pack(pop)
@@ -276,6 +279,8 @@ void SDHRManager::Initialize()
 	}
 	if (!defaultWindowShaderProgram.isReady)
 		defaultWindowShaderProgram.build(_SHADER_SDHR_VERTEX_DEFAULT, _SHADER_SDHR_FRAGMENT_DEFAULT);
+	if (!pixelizationShaderProgram.isReady)
+		pixelizationShaderProgram.build(_SHADER_SDHR_VERTEX_DEPIXELIZE, _SHADER_SDHR_FRAGMENT_DEPIXELIZE);
 	bShouldInitializeRender = true;
 	dataState = DATASTATE_e::DATA_IDLE;
 }
@@ -370,7 +375,6 @@ void SDHRManager::Render()
 			// the default tex0 and tex4..16 are the same, but the others are unique for better testing
 			image_assets[i].AssignByFilename(this, "textures/Texture_Default.png");
 			image_assets[i].LoadIntoGPU();
-			texSamplers[i] = (_SDHR_START_TEXTURES - GL_TEXTURE0) + i;
 			if ((glerr = glGetError()) != GL_NO_ERROR) {
 				std::cerr << "OpenGL AssignByFilename error: " << i << " - " << glerr << std::endl;
 			}
@@ -407,20 +411,6 @@ void SDHRManager::Render()
 		}
 		this->dataState = DATASTATE_e::DATA_IDLE;
 	}
-
-	// Assign the list of all the textures to the shader's "tilesTexture" uniform
-	auto texUniformId = glGetUniformLocation(defaultWindowShaderProgram.ID, "tilesTexture");
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glGetUniformLocation error: " << glerr << std::endl;
-	}
-	glUniform1iv(texUniformId, _SDHR_MAX_TEXTURES, &texSamplers[0]);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
-	}
-
-	// Assign the sdhr global (to all windows) uniforms
-	defaultWindowShaderProgram.setBool("iDebugNoTextures", oglHelper->bDebugNoTextures);
-	defaultWindowShaderProgram.setInt("ticks", SDL_GetTicks());
 
 	// Render the windows (i.e. the meshes with the windows stencils)
 	for (auto& _w: this->windows) {
@@ -802,16 +792,20 @@ bool SDHRManager::ProcessCommands(void)
 			if (!CheckCommandLength(p, end, sizeof(UpdateWindowDisplayImageCommand))) return false;
 			UpdateWindowDisplayImageCommand* cmd = (UpdateWindowDisplayImageCommand*)p;
 			SDHRWindow* r = windows + cmd->window_index;
-			
+
 			// Reformat the window to display a single image fully inside itself
 			r->Define(
 				r->Get_screen_count(),
 				r->Get_screen_count(),
 				uXY({ 1, 1 }),
-				&defaultWindowShaderProgram
+				(cmd->pixel_size > 1
+					? &pixelizationShaderProgram
+					: &defaultWindowShaderProgram
+				)
 			);
 			auto mesh = r->mesh;
 			mesh->UpdateMosaicUV(0, 0, 0, cmd->asset_index);
+			mesh->pixelSize = cmd->pixel_size;
 
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPDATE_WINDOW_DISPLAY_IMAGE: Success! " << (uint32_t)cmd->window_index << ';' << (uint32_t)cmd->asset_index << std::endl;

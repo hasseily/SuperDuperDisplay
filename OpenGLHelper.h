@@ -35,6 +35,7 @@ public:
 	bool request_framebuffer_resize(uint32_t width, uint32_t height);
 	void get_framebuffer_size(uint32_t* width, uint32_t* height);
 	void set_callback_changed_resolution(void(*func)(int w, int h)) { callbackResolutionChange = func; };
+	uint32_t get_frame_ticks();	// get the global tick value for the current frame
 
 	// The created texture ids (max is _SDHR_MAX_TEXTURES)
 	std::vector<GLuint>v_texture_ids;
@@ -81,6 +82,8 @@ private:
 
 	uint32_t fb_width_requested = UINT32_MAX;
 	uint32_t fb_height_requested = UINT32_MAX;
+
+	uint32_t frame_ticks;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Internal attributes

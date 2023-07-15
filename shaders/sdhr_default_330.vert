@@ -12,7 +12,7 @@ out vec3 vColor;    // DEBUG for non-textured display
 out vec3 vFragPos;
 flat out int iAnimTexId; // Animation texture id. Chooses 1 of the first 4 textures
 
-uniform int ticks;      // ms since start
+uniform int ticks;      // ms since first render after mesh creation or update
 uniform mat4 model;     // model matrix
 uniform mat4 transform; // Final mesh transform matrix from model to world space
 uniform int anim_ms_frame; // number of ms to animate per frame for textures 0-3

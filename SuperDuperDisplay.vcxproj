@@ -238,6 +238,10 @@
     </Media>
     <None Include="shaders\a2video_dtext_310es.frag" />
     <None Include="shaders\a2video_dtext_330.frag" />
+    <None Include="shaders\sdhr_depixelize_310es.frag" />
+    <None Include="shaders\sdhr_depixelize_310es.vert" />
+    <None Include="shaders\sdhr_depixelize_330.frag" />
+    <None Include="shaders\sdhr_depixelize_330.vert" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="shaders\**">

@@ -54,6 +54,9 @@ MosaicMesh::MosaicMesh(uint32_t tile_xcount, uint32_t tile_ycount, uint32_t tile
 		}
 	};
 
+	for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
+		texSamplers[i] = (_SDHR_START_TEXTURES - GL_TEXTURE0) + i;
+	}
 	bNeedsGPUUpdate = true;
 }
 
@@ -153,6 +156,7 @@ void MosaicMesh::updateMesh()
 	// Update the model->world transform matrix, to translate the model into the world space
 	this->mat_trans = glm::translate(glm::mat4(1.0f), glm::vec3(world_x, world_y, 0.0f));
 
+	bIsFirstDraw = true;
 	bNeedsGPUUpdate = false;
 }
 
@@ -160,7 +164,28 @@ void MosaicMesh::updateMesh()
 // NOTE: This (and any methods with OpenGL calls) must be called from the main thread
 void MosaicMesh::SetupDraw()
 {
+	if (bIsFirstDraw)
+	{
+		ticks_since_first_render = OpenGLHelper::GetInstance()->get_frame_ticks();
+		bIsFirstDraw = false;
+	}
+
+	GLenum glerr;
+	auto oglHelper = OpenGLHelper::GetInstance();
 	shaderProgram->use();
+	shaderProgram->setInt("ticks", oglHelper->get_frame_ticks() - ticks_since_first_render);
+	shaderProgram->setFloat("pixelSize", pixelSize);
+	shaderProgram->setBool("iDebugNoTextures", oglHelper->bDebugNoTextures);
+
+	// Assign the list of all the textures to the shader's "tilesTexture" uniform
+	auto texUniformId = glGetUniformLocation(shaderProgram->ID, "tilesTexture");
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glGetUniformLocation error: " << glerr << std::endl;
+	}
+	glUniform1iv(texUniformId, _SDHR_MAX_TEXTURES, &texSamplers[0]);
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL glUniform1iv error: " << glerr << std::endl;
+	}
 }
 
 // render the mesh

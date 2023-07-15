@@ -1,4 +1,4 @@
-#version 310 es
+#version 330 core
 
 precision mediump float;
 
@@ -17,6 +17,9 @@ uniform mat4 model;     // model matrix
 uniform mat4 transform; // Final mesh transform matrix from model to world space
 uniform int anim_ms_frame; // number of ms to animate per frame for textures 0-3
 
+uniform float pixelSize;  // Size of each pixel for pixelization
+flat out vec2 pixelizationDelta; // Delta osition of the corner of the pixelization rectangle
+
 void main()
 {
     // Move the mesh vertices with the transform
@@ -31,12 +34,17 @@ void main()
     vTintColor = aTintColor;
 
     // This below is just to create a random vertex color for debugging untextured triangles
-    float r = float((gl_VertexID * 204) % 0xFF) / 255.f; 
-    float g = float(int(float(gl_VertexID) * 182.53f * abs(aPos.x)) % 0xFF) / 255.f; 
-    float b = float(int(float(gl_VertexID) * 359.65f * abs(aPos.y)) % 0xFF) / 255.f; 
+    float r = float(int(gl_VertexID * 204.95f) % 0xFF) / 255.f; 
+    float g = float(int(gl_VertexID * 182.53f * abs(aPos.x)) % 0xFF) / 255.f; 
+    float b = float(int(gl_VertexID * 359.65f * abs(aPos.y)) % 0xFF) / 255.f; 
     vColor = vec3(      // DEBUG: Change the colors of each triangle to be better visible
         r, g, b
     );
 
     iAnimTexId = (ticks / anim_ms_frame) % 4; // Rotates through 0-3 every anim_ms_frame
+
+    // Pixelize by choosing the color of a corner of a square
+    float Pixels = 512.0;
+    float fpixelSize = mix(pixelSize, 0.000001f, float(min(ticks, 10000)) / 10000.0);
+    pixelizationDelta = vec2(fpixelSize / Pixels, fpixelSize / Pixels);
 }

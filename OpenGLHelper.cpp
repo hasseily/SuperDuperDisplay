@@ -5,6 +5,7 @@
 
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
+#include "SDL_timer.h"
 
 
 // below because "The declaration of a static data member in its class definition is not a definition"
@@ -155,6 +156,7 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 
 void OpenGLHelper::setup_render()
 {
+	frame_ticks = SDL_GetTicks();
 	GLenum glerr;
 	bind_framebuffer();
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
@@ -233,4 +235,9 @@ void OpenGLHelper::get_framebuffer_size(uint32_t* width, uint32_t* height)
 {
 	*width = fb_width;
 	*height = fb_height;
+}
+
+uint32_t OpenGLHelper::get_frame_ticks()
+{
+	return frame_ticks;
 }

@@ -200,10 +200,6 @@ private:
 	char error_str[256];
 	uint8_t* uploaded_data_region = NULL;	// A region of 256 * 256 * 256 bytes (16MB)
 
-	// Texture samplers of the 16 textures the meshes will use
-	// That's just 16 consecutive integers starting at _SDHR_START_TEXTURES
-	GLint texSamplers[_SDHR_MAX_TEXTURES];
-
 	// This is a FIFO queue where the network thread tells the main thread that
 	// there's image data that needs to be uploaded to the GPU
 	// It's only FIFO in name because we don't allow more than one entry in there
