@@ -189,6 +189,8 @@ void OpenGLHelper::setup_render()
 		camera.Up = glm::vec3(0.f, 1.f, 0.f);
 		camera.Yaw = -90.f;
 		camera.Pitch = 0.f;
+		camera.Zoom = 45.0f;
+		camera.updateCameraVectors();
 		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)fb_width / fb_height, 0, 256);
 		bIsUsingPerspective = bUsePerspective;
 	}
@@ -196,10 +198,12 @@ void OpenGLHelper::setup_render()
 	{
 		camera.Position.x = fb_width / 2.f;
 		camera.Position.y = fb_height / 2.f;
-		camera.Position.z = _SDHR_MAX_WINDOWS;
+		camera.Position.z = _SDHR_MAX_WINDOWS - 1;
 		camera.Up = glm::vec3(0.f, 1.f, 0.f);
 		camera.Yaw = -90.f;
 		camera.Pitch = 0.f;
+		camera.Zoom = 45.0f;
+		camera.updateCameraVectors();
 		mat_proj = glm::ortho<float>(
 			-(float)fb_width / 2, (float)fb_width / 2,
 			-(float)fb_height / 2, (float)fb_height / 2,
