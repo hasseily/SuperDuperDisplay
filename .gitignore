@@ -16,10 +16,6 @@
 *.dylib
 *.dll
 
-# Fortran module files
-*.mod
-*.smod
-
 # Compiled Static libraries
 *.lai
 *.la
@@ -38,3 +34,6 @@ SuperDuperDisplay
 /imgui.ini
 /JSON/Schemas/Catalog
 /Release
+
+# MacOS
+.DS_Store
