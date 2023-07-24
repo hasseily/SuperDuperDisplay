@@ -70,6 +70,7 @@ public:
 private:
 	void Reset();
 
+    bool enabled;           // if not enabled, doesn't get rendered
 	uint8_t index;			// index of window (is also the z-value: higher is closer to camera)
 	uXY screen_count;		// width,height in pixels of visible screen area of window
 	uXY tile_dim;			// xy dimension, in pixels, of tiles in the window.
@@ -85,7 +86,6 @@ private:
 	std::vector<A2Vertex> vertices;		// Vertices with XYRelative and XYPixels
 	unsigned int VAO = UINT_MAX;		// Vertex Array Object (holds buffers that are vertex related)
 	unsigned int VBO = UINT_MAX;		// Vertex Buffer Object (holds vertices)
-	bool enabled;
 };
 
 #endif // A2WINDOW_H

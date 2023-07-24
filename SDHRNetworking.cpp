@@ -44,7 +44,7 @@ ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_a
 	int optval = 1;
 	setsockopt(*server_fd, SOL_SOCKET, SO_REUSEADDR,
 		(const char*)&optval, sizeof(int));
-	if (bind(*server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
+	if (::bind(*server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
 		std::cerr << "Error binding socket" << std::endl;
 		return ENET_RES::ERR;
 	}
@@ -175,10 +175,6 @@ int process_events_thread(bool* shouldTerminateProcessing)
 
 int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 {
-	// commands socket and descriptors
-	//__SOCKET server_fd, client_fd;
-	//struct sockaddr_in server_addr, client_addr;
-	//socklen_t client_len = sizeof(client_addr);
 	std::cout << "Starting Network Thread\n";
 
 #ifdef __NETWORKING_WINDOWS__
@@ -236,7 +232,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			// Receive a datagram
 			retval = recvfrom(sockfd, (char*)RecvBuf, BufLen, 0, (SOCKADDR*)&SenderAddr, &SenderAddrSize);
 			if (retval < 0 && errno != EWOULDBLOCK) {
-				std::cerr << "Error in recvmmsg" << std::endl;
+				std::cerr << "Error in recvfrom" << std::endl;
 				return 1;
 			}
 			if (connected && nsec > last_recv_nsec + 10000000000ll) {
@@ -329,7 +325,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	closesocket(sockfd);
 	std::cout << "    Client Closed" << std::endl;
 	return 0;
-#else
+#else   // not __NETWORKING_WINDOWS__
 #define VLEN 256
 #define BUFSZ 2048
 
@@ -344,10 +340,12 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	if (socket_bind_and_listen(&sockfd, serveraddr) == ENET_RES::ERR)
 		return 1;
 
-	struct mmsghdr msgs[VLEN];
-	struct iovec iovecs[VLEN];
-	uint8_t bufs[VLEN][BUFSZ];
+    struct mmsghdr* msgs = new struct mmsghdr[VLEN];
+    struct iovec* iovecs = new struct iovec[VLEN];
+    uint8_t** bufs = new uint8_t*[VLEN];
+    
 	for (int i = 0; i < VLEN; ++i) {
+        bufs[i] = new uint8_t[BUFSZ];
 		iovecs[i].iov_base = bufs[i];
 		iovecs[i].iov_len = BUFSZ;
 		msgs[i].msg_hdr.msg_iov = &iovecs[i];
@@ -370,6 +368,37 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		struct timespec ts;
 		clock_gettime(CLOCK_REALTIME, &ts);
 		int64_t nsec = ts.tv_sec * 1000000000ll + ts.tv_nsec;
+#ifdef __NETWORKING_APPLE__
+        // OSX doesn't have recvmmsg
+        // This emulates recvmmsg
+        int retval = 0;
+        bool _bcontinue = false;
+        for (int i = 0; i < VLEN; ++i) {
+            retval = recvmsg(sockfd, &msgs[i].msg_hdr, 0);
+            if (retval < 0 && errno != EWOULDBLOCK) {
+                std::cerr << "Error in recvmsg" << std::endl;
+                return 1;
+            }
+            if (connected && nsec > last_recv_nsec + 10000000000ll) {
+                std::cout << "Client disconnected" << std::endl;
+                connected = false;
+                first_drop = true;
+                _bcontinue = true;
+                break;
+            }
+            if (retval == -1) {
+                retval = i+1;   // number of messages received
+                if (i == 0)     // loop again on the while if no messages received
+                    _bcontinue = true;
+                // Otherwise, process all the messages received just like
+                // for linux's recvmmsg
+                break;
+            }
+            msgs[i].msg_len = retval;
+        }
+        if (_bcontinue)
+            continue;
+#else   // linux networking
 		int retval = recvmmsg(sockfd, msgs, VLEN, 0, NULL);
 		if (retval < 0 && errno != EWOULDBLOCK) {
 			std::cerr << "Error in recvmmsg" << std::endl;
@@ -384,6 +413,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		if (retval == -1) {
 			continue;
 		}
+#endif // __NETWORKING_APPLE__
 		if (!connected) {
 			connected = true;
 			std::cout << "Client connected" << std::endl;
@@ -463,6 +493,14 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	std::cout << "Client Closing" << std::endl;
 	close(sockfd);
 	std::cout << "    Client Closed" << std::endl;
+    
+    for (int i = 0; i < VLEN; ++i) {
+        delete[] bufs[i];
+    }
+    delete[] bufs;
+    delete[] iovecs;
+    delete[] msgs;
+    
 	return 0;
 #endif // __NETWORKING_WINDOWS__
 }

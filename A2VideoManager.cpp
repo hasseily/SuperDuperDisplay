@@ -58,7 +58,8 @@ static uint32_t gPaletteRGB[] =
 	SETRGBCOLOR(/*WHITE,*/      0xFF,0xFF,0xFF),
 };
 
-static uint32_t gRGBTransparent = 0;
+// Gotta have a transparency global just in case
+// static uint32_t gRGBTransparent = 0;
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;

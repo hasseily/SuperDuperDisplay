@@ -23,7 +23,7 @@
 EXE = SuperDuperDisplay
 IMGUI_DIR = imgui/imgui
 SOURCES = main.cpp OpenGLHelper.cpp MosaicMesh.cpp SDHRNetworking.cpp SDHRManager.cpp SDHRWindow.cpp A2VideoManager.cpp A2Window.cpp
-SOURCES += glad/glad.c
+SOURCES += glad/glad.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl2.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
@@ -63,11 +63,11 @@ endif
 
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
-	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `sdl2-config --libs`
-	LIBS += -L/usr/local/lib -L/opt/local/lib
+	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `sdl2-config --libs` -lz
+	LIBS += -L/usr/local/lib -L/opt/local/lib -L/opt/homebrew/lib
 
 	CXXFLAGS += `sdl2-config --cflags`
-	CXXFLAGS += -I/usr/local/include -I/opt/local/include
+	CXXFLAGS += -I/usr/local/include -I/opt/local/include -I/opt/homebrew/include
 	CFLAGS = $(CXXFLAGS)
 endif
 
@@ -84,7 +84,7 @@ endif
 ## BUILD RULES
 ##---------------------------------------------------------------------
 
-%.o:glad/%.c
+%.o:glad/%.cpp
 	$(CXX) $(CXXFLAGS) $(CONFIGFLAGS) -c -o $@ $<
 
 %.o:%.cpp

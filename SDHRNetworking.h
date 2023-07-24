@@ -12,6 +12,10 @@
 #define __NETWORKING_WINDOWS__
 #endif
 
+#if defined(__APPLE__)
+#define __NETWORKING_APPLE__
+#endif
+
 #include <iostream>
 #include <cstring>
 
@@ -26,6 +30,13 @@ typedef SOCKET        __SOCKET;
 #include <arpa/inet.h>
 #include <unistd.h>
 typedef int        __SOCKET;
+#ifdef __NETWORKING_APPLE__
+//#include <sys/uio.h>
+struct mmsghdr {
+    struct msghdr msg_hdr;  // The standard msghdr structure
+    unsigned int  msg_len;  // Number of bytes received or sent
+};
+#endif
 #endif
 
 #pragma pack(push, 1)
