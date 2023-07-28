@@ -108,9 +108,9 @@ int process_events_thread(bool* shouldTerminateProcessing)
 			switch (_ctrl)
 			{
 			case SDHR_CTRL_DISABLE:
-				//#ifdef DEBUG
+				#ifdef DEBUG
 				std::cout << "CONTROL: Disable SDHR" << std::endl;
-				//#endif
+				#endif
 				sdhrMgr->ToggleSdhr(false);
 				a2VideoMgr->ToggleA2Video(true);
 				break;
@@ -171,6 +171,83 @@ int process_events_thread(bool* shouldTerminateProcessing)
 	}
 	std::cout << "Stopped Processing Thread\n";
 	return 0;
+}
+
+void process_single_packet_header(SDHRPacketHeader* h,
+                                  uint32_t packet_size,
+                                  uint32_t& prev_seqno,
+                                  uint16_t& prev_addr,
+                                  bool& first_drop)
+{
+    uint32_t seqno = h->seqno[0];
+    seqno += (uint32_t)h->seqno[1] << 8;
+    seqno += (uint32_t)h->seqno[2] << 16;
+    seqno += (uint32_t)h->seqno[3] << 24;
+
+    // std::cerr << "Receiving seqno " << seqno << std::endl;
+
+    if (seqno < prev_seqno)
+        std::cerr << "FOUND EARLIER PACKET" << std::endl;
+    if (seqno != prev_seqno + 1) {
+        if (first_drop) {
+            first_drop = false;
+        }
+        else {
+            std::cerr << "seqno drops: "
+                << seqno - prev_seqno + 1 << std::endl;
+            // this is pretty bad, should probably go into error
+        }
+    }
+    prev_seqno = seqno;
+    switch (h->cmdtype)
+    {
+    case 0:    // bus event
+        break;
+    case 1:    // echo
+        // TODO
+        return;
+    case 2: // computer reset
+        A2VideoManager::GetInstance()->ResetComputer();
+        return;
+    case 3: // datetime request
+        // TODO
+        return;
+    default:
+        std::cerr << "ignoring cmd" << std::endl;
+        return;
+    };
+
+    // bus event
+    uint8_t* p = (uint8_t*)h + sizeof(SDHRPacketHeader);
+
+    while (p - (uint8_t*)h < packet_size) {
+        SDHRBusChunk* c = (SDHRBusChunk*)p;
+        size_t chunk_len = 10;
+        uint32_t addr_count = 0;
+        for (int j = 0; j < 8; ++j) {
+            bool rw = (c->rwflags & (1 << j)) != 0;
+            uint16_t addr;
+            bool addr_flag = (c->seqflags & (1 << j)) != 0;
+            if (addr_flag) {
+                chunk_len += 2;
+                addr = c->addrs[addr_count * 2 + 1];
+                addr <<= 8;
+                addr += c->addrs[addr_count * 2];
+                ++addr_count;
+            }
+            else {
+                addr = ++(prev_addr);
+            }
+            prev_addr = addr;
+            if (rw && ((addr & 0xF000) != 0xC000)) {
+                // ignoring all read events not softswitches
+                continue;
+            }
+            SDHREvent e(rw, addr, c->data[j]);
+            events.push(e);
+        }
+        p += chunk_len;
+    }
 }
 
 int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
@@ -251,73 +328,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			last_recv_nsec = nsec;
 
 			SDHRPacketHeader* h = (SDHRPacketHeader*)RecvBuf;
-			uint32_t seqno = h->seqno[0];
-			seqno += (uint32_t)h->seqno[1] << 8;
-			seqno += (uint32_t)h->seqno[2] << 16;
-			seqno += (uint32_t)h->seqno[3] << 24;
-
-			if (seqno < prev_seqno)
-				std::cerr << "FOUND EARLIER PACKET" << std::endl;
-			if (seqno != prev_seqno + 1) {
-				if (first_drop) {
-					first_drop = false;
-				}
-				else {
-					std::cerr << "seqno drops: "
-						<< seqno - prev_seqno + 1 << std::endl;
-					// this is pretty bad, should probably go into error
-				}
-			}
-			prev_seqno = seqno;
-			switch (h->cmdtype)
-			{
-			case 0:	// bus event
-				break;
-			case 1:	// echo
-				// TODO
-				continue;
-			case 2: // computer reset
-				A2VideoManager::GetInstance()->ResetComputer();
-				continue;
-			case 3: // datetime request
-				// TODO
-				continue;
-			default:
-				std::cerr << "ignoring cmd" << std::endl;
-				continue;
-			};
-
-			// bus event
-			uint8_t* p = RecvBuf + sizeof(SDHRPacketHeader);
-
-			while (p - RecvBuf < retval) {
-				SDHRBusChunk* c = (SDHRBusChunk*)p;
-				size_t chunk_len = 10;
-				uint32_t addr_count = 0;
-				for (int j = 0; j < 8; ++j) {
-					bool rw = (c->rwflags & (1 << j)) != 0;
-					uint16_t addr;
-					bool addr_flag = (c->seqflags & (1 << j)) != 0;
-					if (addr_flag) {
-						chunk_len += 2;
-						addr = c->addrs[addr_count * 2 + 1];
-						addr <<= 8;
-						addr += c->addrs[addr_count * 2];
-						++addr_count;
-					}
-					else {
-						addr = ++prev_addr;
-					}
-					prev_addr = addr;
-					if (rw && ((addr & 0xF000) != 0xC000)) {
-						// ignoring all read events not softswitches
-						continue;
-					}
-					SDHREvent e(rw, addr, c->data[j]);
-					events.push(e);
-				}
-				p += chunk_len;
-			}
+            process_single_packet_header(h, retval, prev_seqno, prev_addr, first_drop);
 		}
 	}
 
@@ -325,7 +336,82 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	closesocket(sockfd);
 	std::cout << "    Client Closed" << std::endl;
 	return 0;
-#else   // not __NETWORKING_WINDOWS__
+#endif
+#ifdef __NETWORKING_APPLE__
+
+#define BUFSZ 2048
+
+    int sockfd;
+    struct sockaddr_in serveraddr;
+    memset(&serveraddr, 0, sizeof(serveraddr));
+
+    serveraddr.sin_family = AF_INET;
+    serveraddr.sin_port = htons(port);
+    serveraddr.sin_addr.s_addr = INADDR_ANY;
+
+    if (socket_bind_and_listen(&sockfd, serveraddr) == ENET_RES::ERR)
+        return 1;
+
+    struct msghdr msg;
+    struct iovec iovec;
+    uint8_t* buf;
+
+    buf = new uint8_t[BUFSZ];
+    iovec.iov_base = buf;
+    iovec.iov_len = BUFSZ;
+    msg.msg_iov = &iovec;
+    msg.msg_iovlen = 1;
+    
+    int flags = fcntl(sockfd, F_GETFL, 0);
+    flags |= O_NONBLOCK;
+    fcntl(sockfd, F_SETFL, flags);
+
+    std::cout << "Waiting for connection..." << std::endl;
+    bool connected = false;
+
+    bool first_drop = true;
+    uint32_t prev_seqno = 0;
+    uint16_t prev_addr = 0;
+    int64_t last_recv_nsec;
+
+    timespec ts;
+    while (!(*shouldTerminateNetworking)) {
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        int64_t nsec = ts.tv_sec * 1000000000ll + ts.tv_nsec;
+
+        int retval = recvmsg(sockfd, &msg, 0);
+        if (retval < 0 && errno != EWOULDBLOCK) {
+            std::cerr << "Error in recvmsg" << std::endl;
+            return 1;
+        }
+        if (connected && nsec > last_recv_nsec + 10000000000ll) {
+            std::cout << "Client disconnected" << std::endl;
+            connected = false;
+            first_drop = true;
+            continue;
+        }
+        if (retval == -1) {
+            continue;
+        }
+
+        if (!connected) {
+            connected = true;
+            std::cout << "Client connected" << std::endl;
+        }
+        last_recv_nsec = nsec;
+
+        SDHRPacketHeader* h = (SDHRPacketHeader*)buf;
+        process_single_packet_header(h, retval, prev_seqno, prev_addr, first_drop);
+    }
+
+    std::cout << "Client Closing" << std::endl;
+    close(sockfd);
+    std::cout << "    Client Closed" << std::endl;
+
+    delete[] buf;
+
+    return 0;
+#else   // Linux Networking
 #define VLEN 256
 #define BUFSZ 2048
 
@@ -343,7 +429,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
     struct mmsghdr* msgs = new struct mmsghdr[VLEN];
     struct iovec* iovecs = new struct iovec[VLEN];
     uint8_t** bufs = new uint8_t*[VLEN];
-    
+
 	for (int i = 0; i < VLEN; ++i) {
         bufs[i] = new uint8_t[BUFSZ];
 		iovecs[i].iov_base = bufs[i];
@@ -368,37 +454,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		struct timespec ts;
 		clock_gettime(CLOCK_REALTIME, &ts);
 		int64_t nsec = ts.tv_sec * 1000000000ll + ts.tv_nsec;
-#ifdef __NETWORKING_APPLE__
-        // OSX doesn't have recvmmsg
-        // This emulates recvmmsg
-        int retval = 0;
-        bool _bcontinue = false;
-        for (int i = 0; i < VLEN; ++i) {
-            retval = recvmsg(sockfd, &msgs[i].msg_hdr, 0);
-            if (retval < 0 && errno != EWOULDBLOCK) {
-                std::cerr << "Error in recvmsg" << std::endl;
-                return 1;
-            }
-            if (connected && nsec > last_recv_nsec + 10000000000ll) {
-                std::cout << "Client disconnected" << std::endl;
-                connected = false;
-                first_drop = true;
-                _bcontinue = true;
-                break;
-            }
-            if (retval == -1) {
-                retval = i+1;   // number of messages received
-                if (i == 0)     // loop again on the while if no messages received
-                    _bcontinue = true;
-                // Otherwise, process all the messages received just like
-                // for linux's recvmmsg
-                break;
-            }
-            msgs[i].msg_len = retval;
-        }
-        if (_bcontinue)
-            continue;
-#else   // linux networking
+
 		int retval = recvmmsg(sockfd, msgs, VLEN, 0, NULL);
 		if (retval < 0 && errno != EWOULDBLOCK) {
 			std::cerr << "Error in recvmmsg" << std::endl;
@@ -413,8 +469,8 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		if (retval == -1) {
 			continue;
 		}
-#endif // __NETWORKING_APPLE__
-		if (!connected) {
+
+        if (!connected) {
 			connected = true;
 			std::cout << "Client connected" << std::endl;
 		}
@@ -422,85 +478,21 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 
 		for (int i = 0; i < retval; ++i) {
 			SDHRPacketHeader* h = (SDHRPacketHeader*)bufs[i];
-			uint32_t seqno = h->seqno[0];
-			seqno += (uint32_t)h->seqno[1] << 8;
-			seqno += (uint32_t)h->seqno[2] << 16;
-			seqno += (uint32_t)h->seqno[3] << 24;
-
-			if (seqno < prev_seqno)
-				std::cerr << "FOUND EARLIER PACKET" << std::endl;
-
-			if (seqno != prev_seqno + 1) {
-				if (first_drop) {
-					first_drop = false;
-				}
-				else {
-					std::cerr << "seqno drops: "
-						<< seqno - prev_seqno + 1 << std::endl;
-					// this is pretty bad, should probably go into error
-				}
-			}
-			prev_seqno = seqno;
-			switch (h->cmdtype)
-			{
-			case 0:	// bus event
-				break;
-			case 1:	// echo
-				// TODO
-				continue;
-			case 2: // computer reset
-				A2VideoManager::GetInstance()->ResetComputer();
-				continue;
-			case 3: // datetime request
-				// TODO
-				continue;
-			default:
-				std::cerr << "ignoring cmd" << std::endl;
-				continue;
-			};
-			uint8_t* p = bufs[i] + sizeof(SDHRPacketHeader);
-			while (p - bufs[i] < msgs[i].msg_len) {
-				SDHRBusChunk* c = (SDHRBusChunk*)p;
-				size_t chunk_len = 10;
-				uint32_t addr_count = 0;
-				for (int j = 0; j < 8; ++j) {
-					bool rw = (c->rwflags & (1 << j)) != 0;
-					uint16_t addr;
-					bool addr_flag = (c->seqflags & (1 << j)) != 0;
-					if (addr_flag) {
-						chunk_len += 2;
-						addr = c->addrs[addr_count * 2 + 1];
-						addr <<= 8;
-						addr += c->addrs[addr_count * 2];
-						++addr_count;
-					}
-					else {
-						addr = ++prev_addr;
-					}
-					prev_addr = addr;
-					if (rw && ((addr & 0xF000) != 0xC000)) {
-						// ignoring all read events not softswitches
-						continue;
-					}
-					SDHREvent e(rw, addr, c->data[j]);
-					events.push(e);
-				}
-				p += chunk_len;
-			}
+            process_single_packet_header(h, msgs[i].msg_len, prev_seqno, prev_addr, first_drop);
 		}
 	}
 
 	std::cout << "Client Closing" << std::endl;
 	close(sockfd);
 	std::cout << "    Client Closed" << std::endl;
-    
+
     for (int i = 0; i < VLEN; ++i) {
         delete[] bufs[i];
     }
     delete[] bufs;
     delete[] iovecs;
     delete[] msgs;
-    
+
 	return 0;
 #endif // __NETWORKING_WINDOWS__
 }
