@@ -279,49 +279,64 @@ void A2VideoManager::ToggleA2Video(bool value)
 
 void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, uint8_t rw)
 {
+    //std::cerr << "Processing soft switch " << std::hex << (uint32_t)addr << " RW: " << (uint32_t)rw << std::endl;
 	switch (addr)
 	{
 	case 0xC000:	// 80STOREOFF
-		a2SoftSwitches &= ~A2SS_80STORE;
+        if (rw)
+            a2SoftSwitches &= ~A2SS_80STORE;
 		break;
 	case 0xC001:	// 80STOREON
-		a2SoftSwitches |= A2SS_80STORE;
+        if (rw)
+            a2SoftSwitches |= A2SS_80STORE;
 		break;
 	case 0xC002:	// RAMRDOFF
-		a2SoftSwitches &= ~A2SS_RAMRD;
+        if (rw)
+            a2SoftSwitches &= ~A2SS_RAMRD;
 		break;
 	case 0xC003:	// RAMRDON
-		a2SoftSwitches |= A2SS_RAMRD;
+        if (rw)
+            a2SoftSwitches |= A2SS_RAMRD;
 		break;
 	case 0xC004:	// RAMWRTOFF
-		a2SoftSwitches &= ~A2SS_RAMWRT;
+        if (rw)
+            a2SoftSwitches &= ~A2SS_RAMWRT;
 		break;
 	case 0xC005:	// RAMWRTON
-		a2SoftSwitches |= A2SS_RAMWRT;
+        if (rw)
+            a2SoftSwitches |= A2SS_RAMWRT;
 		break;
 	case 0xC006:	// INTCXROMOFF
-		a2SoftSwitches &= ~A2SS_INTCXROM;
+        if (rw)
+            a2SoftSwitches &= ~A2SS_INTCXROM;
 		break;
 	case 0xC007:	// INTCXROMON
-		a2SoftSwitches |= A2SS_INTCXROM;
+        if (rw)
+            a2SoftSwitches |= A2SS_INTCXROM;
 		break;
 	case 0xC00A:	// SLOTC3ROMOFF
-		a2SoftSwitches &= ~A2SS_SLOTC3ROM;
+        if (rw)
+            a2SoftSwitches &= ~A2SS_SLOTC3ROM;
 		break;
 	case 0xC00B:	// SLOTC3ROMOFF
-		a2SoftSwitches |= A2SS_SLOTC3ROM;
+        if (rw)
+            a2SoftSwitches |= A2SS_SLOTC3ROM;
 		break;
 	case 0xC00C:	// 80COLOFF
-		a2SoftSwitches &= ~A2SS_80COL;
+        if (rw)
+            a2SoftSwitches &= ~A2SS_80COL;
 		break;
 	case 0xC00D:	// 80COLON
-		a2SoftSwitches |= A2SS_80COL;
+        if (rw)
+            a2SoftSwitches |= A2SS_80COL;
 		break;
 	case 0xC00E:	// ALTCHARSETOFF
-		a2SoftSwitches &= ~A2SS_ALTCHARSET;
+        if (rw)
+            a2SoftSwitches &= ~A2SS_ALTCHARSET;
 		break;
 	case 0xC00F:	// ALTCHARSETON
-		a2SoftSwitches |= A2SS_ALTCHARSET;
+        if (rw)
+            a2SoftSwitches |= A2SS_ALTCHARSET;
 		break;
 	case 0xC050:	// TEXTOFF
 		a2SoftSwitches &= ~A2SS_TEXT;
@@ -354,13 +369,17 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, uint8_t rw)
 		a2SoftSwitches &= ~A2SS_DRES;
 		break;
 	// $C022   R / W     SCREENCOLOR[IIgs] text foreground and background colors(also VidHD)
-	case 0xC022:	// Set border color on bits 3:0
-		color_foreground = gPaletteRGB[12 + (val & 0x0F)];
-		color_background = gPaletteRGB[12 + (val & 0xF0)];
+	case 0xC022:	// Set screen color
+        if (rw)
+        {
+            color_foreground = gPaletteRGB[12 + (val & 0x0F)];
+            color_background = gPaletteRGB[12 + (val & 0xF0)];
+        }
 		break;
 	// $C034   R / W     BORDERCOLOR[IIgs] b3:0 are border color(also VidHD)
 	case 0xC034:	// Set border color on bits 3:0
-		color_border = gPaletteRGB[12 + (val & 0x0F)];
+        if (rw)
+            color_border = gPaletteRGB[12 + (val & 0x0F)];
 		break;
 	default:
 		break;
