@@ -375,8 +375,8 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, uint8_t rw)
 //            " RW: " << (uint32_t)rw << std::endl;
         if (!rw)
         {
-            color_foreground = gPaletteRGB[12 + (val & 0x0F)];
-            color_background = gPaletteRGB[12 + (val & 0xF0)];
+            color_background = gPaletteRGB[12 + (val & 0x0F)];
+            color_foreground = gPaletteRGB[12 + ((val & 0xF0) >> 4)];
         }
 		break;
 	// $C034   R / W     BORDERCOLOR[IIgs] b3:0 are border color(also VidHD)
