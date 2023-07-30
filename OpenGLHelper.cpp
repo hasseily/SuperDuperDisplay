@@ -104,7 +104,7 @@ void OpenGLHelper::create_framebuffer(uint32_t width, uint32_t height)
 	glGenTextures(1, &output_texture_id);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, fb_width, fb_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);
@@ -159,7 +159,7 @@ void OpenGLHelper::setup_render()
 	frame_ticks = SDL_GetTicks();
 	GLenum glerr;
 	bind_framebuffer();
-	glClearColor(0.f, 0.f, 0.f, 1.0f);
+	glClearColor(0.f, 0.f, 0.f, 0.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL setup_render error: " << glerr << std::endl;

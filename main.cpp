@@ -413,6 +413,11 @@ int main(int, char**)
             }
 			margin.x = (_w - _newW) / 2;
 			margin.y = (_h - _newH) / 2;
+            ImGui::GetBackgroundDrawList()->AddRectFilled(
+                margin,
+                ImVec2(margin.x + _newW, margin.y + _newH),
+                a2VideoManager->color_background
+            );
 			ImGui::GetBackgroundDrawList()->AddImage(
 				(void*)glhelper->get_output_texture_id(),
 				margin,
