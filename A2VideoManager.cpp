@@ -370,6 +370,9 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, uint8_t rw)
 		break;
 	// $C022   R / W     SCREENCOLOR[IIgs] text foreground and background colors(also VidHD)
 	case 0xC022:	// Set screen color
+//            std::cerr << "Processing soft switch " << std::hex << (uint32_t)addr <<
+//            " VAL: " << (uint32_t)val <<
+//            " RW: " << (uint32_t)rw << std::endl;
         if (!rw)
         {
             color_foreground = gPaletteRGB[12 + (val & 0x0F)];
