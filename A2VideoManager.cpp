@@ -283,59 +283,59 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, uint8_t rw)
 	switch (addr)
 	{
 	case 0xC000:	// 80STOREOFF
-        if (rw)
+        if (!rw)
             a2SoftSwitches &= ~A2SS_80STORE;
 		break;
 	case 0xC001:	// 80STOREON
-        if (rw)
+        if (!rw)
             a2SoftSwitches |= A2SS_80STORE;
 		break;
 	case 0xC002:	// RAMRDOFF
-        if (rw)
+        if (!rw)
             a2SoftSwitches &= ~A2SS_RAMRD;
 		break;
 	case 0xC003:	// RAMRDON
-        if (rw)
+        if (!rw)
             a2SoftSwitches |= A2SS_RAMRD;
 		break;
 	case 0xC004:	// RAMWRTOFF
-        if (rw)
+        if (!rw)
             a2SoftSwitches &= ~A2SS_RAMWRT;
 		break;
 	case 0xC005:	// RAMWRTON
-        if (rw)
+        if (!rw)
             a2SoftSwitches |= A2SS_RAMWRT;
 		break;
 	case 0xC006:	// INTCXROMOFF
-        if (rw)
+        if (!rw)
             a2SoftSwitches &= ~A2SS_INTCXROM;
 		break;
 	case 0xC007:	// INTCXROMON
-        if (rw)
+        if (!rw)
             a2SoftSwitches |= A2SS_INTCXROM;
 		break;
 	case 0xC00A:	// SLOTC3ROMOFF
-        if (rw)
+        if (!rw)
             a2SoftSwitches &= ~A2SS_SLOTC3ROM;
 		break;
 	case 0xC00B:	// SLOTC3ROMOFF
-        if (rw)
+        if (!rw)
             a2SoftSwitches |= A2SS_SLOTC3ROM;
 		break;
 	case 0xC00C:	// 80COLOFF
-        if (rw)
+        if (!rw)
             a2SoftSwitches &= ~A2SS_80COL;
 		break;
 	case 0xC00D:	// 80COLON
-        if (rw)
+        if (!rw)
             a2SoftSwitches |= A2SS_80COL;
 		break;
 	case 0xC00E:	// ALTCHARSETOFF
-        if (rw)
+        if (!rw)
             a2SoftSwitches &= ~A2SS_ALTCHARSET;
 		break;
 	case 0xC00F:	// ALTCHARSETON
-        if (rw)
+        if (!rw)
             a2SoftSwitches |= A2SS_ALTCHARSET;
 		break;
 	case 0xC050:	// TEXTOFF
@@ -370,7 +370,7 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, uint8_t rw)
 		break;
 	// $C022   R / W     SCREENCOLOR[IIgs] text foreground and background colors(also VidHD)
 	case 0xC022:	// Set screen color
-        if (rw)
+        if (!rw)
         {
             color_foreground = gPaletteRGB[12 + (val & 0x0F)];
             color_background = gPaletteRGB[12 + (val & 0xF0)];
@@ -378,7 +378,7 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, uint8_t rw)
 		break;
 	// $C034   R / W     BORDERCOLOR[IIgs] b3:0 are border color(also VidHD)
 	case 0xC034:	// Set border color on bits 3:0
-        if (rw)
+        if (!rw)
             color_border = gPaletteRGB[12 + (val & 0x0F)];
 		break;
 	default:
