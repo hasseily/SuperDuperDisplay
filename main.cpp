@@ -342,6 +342,9 @@ int main(int argc, char* argv[])
 				ImGui::Checkbox("Apple //e Memory Window", &show_mem_apple2_window);
 				ImGui::Checkbox("Upload Region Memory Window", &show_mem_upload_window);
                 ImGui::Separator();
+                if (ImGui::Button("Reset")) {
+                    a2VideoManager->ResetComputer();
+                }
 				did_press_quit = ImGui::Button("Quit App (Ctrl-c)");
 				if (did_press_quit)
 					done = true;
