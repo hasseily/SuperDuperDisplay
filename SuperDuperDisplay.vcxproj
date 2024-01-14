@@ -142,7 +142,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>imgui\imgui;imgui\imgui\backends;%SDL2_DIR%\include;$(VcpkgCurrentInstalledDir)include\SDL2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>imgui;imgui\backends;%SDL2_DIR%\include;$(VcpkgCurrentInstalledDir)include\SDL2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
@@ -158,14 +158,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="A2Window.cpp" />
-    <ClCompile Include="glad\glad.c" />
-    <ClCompile Include="imgui\imgui\imgui.cpp" />
-    <ClCompile Include="imgui\imgui\imgui_demo.cpp" />
-    <ClCompile Include="imgui\imgui\imgui_draw.cpp" />
-    <ClCompile Include="imgui\imgui\imgui_tables.cpp" />
-    <ClCompile Include="imgui\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="imgui\imgui\backends\imgui_impl_sdl2.cpp" />
-    <ClCompile Include="imgui\imgui\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="glad\glad.cpp" />
+    <ClCompile Include="imgui\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="imgui\backends\imgui_impl_sdl2.cpp" />
+    <ClCompile Include="imgui\imgui.cpp" />
+    <ClCompile Include="imgui\imgui_demo.cpp" />
+    <ClCompile Include="imgui\imgui_draw.cpp" />
+    <ClCompile Include="imgui\imgui_tables.cpp" />
+    <ClCompile Include="imgui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MosaicMesh.cpp" />
     <ClCompile Include="OpenGLHelper.cpp" />
@@ -183,13 +183,13 @@
     <ClInclude Include="glad\glad.h" />
     <ClInclude Include="glad\khrplatform.h" />
     <ClInclude Include="GRAddr2XY.h" />
+    <ClInclude Include="imgui\backends\imgui_impl_opengl3.h" />
+    <ClInclude Include="imgui\backends\imgui_impl_opengl3_loader.h" />
+    <ClInclude Include="imgui\backends\imgui_impl_sdl2.h" />
+    <ClInclude Include="imgui\imconfig.h" />
+    <ClInclude Include="imgui\imgui.h" />
+    <ClInclude Include="imgui\imgui_internal.h" />
     <ClInclude Include="imgui_memory_editor.h" />
-    <ClInclude Include="imgui\imgui\imconfig.h" />
-    <ClInclude Include="imgui\imgui\imgui.h" />
-    <ClInclude Include="imgui\imgui\imgui_internal.h" />
-    <ClInclude Include="imgui\imgui\backends\imgui_impl_sdl2.h" />
-    <ClInclude Include="imgui\imgui\backends\imgui_impl_opengl3.h" />
-    <ClInclude Include="imgui\imgui\backends\imgui_impl_opengl3_loader.h" />
     <ClInclude Include="MosaicMesh.h" />
     <ClInclude Include="my_imgui_config.h" />
     <ClInclude Include="OpenGLHelper.h" />
@@ -263,16 +263,16 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="packages\sdl2.nuget.redist.2.28.5\build\native\sdl2.nuget.redist.targets" Condition="Exists('packages\sdl2.nuget.redist.2.28.5\build\native\sdl2.nuget.redist.targets')" />
+    <Import Project="packages\sdl2.nuget.2.28.5\build\native\sdl2.nuget.targets" Condition="Exists('packages\sdl2.nuget.2.28.5\build\native\sdl2.nuget.targets')" />
     <Import Project="packages\zlib-msvc-x64.1.2.11.8900\build\native\zlib-msvc-x64.targets" Condition="Exists('packages\zlib-msvc-x64.1.2.11.8900\build\native\zlib-msvc-x64.targets')" />
-    <Import Project="packages\sdl2.nuget.redist.2.26.5\build\native\sdl2.nuget.redist.targets" Condition="Exists('packages\sdl2.nuget.redist.2.26.5\build\native\sdl2.nuget.redist.targets')" />
-    <Import Project="packages\sdl2.nuget.2.26.5\build\native\sdl2.nuget.targets" Condition="Exists('packages\sdl2.nuget.2.26.5\build\native\sdl2.nuget.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
+    <Error Condition="!Exists('packages\sdl2.nuget.redist.2.28.5\build\native\sdl2.nuget.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\sdl2.nuget.redist.2.28.5\build\native\sdl2.nuget.redist.targets'))" />
+    <Error Condition="!Exists('packages\sdl2.nuget.2.28.5\build\native\sdl2.nuget.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\sdl2.nuget.2.28.5\build\native\sdl2.nuget.targets'))" />
     <Error Condition="!Exists('packages\zlib-msvc-x64.1.2.11.8900\build\native\zlib-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\zlib-msvc-x64.1.2.11.8900\build\native\zlib-msvc-x64.targets'))" />
-    <Error Condition="!Exists('packages\sdl2.nuget.redist.2.26.5\build\native\sdl2.nuget.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\sdl2.nuget.redist.2.26.5\build\native\sdl2.nuget.redist.targets'))" />
-    <Error Condition="!Exists('packages\sdl2.nuget.2.26.5\build\native\sdl2.nuget.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\sdl2.nuget.2.26.5\build\native\sdl2.nuget.targets'))" />
   </Target>
 </Project>
