@@ -9,7 +9,6 @@
 #include "imgui_impl_opengl3.h"
 #include "imgui_memory_editor.h"
 #include <SDL.h>
-
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
@@ -27,6 +26,11 @@
 #include "SDHRManager.h"
 #include "A2VideoManager.h"
 #include "OpenGLHelper.h"
+
+#if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
+#include <unistd.h>
+#include <libgen.h>
+#endif
 
 static uint32_t fbWidth = 0;
 static uint32_t fbHeight = 0;
@@ -50,8 +54,13 @@ void callback_resolutionChange(int w, int h)
 }
 
 // Main code
-int main(int, char**)
+int main(int argc, char* argv[])
 {
+#if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
+    // when double-clicking the app, change to its working directory
+    char *dir = dirname(strdup(argv[0]));
+    chdir(dir);
+#endif
 	GLenum glerr;
     // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
