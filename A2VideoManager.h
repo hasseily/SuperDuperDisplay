@@ -136,6 +136,15 @@ public:
 	~A2VideoManager();
 
 	inline static bool IsSoftSwitch(A2SoftSwitch_e ss) { return (a2SoftSwitches & ss); };
+    static void SetSoftSwitch(A2SoftSwitch_e ss, bool state)
+    {
+        if (state)
+            a2SoftSwitches |= ss;
+        else
+            a2SoftSwitches &= ~ss;
+        A2VideoManager::GetInstance()->SelectVideoModes();
+    }
+    
 	void ResetComputer();
 private:
 	//////////////////////////////////////////////////////////////////////////

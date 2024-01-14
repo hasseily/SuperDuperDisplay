@@ -398,6 +398,7 @@ void A2VideoManager::SelectVideoModes()
 {
 	for (auto& _w : this->windows) {
 		_w.SetEnabled(false);
+        _w.bNeedsGPUDataUpdate = true;
 	}
 	if (!IsSoftSwitch(A2SS_TEXT))
 	{

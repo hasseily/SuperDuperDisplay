@@ -348,6 +348,55 @@ int main(int argc, char* argv[])
 				did_press_quit = ImGui::Button("Quit App (Ctrl-c)");
 				if (did_press_quit)
 					done = true;
+                ImGui::Separator();
+                bool ssValue0 = A2VideoManager::IsSoftSwitch(A2SS_80STORE);
+                if (ImGui::Checkbox("A2SS_80STORE", &ssValue0)) {
+                    A2VideoManager::SetSoftSwitch(A2SS_80STORE, ssValue0);
+                }
+                bool ssValue1 = A2VideoManager::IsSoftSwitch(A2SS_RAMRD);
+                if (ImGui::Checkbox("A2SS_RAMRD", &ssValue1)) {
+                    A2VideoManager::SetSoftSwitch(A2SS_RAMRD, ssValue1);
+                }
+                bool ssValue2 = A2VideoManager::IsSoftSwitch(A2SS_RAMWRT);
+                if (ImGui::Checkbox("A2SS_RAMWRT", &ssValue2)) {
+                    A2VideoManager::SetSoftSwitch(A2SS_RAMWRT, ssValue2);
+                }
+                bool ssValue3 = A2VideoManager::IsSoftSwitch(A2SS_80COL);
+                if (ImGui::Checkbox("A2SS_80COL", &ssValue3)) {
+                    A2VideoManager::SetSoftSwitch(A2SS_80COL, ssValue3);
+                }
+                bool ssValue4 = A2VideoManager::IsSoftSwitch(A2SS_ALTCHARSET);
+                if (ImGui::Checkbox("A2SS_ALTCHARSET", &ssValue4)) {
+                    A2VideoManager::SetSoftSwitch(A2SS_ALTCHARSET, ssValue4);
+                }
+                bool ssValue5 = A2VideoManager::IsSoftSwitch(A2SS_INTCXROM);
+                if (ImGui::Checkbox("A2SS_INTCXROM", &ssValue5)) {
+                    A2VideoManager::SetSoftSwitch(A2SS_INTCXROM, ssValue5);
+                }
+                bool ssValue6 = A2VideoManager::IsSoftSwitch(A2SS_SLOTC3ROM);
+                if (ImGui::Checkbox("A2SS_SLOTC3ROM", &ssValue6)) {
+                    A2VideoManager::SetSoftSwitch(A2SS_SLOTC3ROM, ssValue6);
+                }
+                bool ssValue7 = A2VideoManager::IsSoftSwitch(A2SS_TEXT);
+                if (ImGui::Checkbox("A2SS_TEXT", &ssValue7)) {
+                    A2VideoManager::SetSoftSwitch(A2SS_TEXT, ssValue7);
+                }
+                bool ssValue8 = A2VideoManager::IsSoftSwitch(A2SS_MIXED);
+                if (ImGui::Checkbox("A2SS_MIXED", &ssValue8)) {
+                    A2VideoManager::SetSoftSwitch(A2SS_MIXED, ssValue8);
+                }
+                bool ssValue9 = A2VideoManager::IsSoftSwitch(A2SS_PAGE2);
+                if (ImGui::Checkbox("A2SS_PAGE2", &ssValue9)) {
+                    A2VideoManager::SetSoftSwitch(A2SS_PAGE2, ssValue9);
+                }
+                bool ssValue10 = A2VideoManager::IsSoftSwitch(A2SS_HIRES);
+                if (ImGui::Checkbox("A2SS_HIRES", &ssValue10)) {
+                    A2VideoManager::SetSoftSwitch(A2SS_HIRES, ssValue10);
+                }
+                bool ssValue11 = A2VideoManager::IsSoftSwitch(A2SS_DRES);
+                if (ImGui::Checkbox("A2SS_DRES", &ssValue11)) {
+                    A2VideoManager::SetSoftSwitch(A2SS_DRES, ssValue11);
+                }
             }
 			ImGui::End();
 		}
