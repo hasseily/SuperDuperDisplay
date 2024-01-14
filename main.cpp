@@ -62,7 +62,7 @@ int main(int, char**)
 
     // Decide GL+GLSL versions
 #if defined(IMGUI_IMPL_OPENGL_ES2)
-    // GL ES 2.0 + GLSL 100
+    // GL ES 2.0 + GLSL 100 es
     const char* glsl_version = "#version 100";
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
@@ -84,7 +84,7 @@ int main(int, char**)
 		std::cerr << "SDL Error: " << SDL_GetError() << std::endl;
     if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) != 0)
 		std::cerr << "SDL Error: " << SDL_GetError() << std::endl;
-    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1) != 0)
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0) != 0)
 		std::cerr << "SDL Error: " << SDL_GetError() << std::endl;
 #endif
 
