@@ -10,10 +10,12 @@
 
 #if defined(__MINGW32__) || defined(__MINGW64__) || defined(_WIN32) || defined(_WIN64)
 #define __NETWORKING_WINDOWS__
-#endif
-
-#if defined(__APPLE__)
+#elif defined(__linux) || defined(__linux__) || defined(linux) || defined(__gnu_linux__) ||    defined(__GNUC__)
+#define __NETWORKING_LINUX__
+#elif defined(__APPLE__)
 #define __NETWORKING_APPLE__
+#else
+#error "OS NOT SUPPORTED"
 #endif
 
 #include <iostream>

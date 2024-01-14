@@ -411,7 +411,8 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
     delete[] buf;
 
     return 0;
-#else   // Linux Networking
+#endif
+#ifdef __NETWORKING_LINUX__
 #define VLEN 256
 #define BUFSZ 2048
 
