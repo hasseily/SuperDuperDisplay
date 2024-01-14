@@ -21,7 +21,7 @@
 #CXX = clang++
 
 EXE = SuperDuperDisplay
-IMGUI_DIR = imgui/imgui
+IMGUI_DIR = imgui
 SOURCES = main.cpp OpenGLHelper.cpp MosaicMesh.cpp SDHRNetworking.cpp SDHRManager.cpp SDHRWindow.cpp A2VideoManager.cpp A2Window.cpp
 SOURCES += glad/glad.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
