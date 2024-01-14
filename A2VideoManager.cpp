@@ -243,8 +243,8 @@ void A2VideoManager::ResetComputer()
     if (bIsRebooting == true)
         return;
     bIsRebooting = true;
+    SDHRManager::GetInstance()->Initialize();
 	this->Initialize();
-	SDHRManager::GetInstance()->Initialize();
     bIsRebooting = false;
 }
 
