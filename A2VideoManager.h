@@ -113,6 +113,7 @@ public:
 	uint32_t color_border = 0;
 	uint32_t color_foreground = UINT32_MAX;
 	uint32_t color_background = 0;
+    bool bShouldReboot = false;             // When an Appletini reboot packet arrives
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods

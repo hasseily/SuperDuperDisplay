@@ -207,7 +207,7 @@ void process_single_packet_header(SDHRPacketHeader* h,
         // TODO
         return;
     case 2: // computer reset
-        A2VideoManager::GetInstance()->ResetComputer();
+        A2VideoManager::GetInstance()->bShouldReboot = true;
         return;
     case 3: // datetime request
         // TODO

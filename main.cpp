@@ -507,6 +507,13 @@ int main(int argc, char* argv[])
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL end of render error: " << glerr << std::endl;
 		}
+        
+        // Check if we should reboot
+        if (a2VideoManager->bShouldReboot)
+        {
+            a2VideoManager->bShouldReboot = false;
+            A2VideoManager::GetInstance()->ResetComputer();
+        }
     }
 #ifdef __EMSCRIPTEN__
     EMSCRIPTEN_MAINLOOP_END;
