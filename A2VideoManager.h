@@ -165,8 +165,9 @@ private:
 	//////////////////////////////////////////////////////////////////////////
 	bool bA2VideoEnabled = true;			// Is standard Apple 2 video enabled?
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
+    bool bIsRebooting = false;              // Rebooting semaphore
 	static uint16_t a2SoftSwitches;			// Soft switches states
-
+    
 	// framebuffers for graphics modes
 	std::vector<uint32_t>v_fblgr1;
 	std::vector<uint32_t>v_fblgr2;

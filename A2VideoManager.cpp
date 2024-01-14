@@ -240,8 +240,12 @@ A2VideoManager::~A2VideoManager()
 
 void A2VideoManager::ResetComputer()
 {
+    if (bIsRebooting == true)
+        return;
+    bIsRebooting = true;
 	this->Initialize();
 	SDHRManager::GetInstance()->Initialize();
+    bIsRebooting = false;
 }
 
 void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
