@@ -38,4 +38,4 @@ SuperDuperDisplay
 # MacOS
 .DS_Store
 /packages
-xcuserdata/
+**/xcuserdata/
