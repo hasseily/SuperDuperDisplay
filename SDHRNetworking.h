@@ -50,10 +50,12 @@ struct SDHRPacketHeader {
 #pragma pack(pop)
 
 struct SDHREvent {
-	bool rw; // read == 1, write == 0
+    bool is_iigs;   // 2gs == 1, 2e == 0
+	bool rw;        // read == 1, write == 0
 	uint16_t addr;
 	uint8_t data;
-	SDHREvent(bool rw_, uint16_t addr_, uint8_t data_) :
+	SDHREvent(bool is_iigs_, bool rw_, uint16_t addr_, uint8_t data_) :
+		is_iigs(is_iigs_),
 		rw(rw_),
 		addr(addr_),
 		data(data_) {}

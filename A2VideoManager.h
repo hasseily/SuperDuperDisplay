@@ -20,6 +20,7 @@ enum A2VideoMode_e
 	A2VIDEO_DTEXT,
 	A2VIDEO_DLGR,
 	A2VIDEO_DHGR,
+	A2VIDEO_SHR,
 	A2VIDEO_TOTAL_COUNT
 };
 
@@ -45,6 +46,7 @@ VIDEO SOFT SWITCHES
  $C00D   W       80COLON         Turn on 80 column display
  $C00E   W       ALTCHARSETOFF   Turn off alternate characters
  $C00F   W       ALTCHARSETON    Turn on alternate characters
+ $C021   R/W     MONOCOLOR       [IIgs] Bit 7 on: Greyscale
  $C022   R/W     SCREENCOLOR     [IIgs] text foreground and background colors (also VidHD)
  $C029   R/W     NEWVIDEO        [IIgs] Select new video modes (also VidHD)
  $C034   R/W     BORDERCOLOR     [IIgs] b3:0 are border color (also VidHD)
@@ -62,18 +64,21 @@ VIDEO SOFT SWITCHES
 */
 enum A2SoftSwitch_e
 {
-	A2SS_80STORE	= 0b000000000001,
-	A2SS_RAMRD		= 0b000000000010,
-	A2SS_RAMWRT		= 0b000000000100,
-	A2SS_80COL		= 0b000000001000,
-	A2SS_ALTCHARSET = 0b000000010000,
-	A2SS_INTCXROM	= 0b000000100000,
-	A2SS_SLOTC3ROM	= 0b000001000000,
-	A2SS_TEXT		= 0b000010000000,
-	A2SS_MIXED		= 0b000100000000,
-	A2SS_PAGE2		= 0b001000000000,
-	A2SS_HIRES		= 0b010000000000,
-	A2SS_DRES		= 0b100000000000,
+	A2SS_80STORE	= 0b000000000000001,
+	A2SS_RAMRD		= 0b000000000000010,
+	A2SS_RAMWRT		= 0b000000000000100,
+	A2SS_80COL		= 0b000000000001000,
+	A2SS_ALTCHARSET = 0b000000000010000,
+	A2SS_INTCXROM	= 0b000000000100000,
+	A2SS_SLOTC3ROM	= 0b000000001000000,
+	A2SS_TEXT		= 0b000000010000000,
+	A2SS_MIXED		= 0b000000100000000,
+	A2SS_PAGE2		= 0b000001000000000,
+	A2SS_HIRES		= 0b000010000000000,
+	A2SS_DHGR		= 0b000100000000000,
+	A2SS_DHGRMONO	= 0b001000000000000,
+    A2SS_SHR        = 0b010000000000000,
+	A2SS_GREYSCALE  = 0b100000000000000,
 };
 
 class A2VideoManager
@@ -123,7 +128,7 @@ public:
 	void ToggleA2Video(bool value);
 	void SelectVideoModes();			// Based on soft switches, decided on video modes
 	uXY ScreenSize() { return windows[activeVideoMode].Get_screen_count(); }
-	void ProcessSoftSwitch(uint16_t addr, uint8_t val, uint8_t rw);
+	void ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool is_iigs);
 
 	void Render();	// render whatever mode is active (enabled windows)
 
@@ -185,6 +190,7 @@ private:
 	std::vector<uint32_t>v_fbhgr1;
 	std::vector<uint32_t>v_fbhgr2;
 	std::vector<uint32_t>v_fbdhgr;
+	std::vector<uint32_t>v_fbshr;
 
 	A2VideoMode_e activeVideoMode = A2VIDEO_TEXT1;
 };

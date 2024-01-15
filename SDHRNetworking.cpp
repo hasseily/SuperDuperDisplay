@@ -57,7 +57,7 @@ void terminate_processing_thread()
 {
 	// Force a dummy event to process, so that shouldTerminateProcessing is triggered
 	// and the loop is closed cleanly.
-	SDHREvent e = SDHREvent(1, 0, 0);
+	SDHREvent e = SDHREvent(0, 1, 0, 0);
 	events.push(e);
 }
 
@@ -72,7 +72,7 @@ int process_events_thread(bool* shouldTerminateProcessing)
 	A2VideoManager* a2VideoMgr = A2VideoManager::GetInstance();
 	while (!(*shouldTerminateProcessing)) {
 		auto e = events.pop();	// The thread will wait until there's an event to pop
-		// std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
+		// std::cout << e.is_iigs << " " << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
 
         /*
          *********************************
@@ -105,7 +105,7 @@ int process_events_thread(bool* shouldTerminateProcessing)
 		if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
 			// Send soft switches to the A2VideoManager
 			if (e.addr >> 8 == 0xc0)
-				a2VideoMgr->ProcessSoftSwitch(e.addr, e.data, e.rw);
+				a2VideoMgr->ProcessSoftSwitch(e.addr, e.data, e.rw, e.is_iigs);
 			// ignore non-control
 			continue;
 		}
@@ -242,7 +242,7 @@ void process_single_packet_header(SDHRPacketHeader* h,
         uint16_t addr = (*event >> 8) & 0xffff;
         uint8_t data = *event & 0xff;
         bool m2sel = (ctrl_bits & 0x02) == 0x02;
-	bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
+        bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
         if (iigs_mode && m2sel) {
 	    // ignore updates from iigs_mode firmware with m2sel high
             continue;
@@ -252,7 +252,7 @@ void process_single_packet_header(SDHRPacketHeader* h,
             // ignoring all read events not softswitches
             continue;
         }
-        SDHREvent e(rw, addr, data);
+        SDHREvent e(iigs_mode, rw, addr, data);
         events.push(e);
     }
 }

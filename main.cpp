@@ -393,10 +393,22 @@ int main(int argc, char* argv[])
                 if (ImGui::Checkbox("A2SS_HIRES", &ssValue10)) {
                     A2VideoManager::SetSoftSwitch(A2SS_HIRES, ssValue10);
                 }
-                bool ssValue11 = A2VideoManager::IsSoftSwitch(A2SS_DRES);
-                if (ImGui::Checkbox("A2SS_DRES", &ssValue11)) {
-                    A2VideoManager::SetSoftSwitch(A2SS_DRES, ssValue11);
+                bool ssValue11 = A2VideoManager::IsSoftSwitch(A2SS_DHGR);
+                if (ImGui::Checkbox("A2SS_DHGR", &ssValue11)) {
+                    A2VideoManager::SetSoftSwitch(A2SS_DHGR, ssValue11);
                 }
+				bool ssValue12 = A2VideoManager::IsSoftSwitch(A2SS_DHGRMONO);
+				if (ImGui::Checkbox("A2SS_DHGRMONO", &ssValue12)) {
+					A2VideoManager::SetSoftSwitch(A2SS_DHGRMONO, ssValue12);
+				}
+				bool ssValue13 = A2VideoManager::IsSoftSwitch(A2SS_SHR);
+				if (ImGui::Checkbox("A2SS_SHR", &ssValue13)) {
+					A2VideoManager::SetSoftSwitch(A2SS_SHR, ssValue13);
+				}
+				bool ssValue14 = A2VideoManager::IsSoftSwitch(A2SS_GREYSCALE);
+				if (ImGui::Checkbox("A2SS_GREYSCALE", &ssValue14)) {
+					A2VideoManager::SetSoftSwitch(A2SS_GREYSCALE, ssValue14);
+				}
             }
 			ImGui::End();
 		}

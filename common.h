@@ -30,19 +30,6 @@
 typedef struct uixy { uint32_t x; uint32_t y; } uXY;
 typedef struct ixy { int32_t x; int32_t y; } iXY;
 
-#define _A2VIDEO_MIN_WIDTH 40*7*2
-#define _A2VIDEO_MIN_HEIGHT 24*8*2
-#define _A2VIDEO_MIN_MIXED_HEIGHT 20*8*2
-
-#define _A2VIDEO_TEXT1_START 0x400
-#define _A2VIDEO_TEXT2_START 0x800
-#define _A2VIDEO_TEXT_SIZE 0x400
-#define _A2VIDEO_HGR1_START 0x2000
-#define _A2VIDEO_HGR2_START 0x4000
-#define _A2VIDEO_HGR_SIZE 0x2000
-
-#define _SCREEN_DEFAULT_WIDTH  _A2VIDEO_MIN_WIDTH
-#define _SCREEN_DEFAULT_HEIGHT _A2VIDEO_MIN_HEIGHT
 
 // DEFINITIONS OF SDHR SPECS
 #define _SDHR_SERVER_PORT 8080
@@ -53,7 +40,24 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _SDHR_TBO_TEXUNIT 1					// Texture unit (GL_TEXTURE0 + unit) of the tilebufferobject
 #define _SDHR_MAX_TEXTURES 14				// Max # of image assets available
 #define _SDHR_START_TEXTURES GL_TEXTURE2	// Start of the image assets
-#define _SDHR_MAX_UV_SCALE 100.f			// Maximum scale of Mosaic Tile UV	
+#define _SDHR_MAX_UV_SCALE 100.f			// Maximum scale of Mosaic Tile UV
+
+// ORIGINAL APPLE 2 VIDEO MODES
+#define _A2VIDEO_MIN_WIDTH 40*7*2
+#define _A2VIDEO_MIN_HEIGHT 24*8*2
+#define _A2VIDEO_MIN_MIXED_HEIGHT 20*8*2
+
+#define _A2VIDEO_TEXT1_START 0x400
+#define _A2VIDEO_TEXT2_START 0x800
+#define _A2VIDEO_TEXT_SIZE 0x400
+#define _A2VIDEO_HGR1_START 0x2000
+#define _A2VIDEO_HGR2_START 0x4000
+#define _A2VIDEO_HGR_SIZE 0x2000
+#define _A2VIDEO_SHR_START 0x2000	// In the AUX (E1) bank!
+#define _A2VIDEO_SHR_SIZE 0x8000
+
+#define _SCREEN_DEFAULT_WIDTH  _A2VIDEO_MIN_WIDTH
+#define _SCREEN_DEFAULT_HEIGHT _A2VIDEO_MIN_HEIGHT
 
 // SHADERS
 #if defined(IMGUI_IMPL_OPENGL_ES2)

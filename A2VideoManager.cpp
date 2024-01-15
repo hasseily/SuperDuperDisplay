@@ -114,7 +114,8 @@ void A2VideoManager::Initialize()
 	v_fbhgr1 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
 	v_fbhgr2 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
 	v_fbdhgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
-
+	v_fbshr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
+	
 	color_border = 0;
 	color_foreground = UINT32_MAX;
 	color_background = 0;
@@ -281,9 +282,9 @@ void A2VideoManager::ToggleA2Video(bool value)
 	}
 }
 
-void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, uint8_t rw)
+void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool is_iigs)
 {
-    //std::cerr << "Processing soft switch " << std::hex << (uint32_t)addr << " RW: " << (uint32_t)rw << std::endl;
+    //std::cerr << "Processing soft switch " << std::hex << (uint32_t)addr << " RW: " << (uint32_t)rw << " 2gs: " << (uint32_t)is_iigs << std::endl;
 	switch (addr)
 	{
 	case 0xC000:	// 80STOREOFF
@@ -366,11 +367,19 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, uint8_t rw)
 	case 0xC057:	// HIRESON
 		a2SoftSwitches |= A2SS_HIRES;
 		break;
-	case 0xC05E:	// DRESON
-		a2SoftSwitches |= A2SS_DRES;
+	case 0xC05E:	// DHIRESON
+		a2SoftSwitches |= A2SS_DHGR;
 		break;
-	case 0xC05F:	// DRESOFF
-		a2SoftSwitches &= ~A2SS_DRES;
+	case 0xC05F:	// DHIRESOFF
+		a2SoftSwitches &= ~A2SS_DHGR;
+		break;
+	case 0xC021:	// MONOCOLOR
+		// bits 0-6 are reserved
+		// bit 7 determines color or greyscale. Greyscale is 1
+		if (!rw)
+		{
+			SetSoftSwitch(A2SS_GREYSCALE, (bool)(val >> 7));
+		}
 		break;
 	// $C022   R / W     SCREENCOLOR[IIgs] text foreground and background colors(also VidHD)
 	case 0xC022:	// Set screen color
@@ -388,6 +397,39 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, uint8_t rw)
         if (!rw)
             color_border = gPaletteRGB[12 + (val & 0x0F)];
 		break;
+    // $C029   R/W     NEWVIDEO        [IIgs] Select new video modes (also VidHD)
+    case 0xC029:    // NEWVIDEO (SHR)
+		if (rw)		// don't do anything on read
+			break;
+		// bits 1-4 are reserved
+		if (val == 0x21)
+		{
+			// Return to mode TEXT
+			a2SoftSwitches &= ~A2SS_SHR;
+			a2SoftSwitches |= A2SS_TEXT;
+			break;
+		}
+		if (val & 0x20)		// bit 5
+		{
+			// DHGR in Monochrome @ 560x192
+			a2SoftSwitches |= A2SS_DHGRMONO;
+		} else {
+			// DHGR in 16 Colors @ 140x192
+			a2SoftSwitches &= ~A2SS_DHGRMONO;
+		}
+		if (val & 0x40)	// bit 6
+		{
+			// Video buffer is contiguous 0x2000-0x9D00 in bank E1
+		} else {
+			// AUX memory behaves like Apple //e
+		}
+		if (val & 0x80)	// bit 7
+		{
+			// SHR video mode. Bit 6 is considered on
+		} else {
+			// Classic Apple 2 video modes
+		}
+        break;
 	default:
 		break;
 	}
@@ -404,7 +446,7 @@ void A2VideoManager::SelectVideoModes()
 	{
 		if (IsSoftSwitch(A2SS_80COL))	// double resolution
 		{
-			if (IsSoftSwitch(A2SS_DRES))
+			if (IsSoftSwitch(A2SS_DHGR))
 				this->windows[A2VIDEO_DHGR].SetEnabled(true);
 			else
 				this->windows[A2VIDEO_DLGR].SetEnabled(true);
@@ -789,61 +831,79 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 		dwordval_tmp >>= 4;
 	}
 
+	// black and white colors
+	uint32_t bw[2];
+	bw[0] = gPaletteRGB[0];
+	bw[1] = gPaletteRGB[1];
+
 	// destination offset in the pixel framebuffer
 	// We process a complete byte very time, so the offset for even/odd is 7 pixels * 2
 	uint32_t dst = (y * _A2VIDEO_MIN_WIDTH) + x + (xoffset * 14);
 	uint32_t* pDst = &framebuffer->at(dst);
+	
 	if (xoffset == 0)	// First cell
 	{
-		// Color
+		if (IsSoftSwitch(A2SS_DHGRMONO))	// It Black and White
+		{
+			for (int i = 0; i < 7; i++)
+			{
+				*(pDst++) = bw[dwordval & 1];
+				dwordval >>= 1;
+			}
+		} else {
+			// Color cell 0
+			*(pDst++) = colors[0];
+			*(pDst++) = colors[0];
+			*(pDst++) = colors[0];
+			*(pDst++) = colors[0];
+			// Color cell 1
+			*(pDst++) = colors[1];
+			*(pDst++) = colors[1];
+			*(pDst++) = colors[1];
 
-		// Color cell 0
-		*(pDst++) = colors[0];
-		*(pDst++) = colors[0];
-		*(pDst++) = colors[0];
-		*(pDst++) = colors[0];
-		// Color cell 1
-		*(pDst++) = colors[1];
-		*(pDst++) = colors[1];
-		*(pDst++) = colors[1];
+			// Remaining of color cell 1
+			*(pDst++) = colors[1];
 
-		// Remaining of color cell 1
-		*(pDst++) = colors[1];
-
-		// Color cell 2
-		*(pDst++) = colors[2];
-		*(pDst++) = colors[2];
-		*(pDst++) = colors[2];
-		*(pDst++) = colors[2];
-		// Color cell 3
-		*(pDst++) = colors[3];
-		*(pDst++) = colors[3];
+			// Color cell 2
+			*(pDst++) = colors[2];
+			*(pDst++) = colors[2];
+			*(pDst++) = colors[2];
+			*(pDst++) = colors[2];
+			// Color cell 3
+			*(pDst++) = colors[3];
+			*(pDst++) = colors[3];
+		}
 	}
 	else  // Second cell
 	{
-
-		// Remaining of color cell 3
-		*(pDst++) = colors[3];
-		*(pDst++) = colors[3];
-
-		// Color cell 4
-		*(pDst++) = colors[4];
-		*(pDst++) = colors[4];
-		*(pDst++) = colors[4];
-		*(pDst++) = colors[4];
-		// Color cell 5
-		*(pDst++) = colors[5];
-
-		// Remaining of color cell 5
-		*(pDst++) = colors[5];
-		*(pDst++) = colors[5];
-		*(pDst++) = colors[5];
-
-		// Color cell 6
-		*(pDst++) = colors[6];
-		*(pDst++) = colors[6];
-		*(pDst++) = colors[6];
-		*(pDst++) = colors[6];
+		if (IsSoftSwitch(A2SS_DHGRMONO))	// It Black and White
+		{
+			*(pDst++) = bw[dwordval & 1];
+			dwordval >>= 1;
+		} else {
+			// Remaining of color cell 3
+			*(pDst++) = colors[3];
+			*(pDst++) = colors[3];
+			
+			// Color cell 4
+			*(pDst++) = colors[4];
+			*(pDst++) = colors[4];
+			*(pDst++) = colors[4];
+			*(pDst++) = colors[4];
+			// Color cell 5
+			*(pDst++) = colors[5];
+			
+			// Remaining of color cell 5
+			*(pDst++) = colors[5];
+			*(pDst++) = colors[5];
+			*(pDst++) = colors[5];
+			
+			// Color cell 6
+			*(pDst++) = colors[6];
+			*(pDst++) = colors[6];
+			*(pDst++) = colors[6];
+			*(pDst++) = colors[6];
+		}
 	}
 
 	// duplicate on the next row (it may be overridden by the scanlines)
