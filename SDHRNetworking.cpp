@@ -179,10 +179,8 @@ void process_single_packet_header(SDHRPacketHeader* h,
                                   uint16_t& prev_addr,
                                   bool& first_drop)
 {
-    uint32_t seqno = h->seqno[0];
-    seqno += (uint32_t)h->seqno[1] << 8;
-    seqno += (uint32_t)h->seqno[2] << 16;
-    seqno += (uint32_t)h->seqno[3] << 24;
+    //std::cerr << packet_size << std::endl;
+    uint32_t seqno = h->seqno;
 
     // std::cerr << "Receiving seqno " << seqno << std::endl;
 
@@ -219,34 +217,27 @@ void process_single_packet_header(SDHRPacketHeader* h,
 
     // bus event
     uint8_t* p = (uint8_t*)h + sizeof(SDHRPacketHeader);
+    uint8_t* e = (uint8_t*)h + packet_size;
 
-    while (p - (uint8_t*)h < packet_size) {
-        SDHRBusChunk* c = (SDHRBusChunk*)p;
-        size_t chunk_len = 10;
-        uint32_t addr_count = 0;
-        for (int j = 0; j < 8; ++j) {
-            bool rw = (c->rwflags & (1 << j)) != 0;
-            uint16_t addr;
-            bool addr_flag = (c->seqflags & (1 << j)) != 0;
-            if (addr_flag) {
-                chunk_len += 2;
-                addr = c->addrs[addr_count * 2 + 1];
-                addr <<= 8;
-                addr += c->addrs[addr_count * 2];
-                ++addr_count;
-            }
-            else {
-                addr = ++(prev_addr);
-            }
-            prev_addr = addr;
-            if (rw && ((addr & 0xF000) != 0xC000)) {
-                // ignoring all read events not softswitches
-                continue;
-            }
-            SDHREvent e(rw, addr, c->data[j]);
-            events.push(e);
+    while (p < e) {
+	uint32_t* event = (uint32_t*)p;
+	p += 4;
+	uint8_t ctrl_bits = (*event >> 24) & 0xff;
+        uint16_t addr = (*event >> 8) & 0xffff;
+        uint8_t data = *event & 0xff;
+        bool m2sel = (ctrl_bits & 0x02) == 0x02;
+	bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
+        if (iigs_mode && m2sel) {
+	    // ignore updates from iigs_mode firmware with m2sel high
+            continue;
         }
-        p += chunk_len;
+        bool rw = (ctrl_bits & 0x01) == 0x01;
+        if (rw && ((addr & 0xF000) != 0xC000)) {
+            // ignoring all read events not softswitches
+            continue;
+        }
+        SDHREvent e(rw, addr, data);
+        events.push(e);
     }
 }
 

@@ -43,16 +43,10 @@ struct mmsghdr {
 
 #pragma pack(push, 1)
 struct SDHRPacketHeader {
-	uint8_t seqno[4];
-	uint8_t cmdtype;
+	uint32_t seqno;
+	uint32_t cmdtype;
 };
 
-struct SDHRBusChunk {
-	uint8_t rwflags;
-	uint8_t seqflags;
-	uint8_t data[8];
-	uint8_t addrs[16];
-};
 #pragma pack(pop)
 
 struct SDHREvent {
