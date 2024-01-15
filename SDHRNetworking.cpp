@@ -73,6 +73,12 @@ int process_events_thread(bool* shouldTerminateProcessing)
 	while (!(*shouldTerminateProcessing)) {
 		auto e = events.pop();	// The thread will wait until there's an event to pop
 		// std::cout << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
+
+        /*
+         *********************************
+         HANDLE SIMPLE MEMORY WRITE EVENTS
+         *********************************
+        */
 		if ((e.addr >= _SDHR_MEMORY_SHADOW_BEGIN) && (e.addr < _SDHR_MEMORY_SHADOW_END)) {
 			if (a2VideoMgr->IsSoftSwitch(A2SS_RAMWRT))
 				sdhrMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
@@ -91,6 +97,11 @@ int process_events_thread(bool* shouldTerminateProcessing)
 			a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
 			continue;
 		}
+        /*
+         *********************************
+         HANDLE SOFT SWITCHES EVENTS
+         *********************************
+        */
 		if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
 			// Send soft switches to the A2VideoManager
 			if (e.addr >> 8 == 0xc0)
@@ -98,6 +109,11 @@ int process_events_thread(bool* shouldTerminateProcessing)
 			// ignore non-control
 			continue;
 		}
+        /*
+         *********************************
+         HANDLE SDHR (0xC0A0/1) EVENTS
+         *********************************
+        */
 		//std::cerr << "cmd " << e.addr << " " << (uint32_t) e.data << std::endl;
 		SDHRCtrl_e _ctrl;
 		switch (e.addr & 0x0f)
