@@ -175,6 +175,9 @@ private:
 	void UpdateDLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
 	void UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
 	void UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
+	void UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* framebuffer);
+	
+	uint32_t ConvertIIgs2RGB(uint16_t color);
 	//////////////////////////////////////////////////////////////////////////
 	// Internal data
 	//////////////////////////////////////////////////////////////////////////

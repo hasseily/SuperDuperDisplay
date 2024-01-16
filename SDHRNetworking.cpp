@@ -79,7 +79,7 @@ int process_events_thread(bool* shouldTerminateProcessing)
          HANDLE SIMPLE MEMORY WRITE EVENTS
          *********************************
         */
-		if ((e.addr >= _SDHR_MEMORY_SHADOW_BEGIN) && (e.addr < _SDHR_MEMORY_SHADOW_END)) {
+		if ((e.addr >= _A2_MEMORY_SHADOW_BEGIN) && (e.addr < _A2_MEMORY_SHADOW_END)) {
 			if (a2VideoMgr->IsSoftSwitch(A2SS_RAMWRT))
 				sdhrMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
 			else {

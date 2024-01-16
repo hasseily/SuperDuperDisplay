@@ -114,7 +114,7 @@ void A2VideoManager::Initialize()
 	v_fbhgr1 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
 	v_fbhgr2 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
 	v_fbdhgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
-	v_fbshr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
+	v_fbshr = std::vector<uint32_t>(_A2VIDEO_SHR_WIDTH * _A2VIDEO_SHR_HEIGHT, 0);
 	
 	color_border = 0;
 	color_foreground = UINT32_MAX;
@@ -164,7 +164,7 @@ void A2VideoManager::Initialize()
 		uXY({ _A2_TEXT80_CHAR_WIDTH, _A2_TEXT80_CHAR_HEIGHT }),
 		uXY({ 80, 24 }),
 		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT1_START,
-		_A2VIDEO_TEXT_SIZE + _SDHR_MEMORY_SHADOW_END,
+		_A2VIDEO_TEXT_SIZE + _A2_MEMORY_SHADOW_END,
 		&shader_a2video_dtext
 	);
 	// LGR1
@@ -213,7 +213,7 @@ void A2VideoManager::Initialize()
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
 		uXY({ 1, 1 }),
 		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
-		(uint8_t*)(&v_fbhgr2[1]),
+		(uint8_t*)(&v_fbhgr2[0]),
 		v_fbhgr2.size() * sizeof(v_fbhgr2[0]),
 		nullptr		// do not render in the window. Rendering is done here
 	);
@@ -223,11 +223,21 @@ void A2VideoManager::Initialize()
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
 		uXY({ 1, 1 }),
 		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
-		(uint8_t*)(&v_fbdhgr[1]),
+		(uint8_t*)(&v_fbdhgr[0]),
 		v_fbdhgr.size() * sizeof(v_fbdhgr[0]),
 		nullptr		// do not render in the window. Rendering is done here
 	);
-
+	// SHR
+	windows[A2VIDEO_SHR].Define(
+		A2VIDEO_SHR,
+		uXY({ (uint32_t)(_A2VIDEO_SHR_WIDTH), (uint32_t)(_A2VIDEO_SHR_HEIGHT) }),
+		uXY({ 1, 1 }),
+		uXY({ _A2VIDEO_SHR_WIDTH, _A2VIDEO_SHR_HEIGHT }),
+		(uint8_t*)(&v_fbshr[0]),
+		v_fbshr.size() * sizeof(v_fbshr[0]),
+		nullptr		// do not render in the window. Rendering is done here
+	);
+	
 	// Activate TEXT1 by default
 	SelectVideoModes();
 	// tell the next Render() call to run initialization routines
@@ -426,8 +436,10 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool
 		if (val & 0x80)	// bit 7
 		{
 			// SHR video mode. Bit 6 is considered on
+			a2SoftSwitches |= A2SS_SHR;
 		} else {
 			// Classic Apple 2 video modes
+			a2SoftSwitches &= ~A2SS_SHR;
 		}
         break;
 	default:
@@ -442,6 +454,15 @@ void A2VideoManager::SelectVideoModes()
 		_w.SetEnabled(false);
         _w.bNeedsGPUDataUpdate = true;
 	}
+	
+	// SHR overrides all other modes
+	if (IsSoftSwitch(A2SS_SHR))
+	{
+		this->windows[A2VIDEO_SHR].SetEnabled(true);
+		return;
+	}
+	
+	// Other Apple 2 modes, starting with graphics
 	if (!IsSoftSwitch(A2SS_TEXT))
 	{
 		if (IsSoftSwitch(A2SS_80COL))	// double resolution
@@ -579,6 +600,15 @@ void A2VideoManager::Render()
 		}
 		this->RenderSubMixed(&v_fbdhgr);
 	}
+	if (this->windows[A2VIDEO_SHR].IsEnabled())
+	{
+		// Update one line at a time
+		for (uint8_t i = 0; i < _A2VIDEO_SHR_HEIGHT; i++)
+		{
+			this->UpdateSHRLine(i, &v_fbdhgr);
+		}
+		this->RenderSubMixed(&v_fbdhgr);
+	}
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
@@ -588,6 +618,15 @@ void A2VideoManager::Render()
 
 void A2VideoManager::RenderSubMixed(std::vector<uint32_t>* framebuffer)
 {
+	// SHR overrides all other modes, no MIXED mode either
+	if (IsSoftSwitch(A2SS_SHR))
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
+			_A2VIDEO_SHR_WIDTH, _A2VIDEO_SHR_HEIGHT,
+			0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&framebuffer->at(0)));
+		return;
+	}
+	
 	if (IsSoftSwitch(A2SS_MIXED))
 		glTexSubImage2D(GL_TEXTURE_2D, 0,
 			0, 0, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_MIXED_HEIGHT,
@@ -803,21 +842,21 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 	// Everything is double the resolution
 	x *= 2;
 	y *= 2;
-
+	
 	if (IsSoftSwitch(A2SS_PAGE2))
-		addr += 0x2000;
+		addr += _A2VIDEO_HGR_SIZE;
 	uint8_t* pMain = SDHRManager::GetInstance()->GetApple2MemPtr() + addr;
 	uint8_t* pAux = SDHRManager::GetInstance()->GetApple2MemAuxPtr() + addr;
-
+	
 	// We need all 28 bits because one 4-bits pixel overlaps two 14-bits cells
 	uint8_t byteval1 = *pAux;
 	uint8_t byteval2 = *pMain;
 	uint8_t byteval3 = *(pAux + 1);
 	uint8_t byteval4 = *(pMain + 1);
-
+	
 	// all 28 bits chained
 	uint32_t dwordval = (byteval1 & 0x7F) | ((byteval2 & 0x7F) << 7) | ((byteval3 & 0x7F) << 14) | ((byteval4 & 0x7F) << 21);
-
+	
 	// Extraction of 7 color pixels and 7x4 bits
 	int bits[7];
 	uint32_t colors[7];
@@ -830,12 +869,12 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 		colors[i] = *reinterpret_cast<const uint32_t*>(&gPaletteRGB[12 + color]);
 		dwordval_tmp >>= 4;
 	}
-
+	
 	// black and white colors
 	uint32_t bw[2];
 	bw[0] = gPaletteRGB[0];
 	bw[1] = gPaletteRGB[1];
-
+	
 	// destination offset in the pixel framebuffer
 	// We process a complete byte very time, so the offset for even/odd is 7 pixels * 2
 	uint32_t dst = (y * _A2VIDEO_MIN_WIDTH) + x + (xoffset * 14);
@@ -843,7 +882,7 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 	
 	if (xoffset == 0)	// First cell
 	{
-		if (IsSoftSwitch(A2SS_DHGRMONO))	// It Black and White
+		if (IsSoftSwitch(A2SS_DHGRMONO))	// Is Black and White
 		{
 			for (int i = 0; i < 7; i++)
 			{
@@ -860,10 +899,10 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 			*(pDst++) = colors[1];
 			*(pDst++) = colors[1];
 			*(pDst++) = colors[1];
-
+			
 			// Remaining of color cell 1
 			*(pDst++) = colors[1];
-
+			
 			// Color cell 2
 			*(pDst++) = colors[2];
 			*(pDst++) = colors[2];
@@ -876,7 +915,7 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 	}
 	else  // Second cell
 	{
-		if (IsSoftSwitch(A2SS_DHGRMONO))	// It Black and White
+		if (IsSoftSwitch(A2SS_DHGRMONO))	// Is Black and White
 		{
 			*(pDst++) = bw[dwordval & 1];
 			dwordval >>= 1;
@@ -905,7 +944,7 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 			*(pDst++) = colors[6];
 		}
 	}
-
+	
 	// duplicate on the next row (it may be overridden by the scanlines)
 	if (!bShowScanLines)
 	{
@@ -915,3 +954,95 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 		}
 	}
 }
+	
+void A2VideoManager::UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* framebuffer)
+{
+	// SHR is all in AUX (E1) Bank
+	uint8_t* pLine = SDHRManager::GetInstance()->GetApple2MemAuxPtr() + _A2VIDEO_SHR_START + line_number * _A2VIDEO_SHR_BYTES_PER_LINE;
+	uint32_t* pVideoAddress = &framebuffer->at(line_number * _A2VIDEO_SHR_BYTES_PER_LINE);
+	uint32_t shrByte;
+
+	const uint32_t k_shr_colors_per_palette = 16;
+	const uint32_t k_shr_color_size = 2;
+	
+	// Grab Scanline Control Byte information
+	bool _is640Mode;
+	bool _isColorFillMode;
+	uint8_t* _pscb = SDHRManager::GetInstance()->GetApple2MemAuxPtr() + _A2VIDEO_SHR_SCB_START;
+	uint8_t _scb = *(_pscb + line_number);	// the scan control byte value
+	_is640Mode = _scb & 0x80;
+	_isColorFillMode = _scb & 0x20;
+	// A palette is a 16-entry array of 4-bit-per-channel RGB colors (last 4 bits are reserved)
+	// So each palette has 16 colors from any of 4096 colors
+	uint16_t* palette = (uint16_t*)(SDHRManager::GetInstance()->GetApple2MemAuxPtr() +
+						_A2VIDEO_SHR_PALETTE_START +
+						((_scb & 0xf) * k_shr_colors_per_palette * k_shr_color_size)
+						);
+	// Now that we have the scanline control byte data, iterate through each pixel
+	for (uint8_t i = 0; i < _A2VIDEO_SHR_BYTES_PER_LINE; i++)
+	{
+		shrByte = *reinterpret_cast<uint32_t*>(pLine + i);
+		if (!_is640Mode) // 320 mode, 2 pixels per byte. Can use colorfill.
+		{
+			uint8_t pixel1 = (shrByte >> 4) & 0xf;
+			uint32_t color1 = this->ConvertIIgs2RGB(palette[pixel1]);
+			if (_isColorFillMode && pixel1 == 0 && (i > 0))
+				color1 = *(pVideoAddress - 1);
+			*pVideoAddress++ = color1;
+			*pVideoAddress++ = color1;
+
+			uint8_t pixel2 = shrByte & 0xf;
+			uint32_t color2 = this->ConvertIIgs2RGB(palette[pixel2]);
+			if (_isColorFillMode && pixel2 == 0)
+				color2 = color1;
+			*pVideoAddress++ = color2;
+			*pVideoAddress++ = color2;
+		}
+		else // 640 mode, 4 pixels per byte. Cannot use colorfill.
+		{
+			uint8_t pixel1 = (shrByte >> 6) & 0x3;
+			uint32_t color1 = this->ConvertIIgs2RGB(palette[0x8 + pixel1]);
+			*pVideoAddress++ = color1;
+
+			uint8_t pixel2 = (shrByte >> 4) & 0x3;
+			uint32_t color2 = this->ConvertIIgs2RGB(palette[0xC + pixel2]);
+			*pVideoAddress++ = color2;
+
+			uint8_t pixel3 = (shrByte >> 2) & 0x3;
+			uint32_t color3 = this->ConvertIIgs2RGB(palette[0x0 + pixel3]);
+			*pVideoAddress++ = color3;
+
+			uint8_t pixel4 = shrByte & 0x3;
+			uint32_t color4 = this->ConvertIIgs2RGB(palette[0x4 + pixel4]);
+			*pVideoAddress++ = color4;
+		}
+	}
+}
+
+const uint16_t BLUE_MASK = 0x000F;        // 0000 0000 0000 1111
+const uint16_t GREEN_MASK = 0x00F0;       // 0000 0000 1111 0000
+const uint16_t RED_MASK = 0x0F00;         // 0000 1111 0000 0000
+// the 4 high bits are reserved
+
+const uint16_t BLUE_SHIFT = 0;
+const uint16_t GREEN_SHIFT = 4;
+const uint16_t RED_SHIFT = 8;
+
+uint32_t A2VideoManager::ConvertIIgs2RGB(uint16_t color)
+{
+	uint8_t red = (color & RED_MASK) >> RED_SHIFT;
+	uint8_t green = (color & GREEN_MASK) >> GREEN_SHIFT;
+	uint8_t blue = (color & BLUE_MASK) >> BLUE_SHIFT;
+	uint8_t alpha = 0xFF; // Fully opaque
+
+	// Scale up from 4 bits to 8 bits
+	red *= 16;
+	green *= 16;
+	blue *= 16;
+
+	// Combine into a 32-bit value (BGRA format)
+	uint32_t rgba = (blue << 24) | (green << 16) | (red << 8) | alpha;
+
+	return rgba;
+}
+

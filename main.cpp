@@ -421,7 +421,7 @@ int main(int argc, char* argv[])
         if (show_mem_apple2_window)
         {
             static MemoryEditor mem_edit_a2e;
-            mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", sdhrManager->GetApple2MemPtr(), 2*_SDHR_MEMORY_SHADOW_END);
+            mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", sdhrManager->GetApple2MemPtr(), 2*_A2_MEMORY_SHADOW_END);
         }
 
 		// Show the upload data region memory
