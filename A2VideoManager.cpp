@@ -259,6 +259,15 @@ void A2VideoManager::ResetComputer()
     bIsRebooting = false;
 }
 
+void A2VideoManager::SetSoftSwitch(A2SoftSwitch_e ss, bool state)
+{
+	if (state)
+		a2SoftSwitches |= ss;
+	else
+		a2SoftSwitches &= ~ss;
+	A2VideoManager::GetInstance()->ToggleA2Video(bA2VideoEnabled);
+}
+
 void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 {
 	// Note: We could do delta updates here for the video modes
@@ -285,10 +294,10 @@ void A2VideoManager::ToggleA2Video(bool value)
 	bA2VideoEnabled = value;
 	if (bA2VideoEnabled)
 	{
+		SelectVideoModes();
 		auto scrSz = ScreenSize();
 		oglHelper->request_framebuffer_resize(scrSz.x, scrSz.y);
 		bShouldInitializeRender = true;
-		SelectVideoModes();
 	}
 }
 
@@ -445,7 +454,7 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool
 	default:
 		break;
 	}
-	SelectVideoModes();
+	ToggleA2Video(bA2VideoEnabled);	// force video refresh
 }
 
 void A2VideoManager::SelectVideoModes()
@@ -502,6 +511,21 @@ void A2VideoManager::SelectVideoModes()
 	return;
 }
 
+uXY A2VideoManager::ScreenSize()
+{
+	uXY maxSize = uXY({0, 0});
+	uXY s = maxSize;
+	for (auto& _w : this->windows) {
+		if (_w.IsEnabled())
+		{
+			s = _w.Get_screen_count();
+			maxSize.x = (s.x > maxSize.x ? s.x : maxSize.x);
+			maxSize.y = (s.y > maxSize.y ? s.y : maxSize.y);
+		}
+	}
+	return maxSize;
+}
+
 void A2VideoManager::Render()
 {
 	if (!bA2VideoEnabled)
@@ -530,9 +554,12 @@ void A2VideoManager::Render()
 		// image asset 1: The alternate font 80COL
 		glActiveTexture(_SDHR_START_TEXTURES + 3);
 		image_assets[3].AssignByFilename(this, "textures/Apple2eFont7x16 - Alternate.png");
-		// image asset 4: The Scanline texture
+		// image asset 4: The Scanline texture for original Apple 2 modes
 		glActiveTexture(_SDHR_START_TEXTURES + 4);
-		image_assets[4].AssignByFilename(this, "textures/Texture_Scanlines.png");
+		image_assets[4].AssignByFilename(this, "textures/Texture_Scanlines_384.png");
+		// image asset 4: The Scanline texture for SHR mode
+		glActiveTexture(_SDHR_START_TEXTURES + 5);
+		image_assets[5].AssignByFilename(this, "textures/Texture_Scanlines_400.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL AssignByFilename error: " 
 				<< 0 << " - " << glerr << std::endl;
@@ -603,7 +630,8 @@ void A2VideoManager::Render()
 	if (this->windows[A2VIDEO_SHR].IsEnabled())
 	{
 		// Update one line at a time
-		for (uint8_t i = 0; i < _A2VIDEO_SHR_HEIGHT; i++)
+		// We doubled the SHR pixel height so only send 1 of 2 lines
+		for (uint8_t i = 0; i < _A2VIDEO_SHR_HEIGHT / 2; i++)
 		{
 			this->UpdateSHRLine(i, &v_fbdhgr);
 		}
@@ -959,7 +987,7 @@ void A2VideoManager::UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* f
 {
 	// SHR is all in AUX (E1) Bank
 	uint8_t* pLine = SDHRManager::GetInstance()->GetApple2MemAuxPtr() + _A2VIDEO_SHR_START + line_number * _A2VIDEO_SHR_BYTES_PER_LINE;
-	uint32_t* pVideoAddress = &framebuffer->at(line_number * _A2VIDEO_SHR_BYTES_PER_LINE);
+	uint32_t* pVideoAddress = &framebuffer->at(line_number * _A2VIDEO_SHR_WIDTH * 2);
 	uint32_t shrByte;
 
 	const uint32_t k_shr_colors_per_palette = 16;
@@ -1016,6 +1044,15 @@ void A2VideoManager::UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* f
 			uint32_t color4 = this->ConvertIIgs2RGB(palette[0x4 + pixel4]);
 			*pVideoAddress++ = color4;
 		}
+		
+		// duplicate on the next row (it may be overridden by the scanlines)
+		if (!bShowScanLines)
+		{
+			for (size_t i = 4; i >0; i--)
+			{
+				*(pVideoAddress - i + _A2VIDEO_SHR_WIDTH) = *(pVideoAddress - i);
+			}
+		}
 	}
 }
 
@@ -1040,8 +1077,8 @@ uint32_t A2VideoManager::ConvertIIgs2RGB(uint16_t color)
 	green *= 16;
 	blue *= 16;
 
-	// Combine into a 32-bit value (BGRA format)
-	uint32_t rgba = (blue << 24) | (green << 16) | (red << 8) | alpha;
+	// Combine into a 32-bit value (RGBA format)
+	uint32_t rgba = (alpha << 24) | (blue << 16) | (green << 8) | red;
 
 	return rgba;
 }

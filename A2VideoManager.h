@@ -107,13 +107,13 @@ public:
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
 
-	ImageAsset image_assets[5];
+	ImageAsset image_assets[6];
 	A2Window windows[A2VIDEO_TOTAL_COUNT];
 
 	bool bShowScanLines = true;
 
 	// Margins when rendering in a window (pixels)
-	int windowMargins = 30;
+	int windowMargins = 10;
 
 	uint32_t color_border = 0;
 	uint32_t color_foreground = UINT32_MAX;
@@ -127,7 +127,7 @@ public:
 	void NotifyA2MemoryDidChange(uint16_t addr);	// Apple 2's memory changed at addr
 	void ToggleA2Video(bool value);
 	void SelectVideoModes();			// Based on soft switches, decided on video modes
-	uXY ScreenSize() { return windows[activeVideoMode].Get_screen_count(); }
+	uXY ScreenSize();
 	void ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool is_iigs);
 
 	void Render();	// render whatever mode is active (enabled windows)
@@ -141,15 +141,8 @@ public:
 	}
 	~A2VideoManager();
 
-	inline static bool IsSoftSwitch(A2SoftSwitch_e ss) { return (a2SoftSwitches & ss); };
-    static void SetSoftSwitch(A2SoftSwitch_e ss, bool state)
-    {
-        if (state)
-            a2SoftSwitches |= ss;
-        else
-            a2SoftSwitches &= ~ss;
-        A2VideoManager::GetInstance()->SelectVideoModes();
-    }
+	inline bool IsSoftSwitch(A2SoftSwitch_e ss) { return (a2SoftSwitches & ss); };
+	void SetSoftSwitch(A2SoftSwitch_e ss, bool state);
     
 	void ResetComputer();
 private:
@@ -194,8 +187,6 @@ private:
 	std::vector<uint32_t>v_fbhgr2;
 	std::vector<uint32_t>v_fbdhgr;
 	std::vector<uint32_t>v_fbshr;
-
-	A2VideoMode_e activeVideoMode = A2VIDEO_TEXT1;
 };
 #endif // A2VIDEOMANAGER_H
 

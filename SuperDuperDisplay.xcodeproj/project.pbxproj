@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXFileReference section */
+		BB1667872B574A66000192A5 /* MemoryLoader.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MemoryLoader.cpp; sourceTree = "<group>"; };
+		BB1667882B574A66000192A5 /* MemoryLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MemoryLoader.h; sourceTree = "<group>"; };
+		BB1667892B5754FE000192A5 /* ImGuiFileDialog.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ImGuiFileDialog.cpp; sourceTree = "<group>"; };
+		BB16678A2B5754FE000192A5 /* ImGuiFileDialog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImGuiFileDialog.h; sourceTree = "<group>"; };
 		BB19E0E82B53484F00341864 /* A2Window.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = A2Window.cpp; sourceTree = "<group>"; };
 		BB19E0E92B53484F00341864 /* ConcurrentQueue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ConcurrentQueue.h; sourceTree = "<group>"; };
 		BB19E0EA2B53484F00341864 /* SDHRNetworking.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SDHRNetworking.h; sourceTree = "<group>"; };
@@ -40,9 +44,22 @@
 		BB19E1062B53484F00341864 /* camera.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = camera.h; sourceTree = "<group>"; };
 		BB19E1072B53484F00341864 /* glm */ = {isa = PBXFileReference; lastKnownFileType = folder; path = glm; sourceTree = "<group>"; };
 		BB19E1082B53484F00341864 /* shader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = shader.h; sourceTree = "<group>"; };
+		BB7246A22B5755E60061C769 /* ImGuiFileDialogConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImGuiFileDialogConfig.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		BB1667862B574A16000192A5 /* extras */ = {
+			isa = PBXGroup;
+			children = (
+				BB1667872B574A66000192A5 /* MemoryLoader.cpp */,
+				BB1667882B574A66000192A5 /* MemoryLoader.h */,
+				BB1667892B5754FE000192A5 /* ImGuiFileDialog.cpp */,
+				BB16678A2B5754FE000192A5 /* ImGuiFileDialog.h */,
+				BB7246A22B5755E60061C769 /* ImGuiFileDialogConfig.h */,
+			);
+			path = extras;
+			sourceTree = "<group>";
+		};
 		BB19E0DD2B52B84600341864 = {
 			isa = PBXGroup;
 			children = (
@@ -53,6 +70,7 @@
 				BB19E1062B53484F00341864 /* camera.h */,
 				BB19E0F32B53484F00341864 /* common.h */,
 				BB19E0E92B53484F00341864 /* ConcurrentQueue.h */,
+				BB1667862B574A16000192A5 /* extras */,
 				BB19E0FD2B53484F00341864 /* glad */,
 				BB19E1072B53484F00341864 /* glm */,
 				BB19E0FE2B53484F00341864 /* GRAddr2XY.h */,

@@ -122,9 +122,9 @@ void A2Window::Render()
 
 	// Assign the textures
 	int _80colOffset = 0;
-	if (A2VideoManager::IsSoftSwitch(A2SS_80COL))
+	if (A2VideoManager::GetInstance()->IsSoftSwitch(A2SS_80COL))
 		_80colOffset = 2;
-	if (A2VideoManager::IsSoftSwitch(A2SS_ALTCHARSET))
+	if (A2VideoManager::GetInstance()->IsSoftSwitch(A2SS_ALTCHARSET))
 	{
 		shaderProgram->setFloat("hasFlashing", 0.f);
 		shaderProgram->setInt("a2FontTexture", _SDHR_START_TEXTURES + _80colOffset + 1 - GL_TEXTURE0);

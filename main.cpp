@@ -26,6 +26,7 @@
 #include "SDHRManager.h"
 #include "A2VideoManager.h"
 #include "OpenGLHelper.h"
+#include "extras/MemoryLoader.h"
 
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
 #include <unistd.h>
@@ -195,6 +196,8 @@ int main(int argc, char* argv[])
 	bool show_texture_window = false;
     bool did_press_quit = false;
 	int _slotnum = 0;
+	bool mem_load_aux_bank = true;
+	int mem_load_position = _A2VIDEO_SHR_START;
 
 	auto sdhrManager = SDHRManager::GetInstance();
     auto a2VideoManager = A2VideoManager::GetInstance();
@@ -315,7 +318,6 @@ int main(int argc, char* argv[])
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
-		
 		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
@@ -331,6 +333,7 @@ int main(int argc, char* argv[])
                 ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 				ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
 				ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
+				ImGui::Text("Screen Size:%03d x %03d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);
 				ImGui::Separator();
 				ImGui::Checkbox("Untextured Geometry", &glhelper->bDebugNoTextures);             // Show textures toggle
 				ImGui::Checkbox("Perspective Projection", &glhelper->bUsePerspective);       // Change projection type
@@ -341,6 +344,12 @@ int main(int argc, char* argv[])
 				ImGui::Checkbox("Metrics Window", &show_metrics_window);
 				ImGui::Checkbox("Apple //e Memory Window", &show_mem_apple2_window);
 				ImGui::Checkbox("Upload Region Memory Window", &show_mem_upload_window);
+				ImGui::Text("Load Memory Start: ");
+				ImGui::SameLine();
+				ImGui::InputInt("##mem_load", &mem_load_position, 1, 8, ImGuiInputTextFlags_CharsHexadecimal);
+				ImGui::SameLine();
+				ImGui::Checkbox("Aux Bank", &mem_load_aux_bank);
+				MemoryLoad(mem_load_position, mem_load_aux_bank);
                 ImGui::Separator();
                 if (ImGui::Button("Reset")) {
                     a2VideoManager->ResetComputer();
@@ -349,65 +358,65 @@ int main(int argc, char* argv[])
 				if (did_press_quit)
 					done = true;
                 ImGui::Separator();
-                bool ssValue0 = A2VideoManager::IsSoftSwitch(A2SS_80STORE);
+                bool ssValue0 = a2VideoManager->IsSoftSwitch(A2SS_80STORE);
                 if (ImGui::Checkbox("A2SS_80STORE", &ssValue0)) {
-                    A2VideoManager::SetSoftSwitch(A2SS_80STORE, ssValue0);
+                    a2VideoManager->SetSoftSwitch(A2SS_80STORE, ssValue0);
                 }
-                bool ssValue1 = A2VideoManager::IsSoftSwitch(A2SS_RAMRD);
+                bool ssValue1 = a2VideoManager->IsSoftSwitch(A2SS_RAMRD);
                 if (ImGui::Checkbox("A2SS_RAMRD", &ssValue1)) {
-                    A2VideoManager::SetSoftSwitch(A2SS_RAMRD, ssValue1);
+                    a2VideoManager->SetSoftSwitch(A2SS_RAMRD, ssValue1);
                 }
-                bool ssValue2 = A2VideoManager::IsSoftSwitch(A2SS_RAMWRT);
+                bool ssValue2 = a2VideoManager->IsSoftSwitch(A2SS_RAMWRT);
                 if (ImGui::Checkbox("A2SS_RAMWRT", &ssValue2)) {
-                    A2VideoManager::SetSoftSwitch(A2SS_RAMWRT, ssValue2);
+                    a2VideoManager->SetSoftSwitch(A2SS_RAMWRT, ssValue2);
                 }
-                bool ssValue3 = A2VideoManager::IsSoftSwitch(A2SS_80COL);
+                bool ssValue3 = a2VideoManager->IsSoftSwitch(A2SS_80COL);
                 if (ImGui::Checkbox("A2SS_80COL", &ssValue3)) {
-                    A2VideoManager::SetSoftSwitch(A2SS_80COL, ssValue3);
+                    a2VideoManager->SetSoftSwitch(A2SS_80COL, ssValue3);
                 }
-                bool ssValue4 = A2VideoManager::IsSoftSwitch(A2SS_ALTCHARSET);
+                bool ssValue4 = a2VideoManager->IsSoftSwitch(A2SS_ALTCHARSET);
                 if (ImGui::Checkbox("A2SS_ALTCHARSET", &ssValue4)) {
-                    A2VideoManager::SetSoftSwitch(A2SS_ALTCHARSET, ssValue4);
+                    a2VideoManager->SetSoftSwitch(A2SS_ALTCHARSET, ssValue4);
                 }
-                bool ssValue5 = A2VideoManager::IsSoftSwitch(A2SS_INTCXROM);
+                bool ssValue5 = a2VideoManager->IsSoftSwitch(A2SS_INTCXROM);
                 if (ImGui::Checkbox("A2SS_INTCXROM", &ssValue5)) {
-                    A2VideoManager::SetSoftSwitch(A2SS_INTCXROM, ssValue5);
+                    a2VideoManager->SetSoftSwitch(A2SS_INTCXROM, ssValue5);
                 }
-                bool ssValue6 = A2VideoManager::IsSoftSwitch(A2SS_SLOTC3ROM);
+                bool ssValue6 = a2VideoManager->IsSoftSwitch(A2SS_SLOTC3ROM);
                 if (ImGui::Checkbox("A2SS_SLOTC3ROM", &ssValue6)) {
-                    A2VideoManager::SetSoftSwitch(A2SS_SLOTC3ROM, ssValue6);
+                    a2VideoManager->SetSoftSwitch(A2SS_SLOTC3ROM, ssValue6);
                 }
-                bool ssValue7 = A2VideoManager::IsSoftSwitch(A2SS_TEXT);
+                bool ssValue7 = a2VideoManager->IsSoftSwitch(A2SS_TEXT);
                 if (ImGui::Checkbox("A2SS_TEXT", &ssValue7)) {
-                    A2VideoManager::SetSoftSwitch(A2SS_TEXT, ssValue7);
+                    a2VideoManager->SetSoftSwitch(A2SS_TEXT, ssValue7);
                 }
-                bool ssValue8 = A2VideoManager::IsSoftSwitch(A2SS_MIXED);
+                bool ssValue8 = a2VideoManager->IsSoftSwitch(A2SS_MIXED);
                 if (ImGui::Checkbox("A2SS_MIXED", &ssValue8)) {
-                    A2VideoManager::SetSoftSwitch(A2SS_MIXED, ssValue8);
+                    a2VideoManager->SetSoftSwitch(A2SS_MIXED, ssValue8);
                 }
-                bool ssValue9 = A2VideoManager::IsSoftSwitch(A2SS_PAGE2);
+                bool ssValue9 = a2VideoManager->IsSoftSwitch(A2SS_PAGE2);
                 if (ImGui::Checkbox("A2SS_PAGE2", &ssValue9)) {
-                    A2VideoManager::SetSoftSwitch(A2SS_PAGE2, ssValue9);
+                    a2VideoManager->SetSoftSwitch(A2SS_PAGE2, ssValue9);
                 }
-                bool ssValue10 = A2VideoManager::IsSoftSwitch(A2SS_HIRES);
+                bool ssValue10 = a2VideoManager->IsSoftSwitch(A2SS_HIRES);
                 if (ImGui::Checkbox("A2SS_HIRES", &ssValue10)) {
-                    A2VideoManager::SetSoftSwitch(A2SS_HIRES, ssValue10);
+                    a2VideoManager->SetSoftSwitch(A2SS_HIRES, ssValue10);
                 }
-                bool ssValue11 = A2VideoManager::IsSoftSwitch(A2SS_DHGR);
+                bool ssValue11 = a2VideoManager->IsSoftSwitch(A2SS_DHGR);
                 if (ImGui::Checkbox("A2SS_DHGR", &ssValue11)) {
-                    A2VideoManager::SetSoftSwitch(A2SS_DHGR, ssValue11);
+                    a2VideoManager->SetSoftSwitch(A2SS_DHGR, ssValue11);
                 }
-				bool ssValue12 = A2VideoManager::IsSoftSwitch(A2SS_DHGRMONO);
+				bool ssValue12 = a2VideoManager->IsSoftSwitch(A2SS_DHGRMONO);
 				if (ImGui::Checkbox("A2SS_DHGRMONO", &ssValue12)) {
-					A2VideoManager::SetSoftSwitch(A2SS_DHGRMONO, ssValue12);
+					a2VideoManager->SetSoftSwitch(A2SS_DHGRMONO, ssValue12);
 				}
-				bool ssValue13 = A2VideoManager::IsSoftSwitch(A2SS_SHR);
+				bool ssValue13 = a2VideoManager->IsSoftSwitch(A2SS_SHR);
 				if (ImGui::Checkbox("A2SS_SHR", &ssValue13)) {
-					A2VideoManager::SetSoftSwitch(A2SS_SHR, ssValue13);
+					a2VideoManager->SetSoftSwitch(A2SS_SHR, ssValue13);
 				}
-				bool ssValue14 = A2VideoManager::IsSoftSwitch(A2SS_GREYSCALE);
+				bool ssValue14 = a2VideoManager->IsSoftSwitch(A2SS_GREYSCALE);
 				if (ImGui::Checkbox("A2SS_GREYSCALE", &ssValue14)) {
-					A2VideoManager::SetSoftSwitch(A2SS_GREYSCALE, ssValue14);
+					a2VideoManager->SetSoftSwitch(A2SS_GREYSCALE, ssValue14);
 				}
             }
 			ImGui::End();
@@ -467,12 +476,12 @@ int main(int argc, char* argv[])
             int32_t _maxW = _w - (2 * margin.x);
             int32_t _maxH = _h - (2 * margin.y);
             // Force integer scaling to have totally proper scanlines
-            _maxW = _A2VIDEO_MIN_WIDTH * (_maxW / (_A2VIDEO_MIN_WIDTH));
-			_maxH = _A2VIDEO_MIN_HEIGHT * (_maxH / (_A2VIDEO_MIN_HEIGHT));
-            if (_maxW < _A2VIDEO_MIN_WIDTH)
-                _maxW = _A2VIDEO_MIN_WIDTH;
-            if (_maxH < _A2VIDEO_MIN_HEIGHT)
-                _maxH = _A2VIDEO_MIN_HEIGHT;
+            _maxW = _ss.x * (_maxW / (_ss.x));
+			_maxH = _ss.y * (_maxH / (_ss.y));
+            if (_maxW < _ss.x)
+                _maxW = _ss.x;
+            if (_maxH < _ss.y)
+                _maxH = _ss.y;
             float _r = (float)_ss.x / _ss.y;
             int _newW, _newH;
             if (_r < _rreq)    // requested a wider screen
@@ -500,8 +509,10 @@ int main(int argc, char* argv[])
 			);
             if (a2VideoManager->bShowScanLines)
             {
+				// Slot 4 for regular modes, 5 for SHR
+				int _slSlot = (_ss.y == 384 ? 4 : 5);
 				ImGui::GetBackgroundDrawList()->AddImage(
-					(void*)glhelper->get_texture_id_at_slot(4),
+					(void*)glhelper->get_texture_id_at_slot(_slSlot),
 					margin,
 					ImVec2(margin.x + _newW, margin.y + _newH),
 					ImVec2(0, 0),

@@ -23,6 +23,7 @@
 EXE = SuperDuperDisplay
 IMGUI_DIR = imgui
 SOURCES = main.cpp OpenGLHelper.cpp MosaicMesh.cpp SDHRNetworking.cpp SDHRManager.cpp SDHRWindow.cpp A2VideoManager.cpp A2Window.cpp
+SOURCES += extras/MemoryLoader.cpp extras/ImGuiFileDialog.cpp
 SOURCES += glad/glad.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl2.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
@@ -30,7 +31,7 @@ OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 LINUX_GL_LIBS = -lGL
 
-CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -Iglad
+CXXFLAGS = -std=c++17 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -Iglad
 CXXFLAGS += -Wall -Wformat -Wno-unused-function
 CONFIGFLAGS =
 LIBS =
@@ -85,6 +86,9 @@ endif
 ##---------------------------------------------------------------------
 
 %.o:glad/%.cpp
+	$(CXX) $(CXXFLAGS) $(CONFIGFLAGS) -c -o $@ $<
+
+%.o:extras/%.cpp
 	$(CXX) $(CXXFLAGS) $(CONFIGFLAGS) -c -o $@ $<
 
 %.o:%.cpp
