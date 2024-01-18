@@ -474,9 +474,9 @@ void A2VideoManager::SelectVideoModes()
 	// Other Apple 2 modes, starting with graphics
 	if (!IsSoftSwitch(A2SS_TEXT))
 	{
-		if (IsSoftSwitch(A2SS_80COL))	// double resolution
+		if (IsSoftSwitch(A2SS_80COL) && IsSoftSwitch(A2SS_DHGR))	// double resolution
 		{
-			if (IsSoftSwitch(A2SS_DHGR))
+			if (IsSoftSwitch(A2SS_HIRES))
 				this->windows[A2VIDEO_DHGR].SetEnabled(true);
 			else
 				this->windows[A2VIDEO_DLGR].SetEnabled(true);
