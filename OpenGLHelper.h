@@ -8,6 +8,15 @@
 #include "shader.h"
 #include "camera.h"
 
+/*
+	This class has helper methods to manage textures and the main framebuffers.
+	There are 2 framebuffers:
+		- 0: The framebuffer that the video managers write to
+		- 1: The postprocessing framebuffer that takes as input framebuffer 0
+
+	You should not need to deal with framebuffer 1. It is automatically managed
+	and all postprocessing is managed by the PostProcessor singleton
+*/
 class OpenGLHelper
 {
 public:
@@ -22,12 +31,12 @@ public:
 
 	// METHODS THAT CAN ONLY BE CALLED FROM THE MAIN THREAD
 	void load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID);
-	size_t get_output_texture_id() { return output_texture_id; };	// output texture id
+	size_t get_output_texture_id() { return output_texture_ids[1]; };	// output texture id of the final framebuffer
 	size_t get_texture_id_at_slot(uint8_t slot);	// returns the opengl-generated texture id for this tex slot
-	void create_framebuffer(uint32_t width, uint32_t height);	// also binds it
-	void bind_framebuffer();
+	void create_framebuffers(uint32_t width, uint32_t height);	// also binds it
+	void bind_framebuffer();	// Binds the correct framebuffer, depending on the postprocessing needs
 	void unbind_framebuffer();
-	void rescale_framebuffer(uint32_t width, uint32_t height);
+	void rescale_framebuffers(uint32_t width, uint32_t height);
 	void setup_render();
 	void cleanup_render();
 
@@ -72,10 +81,10 @@ private:
 
 	void (*callbackResolutionChange)(int w, int h);
 
-	GLuint output_texture_id;
+	GLuint output_texture_ids[2];
 //	GLuint VAO;	// for testing
 //	GLuint VBO;	// for testing
-	GLuint FBO = UINT_MAX;
+	GLuint FBO[2] = { UINT_MAX, UINT_MAX };
 
 	uint32_t fb_width = _SCREEN_DEFAULT_WIDTH;
 	uint32_t fb_height = _SCREEN_DEFAULT_HEIGHT;

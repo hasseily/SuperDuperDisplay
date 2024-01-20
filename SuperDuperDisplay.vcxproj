@@ -171,6 +171,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MosaicMesh.cpp" />
     <ClCompile Include="OpenGLHelper.cpp" />
+    <ClCompile Include="PostProcessor.cpp" />
     <ClCompile Include="SDHRManager.cpp" />
     <ClCompile Include="SDHRNetworking.cpp" />
     <ClCompile Include="SDHRWindow.cpp" />
@@ -197,6 +198,7 @@
     <ClInclude Include="MosaicMesh.h" />
     <ClInclude Include="my_imgui_config.h" />
     <ClInclude Include="OpenGLHelper.h" />
+    <ClInclude Include="PostProcessor.h" />
     <ClInclude Include="SDHRManager.h" />
     <ClInclude Include="SDHRNetworking.h" />
     <ClInclude Include="SDHRWindow.h" />
@@ -206,6 +208,7 @@
   <ItemGroup>
     <None Include="imgui\imgui\misc\debuggers\imgui.natstepfilter" />
     <None Include="imgui\imgui\misc\debuggers\imgui.natvis" />
+    <None Include="Makefile" />
     <None Include="packages.config" />
     <None Include="README.md" />
     <Media Include="shaders\sdhr_default_330.frag">
@@ -242,6 +245,7 @@
     </Media>
     <None Include="shaders\a2video_dtext_310es.frag" />
     <None Include="shaders\a2video_dtext_330.frag" />
+    <None Include="shaders\postprocess_crt-pi.glsl" />
     <None Include="shaders\sdhr_depixelize_310es.frag" />
     <None Include="shaders\sdhr_depixelize_310es.vert" />
     <None Include="shaders\sdhr_depixelize_330.frag" />
