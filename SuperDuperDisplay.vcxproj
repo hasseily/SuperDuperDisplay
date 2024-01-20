@@ -104,9 +104,9 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>imgui\imgui;imgui\imgui\backends;%SDL2_DIR%\include;$(VcpkgCurrentInstalledDir)include\SDL2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>imgui;imgui\backends;%SDL2_DIR%\include;$(VcpkgCurrentInstalledDir)include\SDL2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard_C>Default</LanguageStandard_C>
-      <LanguageStandard>Default</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -144,6 +144,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>imgui;imgui\backends;%SDL2_DIR%\include;$(VcpkgCurrentInstalledDir)include\SDL2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BufferSecurityCheck>false</BufferSecurityCheck>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -159,6 +160,7 @@
   <ItemGroup>
     <ClCompile Include="A2Window.cpp" />
     <ClCompile Include="glad\glad.cpp" />
+    <ClCompile Include="ImGuiFileDialog.cpp" />
     <ClCompile Include="imgui\backends\imgui_impl_opengl3.cpp" />
     <ClCompile Include="imgui\backends\imgui_impl_sdl2.cpp" />
     <ClCompile Include="imgui\imgui.cpp" />
@@ -183,6 +185,8 @@
     <ClInclude Include="glad\glad.h" />
     <ClInclude Include="glad\khrplatform.h" />
     <ClInclude Include="GRAddr2XY.h" />
+    <ClInclude Include="ImGuiFileDialog.h" />
+    <ClInclude Include="ImGuiFileDialogConfig.h" />
     <ClInclude Include="imgui\backends\imgui_impl_opengl3.h" />
     <ClInclude Include="imgui\backends\imgui_impl_opengl3_loader.h" />
     <ClInclude Include="imgui\backends\imgui_impl_sdl2.h" />
