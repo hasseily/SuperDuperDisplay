@@ -3,7 +3,7 @@
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
-#define IMGUI_USER_CONFIG "my_imgui_config.h"
+#define IMGUI_USER_CONFIG "../my_imgui_config.h"
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_opengl3.h"
