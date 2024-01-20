@@ -3,7 +3,7 @@
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
-#define IMGUI_USER_CONFIG "../my_imgui_config.h"
+#define IMGUI_USER_CONFIG "my_imgui_config.h"
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_opengl3.h"
@@ -186,12 +186,16 @@ int main(int argc, char* argv[])
     //IM_ASSERT(font != nullptr);
 
     // Our state
+	static MemoryEditor mem_edit_a2e;
+	static MemoryEditor mem_edit_upload;
+
+	mem_edit_a2e.Open = false;
+	mem_edit_upload.Open = false;
+
 	static bool bShouldTerminateNetworking = false;
 	static bool bShouldTerminateProcessing = false;
     bool show_demo_window = false;
     bool show_metrics_window = false;
-	bool show_mem_apple2_window = false;
-	bool show_mem_upload_window = false;
 	bool show_sdhrinfo_window = false;
 	bool show_texture_window = false;
     bool did_press_quit = false;
@@ -343,8 +347,8 @@ int main(int argc, char* argv[])
 //				ImGui::Checkbox("Demo Window", &show_demo_window);
 				ImGui::Checkbox("Textures Window", &show_texture_window);
 				ImGui::Checkbox("Metrics Window", &show_metrics_window);
-				ImGui::Checkbox("Apple //e Memory Window", &show_mem_apple2_window);
-				ImGui::Checkbox("Upload Region Memory Window", &show_mem_upload_window);
+				ImGui::Checkbox("Apple //e Memory Window", &mem_edit_a2e.Open);
+				ImGui::Checkbox("Upload Region Memory Window", &mem_edit_upload.Open);
 				ImGui::Text("Load Memory Start: ");
 				ImGui::SameLine();
 				ImGui::InputInt("##mem_load", &mem_load_position, 1, 1024, ImGuiInputTextFlags_CharsHexadecimal);
@@ -430,16 +434,14 @@ int main(int argc, char* argv[])
 			ImGui::ShowMetricsWindow(&show_metrics_window);
 
         // Show the Apple //e memory
-        if (show_mem_apple2_window)
+        if (mem_edit_a2e.Open)
         {
-            static MemoryEditor mem_edit_a2e;
             mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", sdhrManager->GetApple2MemPtr(), 2*_A2_MEMORY_SHADOW_END);
         }
 
 		// Show the upload data region memory
-		if (show_mem_upload_window)
+		if (mem_edit_upload.Open)
 		{
-			static MemoryEditor mem_edit_upload;
             mem_edit_upload.DrawWindow("Memory Editor: Upload memory", sdhrManager->GetUploadRegionPtr(), _SDHR_UPLOAD_REGION_SIZE);
 		}
         

@@ -73,6 +73,9 @@
     <ClCompile Include="glad\glad.cpp">
       <Filter>glad</Filter>
     </ClCompile>
+    <ClCompile Include="ImGuiFileDialog.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -143,6 +146,12 @@
     </ClInclude>
     <ClInclude Include="imgui\backends\imgui_impl_sdl2.h">
       <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGuiFileDialog.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGuiFileDialogConfig.h">
+      <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -22,8 +22,6 @@
 #include "shader.h"
 #include "glm/gtc/matrix_transform.hpp"
 
-using namespace std;
-
 // There will be 6 vertices, 2 triangles, 1 quad (rectangle) for the whole MosaicMesh
 // the z position will always be the window's id that the mesh is linked to
 // and the w position is 1.0 for the top left corner, 0.0 for the others
@@ -46,14 +44,14 @@ class MosaicMesh
 {
 public:
 	// mesh Data
-	vector<Vertex> vertices;		// Vertices with XY and UV	(2 vectors of floats)
+	std::vector<Vertex> vertices;		// Vertices with XY and UV	(2 vectors of floats)
 	uint32_t cols = 0;			// # of mosaic tiles horizontally
 	uint32_t rows = 0;			// # of mosaic tiles vertically
 	uint32_t width = 0;			// width and height of the mesh in pixels
 	uint32_t height = 0;
 
 	// A vector of uvec3 for each tile, specifying texture index + uv coords of each tile
-	vector<MosaicTile> mosaicTiles;
+	std::vector<MosaicTile> mosaicTiles;
 
 	float pixelSize = 1.f;					// For pixelization effect of pixelization shader
 	Shader* shaderProgram = NULL;		// Shader program for the mesh. Starts with a default shader

@@ -513,7 +513,7 @@ void A2VideoManager::SelectVideoModes()
 
 uXY A2VideoManager::ScreenSize()
 {
-	uXY maxSize = uXY({0, 0});
+	uXY maxSize = uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT});
 	uXY s = maxSize;
 	for (auto& _w : this->windows) {
 		if (_w.IsEnabled())
