@@ -44,6 +44,11 @@
 		BB19E1062B53484F00341864 /* camera.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = camera.h; sourceTree = "<group>"; };
 		BB19E1072B53484F00341864 /* glm */ = {isa = PBXFileReference; lastKnownFileType = folder; path = glm; sourceTree = "<group>"; };
 		BB19E1082B53484F00341864 /* shader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = shader.h; sourceTree = "<group>"; };
+		BB3738472B5C79F3001D1131 /* PostProcessor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PostProcessor.h; sourceTree = "<group>"; };
+		BB3738482B5C79F3001D1131 /* ImGuiFileDialog.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ImGuiFileDialog.cpp; sourceTree = "<group>"; };
+		BB3738492B5C79F3001D1131 /* ImGuiFileDialog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImGuiFileDialog.h; sourceTree = "<group>"; };
+		BB37384A2B5C79F3001D1131 /* ImGuiFileDialogConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImGuiFileDialogConfig.h; sourceTree = "<group>"; };
+		BB37384B2B5C79F3001D1131 /* PostProcessor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PostProcessor.cpp; sourceTree = "<group>"; };
 		BB7246A22B5755E60061C769 /* ImGuiFileDialogConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImGuiFileDialogConfig.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -77,6 +82,9 @@
 				BB19E0EF2B53484F00341864 /* imgui */,
 				BB19E0F12B53484F00341864 /* imgui_memory_editor.h */,
 				BB19E0F82B53484F00341864 /* imgui.ini */,
+				BB3738482B5C79F3001D1131 /* ImGuiFileDialog.cpp */,
+				BB3738492B5C79F3001D1131 /* ImGuiFileDialog.h */,
+				BB37384A2B5C79F3001D1131 /* ImGuiFileDialogConfig.h */,
 				BB19E0F52B53484F00341864 /* LICENSE */,
 				BB19E0F92B53484F00341864 /* main.cpp */,
 				BB19E0FB2B53484F00341864 /* Makefile */,
@@ -86,6 +94,8 @@
 				BB19E0FA2B53484F00341864 /* my_imgui_config.h */,
 				BB19E0EE2B53484F00341864 /* OpenGLHelper.cpp */,
 				BB19E0F62B53484F00341864 /* OpenGLHelper.h */,
+				BB37384B2B5C79F3001D1131 /* PostProcessor.cpp */,
+				BB3738472B5C79F3001D1131 /* PostProcessor.h */,
 				BB19E0EC2B53484F00341864 /* README.md */,
 				BB19E0FF2B53484F00341864 /* SDHRManager.cpp */,
 				BB19E0F02B53484F00341864 /* SDHRManager.h */,
