@@ -99,7 +99,6 @@ void OpenGLHelper::create_framebuffers(uint32_t width, uint32_t height)
 
 	glGenFramebuffers(2, FBO);
 	glGenTextures(2, output_texture_ids);
-
 	for (int i = 0; i < 2; ++i) {
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO[i]);
 		glBindTexture(GL_TEXTURE_2D, output_texture_ids[i]);
@@ -120,11 +119,15 @@ void OpenGLHelper::create_framebuffers(uint32_t width, uint32_t height)
 void OpenGLHelper::bind_framebuffer()
 {
 	GLuint fb = FBO[0];
+	if (fb == UINT_MAX)
+	{
+		create_framebuffers(_SCREEN_DEFAULT_WIDTH, _SCREEN_DEFAULT_HEIGHT);
+		fb = FBO[0];
+	}
 	if (PostProcessor::GetInstance()->enabled) {
 		fb = FBO[1];
 	}
-	if (fb == UINT_MAX)
-		create_framebuffers(_SCREEN_DEFAULT_WIDTH, _SCREEN_DEFAULT_HEIGHT);
+
 	glBindFramebuffer(GL_FRAMEBUFFER, fb);
 	GLenum glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
