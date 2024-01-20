@@ -912,7 +912,7 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 	{
 		if (IsSoftSwitch(A2SS_DHGRMONO))	// Is Black and White
 		{
-			for (int i = 0; i < 7; i++)
+			for (int i = 0; i < 14; i++)
 			{
 				*(pDst++) = bw[dwordval & 1];
 				dwordval >>= 1;
@@ -945,8 +945,12 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 	{
 		if (IsSoftSwitch(A2SS_DHGRMONO))	// Is Black and White
 		{
-			*(pDst++) = bw[dwordval & 1];
-			dwordval >>= 1;
+			dwordval >>= 14;
+			for (int i = 0; i < 14; i++)
+			{
+				*(pDst++) = bw[dwordval & 1];
+				dwordval >>= 1;
+			}
 		} else {
 			// Remaining of color cell 3
 			*(pDst++) = colors[3];

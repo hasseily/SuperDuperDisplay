@@ -197,7 +197,7 @@ int main(int argc, char* argv[])
     bool did_press_quit = false;
 	int _slotnum = 0;
 	bool mem_load_aux_bank = true;
-	int mem_load_position = _A2VIDEO_SHR_START;
+	int mem_load_position = 0;
 
 	auto sdhrManager = SDHRManager::GetInstance();
     auto a2VideoManager = A2VideoManager::GetInstance();
@@ -329,6 +329,7 @@ int main(int argc, char* argv[])
 			{
 				auto _c = glhelper->camera;
                 auto _pos = _c.Position;
+				ImGui::PushItemWidth(110);
                 ImGui::Text("Press F1 at any time to toggle this window");
                 ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 				ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
@@ -346,7 +347,8 @@ int main(int argc, char* argv[])
 				ImGui::Checkbox("Upload Region Memory Window", &show_mem_upload_window);
 				ImGui::Text("Load Memory Start: ");
 				ImGui::SameLine();
-				ImGui::InputInt("##mem_load", &mem_load_position, 1, 8, ImGuiInputTextFlags_CharsHexadecimal);
+				ImGui::InputInt("##mem_load", &mem_load_position, 1, 1024, ImGuiInputTextFlags_CharsHexadecimal);
+				mem_load_position = std::clamp(mem_load_position, 0, 0xFFFF);
 				ImGui::SameLine();
 				ImGui::Checkbox("Aux Bank", &mem_load_aux_bank);
 				MemoryLoad(mem_load_position, mem_load_aux_bank);
@@ -418,6 +420,7 @@ int main(int argc, char* argv[])
 				if (ImGui::Checkbox("A2SS_GREYSCALE", &ssValue14)) {
 					a2VideoManager->SetSoftSwitch(A2SS_GREYSCALE, ssValue14);
 				}
+				ImGui::PopItemWidth();
             }
 			ImGui::End();
 		}
