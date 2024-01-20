@@ -27,6 +27,7 @@
 #include "A2VideoManager.h"
 #include "OpenGLHelper.h"
 #include "extras/MemoryLoader.h"
+#include "PostProcessor.h"
 
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
 #include <unistd.h>
@@ -198,6 +199,7 @@ int main(int argc, char* argv[])
     bool show_metrics_window = false;
 	bool show_sdhrinfo_window = false;
 	bool show_texture_window = false;
+	bool show_postprocessing_window = false;
     bool did_press_quit = false;
 	int _slotnum = 0;
 	bool mem_load_aux_bank = true;
@@ -345,6 +347,7 @@ int main(int argc, char* argv[])
 				ImGui::Checkbox("Apple 2 Scan Lines", &a2VideoManager->bShowScanLines);
 				ImGui::Separator();
 //				ImGui::Checkbox("Demo Window", &show_demo_window);
+				ImGui::Checkbox("PostProcessing Window", &show_postprocessing_window);
 				ImGui::Checkbox("Textures Window", &show_texture_window);
 				ImGui::Checkbox("Metrics Window", &show_metrics_window);
 				ImGui::Checkbox("Apple //e Memory Window", &mem_edit_a2e.Open);
@@ -428,6 +431,9 @@ int main(int argc, char* argv[])
             }
 			ImGui::End();
 		}
+		// Show the postprocessing window
+		if (show_postprocessing_window)
+			PostProcessor::GetInstance()->DisplayImGuiPPWindow(&show_postprocessing_window);
 
         // Show the metrics window
         if (show_metrics_window)

@@ -1,5 +1,7 @@
 #include "PostProcessor.h"
 #include "OpenGLHelper.h"
+#include "imgui.h"
+#include "ImGuiFileDialog.h"
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 PostProcessor* PostProcessor::s_instance;
@@ -43,5 +45,30 @@ void PostProcessor::Render()
 	if (oglHelper == nullptr)
 		oglHelper = OpenGLHelper::GetInstance();
 
+}
+
+void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
+{
+	if (p_open)
+	{
+		ImGui::Begin("PostProcessing", p_open);
+		ImGui::Checkbox("PostProcessing enabled", &enabled);
+		if (ImGui::Button("Slot 1 Shader"))
+		{
+			IGFD::FileDialogConfig config;
+			config.path = "./shaders/";
+			ImGuiFileDialog::Instance()->OpenDialog("ChooseShader1DlgKey", "Choose File", ".glsl,", config);
+		}
+
+		// Display the file dialog
+		if (ImGuiFileDialog::Instance()->Display("ChooseShader1DlgKey")) {
+			// Check if a file was selected
+			if (ImGuiFileDialog::Instance()->IsOk()) {
+				v_ppshaders.at(0).build_combined(ImGuiFileDialog::Instance()->GetFilePathName().c_str());
+			}
+			ImGuiFileDialog::Instance()->Close();
+		}
+		ImGui::End();
+	}
 }
 

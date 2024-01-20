@@ -120,7 +120,7 @@ void OpenGLHelper::create_framebuffers(uint32_t width, uint32_t height)
 void OpenGLHelper::bind_framebuffer()
 {
 	GLuint fb = FBO[0];
-	if (PostProcessor::GetInstance()->IsEnabled()) {
+	if (PostProcessor::GetInstance()->enabled) {
 		fb = FBO[1];
 	}
 	if (fb == UINT_MAX)
@@ -223,8 +223,18 @@ void OpenGLHelper::setup_render()
 		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)fb_width / fb_height, 0, 256);
 }
 
-void OpenGLHelper::cleanup_render()
+void OpenGLHelper::finalize_render()
 {
+	// If we're doing postprocessing, take fb0 and postprocess it onto fb1
+	if (PostProcessor::GetInstance()->enabled) {
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO[1]);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, output_texture_ids[0]); // Use texture from fb0
+
+
+	}
+
+	// cleanup
 	glUseProgram(0);
 	unbind_framebuffer();
 	bDidChangeResolution = false;

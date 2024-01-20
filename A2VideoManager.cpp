@@ -641,7 +641,7 @@ void A2VideoManager::Render()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
 	}
-	oglh->cleanup_render();
+	oglh->finalize_render();
 }
 
 void A2VideoManager::RenderSubMixed(std::vector<uint32_t>* framebuffer)

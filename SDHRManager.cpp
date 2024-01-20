@@ -419,7 +419,7 @@ void SDHRManager::Render()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
 	}
-	oglh->cleanup_render();
+	oglh->finalize_render();
 }
 
 // Define a tileset from the SDHR_CMD_DEFINE_TILESET commands

@@ -38,7 +38,7 @@ public:
 	void unbind_framebuffer();
 	void rescale_framebuffers(uint32_t width, uint32_t height);
 	void setup_render();
-	void cleanup_render();
+	void finalize_render();
 
 	// METHODS THAT CAN BE CALLED FROM ANY THREAD
 	bool request_framebuffer_resize(uint32_t width, uint32_t height);

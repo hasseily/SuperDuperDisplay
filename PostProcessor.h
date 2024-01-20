@@ -7,11 +7,15 @@
 		-remember if there needs to be postprocessing
 		- decide which shaders need to be used for postprocessing and in which order
 		- provide the necessary uniforms(parameters) to the shaders
-
+		- provide an ImGui interface to:
+			- enable/disable postprocessing
+			- choose up to 5 shaders from the filesystem
 
 */
 
 #include "common.h"
+#include "shader.h"
+#include <array>
 
 class PostProcessor
 {
@@ -26,7 +30,11 @@ public:
 	~PostProcessor();
 
 	void Render();
-	bool IsEnabled() { return false; };	// TODO
+	void DisplayImGuiPPWindow(bool* p_open);
+
+	// public properties
+	bool enabled = false;
+	std::array<Shader, 5>v_ppshaders;
 private:
 	//////////////////////////////////////////////////////////////////////////
 	// Singleton pattern
