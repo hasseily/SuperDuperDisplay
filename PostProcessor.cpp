@@ -42,9 +42,16 @@ void PostProcessor::Render()
 		uniform sampler2D Texture;	// Incoming framebuffer
 	*
 	*/
+	if (!enabled)
+		return;
 	if (oglHelper == nullptr)
 		oglHelper = OpenGLHelper::GetInstance();
-
+	uint32_t w,h;
+	oglHelper->get_framebuffer_size(&w, &h);
+	v_ppshaders.at(0).setVec2("InputSize", glm::vec2(w, h));
+	v_ppshaders.at(0).setVec2("TextureSize", glm::vec2(w, h));
+	v_ppshaders.at(0).setVec2("OutputSize", glm::vec2(w, h));
+	v_ppshaders.at(0).setMat4("MVPMatrix", oglHelper->mat_proj);
 }
 
 void PostProcessor::DisplayImGuiPPWindow(bool* p_open)

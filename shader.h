@@ -34,8 +34,8 @@ public:
 			// close file handler
 			vShaderFile.close();
 			// convert stream into string
-			vertexCode = std::string("#define VERTEX\n") + vShaderStream.str();
-			fragmentCode = std::string("#define FRAGMENT\n") + vShaderStream.str();
+			vertexCode = std::string("#version 330 core\n#define VERTEX\n") + vShaderStream.str();
+			fragmentCode = std::string("#version 330 core\n#define FRAGMENT\n") + vShaderStream.str();
 		}
 		catch (std::ifstream::failure& e)
 		{

@@ -233,8 +233,6 @@ void OpenGLHelper::finalize_render()
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO[1]);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, output_texture_ids[0]); // Use texture from fb0
-
-
 	}
 
 	// cleanup
