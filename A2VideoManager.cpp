@@ -577,7 +577,7 @@ void A2VideoManager::Render()
 	}
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, oglHelper->get_output_texture_id());
+	glBindTexture(GL_TEXTURE_2D, oglHelper->get_intermediate_texture_id());
 
 	if (this->windows[A2VIDEO_LGR1].IsEnabled())
 	{

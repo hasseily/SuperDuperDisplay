@@ -68,6 +68,13 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 	}
 }
 
+size_t OpenGLHelper::get_intermediate_texture_id()
+{
+	if (PostProcessor::GetInstance()->enabled)
+		return output_texture_ids[0];
+	return output_texture_ids[1];
+}
+
 size_t OpenGLHelper::get_texture_id_at_slot(uint8_t slot)
 {
 	if (slot >= v_texture_ids.size())
@@ -118,14 +125,14 @@ void OpenGLHelper::create_framebuffers(uint32_t width, uint32_t height)
 
 void OpenGLHelper::bind_framebuffer()
 {
-	GLuint fb = FBO[0];
+	GLuint fb = FBO[1];	// final framebuffer
 	if (fb == UINT_MAX)
 	{
 		create_framebuffers(_SCREEN_DEFAULT_WIDTH, _SCREEN_DEFAULT_HEIGHT);
-		fb = FBO[0];
+		fb = FBO[1];
 	}
 	if (PostProcessor::GetInstance()->enabled) {
-		fb = FBO[1];
+		fb = FBO[0];	// intermediate framebuffer before postprocessing
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fb);
@@ -233,6 +240,7 @@ void OpenGLHelper::finalize_render()
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO[1]);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, output_texture_ids[0]); // Use texture from fb0
+		PostProcessor::GetInstance()->Render();
 	}
 
 	// cleanup
