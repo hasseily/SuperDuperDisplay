@@ -72,32 +72,8 @@ int main(int argc, char* argv[])
     }
 
     // Decide GL+GLSL versions
-#if defined(IMGUI_IMPL_OPENGL_ES2)
-    // GL ES 2.0 + GLSL 100 es
-    const char* glsl_version = "#version 100";
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-#elif defined(__APPLE__)
-    // GL 3.2 Core + GLSL 150
-    const char* glsl_version = "#version 150";
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-#else
-    // GL 3.0 + GLSL 130
-    const char* glsl_version = "#version 130";
-    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0) != 0)
-        std::cerr << "SDL Error: " << SDL_GetError() << std::endl;
-    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE) != 0)
-		std::cerr << "SDL Error: " << SDL_GetError() << std::endl;
-    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) != 0)
-		std::cerr << "SDL Error: " << SDL_GetError() << std::endl;
-    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0) != 0)
-		std::cerr << "SDL Error: " << SDL_GetError() << std::endl;
-#endif
+    auto glhelper = OpenGLHelper::GetInstance();
+    glhelper->set_gl_version();
 
     // From 2.0.18: Enable native IME.
 #ifdef SDL_HINT_IME_SHOW_UI
@@ -150,7 +126,7 @@ int main(int argc, char* argv[])
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
-    ImGui_ImplOpenGL3_Init(glsl_version);
+    ImGui_ImplOpenGL3_Init(glhelper->get_glsl_version()->c_str());
 
 	if (!gladLoadGL()) {
 		std::cout << "Failed to initialize OpenGL context" << std::endl;
@@ -207,7 +183,6 @@ int main(int argc, char* argv[])
 
 	auto sdhrManager = SDHRManager::GetInstance();
     auto a2VideoManager = A2VideoManager::GetInstance();
-	auto glhelper = OpenGLHelper::GetInstance();
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
 	std::thread thread_server(socket_server_thread, (uint16_t)_SDHR_SERVER_PORT, &bShouldTerminateNetworking);

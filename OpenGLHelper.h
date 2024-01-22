@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <vector>
+#include <string>
 #include "common.h"
 #include "shader.h"
 #include "camera.h"
@@ -30,6 +31,8 @@ public:
 	~OpenGLHelper();
 
 	// METHODS THAT CAN ONLY BE CALLED FROM THE MAIN THREAD
+	void set_gl_version();	// must be called after SDL_Init()
+	const std::string* get_glsl_version();	// returns the glsl version string
 	void load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID);
 	size_t get_intermediate_texture_id();								// texture id of the framebuffer to draw to
 	size_t get_output_texture_id() { return output_texture_ids[1]; };	// output texture id of the final framebuffer
@@ -100,5 +103,6 @@ private:
 	//////////////////////////////////////////////////////////////////////////
 	bool bIsUsingPerspective = false;	// is it currently using perspective?
 	bool bDidChangeResolution = false;	// did the resolution change?
+	std::string glsl_version = "#version 100";
 };
 #endif // OPENGLHELPER_H
