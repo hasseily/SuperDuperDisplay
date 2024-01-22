@@ -1,6 +1,9 @@
-#version 330 core
-
+#ifdef GL_ES
+#define COMPAT_PRECISION mediump
 precision mediump float;
+#else
+#define COMPAT_PRECISION
+#endif
 
 // Global shdr uniforms assigned in SDHRManager
 uniform sampler2D tilesTexture[14]; // It's always 2..16 (for GL_TEXTURE2->GL_TEXTURE16)
@@ -11,8 +14,8 @@ uniform vec2 windowTopLeft;    // Corners of window in model coordinates (pixels
 uniform vec2 windowBottomRight;
 
 // Mesh-level uniforms assigned in MosaicMesh
-uniform float maxTextures;
-uniform float maxUVScale;
+uniform COMPAT_PRECISION float maxTextures;
+uniform COMPAT_PRECISION float maxUVScale;
 uniform uvec2 meshSize;          // mesh size in model coordinates (pixels)
 uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform sampler2D TBTEX;

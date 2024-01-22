@@ -14,12 +14,9 @@ class Shader
 public:
     unsigned int ID;
     bool isReady = false;
-    // Useless until you call build() or build_combined()
+    // Useless until you call build()
 
-    // Build from a combined .glsl file that defines VERTEX and FRAGMENT
-    void build_combined(const char* shaderPath);
-
-    // Build from independent vertex and fragment shaders
+    // Build from vertex and fragment shaders (could be combined using VERTEX and FRAGMENT #define)
     void build(const char* vertexPath, const char* fragmentPath);
     void _compile(const std::string* pvertexCode, const std::string* pfragmentCode);
     // activate the shader

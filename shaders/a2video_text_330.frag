@@ -1,6 +1,9 @@
-#version 330 core
-
+#ifdef GL_ES
+#define COMPAT_PRECISION mediump
 precision mediump float;
+#else
+#define COMPAT_PRECISION
+#endif
 
 /*
 Regular Charset:
@@ -34,7 +37,7 @@ const int textRow[24]= int[24](
 // Global uniforms assigned in A2VideoManager
 uniform sampler2D a2FontTexture;
 uniform int ticks;                  // ms since start
-uniform float hasFlashing;
+uniform COMPAT_PRECISION float hasFlashing;
 
 // Mesh-level uniforms assigned in MosaicMesh
 uniform uvec2 tileCount;         // Count of tiles (cols, rows)

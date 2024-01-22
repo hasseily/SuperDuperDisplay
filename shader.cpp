@@ -1,37 +1,6 @@
 #include "shader.h"
 
 
-
-void Shader::build_combined(const char* shaderPath)
-{
-	// 1. retrieve the vertex+fragment source code from filePath
-	std::string vertexCode;
-	std::string fragmentCode;
-	std::ifstream vShaderFile;
-	// ensure ifstream objects can throw exceptions:
-	vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-	try
-	{
-		// open files
-		vShaderFile.open(shaderPath);
-		std::stringstream vShaderStream;
-		// read file's buffer contents into stream
-		vShaderStream << vShaderFile.rdbuf();
-		// close file handler
-		vShaderFile.close();
-		// convert stream into string
-		auto glhelper = OpenGLHelper::GetInstance();
-		vertexCode += *glhelper->get_glsl_version() + std::string("\n#define VERTEX\n") + vShaderStream.str();
-		fragmentCode += *glhelper->get_glsl_version() + std::string("\n#define FRAGMENT\n") + vShaderStream.str();
-	}
-	catch (std::ifstream::failure& e)
-	{
-		std::cout << "ERROR::SHADER::FILE_NOT_SUCCESSFULLY_READ: " << e.what() << std::endl;
-		exit(1);
-	}
-	_compile(&vertexCode, &fragmentCode);
-}
-
 void Shader::build(const char* vertexPath, const char* fragmentPath)
 {
 	// 1. retrieve the vertex/fragment source code from filePath
@@ -55,8 +24,9 @@ void Shader::build(const char* vertexPath, const char* fragmentPath)
 		vShaderFile.close();
 		fShaderFile.close();
 		// convert stream into string
-		vertexCode = vShaderStream.str();
-		fragmentCode = fShaderStream.str();
+		auto glhelper = OpenGLHelper::GetInstance();
+		vertexCode += *glhelper->get_glsl_version() + std::string("\n#define VERTEX\n") + vShaderStream.str();
+		fragmentCode += *glhelper->get_glsl_version() + std::string("\n#define FRAGMENT\n") + vShaderStream.str();
 	}
 	catch (std::ifstream::failure& e)
 	{

@@ -1,6 +1,9 @@
-#version 330 core
-
+#ifdef GL_ES
+#define COMPAT_PRECISION mediump
 precision mediump float;
+#else
+#define COMPAT_PRECISION
+#endif
 
 layout (location = 0) in vec4 aPos;
 layout (location = 1) in vec4 aTintColor;

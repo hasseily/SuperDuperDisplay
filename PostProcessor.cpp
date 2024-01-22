@@ -142,7 +142,10 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 		if (ImGuiFileDialog::Instance()->Display("ChooseShader1DlgKey")) {
 			// Check if a file was selected
 			if (ImGuiFileDialog::Instance()->IsOk()) {
-				v_ppshaders.at(0).build_combined(ImGuiFileDialog::Instance()->GetFilePathName().c_str());
+				v_ppshaders.at(0).build(
+					ImGuiFileDialog::Instance()->GetFilePathName().c_str(), 
+					ImGuiFileDialog::Instance()->GetFilePathName().c_str()
+				);
 			}
 			ImGuiFileDialog::Instance()->Close();
 		}

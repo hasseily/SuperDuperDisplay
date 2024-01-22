@@ -1,6 +1,9 @@
-#version 330 core
-
+#ifdef GL_ES
+#define COMPAT_PRECISION mediump
 precision mediump float;
+#else
+#define COMPAT_PRECISION
+#endif
 
 layout (location = 0) in vec4 aPos;
 layout (location = 1) in vec4 aTintColor;
@@ -17,7 +20,7 @@ uniform mat4 model;     // model matrix
 uniform mat4 transform; // Final mesh transform matrix from model to world space
 uniform int anim_ms_frame; // number of ms to animate per frame for textures 0-3
 
-uniform float pixelSize;  // Size of each pixel for pixelization
+uniform COMPAT_PRECISION float pixelSize;  // Size of each pixel for pixelization
 flat out vec2 pixelizationDelta; // Delta osition of the corner of the pixelization rectangle
 
 void main()

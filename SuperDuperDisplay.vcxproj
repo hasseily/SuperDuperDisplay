@@ -220,14 +220,6 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
       <FileType>Document</FileType>
     </Media>
-    <Media Include="shaders\a2video_text_310es.frag">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <FileType>Document</FileType>
-    </Media>
-    <Media Include="shaders\a2video_text_310es.vert">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <FileType>Document</FileType>
-    </Media>
     <Media Include="shaders\a2video_text_330.frag">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
       <FileType>Document</FileType>
@@ -236,19 +228,9 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
       <FileType>Document</FileType>
     </Media>
-    <Media Include="shaders\sdhr_default_310es.frag">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <FileType>Document</FileType>
-    </Media>
-    <Media Include="shaders\sdhr_default_310es.vert">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <FileType>Document</FileType>
-    </Media>
-    <None Include="shaders\a2video_dtext_310es.frag" />
     <None Include="shaders\a2video_dtext_330.frag" />
+    <None Include="shaders\a2video_text.glsl" />
     <None Include="shaders\postprocess_crt-pi.glsl" />
-    <None Include="shaders\sdhr_depixelize_310es.frag" />
-    <None Include="shaders\sdhr_depixelize_310es.vert" />
     <None Include="shaders\sdhr_depixelize_330.frag" />
     <None Include="shaders\sdhr_depixelize_330.vert" />
   </ItemGroup>
