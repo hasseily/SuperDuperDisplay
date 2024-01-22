@@ -176,6 +176,7 @@
     <ClCompile Include="SDHRNetworking.cpp" />
     <ClCompile Include="SDHRWindow.cpp" />
     <ClCompile Include="A2VideoManager.cpp" />
+    <ClCompile Include="shader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="A2VideoManager.h" />
