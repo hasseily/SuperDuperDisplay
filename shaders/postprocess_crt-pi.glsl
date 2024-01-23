@@ -79,13 +79,13 @@ uniform COMPAT_PRECISION float OUTPUT_GAMMA;
 */
 
 uniform vec2 TextureSize;
+
+#if defined(VERTEX)
 #if defined(CURVATURE)
-in vec2 screenScale;
+out vec2 screenScale;
 #endif
 out vec2 TEX0;
 out float filterWidth;
-
-#if defined(VERTEX)
 uniform mat4 MVPMatrix;
 in vec4 VertexCoord;
 in vec2 TexCoord;
@@ -103,6 +103,11 @@ void main()
 }
 #elif defined(FRAGMENT)
 
+#if defined(CURVATURE)
+in vec2 screenScale;
+#endif
+in vec2 TEX0;
+in float filterWidth;
 uniform sampler2D Texture;
 out vec4 fragColor;
 

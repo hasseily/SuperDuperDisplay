@@ -5,8 +5,6 @@ precision mediump float;
 #define COMPAT_PRECISION
 #endif
 
-precision mediump float;
-
 layout (location = 0) in vec2 aPos;         // -1,1 relative position
 layout (location = 1) in vec2 pixelPos;     // pixel absolute position
 
