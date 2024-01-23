@@ -8,6 +8,7 @@
 #include <sstream>
 #include <iostream>
 #include "OpenGLHelper.h"
+#include <string>
 
 class Shader
 {
@@ -49,6 +50,8 @@ public:
     void setMat4(const std::string &name, const glm::mat4 &mat) const;
 
 private:
+	std::string s_vertexPath;
+	std::string s_fragmentPath;
     // utility function for checking shader compilation/linking errors.
     // ------------------------------------------------------------------------
     void checkCompileErrors(GLuint shader, std::string type);

@@ -47,7 +47,7 @@ uniform usampler2D DBTEX;        // Apple 2e's memory, starting at 0x400 for TEX
 uniform vec4 colorTint;
 
 in vec2 vFragPos;       // The fragment position in pixels
-// in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
+// in vec3 vColor;      // DEBUG color, a mix of all 3 vertex colors
 
 out vec4 fragColor;
 

@@ -65,7 +65,7 @@ void PostProcessor::Render()
 		std::cerr << "OpenGL error 2: " << glerr << std::endl;
 	}
 
-	// Setup fullscreen quad VAO and VBO if not already done
+	// Setup fullscreen quad VAO and VBO
 	GLuint quadVAO, quadVBO;
 	glGenVertexArrays(1, &quadVAO);
 	glGenBuffers(1, &quadVBO);
@@ -105,7 +105,7 @@ void PostProcessor::Render()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error 6: " << glerr << std::endl;
 	}
-	// Unbind the VAO (it's always a good practice to unbind any buffer/array to prevent strange bugs)
+	// Unbind the VAO
 	glBindVertexArray(0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error 7: " << glerr << std::endl;
@@ -117,7 +117,7 @@ void PostProcessor::Render()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error 8: " << glerr << std::endl;
 	}
-	// Cleanup (do this when you're completely done with the VAO and VBO)
+	// Cleanup
 	glDeleteVertexArrays(1, &quadVAO);
 	glDeleteBuffers(1, &quadVBO);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {

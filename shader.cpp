@@ -3,6 +3,8 @@
 
 void Shader::build(const char* vertexPath, const char* fragmentPath)
 {
+	s_vertexPath = std::string(vertexPath);
+	s_fragmentPath = std::string(fragmentPath);
 	// 1. retrieve the vertex/fragment source code from filePath
 	std::string vertexCode;
 	std::string fragmentCode;
@@ -26,7 +28,7 @@ void Shader::build(const char* vertexPath, const char* fragmentPath)
 		// convert stream into string
 		auto glhelper = OpenGLHelper::GetInstance();
 		vertexCode += *glhelper->get_glsl_version() + std::string("\n#define VERTEX\n") + vShaderStream.str();
-		fragmentCode += *glhelper->get_glsl_version() + std::string("\n#define FRAGMENT\n") + vShaderStream.str();
+		fragmentCode += *glhelper->get_glsl_version() + std::string("\n#define FRAGMENT\n") + fShaderStream.str();
 	}
 	catch (std::ifstream::failure& e)
 	{
@@ -160,6 +162,8 @@ void Shader::checkCompileErrors(GLuint shader, std::string type)
 		{
 			glGetShaderInfoLog(shader, 1024, NULL, infoLog);
 			std::cout << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
+			std::cout << "   Vertex:   " << s_vertexPath << std::endl;
+			std::cout << "   Fragment: " << s_fragmentPath << std::endl;
 			exit(1);
 		}
 	}
@@ -170,6 +174,8 @@ void Shader::checkCompileErrors(GLuint shader, std::string type)
 		{
 			glGetProgramInfoLog(shader, 1024, NULL, infoLog);
 			std::cout << "ERROR::PROGRAM_LINKING_ERROR of type: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
+			std::cout << "   Vertex:   " << s_vertexPath << std::endl;
+			std::cout << "   Fragment: " << s_fragmentPath << std::endl;
 			exit(1);
 		}
 	}

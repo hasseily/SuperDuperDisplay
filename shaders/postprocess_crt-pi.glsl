@@ -80,15 +80,15 @@ uniform COMPAT_PRECISION float OUTPUT_GAMMA;
 
 uniform vec2 TextureSize;
 #if defined(CURVATURE)
-varying vec2 screenScale;
+in vec2 screenScale;
 #endif
-varying vec2 TEX0;
-varying float filterWidth;
+out vec2 TEX0;
+out float filterWidth;
 
 #if defined(VERTEX)
 uniform mat4 MVPMatrix;
-attribute vec4 VertexCoord;
-attribute vec2 TexCoord;
+in vec4 VertexCoord;
+in vec2 TexCoord;
 uniform vec2 InputSize;
 uniform vec2 OutputSize;
 
@@ -104,6 +104,7 @@ void main()
 #elif defined(FRAGMENT)
 
 uniform sampler2D Texture;
+out vec4 fragColor;
 
 #if defined(CURVATURE)
 vec2 Distort(vec2 coord)
@@ -184,7 +185,7 @@ void main()
 		vec2 tc = vec2(texcoord.x, yCoord + dy);
 #endif
 
-		vec3 colour = texture2D(Texture, tc).rgb;
+		vec3 colour = texture(Texture, tc).rgb;
 
 #if defined(SCANLINES)
 #if defined(GAMMA)
@@ -226,7 +227,7 @@ void main()
 			mask.z = 1.0;
 #endif
 
-		gl_FragColor = vec4(colour * mask, 1.0);
+		fragColor = vec4(colour * mask, 1.0);
 #endif
 	}
 }

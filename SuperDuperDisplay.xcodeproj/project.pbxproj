@@ -49,7 +49,9 @@
 		BB3738492B5C79F3001D1131 /* ImGuiFileDialog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImGuiFileDialog.h; sourceTree = "<group>"; };
 		BB37384A2B5C79F3001D1131 /* ImGuiFileDialogConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImGuiFileDialogConfig.h; sourceTree = "<group>"; };
 		BB37384B2B5C79F3001D1131 /* PostProcessor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PostProcessor.cpp; sourceTree = "<group>"; };
+		BB37384C2B5F0A0B001D1131 /* shader.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = shader.cpp; sourceTree = "<group>"; };
 		BB7246A22B5755E60061C769 /* ImGuiFileDialogConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImGuiFileDialogConfig.h; sourceTree = "<group>"; };
+		BB9CBA2A2B5F62E400D95B76 /* ProjectConfig.xconfig.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ProjectConfig.xconfig.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -68,6 +70,7 @@
 		BB19E0DD2B52B84600341864 = {
 			isa = PBXGroup;
 			children = (
+				BB9CBA2A2B5F62E400D95B76 /* ProjectConfig.xconfig.xcconfig */,
 				BB19E0ED2B53484F00341864 /* A2VideoManager.cpp */,
 				BB19E1032B53484F00341864 /* A2VideoManager.h */,
 				BB19E0E82B53484F00341864 /* A2Window.cpp */,
@@ -104,6 +107,7 @@
 				BB19E1042B53484F00341864 /* SDHRWindow.cpp */,
 				BB19E1012B53484F00341864 /* SDHRWindow.h */,
 				BB19E1082B53484F00341864 /* shader.h */,
+				BB37384C2B5F0A0B001D1131 /* shader.cpp */,
 				BB19E0FC2B53484F00341864 /* shaders */,
 				BB19E0F42B53484F00341864 /* stb_image.h */,
 				BB19E1052B53484F00341864 /* textures */,
@@ -120,6 +124,7 @@
 			buildPhases = (
 			);
 			buildToolPath = /usr/bin/make;
+			buildWorkingDirectory = "";
 			dependencies = (
 			);
 			name = SuperDuperDisplay;
@@ -160,6 +165,7 @@
 /* Begin XCBuildConfiguration section */
 		BB19E0E32B52B84600341864 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = BB9CBA2A2B5F62E400D95B76 /* ProjectConfig.xconfig.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -219,6 +225,7 @@
 		};
 		BB19E0E42B52B84600341864 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = BB9CBA2A2B5F62E400D95B76 /* ProjectConfig.xconfig.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;

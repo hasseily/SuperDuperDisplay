@@ -20,10 +20,10 @@ uniform uvec2 meshSize;          // mesh size in model coordinates (pixels)
 uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform sampler2D TBTEX;
 
-in vec3 vFragPos;       // The fragment position in model coordinates (pixels)
+in vec2 vTexCoord;
 in vec4 vTintColor;     // The mixed vertex colors for tinting
 in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
-
+in vec3 vFragPos;       // The fragment position in model coordinates (pixels)
 flat in int iAnimTexId; // Animation texture id. Chooses 1 of the first 4 textures
 flat in vec2 pixelizationDelta;
 

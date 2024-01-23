@@ -11,9 +11,9 @@ layout (location = 1) in vec4 aTintColor;
 out vec2 vTexCoord;
 out vec4 vTintColor;
 out vec3 vColor;    // DEBUG for non-textured display
-
 out vec3 vFragPos;
 flat out int iAnimTexId; // Animation texture id. Chooses 1 of the first 4 textures
+flat out vec2 pixelizationDelta; // Delta osition of the corner of the pixelization rectangle
 
 uniform int ticks;      // ms since first render after mesh creation or update
 uniform mat4 model;     // model matrix
@@ -21,7 +21,6 @@ uniform mat4 transform; // Final mesh transform matrix from model to world space
 uniform int anim_ms_frame; // number of ms to animate per frame for textures 0-3
 
 uniform COMPAT_PRECISION float pixelSize;  // Size of each pixel for pixelization
-flat out vec2 pixelizationDelta; // Delta osition of the corner of the pixelization rectangle
 
 void main()
 {
