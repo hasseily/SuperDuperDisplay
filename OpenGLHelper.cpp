@@ -151,6 +151,8 @@ void OpenGLHelper::create_framebuffers(uint32_t width, uint32_t height)
 		glBindTexture(GL_TEXTURE_2D, output_texture_ids[i]);
 		glViewport(0, 0, fb_width, fb_height);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_ids[i], 0);
@@ -277,7 +279,13 @@ void OpenGLHelper::finalize_render()
 {
 	// If we're doing postprocessing, take fb0 and postprocess it onto fb1
 	if (PostProcessor::GetInstance()->enabled) {
+		GLenum glerr;
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO[1]);
+		glClearColor(0.f, 0.f, 0.f, 0.f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL setup_render error: " << glerr << std::endl;
+		}
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, output_texture_ids[0]); // Use texture from fb0
 		PostProcessor::GetInstance()->Render();

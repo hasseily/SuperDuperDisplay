@@ -29,6 +29,7 @@ void Shader::build(const char* vertexPath, const char* fragmentPath)
 		auto glhelper = OpenGLHelper::GetInstance();
 		vertexCode += *glhelper->get_glsl_version() + std::string("\n#define VERTEX\n") + vShaderStream.str();
 		fragmentCode += *glhelper->get_glsl_version() + std::string("\n#define FRAGMENT\n") + fShaderStream.str();
+		std::cout << fragmentCode << std::endl;
 	}
 	catch (std::ifstream::failure& e)
 	{

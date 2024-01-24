@@ -560,6 +560,9 @@ void A2VideoManager::Render()
 		// image asset 4: The Scanline texture for SHR mode
 		glActiveTexture(_SDHR_START_TEXTURES + 5);
 		image_assets[5].AssignByFilename(this, "textures/Texture_Scanlines_400.png");
+		// image asset 5: The bezel for postprocessing
+		glActiveTexture(_SDHR_START_TEXTURES + 6);
+		image_assets[5].AssignByFilename(this, "textures/Bezel.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL AssignByFilename error: " 
 				<< 0 << " - " << glerr << std::endl;

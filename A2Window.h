@@ -49,7 +49,7 @@ public:
 		vertices.push_back(A2Vertex({glm::vec2(-1, -1), glm::ivec2(0, 0)}));	// bottom left
 		vertices.push_back(A2Vertex({glm::vec2( 1, -1), glm::ivec2(0, 0)}));	// bottom right
 	};
-
+	~A2Window();
 	void Define(uint8_t _index, uXY _screen_count,
 		uXY _tile_dim, uXY _tile_count,
 		uint8_t* _data, uint32_t _datasize,

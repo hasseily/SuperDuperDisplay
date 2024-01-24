@@ -12,6 +12,18 @@ void A2Window::Reset()
 	tile_count = uXY({ 0,0 });
 }
 
+A2Window::~A2Window()
+{
+	if (DBTEX != UINT_MAX)
+		glDeleteTextures(1, &DBTEX);
+
+	if (VAO != UINT_MAX)
+	{
+		glDeleteVertexArrays(1, &VAO);
+		glDeleteBuffers(1, &VBO);
+	}
+}
+
 void A2Window::Define(uint8_t _index, uXY _screen_count, 
 	uXY _tile_dim, uXY _tile_count, 
 	uint8_t* _data, uint32_t _datasize, 

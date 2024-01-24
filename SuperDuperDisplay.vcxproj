@@ -229,8 +229,8 @@
       <FileType>Document</FileType>
     </Media>
     <None Include="shaders\a2video_dtext_330.frag" />
+    <None Include="shaders\a2video_postprocess.glsl" />
     <None Include="shaders\a2video_text.glsl" />
-    <None Include="shaders\postprocess_crt-pi.glsl" />
     <None Include="shaders\sdhr_depixelize_330.frag" />
     <None Include="shaders\sdhr_depixelize_330.vert" />
   </ItemGroup>
