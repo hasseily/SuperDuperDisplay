@@ -520,6 +520,7 @@ int main(int argc, char* argv[])
         // Check if we should reboot
         if (a2VideoManager->bShouldReboot)
         {
+            std::cerr << "reset detected" << std::endl;
             a2VideoManager->bShouldReboot = false;
             A2VideoManager::GetInstance()->ResetComputer();
         }
