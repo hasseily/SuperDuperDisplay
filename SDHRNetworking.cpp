@@ -57,7 +57,7 @@ void terminate_processing_thread()
 {
 	// Force a dummy event to process, so that shouldTerminateProcessing is triggered
 	// and the loop is closed cleanly.
-	SDHREvent e = SDHREvent(0, 1, 0, 0);
+	SDHREvent e = SDHREvent(0, 0, 1, 0, 0);
 	events.push(e);
 }
 
@@ -80,7 +80,7 @@ int process_events_thread(bool* shouldTerminateProcessing)
          *********************************
         */
 		if ((e.addr >= _A2_MEMORY_SHADOW_BEGIN) && (e.addr < _A2_MEMORY_SHADOW_END)) {
-			if (a2VideoMgr->IsSoftSwitch(A2SS_RAMWRT))
+			if (a2VideoMgr->IsSoftSwitch(A2SS_RAMWRT) || (e.is_iigs && e.m2b0))
 				sdhrMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
 			else {
 				if (a2VideoMgr->IsSoftSwitch(A2SS_80STORE) && a2VideoMgr->IsSoftSwitch(A2SS_PAGE2))
@@ -242,6 +242,7 @@ void process_single_packet_header(SDHRPacketHeader* h,
         uint16_t addr = (*event >> 8) & 0xffff;
         uint8_t data = *event & 0xff;
         bool m2sel = (ctrl_bits & 0x02) == 0x02;
+        bool m2b0 = (ctrl_bits & 0x04) == 0x04;
         bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
         if (iigs_mode && m2sel) {
 	    // ignore updates from iigs_mode firmware with m2sel high
@@ -252,7 +253,7 @@ void process_single_packet_header(SDHRPacketHeader* h,
             // ignoring all read events not softswitches
             continue;
         }
-        SDHREvent e(iigs_mode, rw, addr, data);
+        SDHREvent e(iigs_mode, m2b0, rw, addr, data);
         events.push(e);
     }
 }
