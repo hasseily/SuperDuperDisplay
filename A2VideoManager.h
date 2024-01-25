@@ -107,7 +107,7 @@ public:
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
 
-	ImageAsset image_assets[6];
+	ImageAsset image_assets[7];
 	A2Window windows[A2VIDEO_TOTAL_COUNT];
 
 	bool bShowScanLines = true;
