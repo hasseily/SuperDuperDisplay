@@ -11,6 +11,7 @@ static OpenGLHelper* oglHelper;
 // Shader parameter variables
 bool p_bzl = true;
 bool p_corner = false;
+bool p_ext_gamma = false;
 bool p_interlace = true; // use bool for checkbox (1.0 as true, 0.0 as false)
 bool p_potato = false;
 bool p_slot = true;
@@ -26,7 +27,6 @@ float p_centery = 0.0f;
 float p_conv_b = 0.0f;
 float p_conv_g = 0.0f;
 float p_conv_r = 0.0f;
-float p_ext_gamma = 0.0f;
 float p_gb = 0.0f;
 int p_m_type = 1;
 float p_maskh = 0.75f;
@@ -97,7 +97,7 @@ void PostProcessor::Render()
 	shaderProgram.setVec2("InputSize", glm::vec2(w, h));
 	shaderProgram.setVec2("TextureSize", glm::vec2(w, h));
 	shaderProgram.setVec2("OutputSize", glm::vec2(w, h));
-	shaderProgram.setMat4("MVPMatrix", glm::mat4());
+	shaderProgram.setMat4("MVPMatrix", glm::mat4(1));
 	
 	// Update uniforms
 	shaderProgram.setFloat("SCANLINE", p_scanline);
@@ -120,7 +120,7 @@ void PostProcessor::Render()
 	shaderProgram.setFloat("vig", p_vig ? 1.0f : 0.0f);
 	shaderProgram.setFloat("BR_DEP", p_br_dep);
 	shaderProgram.setFloat("c_space", (float)p_c_space);
-	shaderProgram.setFloat("EXT_GAMMA", p_ext_gamma);
+	shaderProgram.setFloat("EXT_GAMMA", p_ext_gamma ? 1.0f : 0.0f);
 	shaderProgram.setFloat("SATURATION", p_saturation);
 	shaderProgram.setFloat("BRIGHTNESs", p_brightness);
 	shaderProgram.setFloat("BLACK", p_black);
@@ -257,13 +257,13 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 		ImGui::Text("[ COLOR SETTINGS ]");
 		ImGui::SliderFloat("Scan/Mask Brightness Dependence", &p_br_dep, 0.0f, 0.333f, "%.3f");
 		ImGui::SliderInt("Color Space: sRGB,PAL,NTSC-U,NTSC-J", &p_c_space, 0, 3, "%1d");
-		ImGui::SliderFloat("External Gamma In (Glow etc)", &p_ext_gamma, 0.0f, 1.0f, "%.1f");
 		ImGui::SliderFloat("Saturation", &p_saturation, 0.0f, 2.0f, "%.2f");
-		ImGui::SliderFloat("Brightness, Sega fix:1.06", &p_brightness, 0.0f, 2.0f, "%.2f");
+		ImGui::SliderFloat("Brightness", &p_brightness, 0.0f, 2.0f, "%.2f");
 		ImGui::SliderFloat("Black Level", &p_black, -0.20f, 0.20f, "%.2f");
 		ImGui::SliderFloat("Green <-to-> Red Hue", &p_rg, -0.25f, 0.25f, "%.2f");
 		ImGui::SliderFloat("Blue <-to-> Red Hue", &p_rb, -0.25f, 0.25f, "%.2f");
 		ImGui::SliderFloat("Blue <-to-> Green Hue", &p_gb, -0.25f, 0.25f, "%.2f");
+		ImGui::Checkbox("External Gamma In (Glow etc)", &p_ext_gamma);
 
 		// Convergence Settings
 		ImGui::Text("[ CONVERGENCE SETTINGS ]");
