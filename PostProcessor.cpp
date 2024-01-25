@@ -9,13 +9,13 @@ PostProcessor* PostProcessor::s_instance;
 static OpenGLHelper* oglHelper;
 
 // Shader parameter variables
-bool p_bzl = true;
+bool p_bzl = false;
 bool p_corner = false;
 bool p_ext_gamma = false;
-bool p_interlace = true; // use bool for checkbox (1.0 as true, 0.0 as false)
+bool p_interlace = false;
 bool p_potato = false;
-bool p_slot = true;
-bool p_vig = true;
+bool p_slot = false;
+bool p_vig = false;
 float p_bgr = 0.0f;
 float p_black = 0.0f;
 float p_br_dep = 0.2f;
@@ -28,17 +28,18 @@ float p_conv_b = 0.0f;
 float p_conv_g = 0.0f;
 float p_conv_r = 0.0f;
 float p_gb = 0.0f;
-int p_m_type = 1;
+int p_m_type = -1;
 float p_maskh = 0.75f;
 float p_maskl = 0.3f;
 float p_msize = 1.0f;
 float p_rb = 0.0f;
 float p_rg = 0.0f;
 float p_saturation = 1.0f;
-float p_scanline = 0.3f;
+float p_scanline_weight = 0.3f;
+int p_scanline_type = 0;
 float p_slotw = 3.0f;
-float p_warpx = 0.02f;
-float p_warpy = 0.01f;
+float p_warpx = 0.0f;
+float p_warpy = 0.0f;
 float p_zoomx = 0.0f;
 float p_zoomy = 0.0f;
 
@@ -92,6 +93,9 @@ void PostProcessor::Render()
 	uint32_t w,h;
 	oglHelper->get_framebuffer_size(&w, &h);
 	auto shaderProgram = v_ppshaders.at(0);
+	// Slot 4 for scanline regular modes, 5 for SHR
+	int _slSlot = (w == 560 ? 4 : 5);
+	shaderProgram.setInt("HorizScanlineTexture", _SDHR_START_TEXTURES + _slSlot - GL_TEXTURE0);
 	shaderProgram.setInt("BezelTexture", _SDHR_START_TEXTURES + 6 - GL_TEXTURE0);
 	shaderProgram.setInt("FrameCount", 2);
 	shaderProgram.setVec2("InputSize", glm::vec2(w, h));
@@ -100,7 +104,7 @@ void PostProcessor::Render()
 	shaderProgram.setMat4("MVPMatrix", glm::mat4(1));
 	
 	// Update uniforms
-	shaderProgram.setFloat("SCANLINE", p_scanline);
+	shaderProgram.setFloat("SCANLINEWEIGHT", p_scanline_weight);
 	shaderProgram.setFloat("INTERLACE", p_interlace ? 1.0f : 0.0f);
 	shaderProgram.setFloat("M_TYPE", (float)p_m_type);
 	shaderProgram.setFloat("MSIZE", p_msize);
@@ -228,12 +232,17 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 		
 
 		// Scanline and Interlacing
-		ImGui::SliderFloat("Scanline Weight", &p_scanline, 0.2f, 0.6f, "%.2f");
+		ImGui::RadioButton("None", &p_scanline_type, 0); ImGui::SameLine();
+		ImGui::RadioButton("Simple", &p_scanline_type, 1); ImGui::SameLine();
+		ImGui::RadioButton("CRT", &p_scanline_type, 2);
+		ImGui::SliderFloat("Scanline Weight", &p_scanline_weight, 0.001f, 0.5f, "%.2f");
 		ImGui::Checkbox("Interlacing On/Off", &p_interlace);
 
 		// Mask Settings
 		ImGui::Text("[ MASK SETTINGS ]");
-		ImGui::SliderInt("Mask Type: -1:None, 0:CGWG, 1:RGB", &p_m_type, -1, 1, "%1d");
+		ImGui::RadioButton("None", &p_m_type, 0); ImGui::SameLine();
+		ImGui::RadioButton("CGWG", &p_m_type, 1); ImGui::SameLine();
+		ImGui::RadioButton("RGB", &p_m_type, 2);
 		ImGui::SliderFloat("Mask Size", &p_msize, 1.0f, 2.0f, "%.1f");
 		ImGui::Checkbox("Slot Mask On/Off", &p_slot);
 		ImGui::SliderFloat("Slot Mask Width", &p_slotw, 2.0f, 3.0f, "%.1f");
@@ -255,10 +264,10 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 
 		// Color Settings
 		ImGui::Text("[ COLOR SETTINGS ]");
-		ImGui::SliderFloat("Scan/Mask Brightness Dependence", &p_br_dep, 0.0f, 0.333f, "%.3f");
+		ImGui::SliderFloat("Scan/Mask Brightness Dependence", &p_br_dep, 0.0f, 0.5f, "%.3f");
 		ImGui::SliderInt("Color Space: sRGB,PAL,NTSC-U,NTSC-J", &p_c_space, 0, 3, "%1d");
 		ImGui::SliderFloat("Saturation", &p_saturation, 0.0f, 2.0f, "%.2f");
-		ImGui::SliderFloat("Brightness", &p_brightness, 0.0f, 2.0f, "%.2f");
+		ImGui::SliderFloat("Brightness", &p_brightness, 0.0f, 4.0f, "%.2f");
 		ImGui::SliderFloat("Black Level", &p_black, -0.20f, 0.20f, "%.2f");
 		ImGui::SliderFloat("Green <-to-> Red Hue", &p_rg, -0.25f, 0.25f, "%.2f");
 		ImGui::SliderFloat("Blue <-to-> Red Hue", &p_rb, -0.25f, 0.25f, "%.2f");
