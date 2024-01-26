@@ -64,7 +64,7 @@ void main()
 
     // Next grab the data for that tile from the tilesBuffer
     // Make sure to rescale all values back from 0-1 to their original values
-    vec4 mosaicTile = texture(TBTEX, vec2(tileColRow / tileCount));
+    vec4 mosaicTile = texture(TBTEX, vec2(tileColRow) / vec2(tileCount));
     int texIdx = int(round(mosaicTile.w * maxTextures));
     float scale = mosaicTile.z * maxUVScale;
     // no need to rescale the uvVals because we'll use them normalized
