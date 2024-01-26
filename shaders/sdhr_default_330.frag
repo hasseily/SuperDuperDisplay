@@ -1,8 +1,11 @@
 #ifdef GL_ES
 #define COMPAT_PRECISION mediump
 precision mediump float;
+precision highp usampler2D;
+precision highp int;
 #else
 #define COMPAT_PRECISION
+layout(pixel_center_integer) in vec4 gl_FragCoord;
 #endif
 
 // Global shdr uniforms assigned in SDHRManager
@@ -28,8 +31,6 @@ in vec3 vFragPos;       // The fragment position in model coordinates (pixels)
 flat in int iAnimTexId; // Animation texture id. Chooses 1 of the first 4 textures
 
 out vec4 fragColor;
-
-layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 /*
 struct MosaicTile {
