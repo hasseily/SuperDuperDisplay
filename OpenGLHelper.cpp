@@ -41,12 +41,13 @@ void OpenGLHelper::set_gl_version()
 {
 	// Decide GL+GLSL versions
 #if defined(IMGUI_IMPL_OPENGL_ES2)
-	// GL ES 3.1 + GLSL 310 es
-	glsl_version = "#version 310 es";
+	// GL ES 3.0 + GLSL 300 es
+    // ImGui only supports 3.0, not 3.1
+	glsl_version = "#version 300 es";
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 #elif defined(__APPLE__)
 	// GL 4.1 Core + GLSL 410
 	glsl_version = "#version 410";
