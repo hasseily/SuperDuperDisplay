@@ -55,15 +55,15 @@ void main()
     uvec2 tileSize = meshSize / tileCount;
     // first figure out which mosaic tile this fragment is part of
         // Calculate the position of the fragment in tile intervals
-    vec2 fTileColRow = (vFragPos).xy / tileSize;
+    vec2 fTileColRow = (vFragPos).xy / vec2(tileSize);
         // Row and column number of the tile containing this fragment
     ivec2 tileColRow = ivec2(floor(fTileColRow));
         // Fragment offset to tile origin, in pixels
-    vec2 fragOffset = ((fTileColRow - tileColRow) * tileSize);
+    vec2 fragOffset = ((fTileColRow - vec2(tileColRow)) * vec2(tileSize));
 
     // Next grab the data for that tile from the tilesBuffer
     // Make sure to rescale all values back from 0-1 to their original values
-    vec4 mosaicTile = texture(TBTEX, tileColRow / vec2(tileCount));
+    vec4 mosaicTile = texture(TBTEX, vec2(tileColRow / tileCount));
     int texIdx = int(round(mosaicTile.w * maxTextures));
     float scale = mosaicTile.z * maxUVScale;
     // no need to rescale the uvVals because we'll use them normalized
@@ -169,6 +169,6 @@ void main()
             break;
     }
 
-    fragColor = tex * vTintColor * (1 - iDebugNoTextures)
-                  + vec4(vColor, 1.f) * iDebugNoTextures;
+    fragColor = tex * vTintColor * (1.f - float(iDebugNoTextures))
+                  + vec4(vColor, 1.f) * float(iDebugNoTextures);
 }
