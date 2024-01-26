@@ -1,8 +1,8 @@
 #ifdef GL_ES
 #define COMPAT_PRECISION mediump
 precision mediump float;
-precision highp usampler2D
-precision highp int
+precision highp usampler2D;
+precision highp int;
 #else
 #define COMPAT_PRECISION
 layout(pixel_center_integer) in vec4 gl_FragCoord;
