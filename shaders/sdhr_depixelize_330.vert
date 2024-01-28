@@ -42,6 +42,7 @@ void main()
     // vColor = vec3(      // DEBUG: Change the colors of each triangle to be better visible
     //     r, g, b
     // );
+	vColor = vec3(0.8, 0.4, 0);
 
     iAnimTexId = (ticks / anim_ms_frame) % 4; // Rotates through 0-3 every anim_ms_frame
 
