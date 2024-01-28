@@ -1,0 +1,478 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		BB96E3E22B664CDB00A3077C /* libSDL2-2.0.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = BB96E3E12B664CDB00A3077C /* libSDL2-2.0.0.dylib */; };
+		BB96E3E32B664CDB00A3077C /* libSDL2-2.0.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BB96E3E12B664CDB00A3077C /* libSDL2-2.0.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = BB96E3EA2B6650BA00A3077C /* libz.tbd */; };
+		BB96E3ED2B66513700A3077C /* imgui_demo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3EC2B66513700A3077C /* imgui_demo.cpp */; };
+		BB96E3EF2B66513C00A3077C /* imgui_draw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3EE2B66513C00A3077C /* imgui_draw.cpp */; };
+		BB96E3F12B66514E00A3077C /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3F02B66514E00A3077C /* imgui_tables.cpp */; };
+		BB96E3F32B66515400A3077C /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3F22B66515400A3077C /* imgui_widgets.cpp */; };
+		BB96E3F52B66515900A3077C /* imgui.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3F42B66515900A3077C /* imgui.cpp */; };
+		BB96E3F72B66519500A3077C /* glad.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3F62B66519500A3077C /* glad.cpp */; };
+		BB96E3F92B6651BE00A3077C /* imgui_impl_opengl3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3F82B6651BE00A3077C /* imgui_impl_opengl3.cpp */; };
+		BB96E3FB2B6651C500A3077C /* imgui_impl_sdl2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3FA2B6651C500A3077C /* imgui_impl_sdl2.cpp */; };
+		BB96E3FC2B66525300A3077C /* extras in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBB5250F2B6648A200A65C62 /* extras */; };
+		BB96E3FD2B66525300A3077C /* shaders in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBB525002B6648A200A65C62 /* shaders */; };
+		BB96E3FE2B66525300A3077C /* textures in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBB524F72B6648A100A65C62 /* textures */; };
+		BB96E4092B66544900A3077C /* scripts in CopyFiles */ = {isa = PBXBuildFile; fileRef = BB96E4082B66544900A3077C /* scripts */; };
+		BBB5251C2B6648A200A65C62 /* ImGuiFileDialog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB524FD2B6648A100A65C62 /* ImGuiFileDialog.cpp */; };
+		BBB5251D2B6648A200A65C62 /* A2VideoManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525022B6648A200A65C62 /* A2VideoManager.cpp */; };
+		BBB5251E2B6648A200A65C62 /* shader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525042B6648A200A65C62 /* shader.cpp */; };
+		BBB5251F2B6648A200A65C62 /* SDHRManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525082B6648A200A65C62 /* SDHRManager.cpp */; };
+		BBB525202B6648A200A65C62 /* MosaicMesh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB5250B2B6648A200A65C62 /* MosaicMesh.cpp */; };
+		BBB525212B6648A200A65C62 /* OpenGLHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB5250C2B6648A200A65C62 /* OpenGLHelper.cpp */; };
+		BBB525222B6648A200A65C62 /* SDHRWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB5250E2B6648A200A65C62 /* SDHRWindow.cpp */; };
+		BBB525232B6648A200A65C62 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525142B6648A200A65C62 /* main.cpp */; };
+		BBB525242B6648A200A65C62 /* SDHRNetworking.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525162B6648A200A65C62 /* SDHRNetworking.cpp */; };
+		BBB525252B6648A200A65C62 /* A2Window.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525172B6648A200A65C62 /* A2Window.cpp */; };
+		BBB525262B6648A200A65C62 /* PostProcessor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB5251A2B6648A200A65C62 /* PostProcessor.cpp */; };
+		BBB525292B664A7D00A65C62 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BBB525282B664A7D00A65C62 /* OpenGL.framework */; };
+		BBB5252B2B664A8F00A65C62 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BBB5252A2B664A8F00A65C62 /* CoreVideo.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		BB8330D42B6645B300071F38 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = "";
+			dstSubfolderSpec = 16;
+			files = (
+				BB96E3FC2B66525300A3077C /* extras in CopyFiles */,
+				BB96E4092B66544900A3077C /* scripts in CopyFiles */,
+				BB96E3FD2B66525300A3077C /* shaders in CopyFiles */,
+				BB96E3FE2B66525300A3077C /* textures in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BB96E3E42B664CDB00A3077C /* Embed Libraries */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				BB96E3E32B664CDB00A3077C /* libSDL2-2.0.0.dylib in Embed Libraries */,
+			);
+			name = "Embed Libraries";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		BB8330D62B6645B300071F38 /* SuperDuperDisplay */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SuperDuperDisplay; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB96E3E12B664CDB00A3077C /* libSDL2-2.0.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libSDL2-2.0.0.dylib"; path = "../../../../../opt/homebrew/Cellar/sdl2/2.28.5/lib/libSDL2-2.0.0.dylib"; sourceTree = "<group>"; };
+		BB96E3EA2B6650BA00A3077C /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		BB96E3EC2B66513700A3077C /* imgui_demo.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_demo.cpp; path = imgui/imgui_demo.cpp; sourceTree = "<group>"; };
+		BB96E3EE2B66513C00A3077C /* imgui_draw.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = imgui_draw.cpp; sourceTree = "<group>"; };
+		BB96E3F02B66514E00A3077C /* imgui_tables.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = imgui_tables.cpp; sourceTree = "<group>"; };
+		BB96E3F22B66515400A3077C /* imgui_widgets.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_widgets.cpp; path = imgui/imgui_widgets.cpp; sourceTree = "<group>"; };
+		BB96E3F42B66515900A3077C /* imgui.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = imgui.cpp; sourceTree = "<group>"; };
+		BB96E3F62B66519500A3077C /* glad.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = glad.cpp; sourceTree = "<group>"; };
+		BB96E3F82B6651BE00A3077C /* imgui_impl_opengl3.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = imgui_impl_opengl3.cpp; sourceTree = "<group>"; };
+		BB96E3FA2B6651C500A3077C /* imgui_impl_sdl2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = imgui_impl_sdl2.cpp; sourceTree = "<group>"; };
+		BB96E4082B66544900A3077C /* scripts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = scripts; sourceTree = "<group>"; };
+		BBB524F72B6648A100A65C62 /* textures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = textures; sourceTree = "<group>"; };
+		BBB524F82B6648A100A65C62 /* shader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = shader.h; sourceTree = "<group>"; };
+		BBB524F92B6648A100A65C62 /* MosaicMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MosaicMesh.h; sourceTree = "<group>"; };
+		BBB524FA2B6648A100A65C62 /* OpenGLHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OpenGLHelper.h; sourceTree = "<group>"; };
+		BBB524FB2B6648A100A65C62 /* PostProcessor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PostProcessor.h; sourceTree = "<group>"; };
+		BBB524FC2B6648A100A65C62 /* A2VideoManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = A2VideoManager.h; sourceTree = "<group>"; };
+		BBB524FD2B6648A100A65C62 /* ImGuiFileDialog.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ImGuiFileDialog.cpp; sourceTree = "<group>"; };
+		BBB524FE2B6648A100A65C62 /* ProjectConfig.xconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ProjectConfig.xconfig; sourceTree = "<group>"; };
+		BBB524FF2B6648A100A65C62 /* SDHRWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SDHRWindow.h; sourceTree = "<group>"; };
+		BBB525002B6648A200A65C62 /* shaders */ = {isa = PBXFileReference; lastKnownFileType = folder; path = shaders; sourceTree = "<group>"; };
+		BBB525012B6648A200A65C62 /* SDHRNetworking.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SDHRNetworking.h; sourceTree = "<group>"; };
+		BBB525022B6648A200A65C62 /* A2VideoManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = A2VideoManager.cpp; sourceTree = "<group>"; };
+		BBB525032B6648A200A65C62 /* GRAddr2XY.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GRAddr2XY.h; sourceTree = "<group>"; };
+		BBB525042B6648A200A65C62 /* shader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = shader.cpp; sourceTree = "<group>"; };
+		BBB525052B6648A200A65C62 /* stb_image.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stb_image.h; sourceTree = "<group>"; };
+		BBB525062B6648A200A65C62 /* imgui.ini */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = imgui.ini; sourceTree = "<group>"; };
+		BBB525072B6648A200A65C62 /* my_imgui_config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = my_imgui_config.h; sourceTree = "<group>"; };
+		BBB525082B6648A200A65C62 /* SDHRManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SDHRManager.cpp; sourceTree = "<group>"; };
+		BBB525092B6648A200A65C62 /* ImGuiFileDialogConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImGuiFileDialogConfig.h; sourceTree = "<group>"; };
+		BBB5250A2B6648A200A65C62 /* camera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = camera.h; sourceTree = "<group>"; };
+		BBB5250B2B6648A200A65C62 /* MosaicMesh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MosaicMesh.cpp; sourceTree = "<group>"; };
+		BBB5250C2B6648A200A65C62 /* OpenGLHelper.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OpenGLHelper.cpp; sourceTree = "<group>"; };
+		BBB5250D2B6648A200A65C62 /* SDHRManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SDHRManager.h; sourceTree = "<group>"; };
+		BBB5250E2B6648A200A65C62 /* SDHRWindow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SDHRWindow.cpp; sourceTree = "<group>"; };
+		BBB5250F2B6648A200A65C62 /* extras */ = {isa = PBXFileReference; lastKnownFileType = folder; path = extras; sourceTree = "<group>"; };
+		BBB525102B6648A200A65C62 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
+		BBB525112B6648A200A65C62 /* imgui_memory_editor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = imgui_memory_editor.h; sourceTree = "<group>"; };
+		BBB525132B6648A200A65C62 /* glad */ = {isa = PBXFileReference; lastKnownFileType = folder; path = glad; sourceTree = "<group>"; };
+		BBB525142B6648A200A65C62 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		BBB525152B6648A200A65C62 /* ConcurrentQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ConcurrentQueue.h; sourceTree = "<group>"; };
+		BBB525162B6648A200A65C62 /* SDHRNetworking.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SDHRNetworking.cpp; sourceTree = "<group>"; };
+		BBB525172B6648A200A65C62 /* A2Window.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = A2Window.cpp; sourceTree = "<group>"; };
+		BBB525182B6648A200A65C62 /* ImGuiFileDialog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImGuiFileDialog.h; sourceTree = "<group>"; };
+		BBB525192B6648A200A65C62 /* glm */ = {isa = PBXFileReference; lastKnownFileType = folder; path = glm; sourceTree = "<group>"; };
+		BBB5251A2B6648A200A65C62 /* PostProcessor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PostProcessor.cpp; sourceTree = "<group>"; };
+		BBB5251B2B6648A200A65C62 /* A2Window.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = A2Window.h; sourceTree = "<group>"; };
+		BBB525282B664A7D00A65C62 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		BBB5252A2B664A8F00A65C62 /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		BB8330D32B6645B300071F38 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */,
+				BB96E3E22B664CDB00A3077C /* libSDL2-2.0.0.dylib in Frameworks */,
+				BBB525292B664A7D00A65C62 /* OpenGL.framework in Frameworks */,
+				BBB5252B2B664A8F00A65C62 /* CoreVideo.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		BB8330CD2B6645B300071F38 = {
+			isa = PBXGroup;
+			children = (
+				BB96E4082B66544900A3077C /* scripts */,
+				BB96E3FA2B6651C500A3077C /* imgui_impl_sdl2.cpp */,
+				BB96E3F82B6651BE00A3077C /* imgui_impl_opengl3.cpp */,
+				BB96E3F62B66519500A3077C /* glad.cpp */,
+				BB96E3F42B66515900A3077C /* imgui.cpp */,
+				BB96E3F22B66515400A3077C /* imgui_widgets.cpp */,
+				BB96E3F02B66514E00A3077C /* imgui_tables.cpp */,
+				BB96E3EE2B66513C00A3077C /* imgui_draw.cpp */,
+				BB96E3EC2B66513700A3077C /* imgui_demo.cpp */,
+				BB8330D82B6645B300071F38 /* SuperDuperDisplay */,
+				BB8330D72B6645B300071F38 /* Products */,
+				BBB525272B664A7D00A65C62 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		BB8330D72B6645B300071F38 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				BB8330D62B6645B300071F38 /* SuperDuperDisplay */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		BB8330D82B6645B300071F38 /* SuperDuperDisplay */ = {
+			isa = PBXGroup;
+			children = (
+				BBB525022B6648A200A65C62 /* A2VideoManager.cpp */,
+				BBB524FC2B6648A100A65C62 /* A2VideoManager.h */,
+				BBB525172B6648A200A65C62 /* A2Window.cpp */,
+				BBB5251B2B6648A200A65C62 /* A2Window.h */,
+				BBB5250A2B6648A200A65C62 /* camera.h */,
+				BBB525102B6648A200A65C62 /* common.h */,
+				BBB525152B6648A200A65C62 /* ConcurrentQueue.h */,
+				BBB5250F2B6648A200A65C62 /* extras */,
+				BBB525132B6648A200A65C62 /* glad */,
+				BBB525192B6648A200A65C62 /* glm */,
+				BBB525032B6648A200A65C62 /* GRAddr2XY.h */,
+				BBB525112B6648A200A65C62 /* imgui_memory_editor.h */,
+				BBB525062B6648A200A65C62 /* imgui.ini */,
+				BBB524FD2B6648A100A65C62 /* ImGuiFileDialog.cpp */,
+				BBB525182B6648A200A65C62 /* ImGuiFileDialog.h */,
+				BBB525092B6648A200A65C62 /* ImGuiFileDialogConfig.h */,
+				BBB525142B6648A200A65C62 /* main.cpp */,
+				BBB5250B2B6648A200A65C62 /* MosaicMesh.cpp */,
+				BBB524F92B6648A100A65C62 /* MosaicMesh.h */,
+				BBB525072B6648A200A65C62 /* my_imgui_config.h */,
+				BBB5250C2B6648A200A65C62 /* OpenGLHelper.cpp */,
+				BBB524FA2B6648A100A65C62 /* OpenGLHelper.h */,
+				BBB5251A2B6648A200A65C62 /* PostProcessor.cpp */,
+				BBB524FB2B6648A100A65C62 /* PostProcessor.h */,
+				BBB524FE2B6648A100A65C62 /* ProjectConfig.xconfig */,
+				BBB525082B6648A200A65C62 /* SDHRManager.cpp */,
+				BBB5250D2B6648A200A65C62 /* SDHRManager.h */,
+				BBB525162B6648A200A65C62 /* SDHRNetworking.cpp */,
+				BBB525012B6648A200A65C62 /* SDHRNetworking.h */,
+				BBB5250E2B6648A200A65C62 /* SDHRWindow.cpp */,
+				BBB524FF2B6648A100A65C62 /* SDHRWindow.h */,
+				BBB525042B6648A200A65C62 /* shader.cpp */,
+				BBB524F82B6648A100A65C62 /* shader.h */,
+				BBB525002B6648A200A65C62 /* shaders */,
+				BBB525052B6648A200A65C62 /* stb_image.h */,
+				BBB524F72B6648A100A65C62 /* textures */,
+			);
+			name = SuperDuperDisplay;
+			sourceTree = "<group>";
+		};
+		BBB525272B664A7D00A65C62 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				BB96E3EA2B6650BA00A3077C /* libz.tbd */,
+				BB96E3E12B664CDB00A3077C /* libSDL2-2.0.0.dylib */,
+				BBB5252A2B664A8F00A65C62 /* CoreVideo.framework */,
+				BBB525282B664A7D00A65C62 /* OpenGL.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		BB8330D52B6645B300071F38 /* SuperDuperDisplay */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BB8330DD2B6645B300071F38 /* Build configuration list for PBXNativeTarget "SuperDuperDisplay" */;
+			buildPhases = (
+				BB8330D22B6645B300071F38 /* Sources */,
+				BB8330D32B6645B300071F38 /* Frameworks */,
+				BB8330D42B6645B300071F38 /* CopyFiles */,
+				BB96E3E42B664CDB00A3077C /* Embed Libraries */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SuperDuperDisplay;
+			productName = SuperDuperDisplay;
+			productReference = BB8330D62B6645B300071F38 /* SuperDuperDisplay */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BB8330CE2B6645B300071F38 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1520;
+				TargetAttributes = {
+					BB8330D52B6645B300071F38 = {
+						CreatedOnToolsVersion = 15.2;
+					};
+				};
+			};
+			buildConfigurationList = BB8330D12B6645B300071F38 /* Build configuration list for PBXProject "SuperDuperDisplay" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = BB8330CD2B6645B300071F38;
+			productRefGroup = BB8330D72B6645B300071F38 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BB8330D52B6645B300071F38 /* SuperDuperDisplay */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		BB8330D22B6645B300071F38 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB96E3F72B66519500A3077C /* glad.cpp in Sources */,
+				BB96E3F92B6651BE00A3077C /* imgui_impl_opengl3.cpp in Sources */,
+				BB96E3FB2B6651C500A3077C /* imgui_impl_sdl2.cpp in Sources */,
+				BB96E3ED2B66513700A3077C /* imgui_demo.cpp in Sources */,
+				BB96E3EF2B66513C00A3077C /* imgui_draw.cpp in Sources */,
+				BB96E3F12B66514E00A3077C /* imgui_tables.cpp in Sources */,
+				BB96E3F32B66515400A3077C /* imgui_widgets.cpp in Sources */,
+				BB96E3F52B66515900A3077C /* imgui.cpp in Sources */,
+				BBB525262B6648A200A65C62 /* PostProcessor.cpp in Sources */,
+				BBB525222B6648A200A65C62 /* SDHRWindow.cpp in Sources */,
+				BBB525252B6648A200A65C62 /* A2Window.cpp in Sources */,
+				BBB525202B6648A200A65C62 /* MosaicMesh.cpp in Sources */,
+				BBB525232B6648A200A65C62 /* main.cpp in Sources */,
+				BBB5251D2B6648A200A65C62 /* A2VideoManager.cpp in Sources */,
+				BBB5251F2B6648A200A65C62 /* SDHRManager.cpp in Sources */,
+				BBB525242B6648A200A65C62 /* SDHRNetworking.cpp in Sources */,
+				BBB525212B6648A200A65C62 /* OpenGLHelper.cpp in Sources */,
+				BBB5251E2B6648A200A65C62 /* shader.cpp in Sources */,
+				BBB5251C2B6648A200A65C62 /* ImGuiFileDialog.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		BB8330DB2B6645B300071F38 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_PROFILING_CODE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = "";
+				SDKROOT = macosx;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/glad",
+					"$(PROJECT_DIR)/imgui/backends",
+					"$(PROJECT_DIR)/imgui",
+					/opt/homebrew/include/SDL2,
+				);
+			};
+			name = Debug;
+		};
+		BB8330DC2B6645B300071F38 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				OTHER_LDFLAGS = "";
+				SDKROOT = macosx;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/glad",
+					"$(PROJECT_DIR)/imgui/backends",
+					"$(PROJECT_DIR)/imgui",
+					/opt/homebrew/include/SDL2,
+				);
+			};
+			name = Release;
+		};
+		BB8330DE2B6645B300071F38 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"/opt/homebrew/Cellar/openssl@3/3.2.0_1/lib",
+					/opt/homebrew/Cellar/sdl2/2.28.5/lib,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		BB8330DF2B6645B300071F38 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"/opt/homebrew/Cellar/openssl@3/3.2.0_1/lib",
+					/opt/homebrew/Cellar/sdl2/2.28.5/lib,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		BB8330D12B6645B300071F38 /* Build configuration list for PBXProject "SuperDuperDisplay" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB8330DB2B6645B300071F38 /* Debug */,
+				BB8330DC2B6645B300071F38 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BB8330DD2B6645B300071F38 /* Build configuration list for PBXNativeTarget "SuperDuperDisplay" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB8330DE2B6645B300071F38 /* Debug */,
+				BB8330DF2B6645B300071F38 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = BB8330CE2B6645B300071F38 /* Project object */;
+}
