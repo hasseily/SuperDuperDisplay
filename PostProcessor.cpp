@@ -1,7 +1,7 @@
 #include "PostProcessor.h"
 #include "OpenGLHelper.h"
 #include "imgui.h"
-#include "ImGuiFileDialog.h"
+#include "extras/ImGuiFileDialog.h"
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 PostProcessor* PostProcessor::s_instance;
