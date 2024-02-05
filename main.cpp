@@ -489,7 +489,7 @@ int main(int argc, char* argv[])
 			ImGui::GetBackgroundDrawList()->AddImage(
 				(void*)glhelper->get_output_texture_id(),
 				margin,
-				ImVec2(margin.x + _newW, margin.y + _newH),
+				ImVec2(_w - margin.x, _h - margin.y),
 				ImVec2(0, 0),
 				ImVec2(1, 1)
 			);
@@ -500,7 +500,7 @@ int main(int argc, char* argv[])
 				ImGui::GetBackgroundDrawList()->AddImage(
 					(void*)glhelper->get_texture_id_at_slot(_slSlot),
 					margin,
-					ImVec2(margin.x + _newW, margin.y + _newH),
+					ImVec2(_w - margin.x, _h - margin.y),
 					ImVec2(0, 0),
 					ImVec2(1, 1)
 				);

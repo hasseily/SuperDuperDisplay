@@ -8,6 +8,22 @@ PostProcessor* PostProcessor::s_instance;
 
 static OpenGLHelper* oglHelper;
 
+// Buffers and vertices for a fullscreen quad
+static GLuint quadVAO = UINT_MAX;
+static GLuint quadVBO = UINT_MAX;
+static GLfloat quadVertices[] = {
+	// Positions	// Texture Coords
+	-1.f, 1.0f,  	0.0f, 1.0f,
+	1.0f, -1.f,  	1.0f, 0.0f,
+	1.0f, 1.0f,  	1.0f, 1.0f,
+	
+	-1.f, 1.0f,  	0.0f, 1.0f,
+	-1.f, -1.f,  	0.0f, 0.0f,
+	1.0f, -1.f,  	1.0f, 0.0f
+};
+
+static int frame_count = 0;	// Frame count for interlacing
+
 // Shader parameter variables
 bool p_bzl = false;
 bool p_corner = false;
@@ -28,7 +44,7 @@ float p_conv_b = 0.0f;
 float p_conv_g = 0.0f;
 float p_conv_r = 0.0f;
 float p_gb = 0.0f;
-int p_m_type = -1;
+int p_m_type = 0;
 float p_maskh = 0.75f;
 float p_maskl = 0.3f;
 float p_msize = 1.0f;
@@ -55,7 +71,12 @@ void PostProcessor::Initialize()
 
 PostProcessor::~PostProcessor()
 {
-
+	if (quadVAO != UINT_MAX)
+	{
+			// Cleanup
+		glDeleteVertexArrays(1, &quadVAO);
+		glDeleteBuffers(1, &quadVBO);
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -84,11 +105,11 @@ void PostProcessor::Render()
 		oglHelper = OpenGLHelper::GetInstance();
 	GLenum glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error 0: " << glerr << std::endl;
+		std::cerr << "OpenGL error PP 0: " << glerr << std::endl;
 	}
 	v_ppshaders.at(0).use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error 1: " << glerr << std::endl;
+		std::cerr << "OpenGL error PP 1: " << glerr << std::endl;
 	}
 	uint32_t w,h;
 	oglHelper->get_framebuffer_size(&w, &h);
@@ -97,14 +118,15 @@ void PostProcessor::Render()
 	int _slSlot = (w == 560 ? 4 : 5);
 	shaderProgram.setInt("HorizScanlineTexture", _SDHR_START_TEXTURES + _slSlot - GL_TEXTURE0);
 	shaderProgram.setInt("BezelTexture", _SDHR_START_TEXTURES + 6 - GL_TEXTURE0);
-	shaderProgram.setInt("FrameCount", 2);
+	shaderProgram.setInt("FrameCount", frame_count);
 	shaderProgram.setVec2("InputSize", glm::vec2(w, h));
 	shaderProgram.setVec2("TextureSize", glm::vec2(w, h));
 	shaderProgram.setVec2("OutputSize", glm::vec2(w, h));
 	shaderProgram.setMat4("MVPMatrix", glm::mat4(1));
 	
 	// Update uniforms
-	shaderProgram.setFloat("SCANLINEWEIGHT", p_scanline_weight);
+	shaderProgram.setFloat("SCANLINE_TYPE", (float)p_scanline_type);
+	shaderProgram.setFloat("SCANLINE_WEIGHT", p_scanline_weight);
 	shaderProgram.setFloat("INTERLACE", p_interlace ? 1.0f : 0.0f);
 	shaderProgram.setFloat("M_TYPE", (float)p_m_type);
 	shaderProgram.setFloat("MSIZE", p_msize);
@@ -139,63 +161,40 @@ void PostProcessor::Render()
 
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error 2: " << glerr << std::endl;
+		std::cerr << "OpenGL error PP 2: " << glerr << std::endl;
 	}
 
 	// Setup fullscreen quad VAO and VBO
-	GLuint quadVAO, quadVBO;
-	glGenVertexArrays(1, &quadVAO);
-	glGenBuffers(1, &quadVBO);
-	glBindVertexArray(quadVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error 3: " << glerr << std::endl;
+	if (quadVAO == UINT_MAX)
+	{
+		glGenVertexArrays(1, &quadVAO);
+		glGenBuffers(1, &quadVBO);
+		glBindVertexArray(quadVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+
+			// Position attribute
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)0);
+
+			// Texture coordinate attribute
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)(2 * sizeof(GLfloat)));
+
+			// Unbind the VAO
+		glBindVertexArray(0);
 	}
 
-	GLfloat quadVertices[] = {
-		// Positions        // Texture Coords
-		-1.f, 1.0f, 0.0f,  0.0f, 1.0f,
-		-1.f, -1.f, 0.0f,  0.0f, 0.0f,
-		1.0f, -1.f, 0.0f,  1.0f, 0.0f,
-
-		-1.f, 1.0f, 0.0f,  0.0f, 1.0f,
-		1.0f, -1.f, 0.0f,  1.0f, 0.0f,
-		1.0f, 1.0f, 0.0f,  1.0f, 1.0f
-	};
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error 4: " << glerr << std::endl;
-	}
-	// Position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
-	glEnableVertexAttribArray(0);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error 5: " << glerr << std::endl;
-	}
-	// Texture coordinate attribute
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
-	glEnableVertexAttribArray(1);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error 6: " << glerr << std::endl;
-	}
-	// Unbind the VAO
-	glBindVertexArray(0);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error 7: " << glerr << std::endl;
-	}
 	// Render the fullscreen quad
 	glBindVertexArray(quadVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error 8: " << glerr << std::endl;
+		std::cerr << "OpenGL error PP 3: " << glerr << std::endl;
 	}
-	// Cleanup
-	glDeleteVertexArrays(1, &quadVAO);
-	glDeleteBuffers(1, &quadVBO);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error 9: " << glerr << std::endl;
-	}
+	
+	++frame_count;
 }
 
 void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
@@ -230,19 +229,22 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 		*/
 		ImGui::Separator();
 		
-
 		// Scanline and Interlacing
-		ImGui::RadioButton("None", &p_scanline_type, 0); ImGui::SameLine();
-		ImGui::RadioButton("Simple", &p_scanline_type, 1); ImGui::SameLine();
-		ImGui::RadioButton("CRT", &p_scanline_type, 2);
-		ImGui::SliderFloat("Scanline Weight", &p_scanline_weight, 0.001f, 0.5f, "%.2f");
-		ImGui::Checkbox("Interlacing On/Off", &p_interlace);
+		ImGui::Text("[ SCANLINE SETTINGS ]");
+		ImGui::RadioButton("None##Scanline", &p_scanline_type, 0); ImGui::SameLine();
+		ImGui::RadioButton("Simple##Scanline", &p_scanline_type, 1); ImGui::SameLine();
+		ImGui::RadioButton("CRT##Scanline", &p_scanline_type, 2);
+		if (p_scanline_type == 2)
+		{
+			ImGui::SliderFloat("Scanline Weight", &p_scanline_weight, 0.001f, 0.5f, "%.2f");
+			ImGui::Checkbox("Interlacing On/Off", &p_interlace);
+		}
 
 		// Mask Settings
 		ImGui::Text("[ MASK SETTINGS ]");
-		ImGui::RadioButton("None", &p_m_type, 0); ImGui::SameLine();
-		ImGui::RadioButton("CGWG", &p_m_type, 1); ImGui::SameLine();
-		ImGui::RadioButton("RGB", &p_m_type, 2);
+		ImGui::RadioButton("None##Mask", &p_m_type, 0); ImGui::SameLine();
+		ImGui::RadioButton("CGWG##Mask", &p_m_type, 1); ImGui::SameLine();
+		ImGui::RadioButton("RGB##Mask", &p_m_type, 2);
 		ImGui::SliderFloat("Mask Size", &p_msize, 1.0f, 2.0f, "%.1f");
 		ImGui::Checkbox("Slot Mask On/Off", &p_slot);
 		ImGui::SliderFloat("Slot Mask Width", &p_slotw, 2.0f, 3.0f, "%.1f");

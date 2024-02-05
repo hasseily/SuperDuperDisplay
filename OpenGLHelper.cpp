@@ -152,8 +152,8 @@ void OpenGLHelper::create_framebuffers(uint32_t width, uint32_t height)
 		glBindTexture(GL_TEXTURE_2D, output_texture_ids[i]);
 		glViewport(0, 0, fb_width, fb_height);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_ids[i], 0);
@@ -200,8 +200,6 @@ void OpenGLHelper::rescale_framebuffers(uint32_t width, uint32_t height)
 		glBindTexture(GL_TEXTURE_2D, output_texture_ids[i]);
 		glViewport(0, 0, width, height);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL rescale_framebuffer error: " << glerr << std::endl;
 		}

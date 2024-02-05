@@ -29,10 +29,10 @@ any later version.
 ///////////////////////////////////////// VERTEX SHADER /////////////////////////////////////////
 #if defined(VERTEX)
 
-in vec2 VertexCoord;
+in vec2 aPos;
 in vec2 TexCoord;
 //in vec4 COLOR;
-out vec2 vTexCoord; // Pass texture coordinates to fragment shader
+out vec2 TexCoords; // Pass texture coordinates to fragment shader
 out vec2 scale;
 out vec2 ps;
 
@@ -41,19 +41,14 @@ uniform COMPAT_PRECISION vec2 OutputSize;
 uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
 
-#ifdef PARAMETER_UNIFORM
-	uniform COMPAT_PRECISION float one;
-#else
-	#define one 0.0
-#endif
-
 void main()
 {
-	gl_Position = vec4(VertexCoord, 0.0, 1.0);
-	vTexCoord = TexCoord;
+	gl_Position = vec4(aPos, 0.0, 1.0);
+	TexCoords = TexCoord;
 	scale = TextureSize.xy/InputSize.xy;
-	ps = 1.0/TextureSize.xy; 
+	ps = 1.0/TextureSize.xy;
 }
+
 
 ///////////////////////////////////////// FRAGMENT SHADER /////////////////////////////////////////
 #elif defined(FRAGMENT)
@@ -65,7 +60,7 @@ uniform COMPAT_PRECISION vec2 InputSize;
 uniform sampler2D Texture;
 uniform sampler2D BezelTexture;
 uniform sampler2D HorizScanlineTexture;
-in vec2 vTexCoord;
+in vec2 TexCoords;
 in vec2 scale;
 in vec2 ps;
 out vec4 FragColor;
@@ -82,7 +77,8 @@ uniform COMPAT_PRECISION float C_STR;
 uniform COMPAT_PRECISION float CONV_R;
 uniform COMPAT_PRECISION float CONV_G;
 uniform COMPAT_PRECISION float CONV_B;
-uniform COMPAT_PRECISION float SCANLINEWEIGHT;
+uniform COMPAT_PRECISION float SCANLINE_WEIGHT;
+uniform COMPAT_PRECISION float SCANLINE_TYPE;
 uniform COMPAT_PRECISION float INTERLACE;
 uniform COMPAT_PRECISION float WARPX;
 uniform COMPAT_PRECISION float WARPY;
@@ -151,12 +147,12 @@ float scanlineWeights(float distance, vec3 color, float x) {
 	// independent of its width. That is, for a narrower beam
 	// "weights" should have a higher peak at the center of the
 	// scanline than for a wider beam.
-	float wid = SCANLINEWEIGHT + 0.15 * dot(color, vec3(0.25-0.8*x)); //0.8 vignette strength
+	float wid = SCANLINE_WEIGHT + 0.15 * dot(color, vec3(0.25-0.8*x)); //0.8 vignette strength
 	float weights = distance / wid;
 	return 0.4 * exp(-weights * weights * weights) / wid;
 }
 
-#define pwr vec3(1.0/((-1.0*SCANLINEWEIGHT+1.0)*(-0.8*CGWG+1.0))-1.2)
+#define pwr vec3(1.0/((-1.0*SCANLINE_WEIGHT+1.0)*(-0.8*CGWG+1.0))-1.2)
 // Returns gamma corrected output, compensated for scanline+mask embedded gamma
 vec3 inv_gamma(vec3 col, vec3 power) {
 	vec3 cir = col-1.0;
@@ -224,7 +220,7 @@ void main() {
 		RB, GB, 1.0
 		);
 // zoom in and center screen for bezel
-	vec2 pos = Warp((vTexCoord*vec2(1.0-zoomx,1.0-zoomy)-vec2(centerx,centery)/100.0)*scale);
+	vec2 pos = Warp((TexCoords*vec2(1.0-zoomx,1.0-zoomy)-vec2(centerx,centery)/100.0)*scale);
 	vec2 corn;
 	
 	if (corner == 1.0){
@@ -233,7 +229,7 @@ void main() {
 	}	 
 	pos /= scale;
 
-	vec4 bez = texture(BezelTexture,vTexCoord*SourceSize.xy/InputSize.xy*0.95+vec2(0.022,0.022));	
+	vec4 bez = texture(BezelTexture,TexCoords*SourceSize.xy/InputSize.xy*0.95+vec2(0.022,0.022));	
 	bez.rgb = mix(bez.rgb, vec3(0.25),0.4);
 	vec2 bpos = pos;
 	vec2 dx = vec2(ps.x,0.0);
@@ -258,7 +254,7 @@ void main() {
 // Vignette
 	float x = 0.0;
 	if (vig == 1.0) {
-		x = vTexCoord.x*scale.x-0.5;
+		x = TexCoords.x*scale.x-0.5;
 		x = x*x;
 	}
 
@@ -280,18 +276,21 @@ void main() {
 		res = clamp(res,0.0,1.0);
 	}
 	
-// handle interlacing
-	float s = fract(bpos.y*SourceSize.y/2.001+0.5);
-	if (INTERLACE == 1.0)
-		s = mod(float(FrameCount),2.0) < 1.0 ? s: s+0.5;
+	// For CRT-Geom scanlines
+	if (SCANLINE_TYPE == 2.0) {
+		// handle interlacing
+		float s = fract(bpos.y*SourceSize.y/2.001+0.5);
+		if (INTERLACE == 1.0)
+			s = mod(float(FrameCount),2.0) < 1.0 ? s: s+0.5;
 	
-// Calculate CRT-Geom scanlines weight and apply
-	float weight = scanlineWeights(s, res, x);
-	float weight2 = scanlineWeights(1.0-s, res, x);
-	res *= weight + weight2;
+		// Calculate CRT-Geom scanlines weight and apply
+		float weight = scanlineWeights(s, res, x);
+		float weight2 = scanlineWeights(1.0-s, res, x);
+		res *= weight + weight2;
+	}
 
 // Masks
-	vec2 xy = vTexCoord*OutputSize.xy*scale/MSIZE;	
+	vec2 xy = TexCoords*OutputSize.xy*scale/MSIZE;	
 	float CGWG = mix(Maskl, Maskh, l);
 	res *= Mask(xy, CGWG);
 
@@ -330,11 +329,13 @@ void main() {
 		if (corn.y <= corn.x || corn.x < 0.0001 )
 			res = vec3(0.0);
 
-// Apply final horizontal scanline
+// Apply final simple horizontal scanline if required
 	
-	FragColor = vec4(res, 1.0);
-	// FragColor = vec4(res * mod(floor(gl_FragCoord.y), 2.0), 1.0);
-
+	if (SCANLINE_TYPE == 1.0) {
+		FragColor = vec4(res * mod(floor(gl_FragCoord.y), 2.0), 1.0);
+	} else {
+		FragColor = vec4(res, 1.0);
+	}
 }
 
 #endif
