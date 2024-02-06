@@ -554,15 +554,9 @@ void A2VideoManager::Render()
 		// image asset 1: The alternate font 80COL
 		glActiveTexture(_SDHR_START_TEXTURES + 3);
 		image_assets[3].AssignByFilename(this, "textures/Apple2eFont7x16 - Alternate.png");
-		// image asset 4: The Scanline texture for original Apple 2 modes
+		// image asset 4: The bezel for postprocessing
 		glActiveTexture(_SDHR_START_TEXTURES + 4);
-		image_assets[4].AssignByFilename(this, "textures/Texture_Scanlines_384.png");
-		// image asset 4: The Scanline texture for SHR mode
-		glActiveTexture(_SDHR_START_TEXTURES + 5);
-		image_assets[5].AssignByFilename(this, "textures/Texture_Scanlines_400.png");
-		// image asset 5: The bezel for postprocessing
-		glActiveTexture(_SDHR_START_TEXTURES + 6);
-		image_assets[6].AssignByFilename(this, "textures/Bezel.png");
+		image_assets[4].AssignByFilename(this, "textures/Bezel.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL AssignByFilename error: " 
 				<< 0 << " - " << glerr << std::endl;
@@ -695,8 +689,7 @@ void A2VideoManager::UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start
 		for (size_t i = 0; i < 14; i++)
 		{
 			framebuffer->at(y * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];	// LoRes colors start at index 12
-			if (!bShowScanLines)
-				framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
+			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
 		}
 		y += 2;
 	}
@@ -735,15 +728,13 @@ void A2VideoManager::UpdateDLoResRGBCell(uint16_t addr, const uint16_t addr_star
 		for (size_t i = 0; i < 7; i++)
 		{
 			framebuffer->at(y * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];	// LoRes colors start at index 12
-			if (!bShowScanLines)
-				framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
+			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
 		}
 		colorIdx = (j < 4) ? (mainval & 0xF) : (mainval & 0xF0) >> 4;
 		for (size_t i = 7; i < 14; i++)
 		{
 			framebuffer->at(y * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];	// LoRes colors start at index 12
-			if (!bShowScanLines)
-				framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
+			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
 		}
 
 		y += 2;
@@ -850,12 +841,9 @@ void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start
 		dwordval = dwordval >> 1;
 	}
 	// duplicate on the next row (it may be overridden by the scanlines)
-	if (!bShowScanLines)
+	for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
 	{
-		for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
-		{
-			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + i) = framebuffer->at(y * _A2VIDEO_MIN_WIDTH + i);
-		}
+		framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + i) = framebuffer->at(y * _A2VIDEO_MIN_WIDTH + i);
 	}
 }
 
@@ -981,12 +969,9 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 	}
 	
 	// duplicate on the next row (it may be overridden by the scanlines)
-	if (!bShowScanLines)
+	for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
 	{
-		for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
-		{
-			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + i) = framebuffer->at(y * _A2VIDEO_MIN_WIDTH + i);
-		}
+		framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + i) = framebuffer->at(y * _A2VIDEO_MIN_WIDTH + i);
 	}
 }
 	
@@ -1053,12 +1038,9 @@ void A2VideoManager::UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* f
 		}
 		
 		// duplicate on the next row (it may be overridden by the scanlines)
-		if (!bShowScanLines)
+		for (size_t i = 4; i >0; i--)
 		{
-			for (size_t i = 4; i >0; i--)
-			{
-				*(pVideoAddress - i + _A2VIDEO_SHR_WIDTH) = *(pVideoAddress - i);
-			}
+			*(pVideoAddress - i + _A2VIDEO_SHR_WIDTH) = *(pVideoAddress - i);
 		}
 	}
 }

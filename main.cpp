@@ -319,7 +319,6 @@ int main(int argc, char* argv[])
 				ImGui::Separator();
 				ImGui::Checkbox("Untextured Geometry", &glhelper->bDebugNoTextures);             // Show textures toggle
 				ImGui::Checkbox("Perspective Projection", &glhelper->bUsePerspective);       // Change projection type
-				ImGui::Checkbox("Apple 2 Scan Lines", &a2VideoManager->bShowScanLines);
 				ImGui::Separator();
 //				ImGui::Checkbox("Demo Window", &show_demo_window);
 				ImGui::Checkbox("PostProcessing Window", &show_postprocessing_window);
@@ -493,18 +492,6 @@ int main(int argc, char* argv[])
 				ImVec2(0, 0),
 				ImVec2(1, 1)
 			);
-            if (a2VideoManager->bShowScanLines)
-            {
-				// Slot 4 for regular modes, 5 for SHR
-				int _slSlot = (_ss.y == 384 ? 4 : 5);
-				ImGui::GetBackgroundDrawList()->AddImage(
-					(void*)glhelper->get_texture_id_at_slot(_slSlot),
-					margin,
-					ImVec2(_w - margin.x, _h - margin.y),
-					ImVec2(0, 0),
-					ImVec2(1, 1)
-				);
-            }
         }
 
 		// Rendering

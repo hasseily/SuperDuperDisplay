@@ -114,10 +114,7 @@ void PostProcessor::Render()
 	uint32_t w,h;
 	oglHelper->get_framebuffer_size(&w, &h);
 	auto shaderProgram = v_ppshaders.at(0);
-	// Slot 4 for scanline regular modes, 5 for SHR
-	int _slSlot = (w == 560 ? 4 : 5);
-	shaderProgram.setInt("HorizScanlineTexture", _SDHR_START_TEXTURES + _slSlot - GL_TEXTURE0);
-	shaderProgram.setInt("BezelTexture", _SDHR_START_TEXTURES + 6 - GL_TEXTURE0);
+	shaderProgram.setInt("BezelTexture", _SDHR_START_TEXTURES + 4 - GL_TEXTURE0);
 	shaderProgram.setInt("FrameCount", frame_count);
 	shaderProgram.setVec2("InputSize", glm::vec2(w, h));
 	shaderProgram.setVec2("TextureSize", glm::vec2(w, h));

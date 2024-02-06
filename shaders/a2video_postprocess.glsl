@@ -59,7 +59,6 @@ uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
 uniform sampler2D Texture;
 uniform sampler2D BezelTexture;
-uniform sampler2D HorizScanlineTexture;
 in vec2 TexCoords;
 in vec2 scale;
 in vec2 ps;
