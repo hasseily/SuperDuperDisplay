@@ -116,6 +116,7 @@
 		BBC172F82B6657C20044B194 /* MemoryLoader.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = MemoryLoader.cpp; path = extras/MemoryLoader.cpp; sourceTree = "<group>"; };
 		BBC172FA2B6658700044B194 /* imgui.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui.cpp; path = imgui/imgui.cpp; sourceTree = "<group>"; };
 		BBC172FC2B6658AD0044B194 /* imgui_impl_sdl2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_impl_sdl2.cpp; path = imgui/backends/imgui_impl_sdl2.cpp; sourceTree = "<group>"; };
+		BBC48E172B71DA7D00D70DBD /* nlohmann */ = {isa = PBXFileReference; lastKnownFileType = folder; path = nlohmann; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,21 +137,21 @@
 		BB8330CD2B6645B300071F38 = {
 			isa = PBXGroup;
 			children = (
-				BBC172FC2B6658AD0044B194 /* imgui_impl_sdl2.cpp */,
-				BBC172FA2B6658700044B194 /* imgui.cpp */,
-				BBC172F82B6657C20044B194 /* MemoryLoader.cpp */,
-				BBC172F62B6657BB0044B194 /* ImGuiFileDialog.cpp */,
-				BBC172F42B6657710044B194 /* glad.cpp */,
-				BBC172F12B6657640044B194 /* imgui_impl_opengl3.cpp */,
-				BBC172F02B6657640044B194 /* imgui_impl_sdlrenderer2.cpp */,
-				BBC172EC2B6657460044B194 /* imgui_draw.cpp */,
-				BBC172ED2B6657470044B194 /* imgui_tables.cpp */,
-				BB96E4082B66544900A3077C /* scripts */,
-				BB96E3F22B66515400A3077C /* imgui_widgets.cpp */,
-				BB96E3EC2B66513700A3077C /* imgui_demo.cpp */,
-				BB8330D82B6645B300071F38 /* SuperDuperDisplay */,
-				BB8330D72B6645B300071F38 /* Products */,
 				BBB525272B664A7D00A65C62 /* Frameworks */,
+				BBC172F42B6657710044B194 /* glad.cpp */,
+				BB96E3EC2B66513700A3077C /* imgui_demo.cpp */,
+				BBC172EC2B6657460044B194 /* imgui_draw.cpp */,
+				BBC172F12B6657640044B194 /* imgui_impl_opengl3.cpp */,
+				BBC172FC2B6658AD0044B194 /* imgui_impl_sdl2.cpp */,
+				BBC172F02B6657640044B194 /* imgui_impl_sdlrenderer2.cpp */,
+				BBC172ED2B6657470044B194 /* imgui_tables.cpp */,
+				BB96E3F22B66515400A3077C /* imgui_widgets.cpp */,
+				BBC172FA2B6658700044B194 /* imgui.cpp */,
+				BBC172F62B6657BB0044B194 /* ImGuiFileDialog.cpp */,
+				BBC172F82B6657C20044B194 /* MemoryLoader.cpp */,
+				BB8330D72B6645B300071F38 /* Products */,
+				BB96E4082B66544900A3077C /* scripts */,
+				BB8330D82B6645B300071F38 /* SuperDuperDisplay */,
 			);
 			sourceTree = "<group>";
 		};
@@ -182,6 +183,7 @@
 				BBB5250B2B6648A200A65C62 /* MosaicMesh.cpp */,
 				BBB524F92B6648A100A65C62 /* MosaicMesh.h */,
 				BBB525072B6648A200A65C62 /* my_imgui_config.h */,
+				BBC48E172B71DA7D00D70DBD /* nlohmann */,
 				BBB5250C2B6648A200A65C62 /* OpenGLHelper.cpp */,
 				BBB524FA2B6648A100A65C62 /* OpenGLHelper.h */,
 				BBB5251A2B6648A200A65C62 /* PostProcessor.cpp */,
@@ -222,8 +224,8 @@
 			buildPhases = (
 				BB8330D22B6645B300071F38 /* Sources */,
 				BB8330D32B6645B300071F38 /* Frameworks */,
-				BB8330D42B6645B300071F38 /* CopyFiles */,
 				BB96E3E42B664CDB00A3077C /* Embed Libraries */,
+				BB8330D42B6645B300071F38 /* CopyFiles */,
 			);
 			buildRules = (
 			);

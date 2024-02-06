@@ -1,7 +1,12 @@
 #include "PostProcessor.h"
 #include "OpenGLHelper.h"
 #include "imgui.h"
+#include "imgui_internal.h"		// for PushItemFlag
 #include "extras/ImGuiFileDialog.h"
+// For save/restore of presets
+#include "nlohmann/json.hpp"
+#include <fstream>
+#include <sstream>
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 PostProcessor* PostProcessor::s_instance;
@@ -23,6 +28,7 @@ static GLfloat quadVertices[] = {
 };
 
 static int frame_count = 0;	// Frame count for interlacing
+static int v_presets = 0;	// Preset chosen
 
 // Shader parameter variables
 bool p_bzl = false;
@@ -82,6 +88,95 @@ PostProcessor::~PostProcessor()
 //////////////////////////////////////////////////////////////////////////
 // Main methods
 //////////////////////////////////////////////////////////////////////////
+
+void PostProcessor::SaveState(int profile_id) {
+	nlohmann::json jsonState = {
+		{"p_bzl", p_bzl},
+		{"p_corner", p_corner},
+		{"p_ext_gamma", p_ext_gamma},
+		{"p_interlace", p_interlace},
+		{"p_potato", p_potato},
+		{"p_slot", p_slot},
+		{"p_vig", p_vig},
+		{"p_bgr", p_bgr},
+		{"p_black", p_black},
+		{"p_br_dep", p_br_dep},
+		{"p_brightness", p_brightness},
+		{"p_c_space", p_c_space},
+		{"p_c_str", p_c_str},
+		{"p_centerx", p_centerx},
+		{"p_centery", p_centery},
+		{"p_conv_b", p_conv_b},
+		{"p_conv_g", p_conv_g},
+		{"p_conv_r", p_conv_r},
+		{"p_gb", p_gb},
+		{"p_m_type", p_m_type},
+		{"p_maskh", p_maskh},
+		{"p_maskl", p_maskl},
+		{"p_msize", p_msize},
+		{"p_rb", p_rb},
+		{"p_rg", p_rg},
+		{"p_saturation", p_saturation},
+		{"p_scanline_weight", p_scanline_weight},
+		{"p_scanline_type", p_scanline_type},
+		{"p_slotw", p_slotw},
+		{"p_warpx", p_warpx},
+		{"p_warpy", p_warpy},
+		{"p_zoomx", p_zoomx},
+		{"p_zoomy", p_zoomy}
+	};
+	
+	std::ostringstream filename;
+	filename << "pp_profile_" << profile_id << ".json";
+	std::ofstream file(filename.str());
+	file << jsonState.dump(4); // Save with pretty printing
+}
+
+void PostProcessor::LoadState(int profile_id) {
+	std::ostringstream filename;
+	filename << "pp_profile_" << profile_id << ".json";
+	std::ifstream file(filename.str());
+	nlohmann::json jsonState;
+	
+	if (file.is_open()) {
+		file >> jsonState;
+		
+		p_bzl = jsonState["p_bzl"];
+		p_corner = jsonState["p_corner"];
+		p_ext_gamma = jsonState["p_ext_gamma"];
+		p_interlace = jsonState["p_interlace"];
+		p_potato = jsonState["p_potato"];
+		p_slot = jsonState["p_slot"];
+		p_vig = jsonState["p_vig"];
+		p_bgr = jsonState["p_bgr"];
+		p_black = jsonState["p_black"];
+		p_br_dep = jsonState["p_br_dep"];
+		p_brightness = jsonState["p_brightness"];
+		p_c_space = jsonState["p_c_space"];
+		p_c_str = jsonState["p_c_str"];
+		p_centerx = jsonState["p_centerx"];
+		p_centery = jsonState["p_centery"];
+		p_conv_b = jsonState["p_conv_b"];
+		p_conv_g = jsonState["p_conv_g"];
+		p_conv_r = jsonState["p_conv_r"];
+		p_gb = jsonState["p_gb"];
+		p_m_type = jsonState["p_m_type"];
+		p_maskh = jsonState["p_maskh"];
+		p_maskl = jsonState["p_maskl"];
+		p_msize = jsonState["p_msize"];
+		p_rb = jsonState["p_rb"];
+		p_rg = jsonState["p_rg"];
+		p_saturation = jsonState["p_saturation"];
+		p_scanline_weight = jsonState["p_scanline_weight"];
+		p_scanline_type = jsonState["p_scanline_type"];
+		p_slotw = jsonState["p_slotw"];
+		p_warpx = jsonState["p_warpx"];
+		p_warpy = jsonState["p_warpy"];
+		p_zoomx = jsonState["p_zoomx"];
+		p_zoomy = jsonState["p_zoomy"];
+	}
+}
+
 
 void PostProcessor::Render()
 {
@@ -200,10 +295,56 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 	{
 		ImGui::Begin("Post Processing CRT Shader", p_open);
 		ImGui::Checkbox("Post Processing Enabled", &enabled);
+		
+		// Handle presets. Disable load/save if the chosen button is "Off"
+		ImGui::Text("[ PRESETS ]");
+		if (v_presets == 0)
+		{
+			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f); // Reduce button opacity
+			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true); // Disable button (and make it unclickable)
+		}
+		if (ImGui::Button("Load##Presets"))
+		{
+			this->LoadState(v_presets);
+		}
+		if (v_presets == 0)
+		{
+			ImGui::PopItemFlag();
+			ImGui::PopStyleVar();
+		}
+		ImGui::SameLine();
+		ImGui::Dummy(ImVec2(50.0f, 0.0f));
+		ImGui::SameLine();
+		ImGui::RadioButton("None##Presets", &v_presets, 0); ImGui::SameLine();
+		ImGui::RadioButton("1##Presets", &v_presets, 1); ImGui::SameLine();
+		ImGui::RadioButton("2##Presets", &v_presets, 2); ImGui::SameLine();
+		ImGui::RadioButton("3##Presets", &v_presets, 3);
+		ImGui::SameLine();
+		ImGui::Dummy(ImVec2(50.0f, 0.0f));
+		ImGui::SameLine();
+		
+		if (v_presets == 0)
+		{
+			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f); // Reduce button opacity
+			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true); // Disable button (and make it unclickable)
+		}
+		if (ImGui::Button("Save##Presets"))
+		{
+			this->SaveState(v_presets);
+		}
+		if (v_presets == 0)
+		{
+			ImGui::PopItemFlag();
+			ImGui::PopStyleVar();
+		}
+
+		
+		/* // enable to reload the shader
 		if (ImGui::Button("Reload Shader"))
 		{
 			v_ppshaders.at(0).build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");
 		}
+		*/
 		/*	// Enable to choose the shader
 		if (ImGui::Button("Slot 1 Shader"))
 		{
@@ -224,6 +365,7 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 			ImGuiFileDialog::Instance()->Close();
 		}
 		*/
+		ImGui::PushItemWidth(200);
 		ImGui::Separator();
 		
 		// Scanline and Interlacing
@@ -236,6 +378,7 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 			ImGui::SliderFloat("Scanline Weight", &p_scanline_weight, 0.001f, 0.5f, "%.2f");
 			ImGui::Checkbox("Interlacing On/Off", &p_interlace);
 		}
+		ImGui::Separator();
 
 		// Mask Settings
 		ImGui::Text("[ MASK SETTINGS ]");
@@ -248,6 +391,7 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 		ImGui::SliderFloat("Subpixels BGR/RGB", &p_bgr, 0.0f, 1.0f, "%.1f");
 		ImGui::SliderFloat("Mask Brightness Dark", &p_maskl, 0.0f, 1.0f, "%.2f");
 		ImGui::SliderFloat("Mask Brightness Bright", &p_maskh, 0.0f, 1.0f, "%.2f");
+		ImGui::Separator();
 
 		// Geometry Settings
 		ImGui::Text("[ GEOMETRY SETTINGS ]");
@@ -260,6 +404,7 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 		ImGui::SliderFloat("Curvature Vertical", &p_warpy, 0.00f, 0.25f, "%.2f");
 		ImGui::Checkbox("Corners Cut", &p_corner);
 		ImGui::Checkbox("Vignette On/Off", &p_vig);
+		ImGui::Separator();
 
 		// Color Settings
 		ImGui::Text("[ COLOR SETTINGS ]");
@@ -272,6 +417,7 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 		ImGui::SliderFloat("Blue <-to-> Red Hue", &p_rb, -0.25f, 0.25f, "%.2f");
 		ImGui::SliderFloat("Blue <-to-> Green Hue", &p_gb, -0.25f, 0.25f, "%.2f");
 		ImGui::Checkbox("External Gamma In (Glow etc)", &p_ext_gamma);
+		ImGui::Separator();
 
 		// Convergence Settings
 		ImGui::Text("[ CONVERGENCE SETTINGS ]");
@@ -281,6 +427,7 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 		ImGui::SliderFloat("Convergence Blue X-Axis", &p_conv_b, -3.0f, 3.0f, "%.2f");
 		ImGui::Checkbox("Potato Boost(Simple Gamma, adjust Mask)", &p_potato);
 
+		ImGui::PopItemWidth();
 		ImGui::End();
 	}
 }

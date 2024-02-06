@@ -17,6 +17,7 @@ static void MemoryLoad(uint32_t position, bool bAuxBank) {
 		pMem = SDHRManager::GetInstance()->GetApple2MemPtr() + position;
 	if (ImGui::Button("Load File in Memory"))
 	{
+		ImGui::SetNextWindowSize(ImVec2(800, 400));
 		IGFD::FileDialogConfig config;
 		config.path = ".";
 		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", ".bin,.txt,", config);

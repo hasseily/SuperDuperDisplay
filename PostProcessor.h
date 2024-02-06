@@ -40,6 +40,8 @@ private:
 	// Singleton pattern
 	//////////////////////////////////////////////////////////////////////////
 	void Initialize();
+	void SaveState(int profile_id);
+	void LoadState(int profile_id);
 
 	static PostProcessor* s_instance;
 	PostProcessor()
