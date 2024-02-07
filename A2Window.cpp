@@ -24,13 +24,14 @@ A2Window::~A2Window()
 	}
 }
 
-void A2Window::Define(uint8_t _index, uXY _screen_count, 
-	uXY _tile_dim, uXY _tile_count, 
-	uint8_t* _data, uint32_t _datasize, 
+void A2Window::Define(A2VideoMode_e _video_mode, 
+	uXY _screen_count,
+	uXY _tile_dim, uXY _tile_count,
+	uint8_t* _data, uint32_t _datasize,
 	Shader* _shaderProgram)
 {
 	this->Reset();
-	index = _index;
+	video_mode = _video_mode;
 	screen_count = _screen_count;
 	tile_dim = _tile_dim;
 	tile_count = _tile_count;
@@ -133,19 +134,75 @@ void A2Window::Render()
 	glBindVertexArray(VAO);
 
 	// Assign the textures
-	int _80colOffset = 0;
-	if (A2VideoManager::GetInstance()->IsSoftSwitch(A2SS_80COL))
-		_80colOffset = 2;
-	if (A2VideoManager::GetInstance()->IsSoftSwitch(A2SS_ALTCHARSET))
-	{
-		shaderProgram->setFloat("hasFlashing", 0.f);
-		shaderProgram->setInt("a2FontTexture", _SDHR_START_TEXTURES + _80colOffset + 1 - GL_TEXTURE0);
-	}
-	else {
-		shaderProgram->setFloat("hasFlashing", 1.f);
-		shaderProgram->setInt("a2FontTexture", _SDHR_START_TEXTURES + _80colOffset - GL_TEXTURE0);
+	switch (video_mode) {
+		case A2VIDEO_TEXT1:
+		case A2VIDEO_TEXT2:
+		{
+			shaderProgram->setFloat("isDouble", 0.f);
+			if (A2VideoManager::GetInstance()->IsSoftSwitch(A2SS_ALTCHARSET))
+			{
+				shaderProgram->setFloat("hasFlashing", 0.f);
+				shaderProgram->setInt("a2ModeTexture", _SDHR_START_TEXTURES + 1 - GL_TEXTURE0);
+			} else {
+				shaderProgram->setFloat("hasFlashing", 1.f);
+				shaderProgram->setInt("a2ModeTexture", _SDHR_START_TEXTURES - GL_TEXTURE0);
+			}
+			break;
+		}
+		case A2VIDEO_DTEXT:
+		{
+			shaderProgram->setFloat("isDouble", 1.f);
+			if (A2VideoManager::GetInstance()->IsSoftSwitch(A2SS_ALTCHARSET))
+			{
+				shaderProgram->setFloat("hasFlashing", 0.f);
+				shaderProgram->setInt("a2ModeTexture", _SDHR_START_TEXTURES + 3 - GL_TEXTURE0);
+			} else {
+				shaderProgram->setFloat("hasFlashing", 1.f);
+				shaderProgram->setInt("a2ModeTexture", _SDHR_START_TEXTURES + 2 - GL_TEXTURE0);
+			}
+			break;
+		}
+		case A2VIDEO_LGR1:
+		case A2VIDEO_LGR2:
+		{
+			shaderProgram->setFloat("isDouble", 0.f);
+			shaderProgram->setInt("a2ModeTexture", _SDHR_START_TEXTURES + 4 - GL_TEXTURE0);
+			break;
+		}
+		case A2VIDEO_DLGR:
+		{
+			shaderProgram->setFloat("isDouble", 1.f);
+			shaderProgram->setInt("a2ModeTexture", _SDHR_START_TEXTURES + 4 - GL_TEXTURE0);
+			break;
+		}
+		case A2VIDEO_HGR1:
+		case A2VIDEO_HGR2:
+		{
+			shaderProgram->setFloat("isDouble", 0.f);
+			shaderProgram->setInt("a2ModeTexture", _SDHR_START_TEXTURES + 5 - GL_TEXTURE0);
+			break;
+		}
+		case A2VIDEO_DHGR:
+		{
+			shaderProgram->setFloat("isDouble", 1.f);
+			shaderProgram->setInt("a2ModeTexture", _SDHR_START_TEXTURES + 6 - GL_TEXTURE0);
+			break;
+		}
+		case A2VIDEO_SHR:
+		{
+			// Shouldn't be here, SHR is done differently for now, in a CPU framebuffer
+			break;
+		}
+		default:
+			break;
 	}
 
+	if (A2VideoManager::GetInstance()->IsSoftSwitch(A2SS_MIXED))
+		shaderProgram->setFloat("isMixed", 1.f);
+	else
+		shaderProgram->setFloat("isMixed", 0.f);
+
+	// TODO: ADD SUPPORT FOR BLACK AND WHITE
 	shaderProgram->setInt("ticks", SDL_GetTicks());
 	shaderProgram->setVec2u("tileCount", tile_count.x, tile_count.y);
 	shaderProgram->setVec2u("tileSize", tile_dim.x, tile_dim.y);

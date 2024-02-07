@@ -73,9 +73,10 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 // SHADERS
 #define _SHADER_SDHR_VERTEX_DEFAULT "shaders/sdhr_default_330.vert"
 #define _SHADER_SDHR_FRAGMENT_DEFAULT "shaders/sdhr_default_330.frag"
-#define _SHADER_TEXT_VERTEX_DEFAULT "shaders/a2video_text_330.vert"
-#define _SHADER_TEXT_FRAGMENT_DEFAULT "shaders/a2video_text_330.frag"
-#define _SHADER_DTEXT_FRAGMENT "shaders/a2video_dtext_330.frag"
+#define _SHADER_A2_VERTEX_DEFAULT "shaders/a2video.vert"
+#define _SHADER_TEXT_FRAGMENT "shaders/a2video_text.frag"
+#define _SHADER_LGR_FRAGMENT "shaders/a2video_lgr.frag"
+#define _SHADER_HGR_FRAGMENT "shaders/a2video_hgr.frag"
 #define _SHADER_SDHR_VERTEX_DEPIXELIZE "shaders/sdhr_depixelize_330.vert"
 #define _SHADER_SDHR_FRAGMENT_DEPIXELIZE "shaders/sdhr_depixelize_330.frag"
 

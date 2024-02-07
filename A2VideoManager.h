@@ -9,21 +9,6 @@
 #include "common.h"
 #include "A2Window.h"
 
-enum A2VideoMode_e
-{
-	A2VIDEO_TEXT1 = 0,
-	A2VIDEO_TEXT2,
-	A2VIDEO_LGR1,
-	A2VIDEO_LGR2,
-	A2VIDEO_HGR1,
-	A2VIDEO_HGR2,
-	A2VIDEO_DTEXT,
-	A2VIDEO_DLGR,
-	A2VIDEO_DHGR,
-	A2VIDEO_SHR,
-	A2VIDEO_TOTAL_COUNT
-};
-
 /*
 MEMORY MANAGEMENT SOFT SWITCHES
  $C000   W       80STOREOFF      Allow page2 to switch video page1 page2
@@ -107,7 +92,7 @@ public:
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
 
-	ImageAsset image_assets[5];
+	ImageAsset image_assets[8];
 	A2Window windows[A2VIDEO_TOTAL_COUNT];
 
 	// Margins when rendering in a window (pixels)
@@ -162,11 +147,13 @@ private:
 	// Renders graphics mode depending on mixed mode switch
 	void RenderSubMixed(std::vector<uint32_t>*framebuffer);
 
+	void UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* framebuffer);
+
+	// these are RGB versions and unused. We're instead using a shader with the composite data
 	void UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
 	void UpdateDLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
 	void UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
 	void UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
-	void UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* framebuffer);
 	
 	uint32_t ConvertIIgs2RGB(uint16_t color);
 	//////////////////////////////////////////////////////////////////////////
@@ -177,13 +164,7 @@ private:
     bool bIsRebooting = false;              // Rebooting semaphore
 	static uint16_t a2SoftSwitches;			// Soft switches states
     
-	// framebuffers for graphics modes
-	std::vector<uint32_t>v_fblgr1;
-	std::vector<uint32_t>v_fblgr2;
-	std::vector<uint32_t>v_fbdlgr;
-	std::vector<uint32_t>v_fbhgr1;
-	std::vector<uint32_t>v_fbhgr2;
-	std::vector<uint32_t>v_fbdhgr;
+	// framebuffers for RGB graphics modes
 	std::vector<uint32_t>v_fbshr;
 };
 #endif // A2VIDEOMANAGER_H

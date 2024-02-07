@@ -28,6 +28,7 @@ public:
     void setBool(const std::string &name, bool value) const;
     // ------------------------------------------------------------------------
     void setInt(const std::string &name, int value) const;
+	void setUInt(const std::string &name, uint32_t value) const;
     // ------------------------------------------------------------------------
     void setFloat(const std::string &name, float value) const;
     // ------------------------------------------------------------------------

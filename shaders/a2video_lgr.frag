@@ -9,24 +9,16 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 #endif
 
 /*
-Regular Charset:
-$00..$1F Inverse  Uppercase Letters (aka glyphs of ASCII $40..$5F)
-$20..$3F Inverse  Symbols/Numbers   (aka glyphs of ASCII $20..$3F)
-$40..$5F Flashing Uppercase Letters
-$60..$7F Flashing Symbols/Numbers
-$80..$9F Normal   Uppercase Letters (make ASCII control codes show up as letters)
-$A0..$BF Normal   Symbols/Numbers   (like ASCII + $80)
-$C0..$DF Normal   Uppercase Letters (like ASCII + $80)
-$E0..$FF Normal   Lowercase Letters (like ASCII + $80)
-Alternate Charset (0xC007):
-$00..$1F Inverse  Uppercase Letters
-$20..$3F Inverse  Symbols/Numbers
-$40..$5F Inverse  MouseText
-$60..$7F Inverse  Lowercase Letters
-$80..$9F Normal   Uppercase Letters
-$A0..$BF Normal   Symbols/Numbers   (like ASCII + $80)
-$C0..$DF Normal   Uppercase Letters (like ASCII + $80)
-$E0..$FF Normal   Lowercase Letters (like ASCII + $80)
+ LGR shader
+ For each pixel, determine which memory byte it is part of,
+ and save the x and y offsets from the origin of the byte.
+ Then based on the value of that byte, determine the origin
+ inside the LGR texture. Finally, find the color value
+ of the pixel based on the xy offsets to the origin of the byte.
+ 
+ When using color, this is overkill as LGR colors are filled.
+ But when in b/w, we can use dithering for LGR so each pixel may
+ be different within a "color".
 */
 
 // Apple 2 text row offsets in memory. The rows aren't contiguous in Apple 2 RAM.
@@ -49,7 +41,6 @@ uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform uvec2 tileSize;
 uniform usampler2D DBTEX;        // Apple 2e's memory, starting at 0x400 for TEXT1 and 0x800 for TEXT2
                                  // Unsigned int sampler!
-uniform vec4 colorTint;
 
 in vec2 vFragPos;       // The fragment position in pixels
 // in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
@@ -58,16 +49,14 @@ out vec4 fragColor;
 
 void main()
 {
-	/* this could be used as an optimization
-	if ((isMixed * vFragPos.y) < float(tileSize.y * 20))
+	if ((isMixed * vFragPos.y) >= float(tileSize.y * 20))
 	{
-		// we're in mixed mode, then don't bother with the top 20 of 24 rows
+		// we're in mixed mode, the bottom 4 rows are transparent
 		fragColor = vec4(0.0);
 		return;
 	}
-	*/
 	
-    // first figure out which mosaic tile this fragment is part of
+    // first figure out which mosaic tile (byte) this fragment is part of
         // Calculate the position of the fragment in tile intervals
     vec2 fTileColRow = vFragPos / vec2(tileSize);
         // Row and column number of the tile containing this fragment
@@ -85,27 +74,30 @@ void main()
 		offset = (textRow[tileColRow.y] + tileColRow.x / 2) + (0xC000 * (1 - (tileColRow.x & 1)));
 	else
 		offset = textRow[tileColRow.y] + tileColRow.x;
-    // the char byte value is just the r component
-    uint charVal = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
-    float vCharVal = float(charVal);
-
-    // Determine from char which font glyph to use
-    // and if we need to flash
-    // Determine if it's inverse when the char is below 0x40
-    // And then if the char is below 0x80 and not inverse, it's flashing
-    float a_inverse = 1.0 - step(float(0x40), vCharVal);
-    float a_flash = (1.0 - step(float(0x80), vCharVal)) * (1.0 - a_inverse) * hasFlashing;
+    // the byte value is just the r component
+    uint byteVal = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
 
     ivec2 textureSize2d = textureSize(a2ModeTexture,0);
-    // what's our character's starting origin in the character map?
-    uvec2 charOrigin = uvec2(charVal & 0xFu, charVal >> 4) * tileSize;
+
+	// What's our byte's starting origin in the character map?
+	// An LGR byte is split in 2. There's a 4-bit color in the low bits
+	// at the top of the 16x16 dot square, and another 4-bit color in
+	// the high bits at the bottom of the 16x16 dot square
+	uvec2 byteOrigin;
+	if ((fragOffset.y * 2.0) < float(tileSize.y))
+	{
+		// This is a top pixel, it uses the color of the 4 low bits
+		byteOrigin = uvec2(0u, (byteVal & 0xFu) * 16u);
+	} else {
+		// It's a bottom pixel, it uses the color of the 4 high bits
+		byteOrigin = uvec2(0u, (byteVal >> 4) * 16u);
+	}
 
     // Now get the texture color, using the tile uv origin and this fragment's offset
-    vec4 tex = texture(a2ModeTexture, (vec2(charOrigin) + fragOffset) / vec2(textureSize2d)) * colorTint;
+    vec4 tex = texture(a2ModeTexture, (vec2(byteOrigin) + fragOffset) / vec2(textureSize2d));
 
-    float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
-    // get the color of flashing or the one above
-    fragColor = ((1.f - tex) * isFlashing) + (tex * (1.f - isFlashing));
+    fragColor = tex;
+	//fragColor = vec4(float(byteOrigin.x)/256.0, float(byteOrigin.y)/256.0, 0, 1);
 
-	// fragColor = vec4(vColor, 1.f);   // for debugging
+    // fragColor = vec4(vColor, 1.f);   // for debugging
 }
