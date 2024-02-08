@@ -214,25 +214,16 @@
     <None Include="Makefile" />
     <None Include="packages.config" />
     <None Include="README.md" />
-    <Media Include="shaders\sdhr_default_330.frag">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <FileType>Document</FileType>
-    </Media>
-    <Media Include="shaders\sdhr_default_330.vert">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <FileType>Document</FileType>
-    </Media>
-    <Media Include="shaders\a2video_text_330.frag">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <FileType>Document</FileType>
-    </Media>
-    <Media Include="shaders\a2video_text_330.vert">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <FileType>Document</FileType>
-    </Media>
-    <None Include="shaders\a2video_dtext_330.frag" />
+    <None Include="shaders\a2video.vert" />
+    <None Include="shaders\a2video_hgr.frag" />
+    <None Include="shaders\a2video_lgr.frag" />
     <None Include="shaders\a2video_postprocess.glsl" />
+    <None Include="shaders\a2video_text.frag" />
     <None Include="shaders\a2video_text.glsl" />
+    <None Include="shaders\basic.frag" />
+    <None Include="shaders\basic.vert" />
+    <None Include="shaders\sdhr_default_330.frag" />
+    <None Include="shaders\sdhr_default_330.vert" />
     <None Include="shaders\sdhr_depixelize_330.frag" />
     <None Include="shaders\sdhr_depixelize_330.vert" />
   </ItemGroup>

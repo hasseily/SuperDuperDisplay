@@ -176,7 +176,33 @@
       <Filter>imgui</Filter>
     </None>
     <None Include="packages.config" />
-    <None Include="shaders\a2video_dtext_330.frag">
+    <None Include="Makefile" />
+    <None Include="shaders\a2video_text.glsl" />
+    <None Include="shaders\a2video.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\a2video_hgr.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\a2video_lgr.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\a2video_postprocess.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\a2video_text.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\basic.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\basic.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\sdhr_default_330.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\sdhr_default_330.vert">
       <Filter>shaders</Filter>
     </None>
     <None Include="shaders\sdhr_depixelize_330.frag">
@@ -185,25 +211,6 @@
     <None Include="shaders\sdhr_depixelize_330.vert">
       <Filter>shaders</Filter>
     </None>
-    <None Include="Makefile" />
-    <None Include="shaders\a2video_text.glsl" />
-    <None Include="shaders\a2video_postprocess.glsl">
-      <Filter>shaders</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Media Include="shaders\sdhr_default_330.vert">
-      <Filter>shaders</Filter>
-    </Media>
-    <Media Include="shaders\sdhr_default_330.frag">
-      <Filter>shaders</Filter>
-    </Media>
-    <Media Include="shaders\a2video_text_330.vert">
-      <Filter>shaders</Filter>
-    </Media>
-    <Media Include="shaders\a2video_text_330.frag">
-      <Filter>shaders</Filter>
-    </Media>
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\Texture_Default.png">
