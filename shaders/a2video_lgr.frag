@@ -49,7 +49,7 @@ out vec4 fragColor;
 
 void main()
 {
-	if ((isMixed * vFragPos.y) >= float(tileSize.y * 20))
+	if ((isMixed * vFragPos.y) >= float(tileSize.y * 20u))
 	{
 		// we're in mixed mode, the bottom 4 rows are transparent
 		fragColor = vec4(0.0);
@@ -70,7 +70,7 @@ void main()
 	// In 80-col mode, the even bytes are pulled from aux mem,
 	// and the odd bytes from main mem
 	int offset;
-	if (isDouble > 0)
+	if (isDouble > 0.0)
 		offset = (textRow[tileColRow.y] + tileColRow.x / 2) + (0xC000 * (1 - (tileColRow.x & 1)));
 	else
 		offset = textRow[tileColRow.y] + tileColRow.x;

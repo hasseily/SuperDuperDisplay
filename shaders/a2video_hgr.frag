@@ -94,7 +94,7 @@ out vec4 fragColor;
 
 void main()
 {
-	if ((isMixed * vFragPos.y) >= float(tileSize.y * 160))
+	if ((isMixed * vFragPos.y) >= float(tileSize.y * 160u))
 	{
 		// we're in mixed mode, the bottom 4 rows of text (4*8=32 pixels) are transparent
 		fragColor = vec4(0.0);
@@ -115,7 +115,7 @@ void main()
 	// In double mode, the even bytes are pulled from aux mem,
 	// and the odd bytes from main mem
 	int offset;
-	if (isDouble > 0)
+	if (isDouble > 0.0)
 		offset = (hgrRow[tileColRow.y] + tileColRow.x / 2) + (0xC000 * (1 - (tileColRow.x & 1)));
 	else
 		offset = hgrRow[tileColRow.y] + tileColRow.x;
@@ -123,8 +123,8 @@ void main()
 	// the byte value is just the r component
 	uint byteVal = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
 	// Grab the other bytes that matter
-	uint byteValPrev = 0;
-	uint byteValNext = 0;
+	uint byteValPrev = 0u;
+	uint byteValNext = 0u;
 	if (tileColRow.x > 0)	// Not at start of row, byteValPrev is valid
 	{
 		byteValPrev = texelFetch(DBTEX, ivec2((offset-1) % 1024, offset / 1024), 0).r;
@@ -137,7 +137,7 @@ void main()
 	ivec2 textureSize2d = textureSize(a2ModeTexture,0);
 	
 	// Calculate the column offset in the texture
-	uint texXOffset = ((byteValPrev & 0xE0u) << 2) | ((byteValNext & 0x03u) << 5) + (tileColRow.x & 1) * 16;
+	int texXOffset = (int((byteValPrev & 0xE0u) << 2) | int((byteValNext & 0x03u) << 5)) + (tileColRow.x & 1) * 16;
 	
 	// Now get the texture color. We know the X offset as well as the fragment's offset on top of that.
 	// The y value is just the byte's value
