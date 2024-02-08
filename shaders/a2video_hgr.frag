@@ -33,6 +33,8 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  So the col offset is ((prevbyte & 0xE0) >> 3) | (nextbyte & 0x03). But since each column is
  32 pixels, the actual col pixel offset should be *32, which results in:
  ((prevbyte & 0xE0) << 2) | ((nextbyte & 0x03) << 5)
+ Then we also need to see which of the 2 subcolumns we will use, depending if it's an even or odd byte:
+ ((prevbyte & 0xE0) << 2) | ((nextbyte & 0x03) << 5) + (tileColRow.x & 1) * 16
  The row pixel value is simply the memory byte value of our pixel
 
  For DHGR:
@@ -125,11 +127,11 @@ void main()
 	uint byteValNext = 0;
 	if (tileColRow.x > 0)	// Not at start of row, byteValPrev is valid
 	{
-		byteValPrev = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024) - 1, 0).r;
+		byteValPrev = texelFetch(DBTEX, ivec2((offset-1) % 1024, offset / 1024), 0).r;
 	}
 	if (tileColRow.x < 39)	// Not at end of row, byteValNext is valid
 	{
-		byteValNext = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024) + 1, 0).r;
+		byteValNext = texelFetch(DBTEX, ivec2((offset+1) % 1024, offset / 1024), 0).r;
 	}
 	
 	ivec2 textureSize2d = textureSize(a2ModeTexture,0);
@@ -142,8 +144,5 @@ void main()
 	vec4 tex = texture(a2ModeTexture, vec2(texXOffset + int(fragOffset.x), byteVal) / vec2(textureSize2d));
 	
 	fragColor = tex;
-	// fragColor = vec4(float(fragOffset.x)/14.0, float(fragOffset.y)/256.0, 0, 1);
-	if ((int(fragOffset.x) == 13) || (tileColRow.y % 8) == 7)	// DEBUG
-		fragColor = vec4(1.0,1.0,0,1);
 	// fragColor = vec4(vColor, 1.f);   // for debugging
 }
