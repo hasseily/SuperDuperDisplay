@@ -102,6 +102,7 @@ public:
 	uint32_t color_foreground = UINT32_MAX;
 	uint32_t color_background = 0;
     bool bShouldReboot = false;             // When an Appletini reboot packet arrives
+	bool bShouldUseCPURGBRenderer = false;	// Use CPU RGB renderer for graphics
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
@@ -165,6 +166,12 @@ private:
 	static uint16_t a2SoftSwitches;			// Soft switches states
     
 	// framebuffers for RGB graphics modes
+	std::vector<uint32_t>v_fblgr1;
+	std::vector<uint32_t>v_fblgr2;
+	std::vector<uint32_t>v_fbdlgr;
+	std::vector<uint32_t>v_fbhgr1;
+	std::vector<uint32_t>v_fbhgr2;
+	std::vector<uint32_t>v_fbdhgr;
 	std::vector<uint32_t>v_fbshr;
 };
 #endif // A2VIDEOMANAGER_H

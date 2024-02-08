@@ -36,6 +36,7 @@
 
 static uint32_t fbWidth = 0;
 static uint32_t fbHeight = 0;
+static bool g_swapInterval = true;  // VSYNC
 static SDL_Window* window;
 
 void callback_resolutionChange(int w, int h)
@@ -98,17 +99,13 @@ int main(int argc, char* argv[])
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN);
 #else
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
-        | SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALLOW_HIGHDPI
+        | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED
         | SDL_WINDOW_SHOWN);
 #endif
     window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
-#if defined(IMGUI_IMPL_OPENGL_ES2)
-    SDL_GL_SetSwapInterval(0); // get max performance from ES2 machines
-#else
-	SDL_GL_SetSwapInterval(1); // Anything not ES2 should be vsynced to conserve power
-#endif
+
     // Get the actual display size
 	SDL_DisplayMode displayMode;
 	SDL_GetCurrentDisplayMode(0, &displayMode);
@@ -207,6 +204,7 @@ int main(int argc, char* argv[])
     while (!done)
 #endif
     {
+		SDL_GL_SetSwapInterval(g_swapInterval);
         dt_LAST = dt_NOW;
         dt_NOW = SDL_GetPerformanceCounter();
 		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
@@ -317,11 +315,10 @@ int main(int argc, char* argv[])
 				ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
 				ImGui::Text("Screen Size:%03d x %03d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);
 				ImGui::Separator();
-				ImGui::Checkbox("Untextured Geometry", &glhelper->bDebugNoTextures);             // Show textures toggle
-				ImGui::Checkbox("Perspective Projection", &glhelper->bUsePerspective);       // Change projection type
-				ImGui::Separator();
 //				ImGui::Checkbox("Demo Window", &show_demo_window);
 				ImGui::Checkbox("PostProcessing Window", &show_postprocessing_window);
+				ImGui::Checkbox("VSYNC On", &g_swapInterval);
+				ImGui::Checkbox("Use CPU RGB Renderer for L/H/D/GR", &a2VideoManager->bShouldUseCPURGBRenderer);
 				ImGui::Checkbox("Textures Window", &show_texture_window);
 				ImGui::Checkbox("Metrics Window", &show_metrics_window);
 				ImGui::Checkbox("Apple //e Memory Window", &mem_edit_a2e.Open);
@@ -340,7 +337,12 @@ int main(int argc, char* argv[])
 				did_press_quit = ImGui::Button("Quit App (Ctrl-c)");
 				if (did_press_quit)
 					done = true;
+				ImGui::Separator();
+				ImGui::Text("[ SDHR ]");
+				ImGui::Checkbox("Untextured Geometry", &glhelper->bDebugNoTextures);         // Show textures toggle
+				ImGui::Checkbox("Perspective Projection", &glhelper->bUsePerspective);       // Change projection type
                 ImGui::Separator();
+				ImGui::Text("[ Soft Switches ]");
                 bool ssValue0 = a2VideoManager->IsSoftSwitch(A2SS_80STORE);
                 if (ImGui::Checkbox("A2SS_80STORE", &ssValue0)) {
                     a2VideoManager->SetSoftSwitch(A2SS_80STORE, ssValue0);

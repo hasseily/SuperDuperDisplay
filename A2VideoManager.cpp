@@ -108,6 +108,12 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 
 void A2VideoManager::Initialize()
 {
+	v_fblgr1 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
+	v_fblgr2 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
+	v_fbdlgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
+	v_fbhgr1 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
+	v_fbhgr2 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
+	v_fbdhgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
 	v_fbshr = std::vector<uint32_t>(_A2VIDEO_SHR_WIDTH * _A2VIDEO_SHR_HEIGHT, 0);
 	
 	color_border = 0;
@@ -574,11 +580,72 @@ void A2VideoManager::Render()
 	}
 
 	for (auto& _w : this->windows) {
-		_w.Render();
+		if (bShouldUseCPURGBRenderer)
+		{
+			// Only GPU render the text modes
+			auto _vidM = _w.Get_video_mode();
+			if ((_vidM == A2VIDEO_TEXT1) || (_vidM == A2VIDEO_TEXT2) || (_vidM == A2VIDEO_DTEXT))
+				_w.Render();
+		}
+		else {
+			_w.Render();
+		}
 	}
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, oglHelper->get_intermediate_texture_id());
+
+	if (bShouldUseCPURGBRenderer)
+	{
+		if (this->windows[A2VIDEO_LGR1].IsEnabled())
+		{
+			for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
+			{
+				this->UpdateLoResRGBCell(_A2VIDEO_TEXT1_START + i, _A2VIDEO_TEXT1_START, &v_fblgr1);
+			}
+			this->RenderSubMixed(&v_fblgr1);
+		}
+		if (this->windows[A2VIDEO_LGR2].IsEnabled())
+		{
+			for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
+			{
+				this->UpdateLoResRGBCell(_A2VIDEO_TEXT2_START + i, _A2VIDEO_TEXT2_START, &v_fblgr2);
+			}
+			this->RenderSubMixed(&v_fblgr2);
+		}
+		if (this->windows[A2VIDEO_DLGR].IsEnabled())
+		{
+			for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
+			{
+				this->UpdateDLoResRGBCell(_A2VIDEO_TEXT1_START + i, _A2VIDEO_TEXT1_START, &v_fbdlgr);
+			}
+			this->RenderSubMixed(&v_fbdlgr);
+		}
+		if (this->windows[A2VIDEO_HGR1].IsEnabled())
+		{
+			for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
+			{
+				this->UpdateHiResRGBCell(_A2VIDEO_HGR1_START + i, _A2VIDEO_HGR1_START, &v_fbhgr1);
+			}
+			this->RenderSubMixed(&v_fbhgr1);
+		}
+		if (this->windows[A2VIDEO_HGR2].IsEnabled())
+		{
+			for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
+			{
+				this->UpdateHiResRGBCell(_A2VIDEO_HGR2_START + i, _A2VIDEO_HGR2_START, &v_fbhgr2);
+			}
+			this->RenderSubMixed(&v_fbhgr2);
+		}
+		if (this->windows[A2VIDEO_DHGR].IsEnabled())
+		{
+			for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
+			{
+				this->UpdateDHiResRGBCell(_A2VIDEO_HGR1_START + i, _A2VIDEO_HGR1_START, &v_fbdhgr);
+			}
+			this->RenderSubMixed(&v_fbdhgr);
+		}
+	}
 
 	if (this->windows[A2VIDEO_SHR].IsEnabled())
 	{
