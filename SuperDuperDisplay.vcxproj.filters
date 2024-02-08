@@ -73,13 +73,16 @@
     <ClCompile Include="glad\glad.cpp">
       <Filter>glad</Filter>
     </ClCompile>
-    <ClCompile Include="ImGuiFileDialog.cpp">
-      <Filter>sources</Filter>
-    </ClCompile>
     <ClCompile Include="PostProcessor.cpp">
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="shader.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="extras\ImGuiFileDialog.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="extras\MemoryLoader.cpp">
       <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>
@@ -160,6 +163,9 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="PostProcessor.h" />
+    <ClInclude Include="extras\MemoryLoader.h">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />

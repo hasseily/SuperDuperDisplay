@@ -159,8 +159,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="A2Window.cpp" />
+    <ClCompile Include="extras\ImGuiFileDialog.cpp" />
+    <ClCompile Include="extras\MemoryLoader.cpp" />
     <ClCompile Include="glad\glad.cpp" />
-    <ClCompile Include="ImGuiFileDialog.cpp" />
     <ClCompile Include="imgui\backends\imgui_impl_opengl3.cpp" />
     <ClCompile Include="imgui\backends\imgui_impl_sdl2.cpp" />
     <ClCompile Include="imgui\imgui.cpp" />
@@ -184,6 +185,7 @@
     <ClInclude Include="camera.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="ConcurrentQueue.h" />
+    <ClInclude Include="extras\MemoryLoader.h" />
     <ClInclude Include="glad\glad.h" />
     <ClInclude Include="glad\khrplatform.h" />
     <ClInclude Include="GRAddr2XY.h" />
