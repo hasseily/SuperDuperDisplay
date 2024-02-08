@@ -190,7 +190,7 @@ void A2VideoManager::Initialize()
 		uXY({ 80, 24 }),
 		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT1_START,
 		_A2VIDEO_TEXT_SIZE + _A2_MEMORY_SHADOW_END,
-		&shader_a2video_lgr		// do not render in the window. Rendering is done here
+		&shader_a2video_lgr
 	);
 	// HGR1
 	windows[A2VIDEO_HGR1].Define(
