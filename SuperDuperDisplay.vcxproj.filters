@@ -211,6 +211,9 @@
     <None Include="shaders\sdhr_depixelize_330.vert">
       <Filter>shaders</Filter>
     </None>
+    <None Include="shaders\a2video_dhgr.frag">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\Texture_Default.png">

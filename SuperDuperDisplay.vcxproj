@@ -215,6 +215,7 @@
     <None Include="packages.config" />
     <None Include="README.md" />
     <None Include="shaders\a2video.vert" />
+    <None Include="shaders\a2video_dhgr.frag" />
     <None Include="shaders\a2video_hgr.frag" />
     <None Include="shaders\a2video_lgr.frag" />
     <None Include="shaders\a2video_postprocess.glsl" />

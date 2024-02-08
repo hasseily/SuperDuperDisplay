@@ -69,6 +69,7 @@ static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
 static Shader shader_a2video_text = Shader();
 static Shader shader_a2video_lgr = Shader();
 static Shader shader_a2video_hgr = Shader();
+static Shader shader_a2video_dhgr = Shader();
 
 //////////////////////////////////////////////////////////////////////////
 // Image Asset Methods
@@ -135,7 +136,8 @@ void A2VideoManager::Initialize()
 	shader_a2video_text.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_TEXT_FRAGMENT);
 	shader_a2video_lgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_LGR_FRAGMENT);
 	shader_a2video_hgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_HGR_FRAGMENT);
-	
+	shader_a2video_dhgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_DHGR_FRAGMENT);
+
 	// Initialize windows and meshes
 	
 	// TEXT1
@@ -202,7 +204,7 @@ void A2VideoManager::Initialize()
 	windows[A2VIDEO_HGR1].Define(
 		A2VIDEO_HGR1,
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ 14, 2 }),	// TODO: CHECK THIS
+		uXY({ 14, 2 }),
 		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
 		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_HGR1_START,
 		_A2VIDEO_HGR_SIZE,
@@ -212,7 +214,7 @@ void A2VideoManager::Initialize()
 	windows[A2VIDEO_HGR2].Define(
 		A2VIDEO_HGR2,
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ 14, 2 }),	// TODO: CHECK THIS
+		uXY({ 14, 2 }),
 		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
 		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_HGR2_START,
 		_A2VIDEO_HGR_SIZE,
@@ -226,7 +228,7 @@ void A2VideoManager::Initialize()
 		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
 		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_HGR1_START,
 		_A2VIDEO_HGR_SIZE + _A2_MEMORY_SHADOW_END,
-		&shader_a2video_hgr
+		&shader_a2video_dhgr
 	);
 	// SHR
 	windows[A2VIDEO_SHR].Define(
