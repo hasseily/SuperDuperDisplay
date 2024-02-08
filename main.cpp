@@ -178,7 +178,7 @@ int main(int argc, char* argv[])
 	bool show_postprocessing_window = false;
     bool did_press_quit = false;
 	int _slotnum = 0;
-	bool mem_load_aux_bank = true;
+	bool mem_load_aux_bank = false;
 	int mem_load_position = 0;
 
 	auto sdhrManager = SDHRManager::GetInstance();

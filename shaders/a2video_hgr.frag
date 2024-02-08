@@ -16,8 +16,9 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  To get a pixel in the HGR texture, the procedure is as follows:
  Take the 2 bytes that the pixel is in, starting with the even byte.
  Even bytes use even columns, odd bytes use odd columns.
- Also calculate the high bit of the previous byte, as well as the
- last 2 bits from the previous byte and the first 2 bits from the next byte.
+ Also calculate the high bit and last 2 bits from the previous byte
+ (i.e. the 3 most significant bits), and the first 2 bits from the
+ next byte (i.e. the 3 least significant bits).
 
  // Lookup Table:
  // y (0-255) * 32 columns of 32 pixels
@@ -27,10 +28,12 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  //		currHighBit=0: {14 pixels + 2 pad} * 2
  //		currHighBit=1: {1 pixel + 14 pixels + 1 pad} * 2
 
- // high-bit & 2-bits from previous byte, 2-bits from next byte = 2^5 = 32 total permutations
- // 32 permutations, each with 2 bytes, each 8 bits but doubled: 32 * 2 * 8 * 2 = 1024 pixels wide
- 
- // The row value is simply the memory byte value of our pixel
+ high-bit & 2-bits from previous byte, 2-bits from next byte = 2^5 = 32 total permutations
+ 32 permutations, each with 2 bytes, each 8 bits but doubled: 32 * 2 * 8 * 2 = 1024 pixels wide
+ So the col offset is ((prevbyte & 0xE0) >> 3) | (nextbyte & 0x03). But since each column is
+ 32 pixels, the actual col pixel offset should be *32, which results in:
+ ((prevbyte & 0xE0) << 2) | ((nextbyte & 0x03) << 5)
+ The row pixel value is simply the memory byte value of our pixel
 
  For DHGR:
  There are 256 columns of 10 pixels in the texture. Acquiring the right data is a lot more complicated.
@@ -107,37 +110,40 @@ void main()
 	// Next grab the data for that tile from the tilesBuffer
 	// No need to rescale values because we're using GL_R8UI
 	// The "texture" is split by 1kB-sized rows
-	// In 80-col mode, the even bytes are pulled from aux mem,
+	// In double mode, the even bytes are pulled from aux mem,
 	// and the odd bytes from main mem
 	int offset;
 	if (isDouble > 0)
-		offset = (textRow[tileColRow.y] + tileColRow.x / 2) + (0xC000 * (1 - (tileColRow.x & 1)));
+		offset = (hgrRow[tileColRow.y] + tileColRow.x / 2) + (0xC000 * (1 - (tileColRow.x & 1)));
 	else
-		offset = textRow[tileColRow.y] + tileColRow.x;
+		offset = hgrRow[tileColRow.y] + tileColRow.x;
+	
 	// the byte value is just the r component
 	uint byteVal = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
+	// Grab the other bytes that matter
+	uint byteValPrev = 0;
+	uint byteValNext = 0;
+	if (tileColRow.x > 0)	// Not at start of row, byteValPrev is valid
+	{
+		byteValPrev = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024) - 1, 0).r;
+	}
+	if (tileColRow.x < 39)	// Not at end of row, byteValNext is valid
+	{
+		byteValNext = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024) + 1, 0).r;
+	}
 	
 	ivec2 textureSize2d = textureSize(a2ModeTexture,0);
 	
-	// What's our byte's starting origin in the character map?
-	// An LGR byte is split in 2. There's a 4-bit color in the low bits
-	// at the top of the 16x16 dot square, and another 4-bit color in
-	// the high bits at the bottom of the 16x16 dot square
-	uvec2 byteOrigin;
-	if ((fragOffset.y * 2.0) < float(tileSize.y))
-	{
-		// This is a top pixel, it uses the color of the 4 low bits
-		byteOrigin = uvec2(0u, (byteVal & 0xFu) * 16u);
-	} else {
-		// It's a bottom pixel, it uses the color of the 4 high bits
-		byteOrigin = uvec2(0u, (byteVal >> 4) * 16u);
-	}
+	// Calculate the column offset in the texture
+	uint texXOffset = ((byteValPrev & 0xE0u) << 2) | ((byteValNext & 0x03u) << 5) + (tileColRow.x & 1) * 16;
 	
-	// Now get the texture color, using the tile uv origin and this fragment's offset
-	vec4 tex = texture(a2ModeTexture, (vec2(byteOrigin) + fragOffset) / vec2(textureSize2d));
+	// Now get the texture color. We know the X offset as well as the fragment's offset on top of that.
+	// The y value is just the byte's value
+	vec4 tex = texture(a2ModeTexture, vec2(texXOffset + int(fragOffset.x), byteVal) / vec2(textureSize2d));
 	
 	fragColor = tex;
-	//fragColor = vec4(float(byteOrigin.x)/256.0, float(byteOrigin.y)/256.0, 0, 1);
-	
+	// fragColor = vec4(float(fragOffset.x)/14.0, float(fragOffset.y)/256.0, 0, 1);
+	if ((int(fragOffset.x) == 13) || (tileColRow.y % 8) == 7)	// DEBUG
+		fragColor = vec4(1.0,1.0,0,1);
 	// fragColor = vec4(vColor, 1.f);   // for debugging
 }
