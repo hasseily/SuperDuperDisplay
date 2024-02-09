@@ -109,12 +109,6 @@ void main()
 	
 	ivec2 textureSize2d = textureSize(a2ModeTexture,0);
 	
-	/*
-	 #define COLOR  ((xpixel + PIXEL) & 3)
-	 #define VALUE  (dwordval >> (4 + PIXEL - COLOR))
-	 const int xpixel = x * 14;
-	 CopySource(7, 2, SRCOFFS_DHIRES + 10 * HIBYTE(VALUE) + COLOR, LOBYTE(VALUE), pVideoAddress);
-	 */
 	// Calculate the column offset in the texture
 	int wordVal = (int(byteVal1) & 0x70) | ((int(byteVal2) & 0x7F) << 7) |
 		((int(byteVal3) & 0x7F) << 14) | ((int(byteVal4) & 0x07) << 21);
