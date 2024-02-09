@@ -127,11 +127,11 @@ void main()
 	uint byteValNext = 0u;
 	if (tileColRow.x > 0)	// Not at start of row, byteValPrev is valid
 	{
-		byteValPrev = texelFetch(DBTEX, ivec2((offset-1) % 1024, offset / 1024), 0).r;
+		byteValPrev = texelFetch(DBTEX, ivec2((offset % 1024) - 1, offset / 1024), 0).r;
 	}
 	if (tileColRow.x < 39)	// Not at end of row, byteValNext is valid
 	{
-		byteValNext = texelFetch(DBTEX, ivec2((offset+1) % 1024, offset / 1024), 0).r;
+		byteValNext = texelFetch(DBTEX, ivec2((offset % 1024) + 1, offset / 1024), 0).r;
 	}
 	
 	ivec2 textureSize2d = textureSize(a2ModeTexture,0);
