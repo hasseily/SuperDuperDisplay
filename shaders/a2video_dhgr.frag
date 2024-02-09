@@ -90,33 +90,36 @@ void main()
 	// In double mode, the even bytes are pulled from aux mem,
 	// and the odd bytes from main mem
 	int offset;
-	uint byteValPrev = 0u;
-	uint byteValNext = 0u;
-	// The bytes from main: prev and 2
-	offset = hgrRow[tileColRow.y] + tileColRow.x / 2;
-	uint byteVal2 = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
-	if (tileColRow.x > 0)	// Not at start of row, byteValPrev is valid
+	uint byteVal1 = 0u;
+	uint byteVal4 = 0u;
+	// The bytes from main: 1 and 3
+	offset = hgrRow[tileColRow.y] + tileColRow.x;
+	uint byteVal3 = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
+	if (tileColRow.x > 0)	// Not at start of row, byteVal1 is valid
 	{
-		byteValPrev = texelFetch(DBTEX, ivec2((offset-1) % 1024, offset / 1024), 0).r;
+		byteVal1 = texelFetch(DBTEX, ivec2((offset % 1024) - 1, offset / 1024), 0).r;
 	}
-	// The bytes from aux: 1 and Next
+	// The bytes from aux: 2 and 4
 	offset = offset + 0xC000;
-	uint byteVal1 = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
-	if (tileColRow.x < 39)	// Not at end of row, byteValNext is valid
+	uint byteVal2 = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
+	if (tileColRow.x < 39)	// Not at end of row, byteVal4 is valid
 	{
-		byteValNext = texelFetch(DBTEX, ivec2((offset+1) % 1024, offset / 1024), 0).r;
+		byteVal4 = texelFetch(DBTEX, ivec2((offset % 1024) + 1, offset / 1024), 0).r;
 	}
 	
 	ivec2 textureSize2d = textureSize(a2ModeTexture,0);
 	
+	/*
+	 #define COLOR  ((xpixel + PIXEL) & 3)
+	 #define VALUE  (dwordval >> (4 + PIXEL - COLOR))
+	 const int xpixel = x * 14;
+	 CopySource(7, 2, SRCOFFS_DHIRES + 10 * HIBYTE(VALUE) + COLOR, LOBYTE(VALUE), pVideoAddress);
+	 */
 	// Calculate the column offset in the texture
-	int pixelOffset = 0;
-	if (int(fragOffset.x) > 6)
-		pixelOffset = 7;
-	int wordVal = (int(byteValPrev) & 0x70) | ((int(byteVal1) & 0x7F) << 7) |
-		((int(byteVal2) & 0x7F) << 14) | ((int(byteValNext) & 0x07) << 21);
-	int vColor = (tileColRow.x*14 + pixelOffset) & 3;
-	int vValue = (wordVal >> (4 + pixelOffset - vColor));
+	int wordVal = (int(byteVal1) & 0x70) | ((int(byteVal2) & 0x7F) << 7) |
+		((int(byteVal3) & 0x7F) << 14) | ((int(byteVal4) & 0x07) << 21);
+	int vColor = (tileColRow.x*14 + int(fragOffset.x)) & 3;
+	int vValue = (wordVal >> (4 + int(fragOffset.x) - vColor));
 	int xVal = 10 * ((vValue >> 8) & 0xFF) + vColor;
 	int yVal = vValue & 0xFF;
 	vec4 tex = texture(a2ModeTexture, vec2(xVal, yVal) / vec2(textureSize2d));
