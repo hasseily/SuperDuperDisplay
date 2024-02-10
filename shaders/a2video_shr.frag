@@ -38,10 +38,10 @@ uint paletteColorB1 = 0u;	// first byte of the palette color
 uint paletteColorB2 = 0u;	// second byte of the palette color
 
 const uint palette640[16] = uint[16](
-									 8,9,10,11,
-									 12,13,14,15,
-									 0,1,2,3,
-									 4,5,6,7
+									 8u,9u,10u,11u,
+									 12u,13u,14u,15u,
+									 0u,1u,2u,3u,
+									 4u,5u,6u,7u
 								   );
 
 vec4 ConvertIIgs2RGB(uint gscolor)
