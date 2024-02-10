@@ -61,23 +61,15 @@ vec4 ConvertIIgs2RGB(uint gscolor)
 void main()
 {
 	// Grab Scanline Control Byte information
-	// uint scbOffset = 0x7D00 + uint(vFragPos.y)/tileSize.y;
-	// uint scb = texelFetch(DBTEX, ivec2(scbOffset % 1024u, scbOffset / 1024u), 0).r;
 	uint scb = texelFetch(DBTEX, ivec2(0x100u + ((uint(vFragPos.y))/tileSize.y), 0x1Fu), 0).r;
 	is640Mode = bool(scb & 0x80u);
 	isColorFill = bool(scb & 0x20u);
-	
-	// then figure out which byte this fragment is part of
-	// Calculate the position of the fragment in byte intervals
-	vec2 fByteColRow = vFragPos / vec2(tileSize);
-	// Row and column number of the byte containing this fragment
-	ivec2 byteColRow = ivec2(floor(fByteColRow));
-	// Fragment offset to byte origin, in pixels. It is 0-3.
-	// If in 320 mode, there are only 2 pixels, duplicated
-	// If in 640 mode, there are 4 unique pixels
-	uvec2 fragOffset = uvec2((fByteColRow - vec2(byteColRow)) * vec2(tileSize));
-	// Color indexes are reversed for each byte (right pixel is the high bits)
-	fragOffset.x = 3u - fragOffset.x;
+
+	uvec2 fragOffset;
+	ivec2 byteColRow;
+	fragOffset.x = 3u - uint(int(vFragPos.x) % int(tileSize.x));
+	fragOffset.y = uint(int(vFragPos.y) % int(tileSize.y));
+	byteColRow = ivec2(vFragPos) / ivec2(tileSize);
 	
 	// Each line is 160 (0xA0) bytes
 	int byteOffset = byteColRow.y * 0xA0 + byteColRow.x;
@@ -99,14 +91,12 @@ void main()
 			// Start searching backward from the current position
 			for (int i = (int(vFragPos.x) - 1); i >= 0; --i)
 			{
-				fByteColRow.x = float(i) / float(tileSize.x);
-				byteColRow.x = int(floor(fByteColRow.x));
-				fragOffset.x = uint((fByteColRow.x - float(byteColRow.x)) * float(tileSize));
-				fragOffset.x = 3u - fragOffset.x;
-				int newOffset = byteColRow.y * 0xA0 + byteColRow.x;
-				uint newByteVal = texelFetch(DBTEX, ivec2(newOffset % 1024, newOffset / 1024), 0).r;
+				fragOffset.x = 3u - uint(i % 4);
+				byteColRow.x = i / 4;
+				byteOffset = byteColRow.y * 0xA0 + byteColRow.x;
+				byteVal = texelFetch(DBTEX, ivec2(byteOffset % 1024, byteOffset / 1024), 0).r;
 				
-				uint prevColorIdx = (newByteVal >> (4u * (fragOffset.x/2u))) & 0xFu;
+				uint prevColorIdx = (byteVal >> (4u * (fragOffset.x/2u))) & 0xFu;
 				if (prevColorIdx != 0u)
 				{
 					// Found a previous pixel color that isn't 0, that's the one to use
