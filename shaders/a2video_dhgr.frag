@@ -17,6 +17,8 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  It involves taking 20 bits out of 4 memory bytes, then shifting and grabbing different bytes for x and y
  in the texture. See UpdateDHiResCell() in RGBMonitor.cpp of the AppleWin codebase. Take 7 bits each of
  the 2 middle bytes and 3 bits each of the 2 end bytes for a total of 20 bits.
+ 
+ The Apple 2 memory passed in should start at 0x2000 in MAIN
  */
 
 // Apple 2 HGR row offsets in memory. The rows aren't contiguous in Apple 2 RAM.
@@ -59,7 +61,7 @@ uniform COMPAT_PRECISION float isDouble;	// Are we in double res?
 // Mesh-level uniforms assigned in MosaicMesh
 uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform uvec2 tileSize;
-uniform usampler2D DBTEX;        // Apple 2e's memory, starting at 0x400 for TEXT1 and 0x800 for TEXT2
+uniform usampler2D DBTEX;        // Apple 2e's memory, starting at 0x2000 in MAIN for DHGR
 								 // Unsigned int sampler!
 
 in vec2 vFragPos;       // The fragment position in pixels

@@ -70,6 +70,7 @@ static Shader shader_a2video_text = Shader();
 static Shader shader_a2video_lgr = Shader();
 static Shader shader_a2video_hgr = Shader();
 static Shader shader_a2video_dhgr = Shader();
+static Shader shader_a2video_shr = Shader();
 
 //////////////////////////////////////////////////////////////////////////
 // Image Asset Methods
@@ -137,6 +138,7 @@ void A2VideoManager::Initialize()
 	shader_a2video_lgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_LGR_FRAGMENT);
 	shader_a2video_hgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_HGR_FRAGMENT);
 	shader_a2video_dhgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_DHGR_FRAGMENT);
+	shader_a2video_shr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_SHR_FRAGMENT);
 
 	// Initialize windows and meshes
 	
@@ -224,7 +226,7 @@ void A2VideoManager::Initialize()
 	windows[A2VIDEO_DHGR].Define(
 		A2VIDEO_DHGR,
 		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ 14, 2 }),	// TODO: CHECK THIS
+		uXY({ 14, 2 }),
 		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
 		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_HGR1_START,
 		_A2VIDEO_HGR_SIZE + _A2_MEMORY_SHADOW_END,
@@ -234,11 +236,11 @@ void A2VideoManager::Initialize()
 	windows[A2VIDEO_SHR].Define(
 		A2VIDEO_SHR,
 		uXY({ (uint32_t)(_A2VIDEO_SHR_WIDTH), (uint32_t)(_A2VIDEO_SHR_HEIGHT) }),
-		uXY({ 1, 1 }),
+		uXY({ 4, 2 }),	// each byte is 4 pixels wide. If in 320 mode, each pixel is duplicated
 		uXY({ _A2VIDEO_SHR_WIDTH, _A2VIDEO_SHR_HEIGHT }),
-		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_HGR1_START,
-		_A2VIDEO_HGR_SIZE,
-		nullptr		// do not render in the window. Rendering is done here
+		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2_MEMORY_SHADOW_END + _A2VIDEO_SHR_START,
+		_A2VIDEO_SHR_SIZE,
+		&shader_a2video_shr
 	);
 	
 	// Activate TEXT1 by default
@@ -590,7 +592,11 @@ void A2VideoManager::Render()
 				_w.Render();
 		}
 		else {
-			_w.Render();
+			if (!this->windows[A2VIDEO_SHR].IsEnabled() || (_w.Get_video_mode() == A2VIDEO_SHR))
+			{
+				// When SHR is enabled, it turns off every other mode
+				_w.Render();
+			}
 		}
 	}
 
@@ -599,6 +605,17 @@ void A2VideoManager::Render()
 
 	if (bShouldUseCPURGBRenderer)
 	{
+		if (this->windows[A2VIDEO_SHR].IsEnabled())
+		{
+			// Update one line at a time
+			// We doubled the SHR pixel height so only send 1 of 2 lines
+			for (uint8_t i = 0; i < _A2VIDEO_SHR_HEIGHT / 2; i++)
+			{
+				this->UpdateSHRLine(i, &v_fbshr);
+			}
+			this->RenderSubMixed(&v_fbshr);
+			goto ENDRENDER;
+		}
 		if (this->windows[A2VIDEO_LGR1].IsEnabled())
 		{
 			for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
@@ -648,18 +665,7 @@ void A2VideoManager::Render()
 			this->RenderSubMixed(&v_fbdhgr);
 		}
 	}
-
-	if (this->windows[A2VIDEO_SHR].IsEnabled())
-	{
-		// Update one line at a time
-		// We doubled the SHR pixel height so only send 1 of 2 lines
-		for (uint8_t i = 0; i < _A2VIDEO_SHR_HEIGHT / 2; i++)
-		{
-			this->UpdateSHRLine(i, &v_fbshr);
-		}
-		this->RenderSubMixed(&v_fbshr);
-	}
-
+ENDRENDER:
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
 	}

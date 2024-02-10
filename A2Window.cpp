@@ -190,7 +190,7 @@ void A2Window::Render()
 		}
 		case A2VIDEO_SHR:
 		{
-			// Shouldn't be here, SHR is done differently for now, in a CPU framebuffer
+			// Nothing to do here, all the data is in the control bytes in memory
 			break;
 		}
 		default:
