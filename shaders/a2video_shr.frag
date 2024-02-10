@@ -65,11 +65,17 @@ void main()
 	is640Mode = bool(scb & 0x80u);
 	isColorFill = bool(scb & 0x20u);
 
+	// then figure out which byte this fragment is part of
+	// Calculate the position of the fragment in byte intervals
 	uvec2 fragOffset;
-	ivec2 byteColRow;
+	// Fragment offset to byte origin, in pixels. It is 0-3.
+	// If in 320 mode, there are only 2 pixels, duplicated
+	// If in 640 mode, there are 4 unique pixels
+	// Color indexes are reversed for each byte (right pixel is the high bits)
 	fragOffset.x = 3u - uint(int(vFragPos.x) % int(tileSize.x));
 	fragOffset.y = uint(int(vFragPos.y) % int(tileSize.y));
-	byteColRow = ivec2(vFragPos) / ivec2(tileSize);
+	// Row and column number of the byte containing this fragment
+	ivec2 byteColRow = ivec2(vFragPos) / ivec2(tileSize);
 	
 	// Each line is 160 (0xA0) bytes
 	int byteOffset = byteColRow.y * 0xA0 + byteColRow.x;
