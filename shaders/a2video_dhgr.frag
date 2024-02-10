@@ -54,9 +54,8 @@ const int hgrRow[192] = int[192](
 // Global uniforms assigned in A2VideoManager
 uniform sampler2D a2ModeTexture;
 uniform int ticks;                  // ms since start
-uniform COMPAT_PRECISION float hasFlashing;
 uniform COMPAT_PRECISION float isMixed;		// Are we in mixed mode?
-uniform COMPAT_PRECISION float isDouble;	// Are we in double res?
+uniform COMPAT_PRECISION float isPage2;		// Are we in page 2?
 
 // Mesh-level uniforms assigned in MosaicMesh
 uniform uvec2 tileCount;         // Count of tiles (cols, rows)
@@ -95,7 +94,7 @@ void main()
 	uint byteVal1 = 0u;
 	uint byteVal4 = 0u;
 	// The bytes from main: 1 and 3
-	offset = hgrRow[tileColRow.y] + tileColRow.x;
+	offset = hgrRow[tileColRow.y] + tileColRow.x + int(isPage2) * 0x2000;
 	uint byteVal3 = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
 	if (tileColRow.x > 0)	// Not at start of row, byteVal1 is valid
 	{

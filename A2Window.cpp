@@ -184,8 +184,14 @@ void A2Window::Render()
 		}
 		case A2VIDEO_DHGR:
 		{
-			shaderProgram->setFloat("isDouble", 1.f);
 			shaderProgram->setInt("a2ModeTexture", _SDHR_START_TEXTURES + 6 - GL_TEXTURE0);
+			if (A2VideoManager::GetInstance()->IsSoftSwitch(A2SS_PAGE2))
+			{
+				shaderProgram->setFloat("isPage2", 1.f);
+			}
+			else {
+				shaderProgram->setFloat("isPage2", 0.f);
+			}
 			break;
 		}
 		case A2VIDEO_SHR:

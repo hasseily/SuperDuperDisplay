@@ -229,7 +229,7 @@ void A2VideoManager::Initialize()
 		uXY({ 14, 2 }),
 		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
 		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_HGR1_START,
-		_A2VIDEO_HGR_SIZE + _A2_MEMORY_SHADOW_END,
+		(2 * _A2VIDEO_HGR_SIZE) + _A2_MEMORY_SHADOW_END,
 		&shader_a2video_dhgr
 	);
 	// SHR
