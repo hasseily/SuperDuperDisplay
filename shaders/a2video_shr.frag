@@ -34,8 +34,8 @@ out vec4 fragColor;
 
 bool is640Mode = false;
 bool isColorFill = false;
-uint paletteColorB1 = 0;	// first byte of the palette color
-uint paletteColorB2 = 0;	// second byte of the palette color
+uint paletteColorB1 = 0u;	// first byte of the palette color
+uint paletteColorB2 = 0u;	// second byte of the palette color
 
 vec4 ConvertIIgs2RGB(uint gscolor)
 {
@@ -73,27 +73,27 @@ void main()
 	fragOffset.x = 3u - fragOffset.x;
 
 	// Each line is 160 (0xA0) bytes
-	uint byteOffset = byteColRow.y * 0xA0 + byteColRow.x;
+	int byteOffset = byteColRow.y * 0xA0 + byteColRow.x;
 	uint byteVal = texelFetch(DBTEX, ivec2(byteOffset % 1024, byteOffset / 1024), 0).r;
-	uint colorIdx = 0;
+	uint colorIdx = 0u;
 	if (is640Mode)
 	{
-		colorIdx = (byteVal >> (2 * fragOffset.x)) & 0x3u;
+		colorIdx = (byteVal >> (2u * fragOffset.x)) & 0x3u;
 	}
 	else
 	{
 		// fragOffset ends up being 0 or 1
-		colorIdx = (byteVal >> (4 * (fragOffset.x/2))) & 0xFu;
+		colorIdx = (byteVal >> (4u * (fragOffset.x/2u))) & 0xFu;
 		if (isColorFill && (colorIdx == 0u))
 		{
 			// Needs to be colorfilled with the closest previous pixel color that isn't 0
 			// Start searching backward from the current position
 			for (int i = int(byteColRow.x) - 1; i >= 0; --i)
 			{
-				uint newOffset = byteColRow.y * 0xA0 + uint(i);
+				int newOffset = byteColRow.y * 0xA0 + i;
 				uint newByteVal = texelFetch(DBTEX, ivec2(newOffset % 1024, newOffset / 1024), 0).r;
 				
-				uint prevColorIdx = (newByteVal >> (4 * (fragOffset.x/2))) & 0xFu;
+				uint prevColorIdx = (newByteVal >> (4u * (fragOffset.x/2u))) & 0xFu;
 				if (prevColorIdx != 0u)
 				{
 					// Found a previous pixel color that isn't 0, that's the one to use
@@ -109,6 +109,6 @@ void main()
 	// Palettes are on line 0x1F, starting at 0x200
 	uint paletteOffsetX = 0x200u + ((scb & 0xFu) << 5);
 	paletteColorB1 = texelFetch(DBTEX, ivec2(paletteOffsetX + (colorIdx*2u), 0x1Fu), 0).r;
-	paletteColorB2 = texelFetch(DBTEX, ivec2(paletteOffsetX + (colorIdx*2u) + 1, 0x1Fu), 0).r;
+	paletteColorB2 = texelFetch(DBTEX, ivec2(paletteOffsetX + (colorIdx*2u) + 1u, 0x1Fu), 0).r;
 	fragColor = ConvertIIgs2RGB((paletteColorB2 << 8) + paletteColorB1);
 }
