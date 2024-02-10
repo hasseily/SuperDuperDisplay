@@ -1108,3 +1108,4 @@ void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_star
 	}
 }
 
+
