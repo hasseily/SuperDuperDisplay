@@ -37,6 +37,13 @@ bool isColorFill = false;
 uint paletteColorB1 = 0u;	// first byte of the palette color
 uint paletteColorB2 = 0u;	// second byte of the palette color
 
+const uint palette640[16] = uint[16](
+									 8,9,10,11,
+									 12,13,14,15,
+									 0,1,2,3,
+									 4,5,6,7
+								   );
+
 vec4 ConvertIIgs2RGB(uint gscolor)
 {
 	float _red = float((gscolor & 0x0F00u) >> 8);		// 0000 1111 0000 0000
@@ -56,7 +63,7 @@ void main()
 	// Grab Scanline Control Byte information
 	// uint scbOffset = 0x7D00 + uint(vFragPos.y)/tileSize.y;
 	// uint scb = texelFetch(DBTEX, ivec2(scbOffset % 1024u, scbOffset / 1024u), 0).r;
-	uint scb = texelFetch(DBTEX, ivec2(0x100u + (uint(vFragPos.y)/tileSize.y), 0x1Fu), 0).r;
+	uint scb = texelFetch(DBTEX, ivec2(0x100u + ((uint(vFragPos.y))/tileSize.y), 0x1Fu), 0).r;
 	is640Mode = bool(scb & 0x80u);
 	isColorFill = bool(scb & 0x20u);
 	
@@ -65,20 +72,22 @@ void main()
 	vec2 fByteColRow = vFragPos / vec2(tileSize);
 	// Row and column number of the byte containing this fragment
 	ivec2 byteColRow = ivec2(floor(fByteColRow));
-	// Fragment offset to byte origin, in pixels. It should be 4.
+	// Fragment offset to byte origin, in pixels. It is 0-3.
 	// If in 320 mode, there are only 2 pixels, duplicated
 	// If in 640 mode, there are 4 unique pixels
 	uvec2 fragOffset = uvec2((fByteColRow - vec2(byteColRow)) * vec2(tileSize));
-	// Color indexes are reversed for each byte
+	// Color indexes are reversed for each byte (right pixel is the high bits)
 	fragOffset.x = 3u - fragOffset.x;
-
+	
 	// Each line is 160 (0xA0) bytes
 	int byteOffset = byteColRow.y * 0xA0 + byteColRow.x;
 	uint byteVal = texelFetch(DBTEX, ivec2(byteOffset % 1024, byteOffset / 1024), 0).r;
 	uint colorIdx = 0u;
+	
+	
 	if (is640Mode)
 	{
-		colorIdx = (byteVal >> (2u * fragOffset.x)) & 0x3u;
+		colorIdx = palette640[(fragOffset.x * 4u) + ((byteVal >> (2u * fragOffset.x)) & 0x3u)];
 	}
 	else
 	{
@@ -88,9 +97,13 @@ void main()
 		{
 			// Needs to be colorfilled with the closest previous pixel color that isn't 0
 			// Start searching backward from the current position
-			for (int i = int(byteColRow.x) - 1; i >= 0; --i)
+			for (int i = (int(vFragPos.x) - 1); i >= 0; --i)
 			{
-				int newOffset = byteColRow.y * 0xA0 + i;
+				fByteColRow.x = float(i) / float(tileSize.x);
+				byteColRow.x = int(floor(fByteColRow.x));
+				fragOffset.x = uint((fByteColRow.x - float(byteColRow.x)) * float(tileSize));
+				fragOffset.x = 3u - fragOffset.x;
+				int newOffset = byteColRow.y * 0xA0 + byteColRow.x;
 				uint newByteVal = texelFetch(DBTEX, ivec2(newOffset % 1024, newOffset / 1024), 0).r;
 				
 				uint prevColorIdx = (newByteVal >> (4u * (fragOffset.x/2u))) & 0xFu;
