@@ -15,6 +15,7 @@
 #endif
 
 #include <cstring>
+#include <algorithm>
 #include <thread>
 
 #include "common.h"
