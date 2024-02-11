@@ -12,7 +12,7 @@
 #include "../SDHRManager.h"
 #include "ImGuiFileDialog.h"
 
-#include "A2VideoManager.h"
+#include "../A2VideoManager.h"
 
 void MemoryLoad(uint32_t position, bool bAuxBank) {
 	uint8_t* pMem;
