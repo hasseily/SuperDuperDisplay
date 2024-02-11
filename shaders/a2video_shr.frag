@@ -37,11 +37,13 @@ bool isColorFill = false;
 uint paletteColorB1 = 0u;	// first byte of the palette color
 uint paletteColorB2 = 0u;	// second byte of the palette color
 
+// This is reversed because we reversed the fragOffset for
+// faster calculation of color values
 const uint palette640[16] = uint[16](
-									 8u,9u,10u,11u,
-									 12u,13u,14u,15u,
+									 4u,5u,6u,7u,
 									 0u,1u,2u,3u,
-									 4u,5u,6u,7u
+									 12u,13u,14u,15u,
+									 8u,9u,10u,11u
 								   );
 
 vec4 ConvertIIgs2RGB(uint gscolor)
@@ -71,7 +73,7 @@ void main()
 	// Fragment offset to byte origin, in pixels. It is 0-3.
 	// If in 320 mode, there are only 2 pixels, duplicated
 	// If in 640 mode, there are 4 unique pixels
-	// Color indexes are reversed for each byte (right pixel is the high bits)
+    // Reverse the fragment offset, it's cheaper when calculating the color
 	fragOffset.x = 3u - uint(int(vFragPos.x) % int(tileSize.x));
 	fragOffset.y = uint(int(vFragPos.y) % int(tileSize.y));
 	// Row and column number of the byte containing this fragment
@@ -89,10 +91,30 @@ void main()
 	}
 	else
 	{
-		// fragOffset ends up being 0 or 1
 		colorIdx = (byteVal >> (4u * (fragOffset.x/2u))) & 0xFu;
 		if (isColorFill && (colorIdx == 0u))
 		{
+            if (fragOffset.x < 2u)
+            {
+                // The other pixel may have a color
+                colorIdx = (byteVal >> 4u);
+            }
+            if (colorIdx == 0u)
+            {
+                // Loop through every byte in this row
+                for (int i = byteColRow.x; i > 0; i--)
+                {
+                    byteOffset--;
+				    byteVal = texelFetch(DBTEX, ivec2(byteOffset % 1024, byteOffset / 1024), 0).r;
+                    if (byteVal == 0u)
+                        continue;
+                    colorIdx = byteVal & 0xFu;
+                    if (colorIdx == 0u)
+                        colorIdx = (byteVal >> 4u);
+                    break;
+                }
+            }
+            /*
 			// Needs to be colorfilled with the closest previous pixel color that isn't 0
 			// Start searching backward from the current position
 			for (int i = (int(vFragPos.x) - 1); i >= 0; --i)
@@ -110,6 +132,7 @@ void main()
 					break;
 				}
 			}
+            */
 		}
 	}
 	// Get the palette color from the relevant palette.
