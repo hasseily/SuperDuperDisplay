@@ -301,8 +301,8 @@ void A2VideoManager::ToggleA2Video(bool value)
 	{
 		SelectVideoModes();
 		auto scrSz = ScreenSize();
-		oglHelper->request_framebuffer_resize(scrSz.x, scrSz.y);
-		bShouldInitializeRender = true;
+		if (oglHelper->request_framebuffer_resize(scrSz.x, scrSz.y))
+			bShouldInitializeRender = true;
 	}
 }
 
