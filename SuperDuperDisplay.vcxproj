@@ -222,7 +222,6 @@
     <None Include="shaders\a2video_lgr.frag" />
     <None Include="shaders\a2video_postprocess.glsl" />
     <None Include="shaders\a2video_text.frag" />
-    <None Include="shaders\a2video_text.glsl" />
     <None Include="shaders\basic.frag" />
     <None Include="shaders\basic.vert" />
     <None Include="shaders\sdhr_default_330.frag" />
