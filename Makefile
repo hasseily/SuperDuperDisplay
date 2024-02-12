@@ -22,7 +22,7 @@
 
 EXE = SuperDuperDisplay
 IMGUI_DIR = imgui
-SOURCES = main.cpp OpenGLHelper.cpp MosaicMesh.cpp SDHRNetworking.cpp SDHRManager.cpp SDHRWindow.cpp A2VideoManager.cpp A2Window.cpp shader.cpp PostProcessor.cpp
+SOURCES = main.cpp OpenGLHelper.cpp MosaicMesh.cpp SDHRNetworking.cpp SDHRManager.cpp SDHRWindow.cpp A2VideoManager.cpp A2Window.cpp shader.cpp PostProcessor.cpp CycleCounter.cpp
 SOURCES += extras/MemoryLoader.cpp extras/ImGuiFileDialog.cpp
 SOURCES += glad/glad.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
@@ -32,7 +32,7 @@ UNAME_S := $(shell uname -s)
 LINUX_GL_LIBS = -lGL
 
 CXXFLAGS = -std=c++17 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -Iglad
-CXXFLAGS += -Wall -Wformat -Wno-unused-function
+CXXFLAGS += -Wall -Wformat -Wno-unused-function -Wno-unknown-pragmas
 CONFIGFLAGS =
 LIBS =
 
