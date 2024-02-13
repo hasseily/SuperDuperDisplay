@@ -9,13 +9,15 @@
 class CycleCounter
 {
 public:
-	void IncrementCycles(int inc);
-	bool IsNotInBlank();
+	void IncrementCycles(int inc, bool isVBL);
 	bool IsVBL();
 	bool IsHBL();
-	uint8_t GetScanline();
-	uint8_t GetByteYPos();
+	bool IsInBlank();
+	uint32_t GetScanline();
+	uint32_t GetByteYPos();
+	uint32_t m_vbl_start = 0;	// debug to know when we think vbl started previously
 
+	bool isSHR = false;
 
 	// public singleton code
 	static CycleCounter* GetInstance()
@@ -35,8 +37,6 @@ private:
 	{
 		Initialize();
 	}
-
-	uint32_t m_cycle;	// Current cycle
 };
 
 #endif // CYCLECOUNTER_H

@@ -31,6 +31,7 @@ VIDEO SOFT SWITCHES
  $C00D   W       80COLON         Turn on 80 column display
  $C00E   W       ALTCHARSETOFF   Turn off alternate characters
  $C00F   W       ALTCHARSETON    Turn on alternate characters
+ $C019   R7      VERTBLANK       Bit 7 off: During vertical blank in //e. Reversed in IIgs
  $C021   R/W     MONOCOLOR       [IIgs] Bit 7 on: Greyscale
  $C022   R/W     SCREENCOLOR     [IIgs] text foreground and background colors (also VidHD)
  $C029   R/W     NEWVIDEO        [IIgs] Select new video modes (also VidHD)

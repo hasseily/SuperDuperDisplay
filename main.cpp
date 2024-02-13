@@ -27,6 +27,7 @@
 #include "SDHRManager.h"
 #include "A2VideoManager.h"
 #include "OpenGLHelper.h"
+#include "CycleCounter.h"
 #include "extras/MemoryLoader.h"
 #include "PostProcessor.h"
 
@@ -315,6 +316,7 @@ int main(int argc, char* argv[])
 				ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
 				ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
 				ImGui::Text("Screen Size:%03d x %03d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);
+				ImGui::Text("VBL Start:%05d", CycleCounter::GetInstance()->m_vbl_start);
 				ImGui::Separator();
 //				ImGui::Checkbox("Demo Window", &show_demo_window);
 				ImGui::Checkbox("PostProcessing Window", &show_postprocessing_window);

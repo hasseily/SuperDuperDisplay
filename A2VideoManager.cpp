@@ -13,6 +13,7 @@
 
 #include "OpenGLHelper.h"
 #include "SDHRManager.h"
+#include "CycleCounter.h"
 #include "GRAddr2XY.h"
 
 static inline uint32_t SETRGBCOLOR(uint8_t r, uint8_t g, uint8_t b)
@@ -451,9 +452,11 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool
 		{
 			// SHR video mode. Bit 6 is considered on
 			a2SoftSwitches |= A2SS_SHR;
+			CycleCounter::GetInstance()->isSHR = true;
 		} else {
 			// Classic Apple 2 video modes
 			a2SoftSwitches &= ~A2SS_SHR;
+			CycleCounter::GetInstance()->isSHR = false;
 		}
         break;
 	default:
@@ -534,6 +537,10 @@ uXY A2VideoManager::ScreenSize()
 void A2VideoManager::Render()
 {
 	if (!bA2VideoEnabled)
+		return;
+
+	// Do not render during H or VBlank
+	if (CycleCounter::GetInstance()->IsInBlank())
 		return;
 
 	GLenum glerr;

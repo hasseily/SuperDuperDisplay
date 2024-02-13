@@ -1,6 +1,7 @@
 #include "SDHRNetworking.h"
 #include "A2VideoManager.h"
 #include "SDHRManager.h"
+#include "CycleCounter.h"
 #include <time.h>
 #include <fcntl.h>
 
@@ -236,19 +237,23 @@ void process_single_packet_header(SDHRPacketHeader* h,
     uint8_t* e = (uint8_t*)h + packet_size;
 
     while (p < e) {
-	uint32_t* event = (uint32_t*)p;
-	p += 4;
-	uint8_t ctrl_bits = (*event >> 24) & 0xff;
+		uint32_t* event = (uint32_t*)p;
+		p += 4;
+		uint8_t ctrl_bits = (*event >> 24) & 0xff;
         uint16_t addr = (*event >> 8) & 0xffff;
         uint8_t data = *event & 0xff;
         bool m2sel = (ctrl_bits & 0x02) == 0x02;
         bool m2b0 = (ctrl_bits & 0x04) == 0x04;
         bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
+		bool rw = (ctrl_bits & 0x01) == 0x01;
+
+		// Update the cycle counting and VBL hit
+		bool isVBL = (addr == 0xC019) && rw && ((data >> 7) == 0);
+		CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
         if (iigs_mode && m2sel) {
 	    // ignore updates from iigs_mode firmware with m2sel high
             continue;
         }
-        bool rw = (ctrl_bits & 0x01) == 0x01;
         if (rw && ((addr & 0xF000) != 0xC000)) {
             // ignoring all read events not softswitches
             continue;
