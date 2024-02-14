@@ -41,7 +41,7 @@ VIDEO SOFT SWITCHES
  $C051   R/W     TEXTON          Select text mode
  $C052   R/W     MIXEDOFF        Use full screen for graphics
  $C053   R/W     MIXEDON         Use graphics with 4 lines of text
- $C054   R/W     PAGE2OFF        Select panel display (or main video memory)
+ $C054   R/W     PAGE2OFF        Select page1 display (or main video memory)
  $C055   R/W     PAGE2ON         Select page2 display (or aux video memory)
  $C056   R/W     HIRESOFF        Select low resolution graphics
  $C057   R/W     HIRESON         Select high resolution graphics

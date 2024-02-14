@@ -279,20 +279,8 @@ void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
 	// Note: We could do delta updates here for the video modes
 	// but for better reliability we do full updates of the video modes
 	// every frame in the render method
-	if (IsSoftSwitch(A2SS_RAMWRT))
-	{
-		if (addr >= _A2VIDEO_TEXT1_START && addr < (_A2VIDEO_TEXT1_START + _A2VIDEO_TEXT_SIZE))
-			windows[A2VIDEO_DTEXT].bNeedsGPUDataUpdate = true;
-	}
-	else {
-		if (addr >= _A2VIDEO_TEXT1_START && addr < (_A2VIDEO_TEXT1_START + _A2VIDEO_TEXT_SIZE))
-			if (IsSoftSwitch(A2SS_80STORE) && IsSoftSwitch(A2SS_PAGE2))	// writing to aux text and video memory
-				windows[A2VIDEO_DTEXT].bNeedsGPUDataUpdate = true;
-			else
-				windows[A2VIDEO_TEXT1].bNeedsGPUDataUpdate = true;
-		else if (addr >= _A2VIDEO_TEXT2_START && addr < (_A2VIDEO_TEXT2_START + _A2VIDEO_TEXT_SIZE))
-			windows[A2VIDEO_TEXT2].bNeedsGPUDataUpdate = true;
-	}
+	
+	// Do nothing, we assume that the active video mode should always refresh its memory
 }
 
 void A2VideoManager::ToggleA2Video(bool value)
@@ -469,7 +457,6 @@ void A2VideoManager::SelectVideoModes()
 {
 	for (auto& _w : this->windows) {
 		_w.SetEnabled(false);
-        _w.bNeedsGPUDataUpdate = true;
 	}
 	
 	// SHR overrides all other modes
@@ -491,13 +478,13 @@ void A2VideoManager::SelectVideoModes()
 		}
 		else if (IsSoftSwitch(A2SS_HIRES))	// standard hires
 		{
-			if (IsSoftSwitch(A2SS_PAGE2))
+			if (IsSoftSwitch(A2SS_PAGE2) && !IsSoftSwitch(A2SS_80STORE))
 				this->windows[A2VIDEO_HGR2].SetEnabled(true);
 			else
 				this->windows[A2VIDEO_HGR1].SetEnabled(true);
 		}
 		else {	// standard lores
-			if (IsSoftSwitch(A2SS_PAGE2))
+			if (IsSoftSwitch(A2SS_PAGE2) && !IsSoftSwitch(A2SS_80STORE))
 				this->windows[A2VIDEO_LGR2].SetEnabled(true);
 			else
 				this->windows[A2VIDEO_LGR1].SetEnabled(true);

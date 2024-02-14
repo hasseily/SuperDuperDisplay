@@ -37,11 +37,8 @@ public:
 	bool IsEnabled() const { return enabled; }
 	void SetEnabled(bool val) { 
 		enabled = val;
-		if (enabled)
-			bNeedsGPUDataUpdate = true;
 	}
 	bool bNeedsGPUVertexUpdate = false;	// Update the GPU if the vertex data has changed
-	bool bNeedsGPUDataUpdate = false;	// Update the GPU if the underlying data has changed
 
 	A2Window()
 		: enabled(false)

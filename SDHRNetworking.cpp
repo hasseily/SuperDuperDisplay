@@ -81,21 +81,57 @@ int process_events_thread(bool* shouldTerminateProcessing)
          *********************************
         */
 		if ((e.addr >= _A2_MEMORY_SHADOW_BEGIN) && (e.addr < _A2_MEMORY_SHADOW_END)) {
-			if (a2VideoMgr->IsSoftSwitch(A2SS_RAMWRT) || (e.is_iigs && e.m2b0))
-				sdhrMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
-			else {
-				if (a2VideoMgr->IsSoftSwitch(A2SS_80STORE) && a2VideoMgr->IsSoftSwitch(A2SS_PAGE2))
-				{
-					// the A2SS_80STORE switch allows the PAGE2 switch to write to aux video mem
-					if ((e.addr >= 0x400 && e.addr < 0x800) || (e.addr >= 0x2000 && e.addr < 0x4000))
-						sdhrMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
-					else
-						sdhrMgr->GetApple2MemPtr()[e.addr] = e.data;
-				}
+			uint8_t _sw = 0;	// switches state
+			if (a2VideoMgr->IsSoftSwitch(A2SS_80STORE))
+				_sw |= 0b001;
+			if (a2VideoMgr->IsSoftSwitch(A2SS_RAMWRT))
+				_sw |= 0b010;
+			if (a2VideoMgr->IsSoftSwitch(A2SS_PAGE2))
+				_sw |= 0b100;
+			bool bIsAux = false;
+			switch (_sw)
+			{
+			case 0b010:
+				// Only writes 0000-01FF to MAIN
+				bIsAux = true;
+				break;
+			case 0b011:
+				// anything not page 1 (including 0000-01FFF goes to AUX
+				if ((e.addr >= 0x400 && e.addr < 0x800)
+					|| (e.addr >= 0x2000 && e.addr < 0x4000))
+					bIsAux = false;
 				else
-					sdhrMgr->GetApple2MemPtr()[e.addr] = e.data;
+					bIsAux = true;
+				break;
+			case 0b101:
+				// Page 1 is in AUX
+				if ((e.addr >= 0x400 && e.addr < 0x800)
+					|| (e.addr >= 0x2000 && e.addr < 0x4000))
+					bIsAux = true;
+				break;
+			case 0b110:
+				// All writes to AUX except for 0000-01FF
+				bIsAux = true;
+				break;
+			case 0b111:
+				// All writes to AUX except for 0000-01FF
+				bIsAux = true;
+				break;
+			default:
+				break;
 			}
-			a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
+			if (e.is_iigs && e.m2b0)
+				bIsAux = true;
+
+			if (bIsAux)
+			{
+				sdhrMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
+				a2VideoMgr->NotifyA2MemoryDidChange(e.addr + 0x10000);
+			}
+			else {
+				sdhrMgr->GetApple2MemPtr()[e.addr] = e.data;
+				a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
+			}
 			continue;
 		}
         /*
@@ -248,7 +284,7 @@ void process_single_packet_header(SDHRPacketHeader* h,
 		bool rw = (ctrl_bits & 0x01) == 0x01;
 
 		// Update the cycle counting and VBL hit
-		bool isVBL = (addr == 0xC019) && rw && ((data >> 7) == 0);
+		bool isVBL = ((addr == 0xC019) && rw && ((data >> 7) == 0));
 		CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
         if (iigs_mode && m2sel) {
 	    // ignore updates from iigs_mode firmware with m2sel high

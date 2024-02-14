@@ -38,7 +38,6 @@ void A2Window::Define(A2VideoMode_e _video_mode,
 	data = _data;
 	datasize = _datasize;
 	shaderProgram = _shaderProgram;
-	bNeedsGPUDataUpdate = true;
 
 	vertices[0].PixelPos = glm::vec2(0				, screen_count.y);	// top left
 	vertices[1].PixelPos = glm::vec2(screen_count.x	, 0				);	// bottom right
@@ -55,8 +54,6 @@ void A2Window::Update()
 {
 	if (vertices.size() == 0)
 		return;
-	if (!(bNeedsGPUVertexUpdate || bNeedsGPUDataUpdate))
-		return;				// doesn't need updating on the GPU
 
 	GLenum glerr;
 	if (DBTEX == UINT_MAX)
@@ -87,25 +84,24 @@ void A2Window::Update()
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(A2Vertex), (void*)offsetof(A2Vertex, PixelPos));
 	}
 
-	if (bNeedsGPUDataUpdate)
-	{
-		// Associate the texture DBTEX in GL_TEXTURE0+_SDHR_TBO_TEXUNIT with the buffer
-		// This is the apple 2's memory which is mapped to a "texture"
-		uint32_t _h = datasize / 1024;
-		if ((_h * 1024) < datasize)
-			_h++;
-		glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
-		glBindTexture(GL_TEXTURE_2D, DBTEX);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI,
-			1024,					// GL_R8UI is essentially an array of regular bytes (unbounded)
-			_h,						// Split it by 1kB-sized rows
-			0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glBindTexture(GL_TEXTURE_2D, 0);
-	}
+	// Associate the texture DBTEX in GL_TEXTURE0+_SDHR_TBO_TEXUNIT with the buffer
+	// This is the apple 2's memory which is mapped to a "texture"
+	// Always update that buffer in the GPU
+	uint32_t _h = datasize / 1024;
+	if ((_h * 1024) < datasize)
+		_h++;
+	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
+	glBindTexture(GL_TEXTURE_2D, DBTEX);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI,
+		1024,					// GL_R8UI is essentially an array of regular bytes (unbounded)
+		_h,						// Split it by 1kB-sized rows
+		0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
 
 	// reset the binding
 	glBindVertexArray(0);
@@ -115,7 +111,6 @@ void A2Window::Update()
 	}
 
 	bNeedsGPUVertexUpdate = false;
-	bNeedsGPUDataUpdate = false;
 }
 
 void A2Window::Render()
