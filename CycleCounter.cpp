@@ -46,7 +46,7 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 	{
 		if (m_cycle < t.cycles_screen)
 		{
-			std::cout << "	VBL in cycle: " << m_cycle << std::endl;
+			// std::cout << "	VBL in cycle: " << m_cycle << std::endl;
 			m_vbl_start = m_cycle;
 			m_cycle = t.cycles_screen;
 		}
