@@ -117,7 +117,7 @@ void main()
 	int vValue = (wordVal >> (4 + int(fragOffset.x) - vColor));
 	int xVal = 10 * ((vValue >> 8) & 0xFF) + vColor;
 	int yVal = vValue & 0xFF;
-	vec4 tex = texture(a2ModeTexture, vec2(xVal, yVal) / vec2(textureSize2d));
+	vec4 tex = texture(a2ModeTexture, (vec2(0.5, 0.5) + vec2(xVal, yVal)) / vec2(textureSize2d));
 	
 	fragColor = tex;
 	// fragColor = vec4(vColor, 1.f);   // for debugging
