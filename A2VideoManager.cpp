@@ -483,7 +483,6 @@ void A2VideoManager::Render()
 			if (!this->windows[A2VIDEO_SHR].IsEnabled() || (_w.Get_video_mode() == A2VIDEO_SHR))
 			{
 				// When SHR is enabled, it turns off every other mode
-				_w.Update();
 				_w.Render();
 			}
 		}

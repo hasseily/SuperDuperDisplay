@@ -191,6 +191,10 @@ void A2Window::Render()
 		return;
 	if (shaderProgram == nullptr)
 		return;
+
+	// Always update the data before render
+	Update();
+
 	GLenum glerr;
 	shaderProgram->use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
