@@ -111,11 +111,9 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 
 void A2VideoManager::Initialize()
 {
-	v_fblgr1 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
-	v_fblgr2 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
+	v_fblgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
 	v_fbdlgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
-	v_fbhgr1 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
-	v_fbhgr2 = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
+	v_fbhgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
 	v_fbdhgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
 	v_fbshr = std::vector<uint32_t>(_A2VIDEO_SHR_WIDTH * _A2VIDEO_SHR_HEIGHT, 0);
 	
@@ -143,108 +141,15 @@ void A2VideoManager::Initialize()
 
 	// Initialize windows and meshes
 	
-	// TEXT1
-	windows[A2VIDEO_TEXT1].Define(
-		A2VIDEO_TEXT1,
-		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT }),
-		uXY({ 40, 24 }),
-		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT1_START,
-		_A2VIDEO_TEXT_SIZE,
-		&shader_a2video_text
-	);
-	// TEXT2
-	windows[A2VIDEO_TEXT2].Define(
-		A2VIDEO_TEXT2,
-		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT }),
-		uXY({ 40, 24 }),
-		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT2_START,
-		_A2VIDEO_TEXT_SIZE,
-		&shader_a2video_text
-	);
-	// DTEXT
-	windows[A2VIDEO_DTEXT].Define(
-		A2VIDEO_DTEXT,
-		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ _A2_TEXT80_CHAR_WIDTH, _A2_TEXT80_CHAR_HEIGHT }),
-		uXY({ 80, 24 }),
-		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT1_START,
-		_A2VIDEO_TEXT_SIZE + _A2_MEMORY_SHADOW_END,
-		&shader_a2video_text
-	);
-	// LGR1
-	windows[A2VIDEO_LGR1].Define(
-		A2VIDEO_LGR1,
-		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT }),
-		uXY({ 40, 24 }),
-		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT1_START,
-		_A2VIDEO_TEXT_SIZE,
-		&shader_a2video_lgr
-	);
-	// LGR2
-	windows[A2VIDEO_LGR2].Define(
-		A2VIDEO_LGR2,
-		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT }),
-		uXY({ 40, 24 }),
-		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT2_START,
-		_A2VIDEO_TEXT_SIZE,
-		&shader_a2video_lgr
-	);
-	// DLGR
-	windows[A2VIDEO_DLGR].Define(
-		A2VIDEO_DLGR,
-		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ _A2_TEXT80_CHAR_WIDTH, _A2_TEXT80_CHAR_HEIGHT }),
-		uXY({ 80, 24 }),
-		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_TEXT1_START,
-		_A2VIDEO_TEXT_SIZE + _A2_MEMORY_SHADOW_END,
-		&shader_a2video_lgr
-	);
-	// HGR1
-	windows[A2VIDEO_HGR1].Define(
-		A2VIDEO_HGR1,
-		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ 14, 2 }),
-		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
-		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_HGR1_START,
-		_A2VIDEO_HGR_SIZE,
-		&shader_a2video_hgr
-	);
-	// HGR2
-	windows[A2VIDEO_HGR2].Define(
-		A2VIDEO_HGR2,
-		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ 14, 2 }),
-		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
-		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_HGR2_START,
-		_A2VIDEO_HGR_SIZE,
-		&shader_a2video_hgr
-	);
-	// DHGR
-	windows[A2VIDEO_DHGR].Define(
-		A2VIDEO_DHGR,
-		uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) }),
-		uXY({ 14, 2 }),
-		uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT }),		// 192 lines
-		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_HGR1_START,
-		(2 * _A2VIDEO_HGR_SIZE) + _A2_MEMORY_SHADOW_END,
-		&shader_a2video_dhgr
-	);
-	// SHR
-	windows[A2VIDEO_SHR].Define(
-		A2VIDEO_SHR,
-		uXY({ (uint32_t)(_A2VIDEO_SHR_WIDTH), (uint32_t)(_A2VIDEO_SHR_HEIGHT) }),
-		uXY({ 4, 2 }),	// each byte is 4 pixels wide. If in 320 mode, each pixel is duplicated
-		uXY({ _A2VIDEO_SHR_WIDTH, _A2VIDEO_SHR_HEIGHT }),
-		SDHRManager::GetInstance()->GetApple2MemPtr() + _A2_MEMORY_SHADOW_END + _A2VIDEO_SHR_START,
-		_A2VIDEO_SHR_SIZE,
-		&shader_a2video_shr
-	);
+	windows[A2VIDEO_TEXT].Define(A2VIDEO_TEXT, &shader_a2video_text);
+	windows[A2VIDEO_DTEXT].Define(A2VIDEO_DTEXT, &shader_a2video_text);
+	windows[A2VIDEO_LGR].Define(A2VIDEO_LGR, &shader_a2video_lgr);
+	windows[A2VIDEO_DLGR].Define(A2VIDEO_DLGR, &shader_a2video_lgr);
+	windows[A2VIDEO_HGR].Define(A2VIDEO_HGR, &shader_a2video_hgr);
+	windows[A2VIDEO_DHGR].Define(A2VIDEO_DHGR, &shader_a2video_dhgr);
+	windows[A2VIDEO_SHR].Define(A2VIDEO_SHR, &shader_a2video_shr);
 	
-	// Activate TEXT1 by default
+	// Activate TEXT by default
 	SelectVideoModes();
 	// tell the next Render() call to run initialization routines
 	bShouldInitializeRender = true;
@@ -478,16 +383,10 @@ void A2VideoManager::SelectVideoModes()
 		}
 		else if (IsSoftSwitch(A2SS_HIRES))	// standard hires
 		{
-			if (IsSoftSwitch(A2SS_PAGE2) && !IsSoftSwitch(A2SS_80STORE))
-				this->windows[A2VIDEO_HGR2].SetEnabled(true);
-			else
-				this->windows[A2VIDEO_HGR1].SetEnabled(true);
+			this->windows[A2VIDEO_HGR].SetEnabled(true);
 		}
 		else {	// standard lores
-			if (IsSoftSwitch(A2SS_PAGE2) && !IsSoftSwitch(A2SS_80STORE))
-				this->windows[A2VIDEO_LGR2].SetEnabled(true);
-			else
-				this->windows[A2VIDEO_LGR1].SetEnabled(true);
+			this->windows[A2VIDEO_LGR].SetEnabled(true);
 		}
 	}
 	// Now check the text modes
@@ -497,10 +396,7 @@ void A2VideoManager::SelectVideoModes()
 			this->windows[A2VIDEO_DTEXT].SetEnabled(true);
 		else
 		{
-			if (IsSoftSwitch(A2SS_PAGE2) && !IsSoftSwitch(A2SS_80STORE))
-				this->windows[A2VIDEO_TEXT2].SetEnabled(true);
-			else
-				this->windows[A2VIDEO_TEXT1].SetEnabled(true);
+			this->windows[A2VIDEO_TEXT].SetEnabled(true);
 		}
 	}
 	return;
@@ -572,23 +468,22 @@ void A2VideoManager::Render()
 		glActiveTexture(GL_TEXTURE0);
 	}
 
-	// Update Apple 2 video windows
-	for (auto& _w : this->windows) {
-		_w.Update();
-	}
-
 	for (auto& _w : this->windows) {
 		if (bShouldUseCPURGBRenderer)
 		{
 			// Only GPU render the text modes
 			auto _vidM = _w.Get_video_mode();
-			if ((_vidM == A2VIDEO_TEXT1) || (_vidM == A2VIDEO_TEXT2) || (_vidM == A2VIDEO_DTEXT))
+			if ((_vidM == A2VIDEO_TEXT) || (_vidM == A2VIDEO_DTEXT))
+			{
+				_w.Update();
 				_w.Render();
+			}
 		}
 		else {
 			if (!this->windows[A2VIDEO_SHR].IsEnabled() || (_w.Get_video_mode() == A2VIDEO_SHR))
 			{
 				// When SHR is enabled, it turns off every other mode
+				_w.Update();
 				_w.Render();
 			}
 		}
@@ -599,8 +494,15 @@ void A2VideoManager::Render()
 
 	if (bShouldUseCPURGBRenderer)
 	{
+		// Check for page 2
+		bool isPage2 = false;
+		// Careful: it's only page 2 if 80STORE is off
+		if (IsSoftSwitch(A2SS_PAGE2) && !IsSoftSwitch(A2SS_80STORE))
+			isPage2 = true;
+
 		if (this->windows[A2VIDEO_SHR].IsEnabled())
 		{
+			this->windows[A2VIDEO_SHR].Update();
 			// Update one line at a time
 			// We doubled the SHR pixel height so only send 1 of 2 lines
 			for (uint8_t i = 0; i < _A2VIDEO_SHR_HEIGHT / 2; i++)
@@ -610,51 +512,49 @@ void A2VideoManager::Render()
 			this->RenderSubMixed(&v_fbshr);
 			goto ENDRENDER;
 		}
-		if (this->windows[A2VIDEO_LGR1].IsEnabled())
+		if (this->windows[A2VIDEO_LGR].IsEnabled())
 		{
+			this->windows[A2VIDEO_LGR].Update();
 			for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
 			{
-				this->UpdateLoResRGBCell(_A2VIDEO_TEXT1_START + i, _A2VIDEO_TEXT1_START, &v_fblgr1);
+				this->UpdateLoResRGBCell(
+					(isPage2 ? _A2VIDEO_TEXT2_START : _A2VIDEO_TEXT1_START) + i,
+					(isPage2 ? _A2VIDEO_TEXT2_START : _A2VIDEO_TEXT1_START),
+					&v_fblgr);
 			}
-			this->RenderSubMixed(&v_fblgr1);
-		}
-		if (this->windows[A2VIDEO_LGR2].IsEnabled())
-		{
-			for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
-			{
-				this->UpdateLoResRGBCell(_A2VIDEO_TEXT2_START + i, _A2VIDEO_TEXT2_START, &v_fblgr2);
-			}
-			this->RenderSubMixed(&v_fblgr2);
+			this->RenderSubMixed(&v_fblgr);
 		}
 		if (this->windows[A2VIDEO_DLGR].IsEnabled())
 		{
 			for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
 			{
-				this->UpdateDLoResRGBCell(_A2VIDEO_TEXT1_START + i, _A2VIDEO_TEXT1_START, &v_fbdlgr);
+				// TODO: There should be no DLORES page 2
+				this->UpdateDLoResRGBCell(
+					(isPage2 ? _A2VIDEO_TEXT2_START : _A2VIDEO_TEXT1_START) + i,
+					(isPage2 ? _A2VIDEO_TEXT2_START : _A2VIDEO_TEXT1_START),
+					&v_fbdlgr);
 			}
 			this->RenderSubMixed(&v_fbdlgr);
 		}
-		if (this->windows[A2VIDEO_HGR1].IsEnabled())
+		if (this->windows[A2VIDEO_HGR].IsEnabled())
 		{
 			for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
 			{
-				this->UpdateHiResRGBCell(_A2VIDEO_HGR1_START + i, _A2VIDEO_HGR1_START, &v_fbhgr1);
+				this->UpdateHiResRGBCell(
+					(isPage2 ? _A2VIDEO_HGR2_START : _A2VIDEO_HGR1_START) + i,
+					(isPage2 ? _A2VIDEO_HGR2_START : _A2VIDEO_HGR1_START),
+					&v_fbhgr);
 			}
-			this->RenderSubMixed(&v_fbhgr1);
-		}
-		if (this->windows[A2VIDEO_HGR2].IsEnabled())
-		{
-			for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
-			{
-				this->UpdateHiResRGBCell(_A2VIDEO_HGR2_START + i, _A2VIDEO_HGR2_START, &v_fbhgr2);
-			}
-			this->RenderSubMixed(&v_fbhgr2);
+			this->RenderSubMixed(&v_fbhgr);
 		}
 		if (this->windows[A2VIDEO_DHGR].IsEnabled())
 		{
 			for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
 			{
-				this->UpdateDHiResRGBCell(_A2VIDEO_HGR1_START + i, _A2VIDEO_HGR1_START, &v_fbdhgr);
+				this->UpdateDHiResRGBCell(
+					(isPage2 ? _A2VIDEO_HGR2_START : _A2VIDEO_HGR1_START) + i,
+					(isPage2 ? _A2VIDEO_HGR2_START : _A2VIDEO_HGR1_START),
+					&v_fbdhgr);
 			}
 			this->RenderSubMixed(&v_fbdhgr);
 		}

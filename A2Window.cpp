@@ -2,6 +2,7 @@
 #include "common.h"
 #include <SDL_timer.h>
 #include "A2VideoManager.h"
+#include "SDHRManager.h"
 
 // static unsigned int DBTEX = UINT_MAX;		// Data Buffer Texture (holds Apple 2 memory data)
 
@@ -24,21 +25,59 @@ A2Window::~A2Window()
 	}
 }
 
-void A2Window::Define(A2VideoMode_e _video_mode, 
-	uXY _screen_count,
-	uXY _tile_dim, uXY _tile_count,
-	uint8_t* _data, uint32_t _datasize,
-	Shader* _shaderProgram)
+void A2Window::Define(A2VideoMode_e _video_mode, Shader* _shaderProgram)
 {
 	this->Reset();
 	video_mode = _video_mode;
-	screen_count = _screen_count;
-	tile_dim = _tile_dim;
-	tile_count = _tile_count;
-	data = _data;
-	datasize = _datasize;
 	shaderProgram = _shaderProgram;
 
+	switch (video_mode) {
+	case A2VIDEO_TEXT:
+		screen_count	= uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) });
+		tile_dim		= uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT });
+		tile_count		= uXY({ 40, 24 });
+		datasize		= _A2VIDEO_TEXT_SIZE;
+		break;
+	case A2VIDEO_DTEXT:
+		screen_count	= uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH) , (uint32_t)(_A2VIDEO_MIN_HEIGHT) });
+		tile_dim		= uXY({ _A2_TEXT80_CHAR_WIDTH, _A2_TEXT80_CHAR_HEIGHT });
+		tile_count		= uXY({ 80, 24 });
+		datasize		= _A2VIDEO_TEXT_SIZE + _A2_MEMORY_SHADOW_END;
+		break;
+	case A2VIDEO_LGR:
+		screen_count	= uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) });
+		tile_dim		= uXY({ _A2_TEXT40_CHAR_WIDTH, _A2_TEXT40_CHAR_HEIGHT });
+		tile_count		= uXY({ 40, 24 });
+		datasize		= _A2VIDEO_TEXT_SIZE;
+		break;
+	case A2VIDEO_DLGR:
+		screen_count	= uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) });
+		tile_dim		= uXY({ _A2_TEXT80_CHAR_WIDTH, _A2_TEXT80_CHAR_HEIGHT });
+		tile_count		= uXY({ 80, 24 });
+		datasize		= _A2VIDEO_TEXT_SIZE + _A2_MEMORY_SHADOW_END;
+		break;
+	case A2VIDEO_HGR:
+		screen_count	= uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) });
+		tile_dim		= uXY({ 14, 2 });
+		tile_count		= uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT });		// 192 lines
+		datasize		= _A2VIDEO_HGR_SIZE;
+		break;
+	case A2VIDEO_DHGR:
+		screen_count	= uXY({ (uint32_t)(_A2VIDEO_MIN_WIDTH), (uint32_t)(_A2VIDEO_MIN_HEIGHT) });
+		tile_dim		= uXY({ 14, 2 });
+		tile_count		= uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT });		// 192 lines
+		datasize		= (2 * _A2VIDEO_HGR_SIZE) + _A2_MEMORY_SHADOW_END;
+		break;
+	case A2VIDEO_SHR:
+		screen_count	= uXY({ (uint32_t)(_A2VIDEO_SHR_WIDTH), (uint32_t)(_A2VIDEO_SHR_HEIGHT) });
+		tile_dim		= uXY({ 4, 2 });	// each byte is 4 pixels wide. If in 320 mode, each pixel is duplicated
+		tile_count		= uXY({ _A2VIDEO_SHR_WIDTH, _A2VIDEO_SHR_HEIGHT });
+		datasize		= _A2VIDEO_SHR_SIZE;
+		break;
+	default:
+		break;
+
+	}
 	vertices[0].PixelPos = glm::vec2(0				, screen_count.y);	// top left
 	vertices[1].PixelPos = glm::vec2(screen_count.x	, 0				);	// bottom right
 	vertices[2].PixelPos = glm::vec2(screen_count.x	, screen_count.y);	// top right
@@ -84,6 +123,39 @@ void A2Window::Update()
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(A2Vertex), (void*)offsetof(A2Vertex, PixelPos));
 	}
 
+	// Careful: it's only page 2 if 80STORE is off
+	bool isPage2 = false;
+	if (A2VideoManager::GetInstance()->IsSoftSwitch(A2SS_PAGE2)
+		&& !A2VideoManager::GetInstance()->IsSoftSwitch(A2SS_80STORE))
+		isPage2 = true;
+
+	uint8_t* data = SDHRManager::GetInstance()->GetApple2MemPtr();
+	switch (video_mode) {
+	case A2VIDEO_TEXT:
+		data += (isPage2 ? _A2VIDEO_TEXT2_START : _A2VIDEO_TEXT1_START);
+		break;
+	case A2VIDEO_DTEXT:
+		data += (isPage2 ? _A2VIDEO_TEXT2_START : _A2VIDEO_TEXT1_START);
+		break;
+	case A2VIDEO_LGR:
+		data += (isPage2 ? _A2VIDEO_TEXT2_START : _A2VIDEO_TEXT1_START);
+		break;
+	case A2VIDEO_DLGR:	// TODO: Does DLGR have a page 2?
+		data += (isPage2 ? _A2VIDEO_TEXT2_START : _A2VIDEO_TEXT1_START);
+		break;
+	case A2VIDEO_HGR:
+		data += (isPage2 ? _A2VIDEO_HGR2_START : _A2VIDEO_HGR1_START);
+		break;
+	case A2VIDEO_DHGR:
+		data += (isPage2 ? _A2VIDEO_HGR2_START : _A2VIDEO_HGR1_START);
+		break;
+	case A2VIDEO_SHR:
+		data += _A2_MEMORY_SHADOW_END + _A2VIDEO_SHR_START;
+		break;
+	default:
+		break;
+
+	}
 	// Associate the texture DBTEX in GL_TEXTURE0+_SDHR_TBO_TEXUNIT with the buffer
 	// This is the apple 2's memory which is mapped to a "texture"
 	// Always update that buffer in the GPU
@@ -130,8 +202,7 @@ void A2Window::Render()
 
 	// Assign the textures
 	switch (video_mode) {
-		case A2VIDEO_TEXT1:
-		case A2VIDEO_TEXT2:
+		case A2VIDEO_TEXT:
 		{
 			shaderProgram->setFloat("isDouble", 0.f);
 			if (A2VideoManager::GetInstance()->IsSoftSwitch(A2SS_ALTCHARSET))
@@ -157,8 +228,7 @@ void A2Window::Render()
 			}
 			break;
 		}
-		case A2VIDEO_LGR1:
-		case A2VIDEO_LGR2:
+		case A2VIDEO_LGR:
 		{
 			shaderProgram->setFloat("isDouble", 0.f);
 			shaderProgram->setInt("a2ModeTexture", _SDHR_START_TEXTURES + 4 - GL_TEXTURE0);
@@ -170,8 +240,7 @@ void A2Window::Render()
 			shaderProgram->setInt("a2ModeTexture", _SDHR_START_TEXTURES + 4 - GL_TEXTURE0);
 			break;
 		}
-		case A2VIDEO_HGR1:
-		case A2VIDEO_HGR2:
+		case A2VIDEO_HGR:
 		{
 			shaderProgram->setFloat("isDouble", 0.f);
 			shaderProgram->setInt("a2ModeTexture", _SDHR_START_TEXTURES + 5 - GL_TEXTURE0);
@@ -179,14 +248,8 @@ void A2Window::Render()
 		}
 		case A2VIDEO_DHGR:
 		{
+			shaderProgram->setFloat("isDouble", 1.f);
 			shaderProgram->setInt("a2ModeTexture", _SDHR_START_TEXTURES + 6 - GL_TEXTURE0);
-			if (A2VideoManager::GetInstance()->IsSoftSwitch(A2SS_PAGE2))
-			{
-				shaderProgram->setFloat("isPage2", 1.f);
-			}
-			else {
-				shaderProgram->setFloat("isPage2", 0.f);
-			}
 			break;
 		}
 		case A2VIDEO_SHR:

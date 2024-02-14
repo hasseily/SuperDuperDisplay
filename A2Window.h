@@ -13,14 +13,11 @@
 
 enum A2VideoMode_e
 {
-	A2VIDEO_TEXT1 = 0,
-	A2VIDEO_TEXT2,
+	A2VIDEO_TEXT = 0,
 	A2VIDEO_DTEXT,
-	A2VIDEO_LGR1,
-	A2VIDEO_LGR2,
+	A2VIDEO_LGR,
 	A2VIDEO_DLGR,
-	A2VIDEO_HGR1,
-	A2VIDEO_HGR2,
+	A2VIDEO_HGR,
 	A2VIDEO_DHGR,
 	A2VIDEO_SHR,
 	A2VIDEO_TOTAL_COUNT
@@ -43,12 +40,7 @@ public:
 	A2Window()
 		: enabled(false)
 		, video_mode(A2VIDEO_TOTAL_COUNT)
-		, screen_count(uXY({ 0,0 }))
-		, tile_dim(uXY({ 0,0 }))
-		, tile_count(uXY({ 0,0 }))
 		, shaderProgram(nullptr)
-		, data(nullptr)
-		, datasize(0)
 	{
 		// Assign the vertex array.
 		// The first 2 values are the relative XY, bound from -1 to 1.
@@ -63,10 +55,7 @@ public:
 		vertices.push_back(A2Vertex({glm::vec2( 1, -1), glm::ivec2(0, 0)}));	// bottom right
 	};
 	~A2Window();
-	void Define(A2VideoMode_e video_mode, uXY _screen_count,
-		uXY _tile_dim, uXY _tile_count,
-		uint8_t* _data, uint32_t _datasize,
-		Shader* _shaderProgram);
+	void Define(A2VideoMode_e video_mode, Shader* _shaderProgram);
 	void Update();
 	void Render();
 
@@ -90,8 +79,6 @@ private:
 	uXY tile_count;				// xy dimension, in tiles, of the tile array
 	Shader* shaderProgram;		// Shader used
 
-	// TODO: Allow for 2 regions to be uploaded for DTEXT, DLORES, DHGR
-	uint8_t* data;		// The underlying data that will be used by the shader
 	uint32_t datasize;	// Data size in bytes
 
 	unsigned int DBTEX = UINT_MAX;

@@ -167,11 +167,9 @@ private:
 	static uint16_t a2SoftSwitches;			// Soft switches states
     
 	// framebuffers for RGB graphics modes
-	std::vector<uint32_t>v_fblgr1;
-	std::vector<uint32_t>v_fblgr2;
+	std::vector<uint32_t>v_fblgr;
 	std::vector<uint32_t>v_fbdlgr;
-	std::vector<uint32_t>v_fbhgr1;
-	std::vector<uint32_t>v_fbhgr2;
+	std::vector<uint32_t>v_fbhgr;
 	std::vector<uint32_t>v_fbdhgr;
 	std::vector<uint32_t>v_fbshr;
 };
