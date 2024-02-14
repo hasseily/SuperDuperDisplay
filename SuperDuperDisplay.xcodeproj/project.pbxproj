@@ -36,6 +36,7 @@
 		BBC172F92B6657C20044B194 /* MemoryLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBC172F82B6657C20044B194 /* MemoryLoader.cpp */; };
 		BBC172FB2B6658700044B194 /* imgui.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBC172FA2B6658700044B194 /* imgui.cpp */; };
 		BBC172FD2B6658AD0044B194 /* imgui_impl_sdl2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBC172FC2B6658AD0044B194 /* imgui_impl_sdl2.cpp */; };
+		BBD102082B7CF23A00360B33 /* CycleCounter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBD102072B7CF23A00360B33 /* CycleCounter.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -117,6 +118,8 @@
 		BBC172FA2B6658700044B194 /* imgui.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui.cpp; path = imgui/imgui.cpp; sourceTree = "<group>"; };
 		BBC172FC2B6658AD0044B194 /* imgui_impl_sdl2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_impl_sdl2.cpp; path = imgui/backends/imgui_impl_sdl2.cpp; sourceTree = "<group>"; };
 		BBC48E172B71DA7D00D70DBD /* nlohmann */ = {isa = PBXFileReference; lastKnownFileType = folder; path = nlohmann; sourceTree = "<group>"; };
+		BBD102062B7CF23100360B33 /* CycleCounter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CycleCounter.h; sourceTree = "<group>"; };
+		BBD102072B7CF23A00360B33 /* CycleCounter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CycleCounter.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -166,6 +169,8 @@
 		BB8330D82B6645B300071F38 /* SuperDuperDisplay */ = {
 			isa = PBXGroup;
 			children = (
+				BBD102072B7CF23A00360B33 /* CycleCounter.cpp */,
+				BBD102062B7CF23100360B33 /* CycleCounter.h */,
 				BBB525022B6648A200A65C62 /* A2VideoManager.cpp */,
 				BBB524FC2B6648A100A65C62 /* A2VideoManager.h */,
 				BBB525172B6648A200A65C62 /* A2Window.cpp */,
@@ -284,6 +289,7 @@
 				BBC172F72B6657BB0044B194 /* ImGuiFileDialog.cpp in Sources */,
 				BBC172F92B6657C20044B194 /* MemoryLoader.cpp in Sources */,
 				BBB525262B6648A200A65C62 /* PostProcessor.cpp in Sources */,
+				BBD102082B7CF23A00360B33 /* CycleCounter.cpp in Sources */,
 				BBB525222B6648A200A65C62 /* SDHRWindow.cpp in Sources */,
 				BBB525252B6648A200A65C62 /* A2Window.cpp in Sources */,
 				BBB525202B6648A200A65C62 /* MosaicMesh.cpp in Sources */,
