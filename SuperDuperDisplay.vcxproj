@@ -244,6 +244,9 @@
     <Image Include="textures\Apple2eFont14x16 - Regular.png" />
     <Image Include="textures\Apple2eFont7x16 - Alternate.png" />
     <Image Include="textures\Apple2eFont7x16 - Regular.png" />
+    <Image Include="textures\Texture_composite_dhgr.png" />
+    <Image Include="textures\Texture_composite_hgr.png" />
+    <Image Include="textures\Texture_composite_lgr.png" />
     <Image Include="textures\Texture_Default.png" />
     <Image Include="textures\Texture_Scanlines.png" />
   </ItemGroup>

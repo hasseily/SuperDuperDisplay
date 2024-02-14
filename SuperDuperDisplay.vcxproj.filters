@@ -85,6 +85,9 @@
     <ClCompile Include="extras\MemoryLoader.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="CycleCounter.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -166,6 +169,7 @@
     <ClInclude Include="extras\MemoryLoader.h">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="CycleCounter.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
@@ -177,7 +181,6 @@
     </None>
     <None Include="packages.config" />
     <None Include="Makefile" />
-    <None Include="shaders\a2video_text.glsl" />
     <None Include="shaders\a2video.vert">
       <Filter>shaders</Filter>
     </None>
@@ -232,6 +235,15 @@
       <Filter>textures</Filter>
     </Image>
     <Image Include="textures\Apple2eFont14x16 - Regular.png">
+      <Filter>textures</Filter>
+    </Image>
+    <Image Include="textures\Texture_composite_dhgr.png">
+      <Filter>textures</Filter>
+    </Image>
+    <Image Include="textures\Texture_composite_hgr.png">
+      <Filter>textures</Filter>
+    </Image>
+    <Image Include="textures\Texture_composite_lgr.png">
       <Filter>textures</Filter>
     </Image>
   </ItemGroup>
