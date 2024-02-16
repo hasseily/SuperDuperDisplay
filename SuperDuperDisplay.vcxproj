@@ -160,6 +160,7 @@
   <ItemGroup>
     <ClCompile Include="A2Window.cpp" />
     <ClCompile Include="CycleCounter.cpp" />
+    <ClCompile Include="EventRecorder.cpp" />
     <ClCompile Include="extras\ImGuiFileDialog.cpp" />
     <ClCompile Include="extras\MemoryLoader.cpp" />
     <ClCompile Include="glad\glad.cpp" />
@@ -187,6 +188,7 @@
     <ClInclude Include="common.h" />
     <ClInclude Include="ConcurrentQueue.h" />
     <ClInclude Include="CycleCounter.h" />
+    <ClInclude Include="EventRecorder.h" />
     <ClInclude Include="extras\MemoryLoader.h" />
     <ClInclude Include="glad\glad.h" />
     <ClInclude Include="glad\khrplatform.h" />

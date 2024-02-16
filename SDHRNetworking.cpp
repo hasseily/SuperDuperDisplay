@@ -2,10 +2,12 @@
 #include "A2VideoManager.h"
 #include "SDHRManager.h"
 #include "CycleCounter.h"
+#include "EventRecorder.h"
 #include <time.h>
 #include <fcntl.h>
 
 static ConcurrentQueue<SDHREvent> events;
+static EventRecorder* eventRecorder;
 
 ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_addr)
 {
@@ -54,6 +56,11 @@ ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_a
 	return ENET_RES::OK;
 }
 
+void insert_event(SDHREvent* e)
+{
+	events.push(*e);
+}
+
 void terminate_processing_thread()
 {
 	// Force a dummy event to process, so that shouldTerminateProcessing is triggered
@@ -74,6 +81,20 @@ int process_events_thread(bool* shouldTerminateProcessing)
 	while (!(*shouldTerminateProcessing)) {
 		auto e = events.pop();	// The thread will wait until there's an event to pop
 		// std::cout << e.is_iigs << " " << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
+
+		if (eventRecorder->IsRecording())
+			eventRecorder->RecordEvent(&e);
+		// Update the cycle counting and VBL hit
+		bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == 0));
+		CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
+		if (e.is_iigs && e.m2b0) {
+			// ignore updates from iigs_mode firmware with m2sel high
+			continue;
+		}
+		if (e.rw && ((e.addr & 0xF000) != 0xC000)) {
+			// ignoring all read events not softswitches
+			continue;
+		}
 
         /*
          *********************************
@@ -283,18 +304,7 @@ void process_single_packet_header(SDHRPacketHeader* h,
         bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
 		bool rw = (ctrl_bits & 0x01) == 0x01;
 
-		// Update the cycle counting and VBL hit
-		bool isVBL = ((addr == 0xC019) && rw && ((data >> 7) == 0));
-		CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
-        if (iigs_mode && m2sel) {
-	    // ignore updates from iigs_mode firmware with m2sel high
-            continue;
-        }
-        if (rw && ((addr & 0xF000) != 0xC000)) {
-            // ignoring all read events not softswitches
-            continue;
-        }
-        SDHREvent e(iigs_mode, m2b0, rw, addr, data);
+		SDHREvent e(iigs_mode, m2b0, rw, addr, data);
         events.push(e);
     }
 }
@@ -339,6 +349,8 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	uint16_t prev_addr = 0;
 	int64_t last_recv_nsec;
 
+	eventRecorder = EventRecorder::GetInstance();
+
 	while (!(*shouldTerminateNetworking)) {
 		LARGE_INTEGER frequency;        // ticks per second
 		LARGE_INTEGER t1;               // ticks
@@ -377,7 +389,8 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			last_recv_nsec = nsec;
 
 			SDHRPacketHeader* h = (SDHRPacketHeader*)RecvBuf;
-            process_single_packet_header(h, retval, prev_seqno, prev_addr, first_drop);
+			if (!eventRecorder->IsInReplayMode())
+				process_single_packet_header(h, retval, prev_seqno, prev_addr, first_drop);
 		}
 	}
 
