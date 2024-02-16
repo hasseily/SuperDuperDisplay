@@ -115,6 +115,9 @@ public:
 	uXY ScreenSize();
 	void ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool is_iigs);
 
+	// Methods for the single multipurpose beam racing shader
+	void BeamIsAtPosition(uint32_t x, uint32_t y);
+
 	void Render();	// render whatever mode is active (enabled windows)
 
 	// public singleton code

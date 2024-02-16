@@ -40,6 +40,10 @@ public:
 	A2Window()
 		: enabled(false)
 		, video_mode(A2VIDEO_TOTAL_COUNT)
+		, screen_count()
+		, tile_dim()
+		, tile_count()
+		, datasize(0)
 		, shaderProgram(nullptr)
 	{
 		// Assign the vertex array.
@@ -81,7 +85,7 @@ private:
 
 	uint32_t datasize;	// Data size in bytes
 
-	unsigned int DBTEX = UINT_MAX;
+	unsigned int DBTEX = UINT_MAX;		// Data Buffer Texture (holds Apple 2 memory data)
 
 	std::vector<A2Vertex> vertices;		// Vertices with XYRelative and XYPixels
 	unsigned int VAO = UINT_MAX;		// Vertex Array Object (holds buffers that are vertex related)

@@ -165,11 +165,15 @@
     <ClInclude Include="ImGuiFileDialogConfig.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="PostProcessor.h" />
     <ClInclude Include="extras\MemoryLoader.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="CycleCounter.h" />
+    <ClInclude Include="PostProcessor.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="CycleCounter.h">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
@@ -215,6 +219,9 @@
       <Filter>shaders</Filter>
     </None>
     <None Include="shaders\a2video_dhgr.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\a2video_shr.frag">
       <Filter>shaders</Filter>
     </None>
   </ItemGroup>

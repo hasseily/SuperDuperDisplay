@@ -1,6 +1,7 @@
 #include "CycleCounter.h"
 #include <mutex>
 #include <iostream>
+#include "A2VideoManager.h"
 
 enum class VideoRegion
 {
@@ -85,6 +86,7 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 	}
 	bIsVBL = (m_cycle >= CYCLES_SCREEN);
 	bIsHBL = (GetByteYPos() < CYCLES_HBLANK);
+	A2VideoManager::GetInstance()->BeamIsAtPosition(GetScanline(), GetByteYPos());
 }
 
 const bool CycleCounter::IsVBL()

@@ -358,6 +358,11 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool
 	ToggleA2Video(bA2VideoEnabled);	// force video refresh
 }
 
+void A2VideoManager::BeamIsAtPosition(uint32_t x, uint32_t y)
+{
+	// TODO
+}
+
 void A2VideoManager::SelectVideoModes()
 {
 	for (auto& _w : this->windows) {
@@ -586,35 +591,35 @@ void A2VideoManager::RenderSubMixed(std::vector<uint32_t>* framebuffer)
 			0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&framebuffer->at(0)));
 }
 
-//////////////////////////////////////////////////////////////////////////
-// SHR GRAPHICS METHODS
+///////////////////////////////////////////////////////////////////////////////
+// CPU-DRIVEN ORIGINAL A2 MODES GRAPHICS METHODS
 // RGB Videocard code from AppleWin
-//////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 void A2VideoManager::UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* framebuffer)
 {
-		// SHR is all in AUX (E1) Bank
+	// SHR is all in AUX (E1) Bank
 	uint8_t* pLine = SDHRManager::GetInstance()->GetApple2MemAuxPtr() + _A2VIDEO_SHR_START + line_number * _A2VIDEO_SHR_BYTES_PER_LINE;
 	uint32_t* pVideoAddress = &framebuffer->at(line_number * _A2VIDEO_SHR_WIDTH * 2);
 	uint32_t shrByte;
-	
+
 	const uint32_t k_shr_colors_per_palette = 16;
 	const uint32_t k_shr_color_size = 2;
-	
-		// Grab Scanline Control Byte information
+
+	// Grab Scanline Control Byte information
 	bool _is640Mode;
 	bool _isColorFillMode;
 	uint8_t* _pscb = SDHRManager::GetInstance()->GetApple2MemAuxPtr() + _A2VIDEO_SHR_SCB_START;
 	uint8_t _scb = *(_pscb + line_number);	// the scan control byte value
 	_is640Mode = _scb & 0x80;
 	_isColorFillMode = _scb & 0x20;
-		// A palette is a 16-entry array of 4-bit-per-channel RGB colors (last 4 bits are reserved)
-		// So each palette has 16 colors from any of 4096 colors
+	// A palette is a 16-entry array of 4-bit-per-channel RGB colors (last 4 bits are reserved)
+	// So each palette has 16 colors from any of 4096 colors
 	uint16_t* palette = (uint16_t*)(SDHRManager::GetInstance()->GetApple2MemAuxPtr() +
-									_A2VIDEO_SHR_PALETTE_START +
-									((_scb & 0xf) * k_shr_colors_per_palette * k_shr_color_size)
-									);
-		// Now that we have the scanline control byte data, iterate through each pixel
+		_A2VIDEO_SHR_PALETTE_START +
+		((_scb & 0xf) * k_shr_colors_per_palette * k_shr_color_size)
+		);
+	// Now that we have the scanline control byte data, iterate through each pixel
 	for (uint8_t i = 0; i < _A2VIDEO_SHR_BYTES_PER_LINE; i++)
 	{
 		shrByte = *reinterpret_cast<uint32_t*>(pLine + i);
@@ -626,7 +631,7 @@ void A2VideoManager::UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* f
 				color1 = *(pVideoAddress - 1);
 			*pVideoAddress++ = color1;
 			*pVideoAddress++ = color1;
-			
+
 			uint8_t pixel2 = shrByte & 0xf;
 			uint32_t color2 = this->ConvertIIgs2RGB(palette[pixel2]);
 			if (_isColorFillMode && pixel2 == 0)
@@ -639,22 +644,22 @@ void A2VideoManager::UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* f
 			uint8_t pixel1 = (shrByte >> 6) & 0x3;
 			uint32_t color1 = this->ConvertIIgs2RGB(palette[0x8 + pixel1]);
 			*pVideoAddress++ = color1;
-			
+
 			uint8_t pixel2 = (shrByte >> 4) & 0x3;
 			uint32_t color2 = this->ConvertIIgs2RGB(palette[0xC + pixel2]);
 			*pVideoAddress++ = color2;
-			
+
 			uint8_t pixel3 = (shrByte >> 2) & 0x3;
 			uint32_t color3 = this->ConvertIIgs2RGB(palette[0x0 + pixel3]);
 			*pVideoAddress++ = color3;
-			
+
 			uint8_t pixel4 = shrByte & 0x3;
 			uint32_t color4 = this->ConvertIIgs2RGB(palette[0x4 + pixel4]);
 			*pVideoAddress++ = color4;
 		}
-		
-			// duplicate on the next row (it may be overridden by the scanlines)
-		for (size_t i = 4; i >0; i--)
+
+		// duplicate on the next row (it may be overridden by the scanlines)
+		for (size_t i = 4; i > 0; i--)
 		{
 			*(pVideoAddress - i + _A2VIDEO_SHR_WIDTH) = *(pVideoAddress - i);
 		}
@@ -664,7 +669,7 @@ void A2VideoManager::UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* f
 const uint16_t BLUE_MASK = 0x000F;        // 0000 0000 0000 1111
 const uint16_t GREEN_MASK = 0x00F0;       // 0000 0000 1111 0000
 const uint16_t RED_MASK = 0x0F00;         // 0000 1111 0000 0000
-										  // the 4 high bits are reserved
+// the 4 high bits are reserved
 
 const uint16_t BLUE_SHIFT = 0;
 const uint16_t GREEN_SHIFT = 4;
@@ -676,22 +681,17 @@ uint32_t A2VideoManager::ConvertIIgs2RGB(uint16_t color)
 	uint8_t green = (color & GREEN_MASK) >> GREEN_SHIFT;
 	uint8_t blue = (color & BLUE_MASK) >> BLUE_SHIFT;
 	uint8_t alpha = 0xFF; // Fully opaque
-	
-		// Scale up from 4 bits to 8 bits
+
+	// Scale up from 4 bits to 8 bits
 	red *= 16;
 	green *= 16;
 	blue *= 16;
-	
-		// Combine into a 32-bit value (RGBA format)
+
+	// Combine into a 32-bit value (RGBA format)
 	uint32_t rgba = (alpha << 24) | (blue << 16) | (green << 8) | red;
-	
+
 	return rgba;
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// UNUSED ORIGINAL A2 MODES GRAPHICS METHODS
-// RGB Videocard code from AppleWin
-///////////////////////////////////////////////////////////////////////////////
 
 void A2VideoManager::UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer)
 {
