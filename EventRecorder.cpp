@@ -15,6 +15,9 @@ constexpr uint32_t MAXRECORDING_SECONDS = 30;	// Max number of seconds to record
 // below because "The declaration of a static data member in its class definition is not a definition"
 EventRecorder* EventRecorder::s_instance;
 
+// Mem snapshot cycles may be different in saved recordings
+static size_t m_current_snapshot_cycles = RECORDER_MEM_SNAPSHOT_CYCLES;
+
 //////////////////////////////////////////////////////////////////////////
 // Basic singleton methods
 //////////////////////////////////////////////////////////////////////////
@@ -26,34 +29,81 @@ void EventRecorder::Initialize()
 
 EventRecorder::~EventRecorder()
 {
-	delete[] memStartState;
+
 }
 
 //////////////////////////////////////////////////////////////////////////
 // Serialization and data transfer methods
 //////////////////////////////////////////////////////////////////////////
 
-void EventRecorder::GetRAMSnapshot()
+void EventRecorder::MakeRAMSnapshot(size_t cycle)
 {
-	memset(memStartState, 0, sizeof(memStartState));
 	auto _memsize = _A2_MEMORY_SHADOW_END - _A2_MEMORY_SHADOW_BEGIN;
+	ByteBuffer buffer(RECORDER_TOTALMEMSIZE);
 	// Get the MAIN chunk
-	memcpy_s(memStartState + _A2_MEMORY_SHADOW_BEGIN, _memsize,
-		SDHRManager::GetInstance()->GetApple2MemPtr(), _memsize);
+	buffer.copyFrom(SDHRManager::GetInstance()->GetApple2MemPtr(), _A2_MEMORY_SHADOW_BEGIN, _memsize);
 	// Get the AUX chunk
-	memcpy_s(memStartState + 0x10000 + _A2_MEMORY_SHADOW_BEGIN, _memsize,
-		SDHRManager::GetInstance()->GetApple2MemAuxPtr(), _memsize);
+	buffer.copyFrom(SDHRManager::GetInstance()->GetApple2MemAuxPtr(), 0x10000 + _A2_MEMORY_SHADOW_BEGIN, _memsize);
+
+	v_memSnapshots.push_back(std::move(buffer));
 }
 
-void EventRecorder::ApplyRAMSnapshot()
+void EventRecorder::ApplyRAMSnapshot(size_t snapshot_index)
 {
+	if (snapshot_index > (v_memSnapshots.size() - 1))
+		std::cerr << "ERROR: Requested to apply nonexistent memory snapshot at index " << snapshot_index << std::endl;
 	auto _memsize = _A2_MEMORY_SHADOW_END - _A2_MEMORY_SHADOW_BEGIN;
-	// Get the MAIN chunk
-	memcpy_s(SDHRManager::GetInstance()->GetApple2MemPtr(), _memsize,
-		memStartState + _A2_MEMORY_SHADOW_BEGIN, _memsize);
-	// Get the AUX chunk
-	memcpy_s(SDHRManager::GetInstance()->GetApple2MemAuxPtr(), _memsize,
-		memStartState + 0x10000 + _A2_MEMORY_SHADOW_BEGIN, _memsize);
+	// Set the MAIN chunk
+	v_memSnapshots.at(snapshot_index).copyTo(SDHRManager::GetInstance()->GetApple2MemPtr(), _A2_MEMORY_SHADOW_BEGIN, _memsize);
+	// Set the AUX chunk
+	v_memSnapshots.at(snapshot_index).copyTo(SDHRManager::GetInstance()->GetApple2MemAuxPtr(), 0x10000 + _A2_MEMORY_SHADOW_BEGIN, _memsize);
+}
+
+void EventRecorder::WriteRecordingFile(std::ofstream& file)
+{
+	// First store the RAM snapshot interval
+	file.write(reinterpret_cast<const char*>(&m_current_snapshot_cycles), sizeof(m_current_snapshot_cycles));
+	// Next store the event vector size
+	auto _size = v_events.size();
+	file.write(reinterpret_cast<const char*>(&_size), sizeof(_size));
+	// Next store the RAM states
+	for (const auto& snapshot : v_memSnapshots) {
+		file.write(reinterpret_cast<const char*>(snapshot.data()), (RECORDER_TOTALMEMSIZE) / sizeof(uint8_t));
+	}
+
+	std::cout << "Writing " << _size << " events to file" << std::endl;
+	// And finally the events
+	for (const auto& event : v_events) {
+		WriteEvent(event, file);
+	}
+}
+
+void EventRecorder::ReadRecordingFile(std::ifstream& file)
+{
+	ClearRecording();
+	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
+	// First read the ram snapshot interval
+	file.read(reinterpret_cast<char*>(&m_current_snapshot_cycles), sizeof(m_current_snapshot_cycles));
+	// Next read the event vector size
+	size_t _size;
+	file.read(reinterpret_cast<char*>(&_size), sizeof(_size));
+	// Then all the RAM states
+	if (_size > 0)
+	{
+		for (size_t i = 0; i <= (_size / m_current_snapshot_cycles); ++i) {
+			auto snapshot = ByteBuffer(RECORDER_TOTALMEMSIZE);
+			file.read(reinterpret_cast<char*>(snapshot.data()), (RECORDER_TOTALMEMSIZE) / sizeof(uint8_t));
+			v_memSnapshots.push_back(std::move(snapshot));
+		}
+	}
+	std::cout << "Reading " << _size << " events from file" << std::endl;
+	// And finally the events
+	if (_size > 0)
+	{
+		for (size_t i = 0; i < _size; ++i) {
+			ReadEvent(file);
+		}
+	}
 }
 
 void EventRecorder::WriteEvent(const SDHREvent& event, std::ofstream& file) {
@@ -72,8 +122,12 @@ void EventRecorder::ReadEvent(std::ifstream& file) {
 	file.read(reinterpret_cast<char*>(&event.rw), sizeof(event.rw));
 	file.read(reinterpret_cast<char*>(&event.addr), sizeof(event.addr));
 	file.read(reinterpret_cast<char*>(&event.data), sizeof(event.data));
-	v_events.push_back(event);
+	v_events.push_back(std::move(event));
 }
+
+//////////////////////////////////////////////////////////////////////////
+// Replay methods
+//////////////////////////////////////////////////////////////////////////
 
 void EventRecorder::StopReplay()
 {
@@ -90,10 +144,13 @@ void EventRecorder::StopReplay()
 
 void EventRecorder::StartReplay()
 {
+	if (!bHasRecording)
+		return;
 	RewindReplay();
 	bShouldPauseReplay = false;
 	bShouldStopReplay = false;
 	bIsInReplayMode = true;
+	ApplyRAMSnapshot(0);
 	thread_replay = std::thread(&EventRecorder::replay_events_thread, this,
 		&bShouldPauseReplay, &bShouldStopReplay, &currentReplayEvent);
 }
@@ -106,10 +163,8 @@ void EventRecorder::PauseReplay(bool pause)
 void EventRecorder::RewindReplay()
 {
 	StopReplay();
-	ApplyRAMSnapshot();
 	currentReplayEvent = 0;
 }
-
 
 int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldStopReplay, size_t* currentReplayEvent)
 {
@@ -125,8 +180,27 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 			continue;
 		}
+		// Check if the user requested to move to a different area in the recording
+		if (bUserMovedEventSlider)
+		{
+			// Move to the requested event. In order to do this cleanly, we need:
+			// 1. to find the closest previous memory snapshot
+			// 2. run all events between the mem snapshot and the requested event
+			// These events can be run at max speed
+			auto snapshot_index = *currentReplayEvent / m_current_snapshot_cycles;
+			ApplyRAMSnapshot(snapshot_index);
+			clear_events();
+			auto first_event_index = snapshot_index * m_current_snapshot_cycles;
+			for (auto i = first_event_index; i < *currentReplayEvent; i++)
+			{
+				insert_event(&v_events.at(i));
+			}
+		}
+
 		if (*currentReplayEvent < v_events.size())
 		{
+			if (*shouldStopReplay)	// In case a stop was sent while sleeping
+				break;
 			insert_event(&v_events.at(*currentReplayEvent));
 			*currentReplayEvent += 1;
 			// wait 1 clock cycle before adding the next event
@@ -147,14 +221,13 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 }
 
 //////////////////////////////////////////////////////////////////////////
-// Main methods
+// Recording methods
 //////////////////////////////////////////////////////////////////////////
 
 void EventRecorder::StartRecording()
 {
 	ClearRecording();
 	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
-	GetRAMSnapshot();
 	bIsRecording = true;
 }
 
@@ -167,11 +240,12 @@ void EventRecorder::StopRecording()
 
 void EventRecorder::ClearRecording()
 {
-	memset(memStartState, 0, sizeof(memStartState));
+	v_memSnapshots.clear();
 	v_events.clear();
 	v_events.shrink_to_fit();
 	bHasRecording = false;
 	currentReplayEvent = 0;
+	m_current_snapshot_cycles = RECORDER_MEM_SNAPSHOT_CYCLES;
 }
 
 void EventRecorder::SaveRecording()
@@ -190,8 +264,6 @@ void EventRecorder::LoadRecording()
 	ImGuiFileDialog::Instance()->OpenDialog("ChooseRecordingLoad", "Load Recording File", ".vcr,", config);
 }
 
-
-
 //////////////////////////////////////////////////////////////////////////
 // Public methods
 //////////////////////////////////////////////////////////////////////////
@@ -200,9 +272,11 @@ void EventRecorder::RecordEvent(SDHREvent* sdhr_event)
 {
 	if (!bIsRecording)
 		return;
+	if ((currentReplayEvent % RECORDER_MEM_SNAPSHOT_CYCLES) == 0)
+		MakeRAMSnapshot(currentReplayEvent);
 	v_events.push_back(*sdhr_event);
 	++currentReplayEvent;
-	if (v_events.size() == 1000000 * MAXRECORDING_SECONDS)
+	if (v_events.size() == (size_t)1'000'000 * MAXRECORDING_SECONDS)
 		StopRecording();
 }
 
@@ -233,7 +307,7 @@ void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
 		}
 
 		ImGui::Checkbox("Replay Mode", &bIsInReplayMode);
-		ImGui::SliderInt("Event Timeline", reinterpret_cast<int*>(&currentReplayEvent), 0, v_events.size());
+		bUserMovedEventSlider = ImGui::SliderInt("Event Timeline", reinterpret_cast<int*>(&currentReplayEvent), 0, v_events.size());
 		if (thread_replay.joinable())
 		{
 			if (ImGui::Button("Stop##Replay"))
@@ -287,23 +361,10 @@ void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
 			if (ImGuiFileDialog::Instance()->IsOk()) {
 				std::ifstream file(ImGuiFileDialog::Instance()->GetFilePathName().c_str(), std::ios::binary);
 				if (file.is_open()) {
-					ClearRecording();
-					v_events.reserve(1000000 * MAXRECORDING_SECONDS);
 					try
 					{
-						// First load the initial RAM state
-						file.read(reinterpret_cast<char*>(memStartState), (RECORDER_TOTALMEMSIZE) / sizeof(uint8_t));
-						// Next read the event vector size
-						size_t _size;
-						file.read(reinterpret_cast<char*>(&_size), sizeof(_size));
-						std::cout << "Reading " << _size << " events from file" << std::endl;
-						// And finally the events
-						if (_size > 0)
-						{
-							for (size_t i = 0; i < _size; ++i) {
-								ReadEvent(file);
-							}
-						}
+						ReadRecordingFile(file);
+
 					}
 					catch (std::ifstream::failure& e)
 					{
@@ -331,17 +392,7 @@ void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
 				if (file.is_open()) {
 					try
 					{
-						// First store the initial RAM state
-						file.write(reinterpret_cast<const char*>(memStartState), (RECORDER_TOTALMEMSIZE) / sizeof(uint8_t));
-						// Next store the event vector size
-						auto _size = v_events.size();
-						file.write(reinterpret_cast<const char*>(&_size), sizeof(_size));
-						std::cout << "Writing " << _size << " events to file" << std::endl;
-						// And finally the events
-						for (const auto& event : v_events) {
-							WriteEvent(event, file);
-						}
-						file.close();
+						WriteRecordingFile(file);
 					}
 					catch (std::ofstream::failure& e)
 					{
@@ -349,6 +400,7 @@ void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
 						bImGuiOpenModal = true;
 						ImGui::OpenPopup("Recorder Error Modal");
 					}
+					file.close();
 				}
 				else {
 					m_lastErrorString = "Error opening file";
@@ -378,9 +430,10 @@ void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
 
 void EventRecorder::Update()
 {
-	// Stop replay if we reached the end
+
 	if (bIsInReplayMode)
 	{
+		// Stop replay if we reached the end
 		if (currentReplayEvent >= v_events.size())
 			PauseReplay(true);
 	}

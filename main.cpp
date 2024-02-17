@@ -481,7 +481,7 @@ int main(int argc, char* argv[])
             if (_maxH < _ss.y)
                 _maxH = _ss.y;
             float _r = (float)_ss.x / _ss.y;
-            int _newW, _newH;
+            int32_t _newW, _newH;
             if (_r < _rreq)    // requested a wider screen
             {
                 _newW = _maxH * _r;

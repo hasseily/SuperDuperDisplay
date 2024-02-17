@@ -61,6 +61,11 @@ void insert_event(SDHREvent* e)
 	events.push(*e);
 }
 
+void clear_events()
+{
+	events.clear();
+}
+
 void terminate_processing_thread()
 {
 	// Force a dummy event to process, so that shouldTerminateProcessing is triggered
@@ -304,8 +309,8 @@ void process_single_packet_header(SDHRPacketHeader* h,
         bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
 		bool rw = (ctrl_bits & 0x01) == 0x01;
 
-		SDHREvent e(iigs_mode, m2b0, rw, addr, data);
-        events.push(e);
+		SDHREvent ev(iigs_mode, m2b0, rw, addr, data);
+        events.push(ev);
     }
 }
 

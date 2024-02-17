@@ -88,6 +88,9 @@
     <ClCompile Include="CycleCounter.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="EventRecorder.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -170,6 +173,10 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="CycleCounter.h" />
+    <ClInclude Include="EventRecorder.h" />
+    <ClInclude Include="ByteBuffer.h">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />

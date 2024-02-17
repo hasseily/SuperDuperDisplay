@@ -19,7 +19,8 @@
 #include <vector>
 #include <string>
 
-#define RECORDER_TOTALMEMSIZE 128 * 1024	// 128k memory snapshot
+#define RECORDER_TOTALMEMSIZE 128 * 1024		// 128k memory snapshot
+#define RECORDER_MEM_SNAPSHOT_CYCLES 1'000'000	// snapshot memory every x cycles
 
 class EventRecorder
 {
@@ -27,6 +28,7 @@ public:
 	void RecordEvent(SDHREvent* sdhr_event);
 	void DisplayImGuiRecorderWindow(bool* p_open);
 	void Update();	// call this from the main loop
+
 	const bool IsRecording() {
 		return bIsRecording;
 	};
@@ -43,31 +45,34 @@ public:
 	}
 	~EventRecorder();
 private:
-	//////////////////////////////////////////////////////////////////////////
-	// Singleton pattern
-	//////////////////////////////////////////////////////////////////////////
 	void Initialize();
+
+	// recording
 	void StartRecording();
 	void StopRecording();
 	void ClearRecording();
 	void SaveRecording();
 	void LoadRecording();
-
-	void GetRAMSnapshot();
-	void ApplyRAMSnapshot();
-	void WriteEvent(const SDHREvent& event, std::ofstream& file);
-	void ReadEvent(std::ifstream& file);
-
+	
+	// replay
 	void StopReplay();
 	void StartReplay();
 	void PauseReplay(bool pause);
 	void RewindReplay();
 
+	// de/serialization
+	void MakeRAMSnapshot(size_t cycle);
+	void ApplyRAMSnapshot(size_t snapshot_index);
+	void WriteRecordingFile(std::ofstream& file);
+	void ReadRecordingFile(std::ifstream& file);
+	void WriteEvent(const SDHREvent& event, std::ofstream& file);
+	void ReadEvent(std::ifstream& file);
+
 	bool bIsRecording = false;
 	bool bHasRecording = false;
 	bool bIsInReplayMode = false;	// if in replay mode, don't process real events
 
-	uint8_t* memStartState;
+	std::vector<ByteBuffer> v_memSnapshots;	// memory snapshots at regular intervals
 	std::vector<SDHREvent> v_events;
 
 
@@ -77,14 +82,17 @@ private:
 	bool bShouldPauseReplay = false;
 	bool bShouldStopReplay = false;
 	size_t currentReplayEvent;		// index of the event ready to replay in the vector
+	bool bUserMovedEventSlider;		// user moved the slider for events
 
 	bool bImGuiOpenModal = false;
 	std::string m_lastErrorString;
 
+	//////////////////////////////////////////////////////////////////////////
+	// Singleton pattern
+	//////////////////////////////////////////////////////////////////////////
 	static EventRecorder* s_instance;
 	EventRecorder()
 	{
-		memStartState = new uint8_t[RECORDER_TOTALMEMSIZE];	// full RAM state
 		Initialize();
 	}
 };

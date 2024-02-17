@@ -86,3 +86,4 @@ int process_events_thread(bool* shouldTerminateProcessing);
 void terminate_processing_thread();
 
 void insert_event(SDHREvent* e);
+void clear_events();

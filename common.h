@@ -22,6 +22,7 @@
 #include "glm/glm.hpp"
 
 #include "ConcurrentQueue.h"
+#include "ByteBuffer.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_STATIC
