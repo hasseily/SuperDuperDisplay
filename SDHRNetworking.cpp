@@ -296,6 +296,7 @@ void process_single_packet_header(SDHRPacketHeader* h,
 	bool rw = (ctrl_bits & 0x01) == 0x01;
 
 	SDHREvent ev(iigs_mode, m2b0, rw, addr, data);
+	eventRecorder = EventRecorder::GetInstance();
 	if (eventRecorder->IsRecording())
 		eventRecorder->RecordEvent(&ev);
 	// Update the cycle counting and VBL hit
@@ -353,8 +354,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	uint16_t prev_addr = 0;
 	int64_t last_recv_nsec;
 
-	eventRecorder = EventRecorder::GetInstance();
-
 	while (!(*shouldTerminateNetworking)) {
 		LARGE_INTEGER frequency;        // ticks per second
 		LARGE_INTEGER t1;               // ticks
@@ -393,8 +392,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			last_recv_nsec = nsec;
 
 			SDHRPacketHeader* h = (SDHRPacketHeader*)RecvBuf;
-			if (!eventRecorder->IsInReplayMode())
-				process_single_packet_header(h, retval, prev_seqno, prev_addr, first_drop);
+			process_single_packet_header(h, retval, prev_seqno, prev_addr, first_drop);
 		}
 	}
 
