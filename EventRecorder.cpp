@@ -1,0 +1,439 @@
+#include "EventRecorder.h"
+#include "common.h"
+#include "SDHRManager.h"
+#include "imgui.h"
+#include "imgui_internal.h"		// for PushItemFlag
+#include "extras/ImGuiFileDialog.h"
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <chrono>
+
+constexpr uint32_t MAXRECORDING_SECONDS = 30;	// Max number of seconds to record
+
+// below because "The declaration of a static data member in its class definition is not a definition"
+EventRecorder* EventRecorder::s_instance;
+
+// Mem snapshot cycles may be different in saved recordings
+static size_t m_current_snapshot_cycles = RECORDER_MEM_SNAPSHOT_CYCLES;
+
+//////////////////////////////////////////////////////////////////////////
+// Basic singleton methods
+//////////////////////////////////////////////////////////////////////////
+
+void EventRecorder::Initialize()
+{
+	ClearRecording();
+}
+
+EventRecorder::~EventRecorder()
+{
+
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Serialization and data transfer methods
+//////////////////////////////////////////////////////////////////////////
+
+void EventRecorder::MakeRAMSnapshot(size_t cycle)
+{
+	auto _memsize = _A2_MEMORY_SHADOW_END - _A2_MEMORY_SHADOW_BEGIN;
+	ByteBuffer buffer(RECORDER_TOTALMEMSIZE);
+	// Get the MAIN chunk
+	buffer.copyFrom(SDHRManager::GetInstance()->GetApple2MemPtr(), _A2_MEMORY_SHADOW_BEGIN, _memsize);
+	// Get the AUX chunk
+	buffer.copyFrom(SDHRManager::GetInstance()->GetApple2MemAuxPtr(), 0x10000 + _A2_MEMORY_SHADOW_BEGIN, _memsize);
+
+	v_memSnapshots.push_back(std::move(buffer));
+}
+
+void EventRecorder::ApplyRAMSnapshot(size_t snapshot_index)
+{
+	if (snapshot_index > (v_memSnapshots.size() - 1))
+		std::cerr << "ERROR: Requested to apply nonexistent memory snapshot at index " << snapshot_index << std::endl;
+	auto _memsize = _A2_MEMORY_SHADOW_END - _A2_MEMORY_SHADOW_BEGIN;
+	// Set the MAIN chunk
+	v_memSnapshots.at(snapshot_index).copyTo(SDHRManager::GetInstance()->GetApple2MemPtr(), _A2_MEMORY_SHADOW_BEGIN, _memsize);
+	// Set the AUX chunk
+	v_memSnapshots.at(snapshot_index).copyTo(SDHRManager::GetInstance()->GetApple2MemAuxPtr(), 0x10000 + _A2_MEMORY_SHADOW_BEGIN, _memsize);
+}
+
+void EventRecorder::WriteRecordingFile(std::ofstream& file)
+{
+	// First store the RAM snapshot interval
+	file.write(reinterpret_cast<const char*>(&m_current_snapshot_cycles), sizeof(m_current_snapshot_cycles));
+	// Next store the event vector size
+	auto _size = v_events.size();
+	file.write(reinterpret_cast<const char*>(&_size), sizeof(_size));
+	// Next store the RAM states
+	for (const auto& snapshot : v_memSnapshots) {
+		file.write(reinterpret_cast<const char*>(snapshot.data()), (RECORDER_TOTALMEMSIZE) / sizeof(uint8_t));
+	}
+
+	std::cout << "Writing " << _size << " events to file" << std::endl;
+	// And finally the events
+	for (const auto& event : v_events) {
+		WriteEvent(event, file);
+	}
+}
+
+void EventRecorder::ReadRecordingFile(std::ifstream& file)
+{
+	ClearRecording();
+	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
+	// First read the ram snapshot interval
+	file.read(reinterpret_cast<char*>(&m_current_snapshot_cycles), sizeof(m_current_snapshot_cycles));
+	// Next read the event vector size
+	size_t _size;
+	file.read(reinterpret_cast<char*>(&_size), sizeof(_size));
+	// Then all the RAM states
+	if (_size > 0)
+	{
+		for (size_t i = 0; i <= (_size / m_current_snapshot_cycles); ++i) {
+			auto snapshot = ByteBuffer(RECORDER_TOTALMEMSIZE);
+			file.read(reinterpret_cast<char*>(snapshot.data()), (RECORDER_TOTALMEMSIZE) / sizeof(uint8_t));
+			v_memSnapshots.push_back(std::move(snapshot));
+		}
+	}
+	std::cout << "Reading " << _size << " events from file" << std::endl;
+	// And finally the events
+	if (_size > 0)
+	{
+		for (size_t i = 0; i < _size; ++i) {
+			ReadEvent(file);
+		}
+	}
+}
+
+void EventRecorder::WriteEvent(const SDHREvent& event, std::ofstream& file) {
+	// Serialize and write each member of SDHREvent to the file
+	file.write(reinterpret_cast<const char*>(&event.is_iigs), sizeof(event.is_iigs));
+	file.write(reinterpret_cast<const char*>(&event.m2b0), sizeof(event.m2b0));
+	file.write(reinterpret_cast<const char*>(&event.rw), sizeof(event.rw));
+	file.write(reinterpret_cast<const char*>(&event.addr), sizeof(event.addr));
+	file.write(reinterpret_cast<const char*>(&event.data), sizeof(event.data));
+}
+
+void EventRecorder::ReadEvent(std::ifstream& file) {
+	auto event = SDHREvent(false, false, 0, 0, 0);
+	file.read(reinterpret_cast<char*>(&event.is_iigs), sizeof(event.is_iigs));
+	file.read(reinterpret_cast<char*>(&event.m2b0), sizeof(event.m2b0));
+	file.read(reinterpret_cast<char*>(&event.rw), sizeof(event.rw));
+	file.read(reinterpret_cast<char*>(&event.addr), sizeof(event.addr));
+	file.read(reinterpret_cast<char*>(&event.data), sizeof(event.data));
+	v_events.push_back(std::move(event));
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Replay methods
+//////////////////////////////////////////////////////////////////////////
+
+void EventRecorder::StopReplay()
+{
+	if (bIsInReplayMode)
+	{
+		bShouldStopReplay = true;
+		if (thread_replay.joinable())
+			thread_replay.join();
+	}
+	// Don't automatically exit replay mode
+	// Let the user do it manually
+	// bIsInReplayMode = false;
+}
+
+void EventRecorder::StartReplay()
+{
+	if (!bHasRecording)
+		return;
+	RewindReplay();
+	bShouldPauseReplay = false;
+	bShouldStopReplay = false;
+	bIsInReplayMode = true;
+	ApplyRAMSnapshot(0);
+	thread_replay = std::thread(&EventRecorder::replay_events_thread, this,
+		&bShouldPauseReplay, &bShouldStopReplay, &currentReplayEvent);
+}
+
+void EventRecorder::PauseReplay(bool pause)
+{
+	bShouldPauseReplay = pause;
+}
+
+void EventRecorder::RewindReplay()
+{
+	StopReplay();
+	currentReplayEvent = 0;
+}
+
+int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldStopReplay, size_t* currentReplayEvent)
+{
+	using namespace std::chrono;
+	auto targetDuration = duration<double, std::nano>(977.7778337);	// Duration of an Apple 2 clock cycle (not stretched)
+	auto startTime = high_resolution_clock::now();
+	auto elapsed = high_resolution_clock::now() - startTime;
+
+	while (!*shouldStopReplay)
+	{
+		if (*shouldPauseReplay)
+		{
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+			continue;
+		}
+		// Check if the user requested to move to a different area in the recording
+		if (bUserMovedEventSlider)
+		{
+			// Move to the requested event. In order to do this cleanly, we need:
+			// 1. to find the closest previous memory snapshot
+			// 2. run all events between the mem snapshot and the requested event
+			// These events can be run at max speed
+			auto snapshot_index = *currentReplayEvent / m_current_snapshot_cycles;
+			ApplyRAMSnapshot(snapshot_index);
+			clear_events();
+			auto first_event_index = snapshot_index * m_current_snapshot_cycles;
+			for (auto i = first_event_index; i < *currentReplayEvent; i++)
+			{
+				insert_event(&v_events.at(i));
+			}
+		}
+
+		if (*currentReplayEvent < v_events.size())
+		{
+			if (*shouldStopReplay)	// In case a stop was sent while sleeping
+				break;
+			insert_event(&v_events.at(*currentReplayEvent));
+			*currentReplayEvent += 1;
+			// wait 1 clock cycle before adding the next event
+			startTime = high_resolution_clock::now();
+			while (true)
+			{
+				elapsed = high_resolution_clock::now() - startTime;
+				if (elapsed >= targetDuration)
+					break;
+			}
+		}
+		else {
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+			continue;
+		}
+	}
+	return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Recording methods
+//////////////////////////////////////////////////////////////////////////
+
+void EventRecorder::StartRecording()
+{
+	ClearRecording();
+	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
+	bIsRecording = true;
+}
+
+void EventRecorder::StopRecording()
+{
+	bIsRecording = false;
+	bHasRecording = true;
+	SaveRecording();
+}
+
+void EventRecorder::ClearRecording()
+{
+	v_memSnapshots.clear();
+	v_events.clear();
+	v_events.shrink_to_fit();
+	bHasRecording = false;
+	currentReplayEvent = 0;
+	m_current_snapshot_cycles = RECORDER_MEM_SNAPSHOT_CYCLES;
+}
+
+void EventRecorder::SaveRecording()
+{
+	IGFD::FileDialogConfig config;
+	config.path = "./recordings/";
+	ImGui::SetNextWindowSize(ImVec2(800, 400));
+	ImGuiFileDialog::Instance()->OpenDialog("ChooseRecordingSave", "Save to File", ".vcr,", config);
+}
+
+void EventRecorder::LoadRecording()
+{
+	IGFD::FileDialogConfig config;
+	config.path = "./recordings/";
+	ImGui::SetNextWindowSize(ImVec2(800, 400));
+	ImGuiFileDialog::Instance()->OpenDialog("ChooseRecordingLoad", "Load Recording File", ".vcr,", config);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Public methods
+//////////////////////////////////////////////////////////////////////////
+
+void EventRecorder::RecordEvent(SDHREvent* sdhr_event)
+{
+	if (!bIsRecording)
+		return;
+	if ((currentReplayEvent % RECORDER_MEM_SNAPSHOT_CYCLES) == 0)
+		MakeRAMSnapshot(currentReplayEvent);
+	v_events.push_back(*sdhr_event);
+	++currentReplayEvent;
+	if (v_events.size() == (size_t)1'000'000 * MAXRECORDING_SECONDS)
+		StopRecording();
+}
+
+void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
+{
+	if (p_open)
+	{
+		ImGui::Begin("Event Recorder", p_open);
+		ImGui::PushItemWidth(200);
+
+		if (bIsRecording)
+			ImGui::Text("RECORDING IN PROGRESS...");
+		else {
+			if (bHasRecording)
+				ImGui::Text("Recording available");
+			else
+				ImGui::Text("No recording loaded");
+		}
+
+		if (bIsRecording == true)
+		{
+			if (ImGui::Button("Stop Recording"))
+				this->StopRecording();
+		}
+		else {
+			if (ImGui::Button("Start Recording"))
+				this->StartRecording();
+		}
+
+		ImGui::Checkbox("Replay Mode", &bIsInReplayMode);
+		bUserMovedEventSlider = ImGui::SliderInt("Event Timeline", reinterpret_cast<int*>(&currentReplayEvent), 0, v_events.size());
+		if (thread_replay.joinable())
+		{
+			if (ImGui::Button("Stop##Replay"))
+				this->StopReplay();
+		}
+		else {
+			if (ImGui::Button("Play##Replay"))
+				this->StartReplay();
+		}
+		ImGui::SameLine();
+		if (bShouldPauseReplay)
+		{
+			if (ImGui::Button("Unpause##Recording"))
+				this->PauseReplay(false);
+		}
+		else {
+			if (ImGui::Button("Pause##Recording"))
+				this->PauseReplay(true);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Rewind##Recording"))
+			this->RewindReplay();
+		ImGui::Separator();
+
+		if (ImGui::Button("Load##Recording"))
+		{
+			this->LoadRecording();
+		}
+		ImGui::SameLine();
+		ImGui::Dummy(ImVec2(50.0f, 0.0f));
+		ImGui::SameLine();
+		if (bHasRecording == false)
+		{
+			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f); // Reduce button opacity
+			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true); // Disable button (and make it unclickable)
+		}
+		if (ImGui::Button("Save##Recording"))
+		{
+			this->SaveRecording();
+		}
+		if (bHasRecording == false)
+		{
+			ImGui::PopItemFlag();
+			ImGui::PopStyleVar();
+		}
+		ImGui::PopItemWidth();
+
+		// Display the load file dialog
+		if (ImGuiFileDialog::Instance()->Display("ChooseRecordingLoad")) {
+			// Check if a file was selected
+			if (ImGuiFileDialog::Instance()->IsOk()) {
+				std::ifstream file(ImGuiFileDialog::Instance()->GetFilePathName().c_str(), std::ios::binary);
+				if (file.is_open()) {
+					try
+					{
+						ReadRecordingFile(file);
+
+					}
+					catch (std::ifstream::failure& e)
+					{
+						m_lastErrorString = e.what();
+						bImGuiOpenModal = true;
+						ImGui::OpenPopup("Recorder Error Modal");
+					}
+					file.close();
+					bHasRecording = true;
+				}
+				else {
+					m_lastErrorString = "Error opening file";
+					bImGuiOpenModal = true;
+					ImGui::OpenPopup("Recorder Error Modal");
+				}
+			}
+			ImGuiFileDialog::Instance()->Close();
+		}
+
+		// Display the save file dialog
+		if (ImGuiFileDialog::Instance()->Display("ChooseRecordingSave")) {
+			// Check if a file was selected
+			if (ImGuiFileDialog::Instance()->IsOk()) {
+				std::ofstream file(ImGuiFileDialog::Instance()->GetFilePathName().c_str(), std::ios::binary);
+				if (file.is_open()) {
+					try
+					{
+						WriteRecordingFile(file);
+					}
+					catch (std::ofstream::failure& e)
+					{
+						m_lastErrorString = e.what();
+						bImGuiOpenModal = true;
+						ImGui::OpenPopup("Recorder Error Modal");
+					}
+					file.close();
+				}
+				else {
+					m_lastErrorString = "Error opening file";
+					bImGuiOpenModal = true;
+					ImGui::OpenPopup("Recorder Error Modal");
+				}
+			}
+			ImGuiFileDialog::Instance()->Close();
+		}
+
+		if (bImGuiOpenModal) {
+			if (ImGui::BeginPopupModal("Recorder Error Modal", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+				ImGui::Text(m_lastErrorString.c_str());
+				// Buttons to close the modal
+				if (ImGui::Button("OK", ImVec2(120, 0))) {
+					// Handle OK (e.g., process data, close modal)
+					ImGui::CloseCurrentPopup();
+					bImGuiOpenModal = false;
+				}
+				ImGui::EndPopup();
+			}
+		}
+
+		ImGui::End();
+	}
+}
+
+void EventRecorder::Update()
+{
+
+	if (bIsInReplayMode)
+	{
+		// Stop replay if we reached the end
+		if (currentReplayEvent >= v_events.size())
+			PauseReplay(true);
+	}
+}

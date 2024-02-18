@@ -84,3 +84,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking);
 // which itself processes the command_buffer
 int process_events_thread(bool* shouldTerminateProcessing);
 void terminate_processing_thread();
+
+void insert_event(SDHREvent* e);
+void clear_events();

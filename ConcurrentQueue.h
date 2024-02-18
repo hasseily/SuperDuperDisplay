@@ -37,6 +37,7 @@ public:
 		this->d_queue.resize(size);
 	}
 	void clear() {
+		std::unique_lock<std::mutex> lock(this->d_mutex);
 		this->d_queue.clear();
 	}
 	int size() {

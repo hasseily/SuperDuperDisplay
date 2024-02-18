@@ -71,8 +71,8 @@ public:
 		int image_xcount = 0;	// width and height of asset in pixels
 		int image_ycount = 0;
 		GLuint tex_id = 0;	// Texture ID on the GPU that holds the image data
-		int channels;
-		unsigned char* data;
+		int channels = 3;
+		unsigned char* data = nullptr;
 	};
 
 	struct TileTex {				// Tile texture starting coordinates

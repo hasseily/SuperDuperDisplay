@@ -657,11 +657,11 @@ void A2VideoManager::UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* f
 			uint32_t color4 = this->ConvertIIgs2RGB(palette[0x4 + pixel4]);
 			*pVideoAddress++ = color4;
 		}
-
-		// duplicate on the next row (it may be overridden by the scanlines)
-		for (size_t i = 4; i > 0; i--)
+		
+			// duplicate on the next row (it may be overridden by the scanlines)
+		for (size_t j = 4; j >0; j--)
 		{
-			*(pVideoAddress - i + _A2VIDEO_SHR_WIDTH) = *(pVideoAddress - i);
+			*(pVideoAddress - j + _A2VIDEO_SHR_WIDTH) = *(pVideoAddress - j);
 		}
 	}
 }

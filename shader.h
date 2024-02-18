@@ -13,7 +13,7 @@
 class Shader
 {
 public:
-    unsigned int ID;
+    unsigned int ID = 0;
     bool isReady = false;
     // Useless until you call build()
 

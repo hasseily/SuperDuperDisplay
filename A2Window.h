@@ -68,7 +68,7 @@ public:
 
 	bool IsEmpty() { return (tile_count.x == 0 || tile_count.y == 0); };
 
-	uint8_t Get_video_mode() const { return video_mode; }
+	A2VideoMode_e Get_video_mode() const { return video_mode; }
 	uXY Get_screen_count() const { return screen_count; }
 	uXY Get_tile_dim() const { return tile_dim; }
 	uXY Get_tile_count() const { return tile_count; }
