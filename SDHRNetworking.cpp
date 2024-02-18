@@ -7,7 +7,7 @@
 #include <fcntl.h>
 
 static ConcurrentQueue<SDHREvent> events;
-static auto eventRecorder = EventRecorder::GetInstance();
+static EventRecorder* eventRecorder;
 
 ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_addr)
 {
@@ -352,6 +352,8 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	uint32_t prev_seqno = 0;
 	uint16_t prev_addr = 0;
 	int64_t last_recv_nsec;
+
+	eventRecorder = EventRecorder::GetInstance();
 
 	while (!(*shouldTerminateNetworking)) {
 		LARGE_INTEGER frequency;        // ticks per second
