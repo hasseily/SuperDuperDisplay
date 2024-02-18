@@ -18,6 +18,7 @@
 #include "SDHRNetworking.h"	// for SDHREvent
 #include <vector>
 #include <string>
+#include <thread>
 
 #define RECORDER_TOTALMEMSIZE 128 * 1024		// 128k memory snapshot
 #define RECORDER_MEM_SNAPSHOT_CYCLES 1'000'000	// snapshot memory every x cycles

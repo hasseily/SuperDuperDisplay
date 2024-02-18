@@ -7,7 +7,6 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-#include <thread>
 #include <chrono>
 
 constexpr uint32_t MAXRECORDING_SECONDS = 30;	// Max number of seconds to record

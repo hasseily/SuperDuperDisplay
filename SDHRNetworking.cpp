@@ -7,7 +7,6 @@
 #include <fcntl.h>
 
 static ConcurrentQueue<SDHREvent> events;
-static EventRecorder* eventRecorder;
 
 ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_addr)
 {
@@ -81,8 +80,9 @@ void terminate_processing_thread()
 int process_events_thread(bool* shouldTerminateProcessing)
 {
 	std::cout << "Starting Processing Thread\n";
-	SDHRManager* sdhrMgr = SDHRManager::GetInstance();
-	A2VideoManager* a2VideoMgr = A2VideoManager::GetInstance();
+	auto sdhrMgr = SDHRManager::GetInstance();
+	auto a2VideoMgr = A2VideoManager::GetInstance();
+	auto eventRecorder = EventRecorder::GetInstance();
 	while (!(*shouldTerminateProcessing)) {
 		auto e = events.pop();	// The thread will wait until there's an event to pop
 		// std::cout << e.is_iigs << " " << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
@@ -354,7 +354,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	uint16_t prev_addr = 0;
 	int64_t last_recv_nsec;
 
-	eventRecorder = EventRecorder::GetInstance();
+	auto eventRecorder = EventRecorder::GetInstance();
 
 	while (!(*shouldTerminateNetworking)) {
 		LARGE_INTEGER frequency;        // ticks per second
