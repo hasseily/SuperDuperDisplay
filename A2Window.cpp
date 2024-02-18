@@ -72,12 +72,6 @@ void A2Window::Define(A2VideoMode_e _video_mode, Shader* _shaderProgram)
 		tile_count		= uXY({ _A2VIDEO_SHR_WIDTH, _A2VIDEO_SHR_HEIGHT });
 		datasize		= _A2VIDEO_SHR_SIZE;
 		break;
-	case A2VIDEO_BEAM:	// Be the same size as SHR, the others will have 8 transparent lines at the bottom
-		screen_count = uXY({ (uint32_t)(_A2VIDEO_SHR_WIDTH), (uint32_t)(_A2VIDEO_SHR_HEIGHT) });
-		tile_dim = uXY({ 0, 0 });	// unused, it's all in the shader
-		tile_count = uXY({ _A2VIDEO_SHR_WIDTH, _A2VIDEO_SHR_HEIGHT });
-		datasize = 40 * 200;	// One RGBA per byte, 40 bytes per scanline, max 200 scanlines
-		break;
 	default:
 		break;
 

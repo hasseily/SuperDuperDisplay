@@ -10,9 +10,11 @@
     </Filter>
     <Filter Include="headers">
       <UniqueIdentifier>{fd5c2b84-3576-48ae-bd69-50aef3e360dd}</UniqueIdentifier>
+      <Extensions>h;</Extensions>
     </Filter>
     <Filter Include="shaders">
       <UniqueIdentifier>{bc77d915-ea34-4b87-a05c-219375cb07e2}</UniqueIdentifier>
+      <Extensions>vert;frag;glsl;</Extensions>
     </Filter>
     <Filter Include="assets">
       <UniqueIdentifier>{a0ff60f3-4a53-4ffe-946c-9bd8770d7e17}</UniqueIdentifier>
@@ -178,6 +180,9 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="CycleCounter.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ByteBuffer.h">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

@@ -220,6 +220,7 @@
     <None Include="packages.config" />
     <None Include="README.md" />
     <None Include="shaders\a2video.vert" />
+    <None Include="shaders\a2video_beam_legacy.frag" />
     <None Include="shaders\a2video_dhgr.frag" />
     <None Include="shaders\a2video_hgr.frag" />
     <None Include="shaders\a2video_lgr.frag" />
@@ -244,15 +245,19 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="textures\Apple2eFont14x16 - Alternate.png" />
-    <Image Include="textures\Apple2eFont14x16 - Regular.png" />
-    <Image Include="textures\Apple2eFont7x16 - Alternate.png" />
-    <Image Include="textures\Apple2eFont7x16 - Regular.png" />
-    <Image Include="textures\Texture_composite_dhgr.png" />
-    <Image Include="textures\Texture_composite_hgr.png" />
-    <Image Include="textures\Texture_composite_lgr.png" />
-    <Image Include="textures\Texture_Default.png" />
-    <Image Include="textures\Texture_Scanlines.png" />
+    <Image Include="assets\Apple2eFont14x16 - Alternate.png" />
+    <Image Include="assets\Apple2eFont14x16 - Regular.png" />
+    <Image Include="assets\Apple2eFont7x16 - Alternate.png" />
+    <Image Include="assets\Apple2eFont7x16 - Regular.png" />
+    <Image Include="assets\Bezel.png" />
+    <Image Include="assets\Texture_composite_complete.png" />
+    <Image Include="assets\Texture_composite_dhgr.png" />
+    <Image Include="assets\Texture_composite_hgr.png" />
+    <Image Include="assets\Texture_composite_lgr.png" />
+    <Image Include="assets\Texture_Default.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="assets\ProggyTiny.ttf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
