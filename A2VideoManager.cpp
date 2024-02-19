@@ -360,7 +360,14 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool
 
 void A2VideoManager::BeamIsAtPosition(uint32_t x, uint32_t y)
 {
-	// TODO
+	if (y == 200)
+		RequestBeamRendering();
+}
+
+void A2VideoManager::RequestBeamRendering()
+{
+	std::lock_guard<std::mutex> lock(a2video_mutex);
+	bRequestBeamRendering = true;
 }
 
 void A2VideoManager::SelectVideoModes()
@@ -427,10 +434,6 @@ void A2VideoManager::Render()
 	if (!bA2VideoEnabled)
 		return;
 
-	// Do not render during H or VBlank
-	if (CycleCounter::GetInstance()->IsInBlank())
-		return;
-
 	GLenum glerr;
 	auto oglh = OpenGLHelper::GetInstance();
 
@@ -473,6 +476,21 @@ void A2VideoManager::Render()
 		glActiveTexture(GL_TEXTURE0);
 	}
 
+	// BEAM RENDERER
+	if (bShouldUseBeamRenderer)
+	{
+		// At line 200 the cycle counter flags to beam render
+		if (bRequestBeamRendering)
+		{
+			a2video_mutex.lock();
+			bRequestBeamRendering = false;
+			a2video_mutex.unlock();
+			// TODO: Make a "window" for the beam renderer, for vertices and everything else
+		}
+		goto ENDRENDER;
+	}
+	
+	// GPU RENDERER
 	for (auto& _w : this->windows) {
 		if (bShouldUseCPURGBRenderer)
 		{
@@ -496,6 +514,7 @@ void A2VideoManager::Render()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, oglHelper->get_intermediate_texture_id());
 
+	// CPU RENDERER
 	if (bShouldUseCPURGBRenderer)
 	{
 		// Check for page 2

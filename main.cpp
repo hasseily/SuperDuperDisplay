@@ -216,7 +216,8 @@ int main(int argc, char* argv[])
     while (!done)
 #endif
     {
-		SDL_GL_SetSwapInterval(g_swapInterval);
+		// Beam renderer does not use VSYNC. It synchronizes to the Apple 2's VBL.
+		SDL_GL_SetSwapInterval(g_swapInterval && (!a2VideoManager->bShouldUseBeamRenderer));
         dt_LAST = dt_NOW;
         dt_NOW = SDL_GetPerformanceCounter();
 		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
@@ -297,7 +298,7 @@ int main(int argc, char* argv[])
 
         if (sdhrManager->IsSdhrEnabled())
             sdhrManager->Render();
-        else
+        else if (!a2VideoManager->bShouldUseBeamRenderer)
             a2VideoManager->Render();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -332,6 +333,7 @@ int main(int argc, char* argv[])
 //				ImGui::Checkbox("Demo Window", &show_demo_window);
 				ImGui::Checkbox("PostProcessing Window", &show_postprocessing_window);
 				ImGui::Checkbox("VSYNC On", &g_swapInterval);
+				ImGui::Checkbox("Use Beam Racing Renderer", &a2VideoManager->bShouldUseBeamRenderer);
 				ImGui::Checkbox("Use CPU RGB Renderer for L/H/D/GR", &a2VideoManager->bShouldUseCPURGBRenderer);
 				ImGui::Checkbox("Event Recorder Window", &show_recorder_window);
 				ImGui::Checkbox("Textures Window", &show_texture_window);
@@ -533,7 +535,7 @@ int main(int argc, char* argv[])
         {
             std::cerr << "reset detected" << std::endl;
             a2VideoManager->bShouldReboot = false;
-            A2VideoManager::GetInstance()->ResetComputer();
+			a2VideoManager->ResetComputer();
         }
     }
 #ifdef __EMSCRIPTEN__

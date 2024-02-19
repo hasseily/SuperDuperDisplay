@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <mutex>
 
 #include "common.h"
 #include "A2Window.h"
@@ -104,6 +105,7 @@ public:
 	uint32_t color_background = 0;
     bool bShouldReboot = false;             // When an Appletini reboot packet arrives
 	bool bShouldUseCPURGBRenderer = false;	// Use CPU RGB renderer for graphics
+	bool bShouldUseBeamRenderer = false;	// Use the beam racing renderer for graphics
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
@@ -117,7 +119,8 @@ public:
 
 	// Methods for the single multipurpose beam racing shader
 	void BeamIsAtPosition(uint32_t x, uint32_t y);
-
+	void RequestBeamRendering();
+	
 	void Render();	// render whatever mode is active (enabled windows)
 
 	// public singleton code
@@ -169,6 +172,9 @@ private:
     bool bIsRebooting = false;              // Rebooting semaphore
 	static uint16_t a2SoftSwitches;			// Soft switches states
     
+	mutable std::mutex a2video_mutex;
+	bool bRequestBeamRendering = false;		// Requests beam rendering from the main thread
+
 	// framebuffers for RGB graphics modes
 	std::vector<uint32_t>v_fblgr;
 	std::vector<uint32_t>v_fbdlgr;
