@@ -14,7 +14,7 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  and save the x offset from the origin of the byte.
 
  To get a pixel in the HGR texture, the procedure is as follows:
- Take the 2 bytes that the pixel is in, starting with the even byte.
+ Take the byte that the pixel is in.
  Even bytes use even columns, odd bytes use odd columns.
  Also calculate the high bit and last 2 bits from the previous byte
  (i.e. the 3 most significant bits), and the first 2 bits from the
@@ -108,13 +108,7 @@ void main()
 	// Next grab the data for that tile from the tilesBuffer
 	// No need to rescale values because we're using GL_R8UI
 	// The "texture" is split by 1kB-sized rows
-	// In double mode, the even bytes are pulled from aux mem,
-	// and the odd bytes from main mem
-	int offset;
-	if (isDouble > 0.0)
-		offset = (hgrRow[tileColRow.y] + tileColRow.x / 2) + (0xC000 * (1 - (tileColRow.x & 1)));
-	else
-		offset = hgrRow[tileColRow.y] + tileColRow.x;
+	offset = hgrRow[tileColRow.y] + tileColRow.x;
 	
 	// the byte value is just the r component
 	uint byteVal = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;

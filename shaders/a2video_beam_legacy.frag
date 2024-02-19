@@ -65,7 +65,7 @@ void main()
 			// In DTEXT mode, the first 7 dots are AUX, last 7 are MAIN.
 			// In TEXT mode, all 14 dots are from MAIN
 			uint charVal = (targetTexel.g * (fragOffset.x / 7u) + targetTexel.r * (1u - (fragOffset.x / 7u))) * a2mode
-							+ (targetTexel.r * fragOffset.x) * (1 - a2mode);
+							+ targetTexel.r * (1 - a2mode);
 			float vCharVal = float(charVal);
 			
 			// if ALTCHARSET (bit 4), use the alt texture
@@ -80,111 +80,154 @@ void main()
 			float a_inverse = 1.0 - step(float(0x40), vCharVal);
 			float a_flash = (1.0 - step(float(0x80), vCharVal)) * (1.0 - a_inverse) * (1.0 - float(isAlt));
 			
-			ivec2 textureSize2d = textureSize(textureIndex,0);
 			// what's our character's starting origin in the character map?
 			uvec2 charOrigin = uvec2(charVal & 0xFu, charVal >> 4) * uvec2(14, 16);	// each glyph is 14x16
 			
 			// Now get the texture color
 			// When getting from the texture color, in DTEXT multiply the x value by 2 because we're taking
 			// 1/2 of each column in 80 col mode.
-			vec4 tex = texture(textureIndex, (vec2(charOrigin) + (fragOffset * uvec2(1u + a2mode, 1u)) / vec2(textureSize2d)) * colorTint;
+			ivec2 textureSize2d = textureSize(textureIndex,0);
+			vec4 tex = texture(textureIndex, (vec2(charOrigin) + (fragOffset * uvec2(1u + a2mode, 1u))) / vec2(textureSize2d)) * colorTint;
 			
 			float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
 																	   // get the color of flashing or the one above
 			fragColor = ((1.f - tex) * isFlashing) + (tex * (1.f - isFlashing));
+			return;
 			break;
 		}
 		case 2u:	// LGR
-			break;
 		case 3u:	// DLGR
+		{
+			// Get the color value
+			// An LGR byte is split in 2. There's a 4-bit color in the low bits
+			// at the top of the 14x16 dot square, and another 4-bit color in
+			// the high bits at the bottom of the 14x16 dot square.
+			// In DLGR mode, the first 7 dots are AUX, last 7 are MAIN.
+			// In LGR mode, all 14 dots are from MAIN
+
+			// Get the byte value depending on MAIN or AUX
+			uint byteVal = (targetTexel.g * (fragOffset.x / 7u) + targetTexel.r * (1u - (fragOffset.x / 7u))) * a2mode
+				+ targetTexel.r * (1 - a2mode);
+			// get the color depending on vertical position
+			uvec2 byteOrigin;
+			if (fragOffset.y < 8)
+			{
+				// This is a top pixel, it uses the color of the 4 low bits
+				byteOrigin = uvec2(0u, (byteVal & 0xFu) * 16u);
+			} else {
+				// It's a bottom pixel, it uses the color of the 4 high bits
+				byteOrigin = uvec2(0u, (byteVal >> 4) * 16u);
+			}
+			ivec2 textureSize2d = textureSize(textureIndex,0);
+			// similarly to the TEXT modes, if we're in DLGR (a2mode - 2u), get every other column
+			fragColor = texture(textureIndex, (vec2(byteOrigin) + (fragOffset * uvec2(1u + (a2mode - 2u), 1u))) 
+													/ vec2(textureSize2d));
 			break;
+		}
 		case 4u:	// HGR
+		{
+/*
+For each pixel, determine which memory byte it is part of,
+ and save the x offset from the origin of the byte.
+
+ To get a pixel in the HGR texture, the procedure is as follows:
+ Take the byte that the pixel is in.
+ Even bytes use even columns, odd bytes use odd columns.
+ Also calculate the high bit and last 2 bits from the previous byte
+ (i.e. the 3 most significant bits), and the first 2 bits from the
+ next byte (i.e. the 3 least significant bits).
+
+ // Lookup Table:
+ // y (0-255) * 32 columns of 32 pixels
+ // . each column is: high-bit (prev byte) & 2 pixels from previous byte & 2 pixels from next byte
+ // . each 32-pixel unit is 2 * 16-pixel sub-units: 16 pixels for even video byte & 16 pixels for odd video byte
+ //   . where 16 pixels represent the 7 Apple pixels, expanded to 14 pixels (and the last 2 are discarded)
+ //		currHighBit=0: {14 pixels + 2 pad} * 2
+ //		currHighBit=1: {1 pixel + 14 pixels + 1 pad} * 2
+
+ high-bit & 2-bits from previous byte, 2-bits from next byte = 2^5 = 32 total permutations
+ 32 permutations, each with 2 bytes, each 8 bits but doubled: 32 * 2 * 8 * 2 = 1024 pixels wide
+ So the col offset is ((prevbyte & 0xE0) >> 3) | (nextbyte & 0x03). But since each column is
+ 32 pixels, the actual col pixel offset should be *32, which results in:
+ ((prevbyte & 0xE0) << 2) | ((nextbyte & 0x03) << 5)
+ Then we also need to see which of the 2 subcolumns we will use, depending if it's an even or odd byte:
+ ((prevbyte & 0xE0) << 2) | ((nextbyte & 0x03) << 5) + (tileColRow.x & 1) * 16
+ The row pixel value is simply the memory byte value of our pixel
+ */
+ 
+			// The byte value is just targetTexel.r
+			// Grab the other byte values that matter
+			uint byteValPrev = 0u;
+			uint byteValNext = 0u;
+			uint xCol = uFragPos.x / 14u;
+			if (xCol > 0)	// Not at start of row, byteValPrev is valid
+			{
+				byteValPrev = texelFetch(VRAMTEX, ivec2(xCol - 1u, uFragPos.y / 2u), 0).r;
+			}
+			if (xCol < 39)	// Not at end of row, byteValNext is valid
+			{
+				byteValNext = texelFetch(VRAMTEX, ivec2(xCol + 1u, uFragPos.y / 2u), 0).r;
+			}
+
+			// calculate the column offset in the color texture
+			int texXOffset = (int((byteValPrev & 0xE0u) << 2) | int((byteValNext & 0x03u) << 5)) + (xCol & 1) * 16;
+
+			// Now get the texture color. We know the X offset as well as the fragment's offset on top of that.
+			// The y value is just the byte's value
+			ivec2 textureSize2d = textureSize(textureIndex,0);
+			fragColor = texture(textureIndex, vec2(texXOffset + int(fragOffset.x), targetTexel.r) / vec2(textureSize2d));
+			return;
 			break;
+		}
 		case 5u:	// DHGR
+		{
+/*
+ For each pixel, determine which memory byte it is part of,
+ and save the x offset from the origin of the byte.
+
+ There are 256 columns of 10 pixels in the DHGR texture. Acquiring the right data is a lot more complicated.
+ It involves taking 20 bits out of 4 memory bytes, then shifting and grabbing different bytes for x and y
+ in the texture. See UpdateDHiResCell() in RGBMonitor.cpp of the AppleWin codebase. Take 7 bits each of
+ the 2 middle bytes and 3 bits each of the 2 end bytes for a total of 20 bits.
+ */
+			// TODO: check for DHGRMONO
+
+			// In DHGR, as in all double modes, the even bytes are from AUX, odd bytes from MAIN
+			// We already have in targetTexel both MAIN and AUX bytes (R and G respectively)
+			// We need a previous MAIN byte and a subsequent AUX byte to calculate the colors
+			uint byteVal1 = 0u;				// MAIN
+			uint byteVal2 = targetTexel.g;	// AUX
+			uint byteVal2 = targetTexel.r;	// MAIN
+			uint byteVal4 = 0u;				// AUX
+			uint xCol = uFragPos.x / 14u;
+			if (xCol > 0)	// Not at start of row, byteVal1 is valid
+			{
+				byteVal1 = texelFetch(VRAMTEX, ivec2(xCol - 1u, uFragPos.y / 2u), 0).r;
+			}
+			if (xCol < 39)	// Not at end of row, byteVal4 is valid
+			{
+				byteVal4 = texelFetch(VRAMTEX, ivec2(xCol + 1u, uFragPos.y / 2u), 0).g;
+			}
+			// Calculate the column offset in the color texture
+			int wordVal = (int(byteVal1) & 0x70) | ((int(byteVal2) & 0x7F) << 7) |
+				((int(byteVal3) & 0x7F) << 14) | ((int(byteVal4) & 0x07) << 21);
+			int vColor = (xCol*14 + int(fragOffset.x)) & 3;
+			int vValue = (wordVal >> (4 + int(fragOffset.x) - vColor));
+			int xVal = 10 * ((vValue >> 8) & 0xFF) + vColor;
+			int yVal = vValue & 0xFF;
+			ivec2 textureSize2d = textureSize(textureIndex,0);
+			fragColor = texture(textureIndex, (vec2(0.5, 0.5) + vec2(xVal, yVal)) / vec2(textureSize2d));
+			return;
 			break;
+		}
 		default:
+		{
 			// should never happen! Set to pink for visibility
 			fragColor = vec4(1.0f, 0f, 0.5f, 1.f);
 			return;
 			break;
+		}
 	}
-	
-	if (a2mode < 2u)	// TEXT or DTEXT mode
-	{
-		// Get the character value
-		// If we're in DTEXT mode, the first 7 pixels are AUX, last 7 are MAIN.
-		// When getting from the texture, multiply the x value by 2.
-		// If in TEXT mode, all 14 pixels are MAIN. The x value is what it is
-		uint charVal = a2mode;
-		float vCharVal = float(charVal);
-		
-		// if ALTCHARSET (bit 4), use the alt texture
-		textureIndex += 1u * ((targetTexel.b >> 4) & 1u);
-		
-		// Determine from char which font glyph to use
-		// and if we need to flash
-		// Determine if it's inverse when the char is below 0x40
-		// And then if the char is below 0x80 and not inverse, it's flashing
-		float a_inverse = 1.0 - step(float(0x40), vCharVal);
-		float a_flash = (1.0 - step(float(0x80), vCharVal)) * (1.0 - a_inverse) * hasFlashing;
-	}
-
-
-	// TODO: check for DHGRMONO
-
-	vec2 sampleCoord = vec2(texCoord) / vec2(textureSize(selectorTexture, 0));
-	fragColor = texture(textures[textureIndex], sampleCoord);
-
-///////////////////////// OLD CODE /////////////////////////////
-	if ((isMixed * vFragPos.y) >= float(tileSize.y * 160u))
-	{
-		// we're in mixed mode, the bottom 4 rows of text (4*8=32 pixels) are transparent
-		fragColor = vec4(0.0);
-		return;
-	}
-	
-	// first figure out which mosaic tile (byte) this fragment is part of
-	// Calculate the position of the fragment in tile intervals
-	vec2 fTileColRow = vFragPos / vec2(tileSize);
-	// Row and column number of the tile containing this fragment
-	ivec2 tileColRow = ivec2(floor(fTileColRow));
-	// Fragment offset to tile origin, in pixels
-	vec2 fragOffset = ((fTileColRow - vec2(tileColRow)) * vec2(tileSize));
-	
-	// Next grab the data for that tile from the tilesBuffer
-	// No need to rescale values because we're using GL_R8UI
-	// The "texture" is split by 1kB-sized rows
-	// In double mode, the even bytes are pulled from aux mem,
-	// and the odd bytes from main mem
-	int offset;
-	uint byteVal1 = 0u;
-	uint byteVal4 = 0u;
-	// The bytes from main: 1 and 3
-	offset = hgrRow[tileColRow.y] + tileColRow.x;
-	uint byteVal3 = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
-	if (tileColRow.x > 0)	// Not at start of row, byteVal1 is valid
-	{
-		byteVal1 = texelFetch(DBTEX, ivec2((offset % 1024) - 1, offset / 1024), 0).r;
-	}
-	// The bytes from aux: 2 and 4
-	offset = offset + 0xC000;
-	uint byteVal2 = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
-	if (tileColRow.x < 39)	// Not at end of row, byteVal4 is valid
-	{
-		byteVal4 = texelFetch(DBTEX, ivec2((offset % 1024) + 1, offset / 1024), 0).r;
-	}
-	
-	ivec2 textureSize2d = textureSize(a2ModeTexture,0);
-	
-	// Calculate the column offset in the texture
-	int wordVal = (int(byteVal1) & 0x70) | ((int(byteVal2) & 0x7F) << 7) |
-		((int(byteVal3) & 0x7F) << 14) | ((int(byteVal4) & 0x07) << 21);
-	int vColor = (tileColRow.x*14 + int(fragOffset.x)) & 3;
-	int vValue = (wordVal >> (4 + int(fragOffset.x) - vColor));
-	int xVal = 10 * ((vValue >> 8) & 0xFF) + vColor;
-	int yVal = vValue & 0xFF;
-	vec4 tex = texture(a2ModeTexture, (vec2(0.5, 0.5) + vec2(xVal, yVal)) / vec2(textureSize2d));
-	
-	fragColor = tex;
-	// fragColor = vec4(vColor, 1.f);   // for debugging
+	// Shouldn't happen either
+	fragColor = vec4(0f, 1.0f, 0.5f, 1.f);
 }

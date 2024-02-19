@@ -81,8 +81,8 @@ void main()
 
 	// What's our byte's starting origin in the character map?
 	// An LGR byte is split in 2. There's a 4-bit color in the low bits
-	// at the top of the 16x16 dot square, and another 4-bit color in
-	// the high bits at the bottom of the 16x16 dot square
+	// at the top of the 14x16 dot square, and another 4-bit color in
+	// the high bits at the bottom of the 14x16 dot square
 	uvec2 byteOrigin;
 	if ((fragOffset.y * 2.0) < float(tileSize.y))
 	{
