@@ -90,6 +90,9 @@
     <ClCompile Include="EventRecorder.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="A2WindowBeam.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -180,6 +183,9 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="ByteBuffer.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="A2WindowBeam.h">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>
