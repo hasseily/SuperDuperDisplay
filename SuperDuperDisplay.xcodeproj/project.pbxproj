@@ -7,12 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BB01620B2B83643D00A3D503 /* assets in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBD102132B829BAE00360B33 /* assets */; };
 		BB96E3E22B664CDB00A3077C /* libSDL2-2.0.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = BB96E3E12B664CDB00A3077C /* libSDL2-2.0.0.dylib */; };
 		BB96E3E32B664CDB00A3077C /* libSDL2-2.0.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BB96E3E12B664CDB00A3077C /* libSDL2-2.0.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = BB96E3EA2B6650BA00A3077C /* libz.tbd */; };
 		BB96E3ED2B66513700A3077C /* imgui_demo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3EC2B66513700A3077C /* imgui_demo.cpp */; };
 		BB96E3F32B66515400A3077C /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3F22B66515400A3077C /* imgui_widgets.cpp */; };
-		BB96E3FC2B66525300A3077C /* extras in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBB5250F2B6648A200A65C62 /* extras */; };
 		BB96E3FD2B66525300A3077C /* shaders in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBB525002B6648A200A65C62 /* shaders */; };
 		BB96E4092B66544900A3077C /* scripts in CopyFiles */ = {isa = PBXBuildFile; fileRef = BB96E4082B66544900A3077C /* scripts */; };
 		BBB5251D2B6648A200A65C62 /* A2VideoManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525022B6648A200A65C62 /* A2VideoManager.cpp */; };
@@ -46,7 +46,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 16;
 			files = (
-				BB96E3FC2B66525300A3077C /* extras in CopyFiles */,
+				BB01620B2B83643D00A3D503 /* assets in CopyFiles */,
 				BB96E4092B66544900A3077C /* scripts in CopyFiles */,
 				BB96E3FD2B66525300A3077C /* shaders in CopyFiles */,
 			);
