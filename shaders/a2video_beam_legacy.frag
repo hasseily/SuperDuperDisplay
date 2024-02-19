@@ -31,6 +31,7 @@ The shader goes through the following phases:
 uniform int ticks;						// ms since start
 uniform usampler2D VRAMTEX;				// Video RAM texture
 uniform sampler2D a2ModesTextures[5];	// 2 font textures + lgr, hgr, dhgr
+uniform vec4 colorTint;					// text color tint (extra from 2gs)
 
 // mode -> texture
 // modes are: TEXT, DTEXT, LGR, DLGR, HGR, DHGR
@@ -44,13 +45,95 @@ void main()
 {
 	// first determine which VRAMTEX texel this fragment is part of, including
 	// the x and y offsets from the origin
-
-	uvec3 targetTexel =  texelFetch(VRAMTEX, ivec2(vFragPos.x / 40u, vFragPos.y), 0);
-	uint xOffset = vFragPos.x % 40u;		// one of 7 pixels
+	// REMINDER: we're working on dots, with 560 dots per line. And lines are doubled
+	uvec2 uFragPos = uvec2(vFragPos);
+	uvec3 targetTexel =  texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0);
+	uvec2 fragOffset = vec2(uFragPos.x % 14u, uFragPos.y % 16);
+	// The fragOffsets are:
+	// x is 0-14
+	// y is 0-16
 
 	// Extract the lower 3 bits to determine which mode to use
-    uint textureIndex = modeToTexture[selectionValue.b & uint(7)]; // 7 = 0b111 to mask lower 3 bits
+	uint a2mode = targetTexel.b & 7u;	// 7 = 0b111 to mask lower 3 bits
+    uint textureIndex = modeToTexture[a2mode];	// this is the texture to use
+	
+	switch (a2mode) {
+		case 0u:	// TEXT
+		case 1u:	// DTEXT
+		{
+			// Get the character value
+			// In DTEXT mode, the first 7 dots are AUX, last 7 are MAIN.
+			// In TEXT mode, all 14 dots are from MAIN
+			uint charVal = (targetTexel.g * (fragOffset.x / 7u) + targetTexel.r * (1u - (fragOffset.x / 7u))) * a2mode
+							+ (targetTexel.r * fragOffset.x) * (1 - a2mode);
+			float vCharVal = float(charVal);
+			
+			// if ALTCHARSET (bit 4), use the alt texture
+			uint isAlt = ((targetTexel.b >> 4) & 1u);
+			textureIndex += 1u * isAlt;
+			
+			// Determine from char which font glyph to use
+			// and if we need to flash
+			// Determine if it's inverse when the char is below 0x40
+			// And then if the char is below 0x80 and not inverse, it's flashing,
+			// but only if it's the regular charset
+			float a_inverse = 1.0 - step(float(0x40), vCharVal);
+			float a_flash = (1.0 - step(float(0x80), vCharVal)) * (1.0 - a_inverse) * (1.0 - float(isAlt));
+			
+			ivec2 textureSize2d = textureSize(textureIndex,0);
+			// what's our character's starting origin in the character map?
+			uvec2 charOrigin = uvec2(charVal & 0xFu, charVal >> 4) * uvec2(14, 16);	// each glyph is 14x16
+			
+			// Now get the texture color
+			// When getting from the texture color, in DTEXT multiply the x value by 2 because we're taking
+			// 1/2 of each column in 80 col mode.
+			vec4 tex = texture(textureIndex, (vec2(charOrigin) + (fragOffset * uvec2(1u + a2mode, 1u)) / vec2(textureSize2d)) * colorTint;
+			
+			float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
+																	   // get the color of flashing or the one above
+			fragColor = ((1.f - tex) * isFlashing) + (tex * (1.f - isFlashing));
+			break;
+		}
+		case 2u:	// LGR
+			break;
+		case 3u:	// DLGR
+			break;
+		case 4u:	// HGR
+			break;
+		case 5u:	// DHGR
+			break;
+		default:
+			// should never happen! Set to pink for visibility
+			fragColor = vec4(1.0f, 0f, 0.5f, 1.f);
+			return;
+			break;
+	}
+	
+	if (a2mode < 2u)	// TEXT or DTEXT mode
+	{
+		// Get the character value
+		// If we're in DTEXT mode, the first 7 pixels are AUX, last 7 are MAIN.
+		// When getting from the texture, multiply the x value by 2.
+		// If in TEXT mode, all 14 pixels are MAIN. The x value is what it is
+		uint charVal = a2mode;
+		float vCharVal = float(charVal);
+		
+		// if ALTCHARSET (bit 4), use the alt texture
+		textureIndex += 1u * ((targetTexel.b >> 4) & 1u);
+		
+		// Determine from char which font glyph to use
+		// and if we need to flash
+		// Determine if it's inverse when the char is below 0x40
+		// And then if the char is below 0x80 and not inverse, it's flashing
+		float a_inverse = 1.0 - step(float(0x40), vCharVal);
+		float a_flash = (1.0 - step(float(0x80), vCharVal)) * (1.0 - a_inverse) * hasFlashing;
+	}
 
+
+	// TODO: check for DHGRMONO
+
+	vec2 sampleCoord = vec2(texCoord) / vec2(textureSize(selectorTexture, 0));
+	fragColor = texture(textures[textureIndex], sampleCoord);
 
 ///////////////////////// OLD CODE /////////////////////////////
 	if ((isMixed * vFragPos.y) >= float(tileSize.y * 160u))

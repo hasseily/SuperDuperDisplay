@@ -14,7 +14,6 @@
 		BB96E3F32B66515400A3077C /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3F22B66515400A3077C /* imgui_widgets.cpp */; };
 		BB96E3FC2B66525300A3077C /* extras in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBB5250F2B6648A200A65C62 /* extras */; };
 		BB96E3FD2B66525300A3077C /* shaders in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBB525002B6648A200A65C62 /* shaders */; };
-		BB96E3FE2B66525300A3077C /* textures in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBB524F72B6648A100A65C62 /* textures */; };
 		BB96E4092B66544900A3077C /* scripts in CopyFiles */ = {isa = PBXBuildFile; fileRef = BB96E4082B66544900A3077C /* scripts */; };
 		BBB5251D2B6648A200A65C62 /* A2VideoManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525022B6648A200A65C62 /* A2VideoManager.cpp */; };
 		BBB5251E2B6648A200A65C62 /* shader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525042B6648A200A65C62 /* shader.cpp */; };
@@ -37,6 +36,7 @@
 		BBC172FB2B6658700044B194 /* imgui.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBC172FA2B6658700044B194 /* imgui.cpp */; };
 		BBC172FD2B6658AD0044B194 /* imgui_impl_sdl2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBC172FC2B6658AD0044B194 /* imgui_impl_sdl2.cpp */; };
 		BBD102082B7CF23A00360B33 /* CycleCounter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBD102072B7CF23A00360B33 /* CycleCounter.cpp */; };
+		BBD102112B829B7C00360B33 /* EventRecorder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -49,7 +49,6 @@
 				BB96E3FC2B66525300A3077C /* extras in CopyFiles */,
 				BB96E4092B66544900A3077C /* scripts in CopyFiles */,
 				BB96E3FD2B66525300A3077C /* shaders in CopyFiles */,
-				BB96E3FE2B66525300A3077C /* textures in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -73,7 +72,6 @@
 		BB96E3EC2B66513700A3077C /* imgui_demo.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_demo.cpp; path = imgui/imgui_demo.cpp; sourceTree = "<group>"; };
 		BB96E3F22B66515400A3077C /* imgui_widgets.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_widgets.cpp; path = imgui/imgui_widgets.cpp; sourceTree = "<group>"; };
 		BB96E4082B66544900A3077C /* scripts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = scripts; sourceTree = "<group>"; };
-		BBB524F72B6648A100A65C62 /* textures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = textures; sourceTree = "<group>"; };
 		BBB524F82B6648A100A65C62 /* shader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = shader.h; sourceTree = "<group>"; };
 		BBB524F92B6648A100A65C62 /* MosaicMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MosaicMesh.h; sourceTree = "<group>"; };
 		BBB524FA2B6648A100A65C62 /* OpenGLHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OpenGLHelper.h; sourceTree = "<group>"; };
@@ -120,6 +118,11 @@
 		BBC48E172B71DA7D00D70DBD /* nlohmann */ = {isa = PBXFileReference; lastKnownFileType = folder; path = nlohmann; sourceTree = "<group>"; };
 		BBD102062B7CF23100360B33 /* CycleCounter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CycleCounter.h; sourceTree = "<group>"; };
 		BBD102072B7CF23A00360B33 /* CycleCounter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CycleCounter.cpp; sourceTree = "<group>"; };
+		BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EventRecorder.cpp; sourceTree = "<group>"; };
+		BBD1020E2B829B7C00360B33 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		BBD1020F2B829B7C00360B33 /* EventRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EventRecorder.h; sourceTree = "<group>"; };
+		BBD102102B829B7C00360B33 /* ByteBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ByteBuffer.h; sourceTree = "<group>"; };
+		BBD102132B829BAE00360B33 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -169,6 +172,11 @@
 		BB8330D82B6645B300071F38 /* SuperDuperDisplay */ = {
 			isa = PBXGroup;
 			children = (
+				BBD102132B829BAE00360B33 /* assets */,
+				BBD102102B829B7C00360B33 /* ByteBuffer.h */,
+				BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */,
+				BBD1020F2B829B7C00360B33 /* EventRecorder.h */,
+				BBD1020E2B829B7C00360B33 /* README.md */,
 				BBD102072B7CF23A00360B33 /* CycleCounter.cpp */,
 				BBD102062B7CF23100360B33 /* CycleCounter.h */,
 				BBB525022B6648A200A65C62 /* A2VideoManager.cpp */,
@@ -204,7 +212,6 @@
 				BBB524F82B6648A100A65C62 /* shader.h */,
 				BBB525002B6648A200A65C62 /* shaders */,
 				BBB525052B6648A200A65C62 /* stb_image.h */,
-				BBB524F72B6648A100A65C62 /* textures */,
 			);
 			name = SuperDuperDisplay;
 			sourceTree = "<group>";
@@ -288,6 +295,7 @@
 				BB96E3F32B66515400A3077C /* imgui_widgets.cpp in Sources */,
 				BBC172F72B6657BB0044B194 /* ImGuiFileDialog.cpp in Sources */,
 				BBC172F92B6657C20044B194 /* MemoryLoader.cpp in Sources */,
+				BBD102112B829B7C00360B33 /* EventRecorder.cpp in Sources */,
 				BBB525262B6648A200A65C62 /* PostProcessor.cpp in Sources */,
 				BBD102082B7CF23A00360B33 /* CycleCounter.cpp in Sources */,
 				BBB525222B6648A200A65C62 /* SDHRWindow.cpp in Sources */,
