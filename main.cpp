@@ -162,7 +162,7 @@ int main(int argc, char* argv[])
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != nullptr);
 
-    io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 10.0f);
+    io.Fonts->AddFontFromFileTTF("./assets/BerkeliumIIHGR.ttf", 10.0f);
 
     // Our state
 	static MemoryEditor mem_edit_a2e;
