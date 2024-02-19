@@ -108,7 +108,7 @@ void main()
 	// Next grab the data for that tile from the tilesBuffer
 	// No need to rescale values because we're using GL_R8UI
 	// The "texture" is split by 1kB-sized rows
-	offset = hgrRow[tileColRow.y] + tileColRow.x;
+	int offset = hgrRow[tileColRow.y] + tileColRow.x;
 	
 	// the byte value is just the r component
 	uint byteVal = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
