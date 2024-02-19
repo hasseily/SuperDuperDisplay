@@ -35,8 +35,9 @@ uniform vec4 colorTint;					// text color tint (extra from 2gs)
 
 // mode -> texture
 // modes are: TEXT, DTEXT, LGR, DLGR, HGR, DHGR
-// For text and dtext modes, texture 0 is normal and 1 is alternate
-const int modeToTexture[6] = int[6](0, 0, 2, 2, 3, 4);
+// For 40 col text, texture 0 is normal and 1 is alternate
+// For 80 col text, texture 2 is normal and 3 is alternate
+const int modeToTexture[6] = int[6](0, 2, 4, 4, 5, 6);
 
 in vec2 vFragPos;       // The fragment position in pixels
 out vec4 fragColor;
@@ -81,13 +82,15 @@ void main()
 			float a_flash = (1.0 - step(float(0x80), vCharVal)) * (1.0 - a_inverse) * (1.0 - float(isAlt));
 			
 			// what's our character's starting origin in the character map?
-			uvec2 charOrigin = uvec2(charVal & 0xFu, charVal >> 4) * uvec2(14, 16);	// each glyph is 14x16
+			// each glyph is 14x16 for TEXT and 7x16 for DTEXT
+			uvec2 charOrigin = uvec2(charVal & 0xFu, charVal >> 4) * uvec2(7 * (2 - a2mode), 16);
 			
 			// Now get the texture color
-			// When getting from the texture color, in DTEXT multiply the x value by 2 because we're taking
-			// 1/2 of each column in 80 col mode.
+			// When getting from the texture color, in DTEXT if we didn't have a dedicated set of 7x16 glyphs
+			// we would have multiplied the x value by 2 to take 1/2 of each column in 80 col mode.
+			// But we have a dedicated set of 7x16 font textures so don't need to
 			ivec2 textureSize2d = textureSize(textureIndex,0);
-			vec4 tex = texture(textureIndex, (vec2(charOrigin) + (fragOffset * uvec2(1u + a2mode, 1u))) / vec2(textureSize2d)) * colorTint;
+			vec4 tex = texture(textureIndex, (vec2(charOrigin) + fragOffset) / vec2(textureSize2d)) * colorTint;
 			
 			float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
 																	   // get the color of flashing or the one above
