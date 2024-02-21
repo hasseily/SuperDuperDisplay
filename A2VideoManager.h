@@ -145,6 +145,9 @@ private:
 	static A2VideoManager* s_instance;
 	A2VideoManager()
 	{
+		a2legacy_vram = new uint8_t[_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 3];	// 3 bytes per "byte" (main, aux, flags)
+		if (a2legacy_vram == NULL)
+			std::cerr << "FATAL ERROR: COULD NOT ALLOCATE a2legacy_vram MEMORY" << std::endl;
 		Initialize();
 	}
 
@@ -175,6 +178,9 @@ private:
 	mutable std::mutex a2video_mutex;
 	bool bRequestBeamRendering = false;		// Requests beam rendering from the main thread
 
+	// vram for beam renderers
+	uint8_t* a2legacy_vram;
+	
 	// framebuffers for RGB graphics modes
 	std::vector<uint32_t>v_fblgr;
 	std::vector<uint32_t>v_fbdlgr;

@@ -157,7 +157,7 @@ void A2VideoManager::Initialize()
 
 A2VideoManager::~A2VideoManager()
 {
-
+	delete[] a2legacy_vram;
 }
 
 void A2VideoManager::ResetComputer()
