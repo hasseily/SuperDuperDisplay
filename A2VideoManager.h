@@ -155,16 +155,14 @@ private:
 	// Internal methods
 	//////////////////////////////////////////////////////////////////////////
 
-	// Renders graphics mode depending on mixed mode switch
-	void RenderSubMixed(std::vector<uint32_t>*framebuffer);
-
-	void UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* framebuffer);
-
-	// these are RGB versions and unused. We're instead using a shader with the composite data
+	// these are the CPU-calculated RGB version
 	void UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
 	void UpdateDLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
 	void UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
 	void UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
+	void UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* framebuffer);
+	// Renders graphics mode depending on mixed mode switch
+	void RenderSubMixed(std::vector<uint32_t>*framebuffer);
 	
 	uint32_t ConvertIIgs2RGB(uint16_t color);
 	//////////////////////////////////////////////////////////////////////////

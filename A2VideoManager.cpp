@@ -67,11 +67,12 @@ uint16_t A2VideoManager::a2SoftSwitches = 0;
 
 static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
 
-static Shader shader_a2video_text = Shader();
-static Shader shader_a2video_lgr = Shader();
-static Shader shader_a2video_hgr = Shader();
-static Shader shader_a2video_dhgr = Shader();
-static Shader shader_a2video_shr = Shader();
+static Shader shader_text = Shader();
+static Shader shader_lgr = Shader();
+static Shader shader_hgr = Shader();
+static Shader shader_dhgr = Shader();
+static Shader shader_shr = Shader();
+static Shader shader_beam_legacy = Shader();
 
 //////////////////////////////////////////////////////////////////////////
 // Image Asset Methods
@@ -124,8 +125,7 @@ void A2VideoManager::Initialize()
 	a2SoftSwitches = A2SS_TEXT; // default to TEXT1
 
 	// Set up the image assets (textures)
-	// There's no need for tileset records since we know exactly
-	// what the image assets look like, and the shaders will use them directly
+	// Assign them their respective GPU texture id
 	*image_assets = {};
 	for (size_t i = 0; i < (sizeof(image_assets) / sizeof(ImageAsset)); i++)
 	{
@@ -133,21 +133,22 @@ void A2VideoManager::Initialize()
 	}
 
 	// Generate shaders
-	shader_a2video_text.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_TEXT_FRAGMENT);
-	shader_a2video_lgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_LGR_FRAGMENT);
-	shader_a2video_hgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_HGR_FRAGMENT);
-	shader_a2video_dhgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_DHGR_FRAGMENT);
-	shader_a2video_shr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_SHR_FRAGMENT);
-
+	shader_text.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_TEXT_FRAGMENT);
+	shader_lgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_LGR_FRAGMENT);
+	shader_hgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_HGR_FRAGMENT);
+	shader_dhgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_DHGR_FRAGMENT);
+	shader_shr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_SHR_FRAGMENT);
+	shader_beam_legacy.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
+	
 	// Initialize windows and meshes
 	
-	windows[A2VIDEO_TEXT].Define(A2VIDEO_TEXT, &shader_a2video_text);
-	windows[A2VIDEO_DTEXT].Define(A2VIDEO_DTEXT, &shader_a2video_text);
-	windows[A2VIDEO_LGR].Define(A2VIDEO_LGR, &shader_a2video_lgr);
-	windows[A2VIDEO_DLGR].Define(A2VIDEO_DLGR, &shader_a2video_lgr);
-	windows[A2VIDEO_HGR].Define(A2VIDEO_HGR, &shader_a2video_hgr);
-	windows[A2VIDEO_DHGR].Define(A2VIDEO_DHGR, &shader_a2video_dhgr);
-	windows[A2VIDEO_SHR].Define(A2VIDEO_SHR, &shader_a2video_shr);
+	windows[A2VIDEO_TEXT].Define(A2VIDEO_TEXT, &shader_text);
+	windows[A2VIDEO_DTEXT].Define(A2VIDEO_DTEXT, &shader_text);
+	windows[A2VIDEO_LGR].Define(A2VIDEO_LGR, &shader_lgr);
+	windows[A2VIDEO_DLGR].Define(A2VIDEO_DLGR, &shader_lgr);
+	windows[A2VIDEO_HGR].Define(A2VIDEO_HGR, &shader_hgr);
+	windows[A2VIDEO_DHGR].Define(A2VIDEO_DHGR, &shader_dhgr);
+	windows[A2VIDEO_SHR].Define(A2VIDEO_SHR, &shader_shr);
 	
 	// Activate TEXT by default
 	SelectVideoModes();
