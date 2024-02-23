@@ -306,7 +306,7 @@ void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
 		}
 
 		ImGui::Checkbox("Replay Mode", &bIsInReplayMode);
-		bUserMovedEventSlider = ImGui::SliderInt("Event Timeline", reinterpret_cast<int*>(&currentReplayEvent), 0, v_events.size());
+		bUserMovedEventSlider = ImGui::SliderInt("Event Timeline", reinterpret_cast<int*>(&currentReplayEvent), 0, (int)v_events.size());
 		if (thread_replay.joinable())
 		{
 			if (ImGui::Button("Stop##Replay"))
@@ -412,7 +412,7 @@ void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
 
 		if (bImGuiOpenModal) {
 			if (ImGui::BeginPopupModal("Recorder Error Modal", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-				ImGui::Text(m_lastErrorString.c_str());
+				ImGui::Text("%s", m_lastErrorString.c_str());
 				// Buttons to close the modal
 				if (ImGui::Button("OK", ImVec2(120, 0))) {
 					// Handle OK (e.g., process data, close modal)
