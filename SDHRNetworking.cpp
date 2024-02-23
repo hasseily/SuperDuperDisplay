@@ -290,7 +290,7 @@ void process_single_packet_header(SDHRPacketHeader* h,
 		uint8_t ctrl_bits = (*event >> 24) & 0xff;
 			uint16_t addr = (*event >> 8) & 0xffff;
 			uint8_t data = *event & 0xff;
-			bool m2sel = (ctrl_bits & 0x02) == 0x02;
+			// bool m2sel = (ctrl_bits & 0x02) == 0x02;
 			bool m2b0 = (ctrl_bits & 0x04) == 0x04;
 			bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
 		bool rw = (ctrl_bits & 0x01) == 0x01;
@@ -437,14 +437,14 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
     bool first_drop = true;
     uint32_t prev_seqno = 0;
     uint16_t prev_addr = 0;
-    int64_t last_recv_nsec;
+    int64_t last_recv_nsec = 0;
 
     timespec ts;
     while (!(*shouldTerminateNetworking)) {
         clock_gettime(CLOCK_MONOTONIC, &ts);
         int64_t nsec = ts.tv_sec * 1000000000ll + ts.tv_nsec;
 
-        int retval = recvmsg(sockfd, &msg, 0);
+        int retval = (int)recvmsg(sockfd, &msg, 0);
         if (retval < 0 && errno != EWOULDBLOCK) {
             std::cerr << "Error in recvmsg" << std::endl;
             return 1;
