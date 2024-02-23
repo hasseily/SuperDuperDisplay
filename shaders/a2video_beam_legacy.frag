@@ -48,8 +48,8 @@ void main()
 	// the x and y offsets from the origin
 	// REMINDER: we're working on dots, with 560 dots per line. And lines are doubled
 	uvec2 uFragPos = uvec2(vFragPos);
-	uvec3 targetTexel =  texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0);
-	uvec2 fragOffset = vec2(uFragPos.x % 14u, uFragPos.y % 16);
+	uvec3 targetTexel =  texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0).rbg;
+	uvec2 fragOffset = uvec2(uFragPos.x % 14u, uFragPos.y % 16);	// TODO: IS IT uvec2 or vec2 ???
 	// The fragOffsets are:
 	// x is 0-14
 	// y is 0-16
@@ -89,8 +89,8 @@ void main()
 			// When getting from the texture color, in DTEXT if we didn't have a dedicated set of 7x16 glyphs
 			// we would have multiplied the x value by 2 to take 1/2 of each column in 80 col mode.
 			// But we have a dedicated set of 7x16 font textures so don't need to
-			ivec2 textureSize2d = textureSize(textureIndex,0);
-			vec4 tex = texture(textureIndex, (vec2(charOrigin) + fragOffset) / vec2(textureSize2d)) * colorTint;
+			ivec2 textureSize2d = textureSize(a2ModesTextures[textureIndex],0);
+			vec4 tex = texture(a2ModesTextures[textureIndex], (vec2(charOrigin) + fragOffset) / vec2(textureSize2d)) * colorTint;
 			
 			float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
 																	   // get the color of flashing or the one above
@@ -121,10 +121,10 @@ void main()
 				// It's a bottom pixel, it uses the color of the 4 high bits
 				byteOrigin = uvec2(0u, (byteVal >> 4) * 16u);
 			}
-			ivec2 textureSize2d = textureSize(textureIndex,0);
+			ivec2 textureSize2d = textureSize(a2ModesTextures[textureIndex],0);
 			// similarly to the TEXT modes, if we're in DLGR (a2mode - 2u), get every other column
-			fragColor = texture(textureIndex, (vec2(byteOrigin) + (fragOffset * uvec2(1u + (a2mode - 2u), 1u))) 
-													/ vec2(textureSize2d));
+			fragColor = texture(a2ModesTextures[textureIndex],
+								(vec2(byteOrigin) + (fragOffset * uvec2(1u + (a2mode - 2u), 1u))) / vec2(textureSize2d));
 			break;
 		}
 		case 4u:	// HGR
@@ -162,14 +162,14 @@ For each pixel, determine which memory byte it is part of,
 			// Grab the other byte values that matter
 			uint byteValPrev = 0u;
 			uint byteValNext = 0u;
-			uint xCol = uFragPos.x / 14u;
+			int xCol = int(uFragPos.x) / 14;
 			if (xCol > 0)	// Not at start of row, byteValPrev is valid
 			{
-				byteValPrev = texelFetch(VRAMTEX, ivec2(xCol - 1u, uFragPos.y / 2u), 0).r;
+				byteValPrev = texelFetch(VRAMTEX, ivec2(xCol - 1, uFragPos.y / 2u), 0).r;
 			}
 			if (xCol < 39)	// Not at end of row, byteValNext is valid
 			{
-				byteValNext = texelFetch(VRAMTEX, ivec2(xCol + 1u, uFragPos.y / 2u), 0).r;
+				byteValNext = texelFetch(VRAMTEX, ivec2(xCol + 1, uFragPos.y / 2u), 0).r;
 			}
 
 			// calculate the column offset in the color texture
@@ -177,8 +177,8 @@ For each pixel, determine which memory byte it is part of,
 
 			// Now get the texture color. We know the X offset as well as the fragment's offset on top of that.
 			// The y value is just the byte's value
-			ivec2 textureSize2d = textureSize(textureIndex,0);
-			fragColor = texture(textureIndex, vec2(texXOffset + int(fragOffset.x), targetTexel.r) / vec2(textureSize2d));
+			ivec2 textureSize2d = textureSize(a2ModesTextures[textureIndex],0);
+			fragColor = texture(a2ModesTextures[textureIndex], vec2(texXOffset + int(fragOffset.x), targetTexel.r) / vec2(textureSize2d));
 			return;
 			break;
 		}
@@ -200,16 +200,16 @@ For each pixel, determine which memory byte it is part of,
 			// We need a previous MAIN byte and a subsequent AUX byte to calculate the colors
 			uint byteVal1 = 0u;				// MAIN
 			uint byteVal2 = targetTexel.g;	// AUX
-			uint byteVal2 = targetTexel.r;	// MAIN
+			uint byteVal3 = targetTexel.r;	// MAIN
 			uint byteVal4 = 0u;				// AUX
-			uint xCol = uFragPos.x / 14u;
+			int xCol = int(uFragPos.x) / 14;
 			if (xCol > 0)	// Not at start of row, byteVal1 is valid
 			{
-				byteVal1 = texelFetch(VRAMTEX, ivec2(xCol - 1u, uFragPos.y / 2u), 0).r;
+				byteVal1 = texelFetch(VRAMTEX, ivec2(xCol - 1, uFragPos.y / 2u), 0).r;
 			}
 			if (xCol < 39)	// Not at end of row, byteVal4 is valid
 			{
-				byteVal4 = texelFetch(VRAMTEX, ivec2(xCol + 1u, uFragPos.y / 2u), 0).g;
+				byteVal4 = texelFetch(VRAMTEX, ivec2(xCol + 1, uFragPos.y / 2u), 0).g;
 			}
 			// Calculate the column offset in the color texture
 			int wordVal = (int(byteVal1) & 0x70) | ((int(byteVal2) & 0x7F) << 7) |
@@ -218,19 +218,19 @@ For each pixel, determine which memory byte it is part of,
 			int vValue = (wordVal >> (4 + int(fragOffset.x) - vColor));
 			int xVal = 10 * ((vValue >> 8) & 0xFF) + vColor;
 			int yVal = vValue & 0xFF;
-			ivec2 textureSize2d = textureSize(textureIndex,0);
-			fragColor = texture(textureIndex, (vec2(0.5, 0.5) + vec2(xVal, yVal)) / vec2(textureSize2d));
+			ivec2 textureSize2d = textureSize(a2ModesTextures[textureIndex],0);
+			fragColor = texture(a2ModesTextures[textureIndex], (vec2(0.5, 0.5) + vec2(xVal, yVal)) / vec2(textureSize2d));
 			return;
 			break;
 		}
 		default:
 		{
 			// should never happen! Set to pink for visibility
-			fragColor = vec4(1.0f, 0f, 0.5f, 1.f);
+			fragColor = vec4(1.0f, 0.f, 0.5f, 1.f);
 			return;
 			break;
 		}
 	}
 	// Shouldn't happen either
-	fragColor = vec4(0f, 1.0f, 0.5f, 1.f);
+	fragColor = vec4(0.f, 1.0f, 0.5f, 1.f);
 }
