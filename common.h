@@ -72,14 +72,17 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _SCREEN_DEFAULT_HEIGHT _A2VIDEO_MIN_HEIGHT
 
 // SHADERS
-#define _SHADER_SDHR_VERTEX_DEFAULT "shaders/sdhr_default_330.vert"
-#define _SHADER_SDHR_FRAGMENT_DEFAULT "shaders/sdhr_default_330.frag"
 #define _SHADER_A2_VERTEX_DEFAULT "shaders/a2video.vert"
 #define _SHADER_TEXT_FRAGMENT "shaders/a2video_text.frag"
 #define _SHADER_LGR_FRAGMENT "shaders/a2video_lgr.frag"
 #define _SHADER_HGR_FRAGMENT "shaders/a2video_hgr.frag"
 #define _SHADER_DHGR_FRAGMENT "shaders/a2video_dhgr.frag"
 #define _SHADER_SHR_FRAGMENT "shaders/a2video_shr.frag"
+#define _SHADER_BEAM_LEGACY_FRAGMENT "shaders/a2video_beam_legacy.frag"
+#define _SHADER_BEAM_SHR_FRAGMENT "shaders/a2video_beam_shr.frag"
+
+#define _SHADER_SDHR_VERTEX_DEFAULT "shaders/sdhr_default_330.vert"
+#define _SHADER_SDHR_FRAGMENT_DEFAULT "shaders/sdhr_default_330.frag"
 #define _SHADER_SDHR_VERTEX_DEPIXELIZE "shaders/sdhr_depixelize_330.vert"
 #define _SHADER_SDHR_FRAGMENT_DEPIXELIZE "shaders/sdhr_depixelize_330.frag"
 

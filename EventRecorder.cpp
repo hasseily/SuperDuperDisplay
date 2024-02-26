@@ -1,6 +1,7 @@
 #include "EventRecorder.h"
 #include "common.h"
 #include "SDHRManager.h"
+#include "CycleCounter.h"
 #include "imgui.h"
 #include "imgui_internal.h"		// for PushItemFlag
 #include "extras/ImGuiFileDialog.h"
@@ -189,10 +190,14 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			auto snapshot_index = *currentReplayEvent / m_current_snapshot_cycles;
 			ApplyRAMSnapshot(snapshot_index);
 			clear_events();
+			bool isVBL = false;
 			auto first_event_index = snapshot_index * m_current_snapshot_cycles;
 			for (auto i = first_event_index; i < *currentReplayEvent; i++)
 			{
-				insert_event(&v_events.at(i));
+				auto e = v_events.at(i);
+				isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == 0));
+				CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
+				insert_event(&e);
 			}
 		}
 
@@ -200,7 +205,10 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 		{
 			if (*shouldStopReplay)	// In case a stop was sent while sleeping
 				break;
-			insert_event(&v_events.at(*currentReplayEvent));
+			auto e = v_events.at(*currentReplayEvent);
+			bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == 0));
+			CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
+			insert_event(&e);
 			*currentReplayEvent += 1;
 			// wait 1 clock cycle before adding the next event
 			startTime = high_resolution_clock::now();

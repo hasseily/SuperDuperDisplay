@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <string>
 #include <algorithm>
 #include <map>
 #include "SDL.h"
@@ -64,6 +65,8 @@ static uint32_t gPaletteRGB[] =
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
 uint16_t A2VideoManager::a2SoftSwitches = 0;
+uint8_t A2VideoManager::switch_c022 = 0;
+uint8_t A2VideoManager::switch_c034 = 0;
 
 static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
 
@@ -112,6 +115,11 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 
 void A2VideoManager::Initialize()
 {
+	memset(a2legacy_vram, 0, _BEAM_VRAM_SIZE_LEGACY);
+	memset(a2shr_vram, 0, _BEAM_VRAM_SIZE_SHR);
+	bVBlankHasLegacy = true;
+	bVBlankHasSHR = false;
+	
 	v_fblgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
 	v_fbdlgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
 	v_fbhgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
@@ -159,6 +167,7 @@ void A2VideoManager::Initialize()
 A2VideoManager::~A2VideoManager()
 {
 	delete[] a2legacy_vram;
+	delete[] a2shr_vram;
 }
 
 void A2VideoManager::ResetComputer()
@@ -307,6 +316,7 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool
 //            " RW: " << (uint32_t)rw << std::endl;
         if (!rw)
         {
+			switch_c022 = val;
             color_background = gPaletteRGB[12 + (val & 0x0F)];
             color_foreground = gPaletteRGB[12 + ((val & 0xF0) >> 4)];
         }
@@ -314,7 +324,10 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool
 	// $C034   R / W     BORDERCOLOR[IIgs] b3:0 are border color(also VidHD)
 	case 0xC034:	// Set border color on bits 3:0
         if (!rw)
-            color_border = gPaletteRGB[12 + (val & 0x0F)];
+		{
+			switch_c034 = val;
+			color_border = gPaletteRGB[12 + (val & 0x0F)];
+		}
 		break;
     // $C029   R/W     NEWVIDEO        [IIgs] Select new video modes (also VidHD)
     case 0xC029:    // NEWVIDEO (SHR)
@@ -361,14 +374,138 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool
 
 void A2VideoManager::BeamIsAtPosition(uint32_t x, uint32_t y)
 {
-	if (y == 200)
-		RequestBeamRendering();
+	if (y > 200)	// in VBLANK, nothing to do
+		return;
+	// Theoretically at y==192 (start of VBLANK) we can render for legacy
+	// but SHR goes to 200 so let's wait until 200 anyway. We're in VBLANK still.
+	if (y == 200)	// Start of VBLANK
+	{
+		RequestBeamRendering(bVBlankHasLegacy, bVBlankHasSHR);
+		// reset the legacy and shr flags at each vblank
+		bVBlankHasLegacy = false;
+		bVBlankHasSHR = false;
+		return;
+	}
+	
+	if (IsSoftSwitch(A2SS_SHR))
+	{
+		// Get the data for this position, if it's the start of the byte
+		// Otherwise no need to do anything, we've already acquired the data for the 4 dots
+		if ((x % 4) == 0)
+		{
+			auto posByte = x / 4;		// Byte value for the position
+			bVBlankHasSHR = true;		// at least 1 pixel in this vblank cycle is in SHR
+			auto lineStartPtr = a2shr_vram + (1 + 32 + 160) * y;
+			auto memPtr = SDHRManager::GetInstance()->GetApple2MemAuxPtr();
+			if (x == 0)
+			{
+				// it's the beginning of the line
+				// Get the SCB
+				lineStartPtr[0] = *(memPtr + _A2VIDEO_SHR_SCB_START + y);
+				// Get the palettes
+				memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
+					   memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) << 5),
+					   32);					// palette length is 32 bytes
+			}
+			// Get the color info
+			lineStartPtr[1 + 32 + posByte] = *(memPtr + _A2VIDEO_SHR_START + y * _A2VIDEO_SHR_BYTES_PER_LINE + posByte);
+		}
+		return;
+	}
+	
+	// The dot isn't SHR, it's legacy
+	// Get the data for this position, if it's the start of the byte
+	// Otherwise no need to do anything, we've already acquired the data for the 14 dots
+	if ((x % 14) == 0)
+	{
+		auto posByte = x / 14;		// Byte value for the position
+		bVBlankHasLegacy = true;	// at least 1 pixel in this vblank cycle is not SHR
+		auto byteStartPtr = a2legacy_vram + (40 * 4 * y) + (x * 4);
+		// the flags byte is:
+		// bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO)
+		// bit 3: ALT charset for TEXT
+		// bits 4-7: border color (like in the 2gs)
+		uint8_t flags = 0;
+		// the colors byte is:
+		// bits 0-3: background color
+		// bits 4-7: foreground color
+		uint8_t colors = 0;
+		
+		// now set the mode, and depending on the mode, grab the bytes
+		if (!IsSoftSwitch(A2SS_TEXT))
+		{
+			if (IsSoftSwitch(A2SS_MIXED) && y > 159)	// check mixed mode
+			{
+				if (IsSoftSwitch(A2SS_80COL))
+					flags = 1;	// DTEXT
+				else
+					flags = 0;	// TEXT
+			}
+			else if (IsSoftSwitch(A2SS_80COL) && IsSoftSwitch(A2SS_DHGR))	// double resolution
+			{
+				if (IsSoftSwitch(A2SS_HIRES))
+					flags = 5;	// DHGR
+				else
+					flags = 3;	// DLGR
+			}
+			else if (IsSoftSwitch(A2SS_HIRES))	// standard hires
+			{
+				flags = 4;	// HGR
+			}
+			else {	// standard lores
+				flags = 2;	// LGR
+			}
+		}
+		// Now check the text modes
+		if (IsSoftSwitch(A2SS_TEXT) || IsSoftSwitch(A2SS_MIXED))
+		{
+			if (IsSoftSwitch(A2SS_80COL))
+				flags = 1;	// DTEXT
+			else
+			{
+				flags = 0;	// TEXT
+			}
+		}
+		
+		// Fill in the rest of the flags. We already use bits 0-2 for the modes
+		flags += ((IsSoftSwitch(A2SS_ALTCHARSET) ? 1 : 0) << 3);	// bit 3 is alt charset
+		flags += ((switch_c034 & 0b111) << 4);						// bits 4-7 are border color
+		// and the colors
+		colors = switch_c022;
+		// Check for page 2
+		bool isPage2 = false;
+		// Careful: it's only page 2 if 80STORE is off
+		if (IsSoftSwitch(A2SS_PAGE2) && !IsSoftSwitch(A2SS_80STORE))
+			isPage2 = true;
+		
+		// Finally set the 4 VRAM bytes
+		// Determine where in memory we should get the data from, and get it
+		if (flags < 4)	// D/TEXT AND D/LGR
+		{
+			uint32_t startMem = _A2VIDEO_TEXT1_START;
+			if ((flags < 3) && isPage2)		// check for page 2 (DLGR doesn't have it)
+				startMem = _A2VIDEO_TEXT2_START;
+			byteStartPtr[0] = *(SDHRManager::GetInstance()->GetApple2MemPtr() + startMem + ((y / 8) * 40) + posByte);
+			byteStartPtr[1] = *(SDHRManager::GetInstance()->GetApple2MemAuxPtr() + startMem + ((y / 8) * 40) + posByte);
+		} else {		// D/HIRES
+			uint32_t startMem = _A2VIDEO_HGR1_START;
+			if (isPage2)
+				startMem = _A2VIDEO_HGR2_START;
+			byteStartPtr[0] = *(SDHRManager::GetInstance()->GetApple2MemPtr() + startMem + (y * 40) + posByte);
+			byteStartPtr[1] = *(SDHRManager::GetInstance()->GetApple2MemAuxPtr() + startMem + (y * 40) + posByte);
+		}
+		byteStartPtr[3] = flags;
+		byteStartPtr[4] = colors;
+	}
+
 }
 
-void A2VideoManager::RequestBeamRendering()
+void A2VideoManager::RequestBeamRendering(bool cycleHasLegacy, bool cycleHasSHR)
 {
 	std::lock_guard<std::mutex> lock(a2video_mutex);
 	bRequestBeamRendering = true;
+	bBeamRenderLegacy = cycleHasLegacy;
+	bBeamRenderSHR = cycleHasSHR;
 }
 
 void A2VideoManager::SelectVideoModes()

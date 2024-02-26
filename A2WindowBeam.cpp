@@ -87,20 +87,22 @@ void A2WindowBeam::Render()
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(A2BeamVertex), (void*)offsetof(A2BeamVertex, PixelPos));
 	}
 
-	// TODO: Point to the VRAM
-	// TODO: at each cycle update the VRAM
-	uint8_t* data = ...;
-
 	// Associate the texture VRAMTEX in GL_TEXTURE0+_SDHR_TBO_TEXUNIT with the buffer
 	// This is the apple 2's memory which is mapped to a "texture"
 	// Always update that buffer in the GPU
 	uint32_t _h = 200;	// max 200 lines
 	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
 	glBindTexture(GL_TEXTURE_2D, VRAMTEX);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8UI,	// Unsigned integer, not normalized
-		40,
-		200,
-		0, GL_RGB_INTEGER, GL_UNSIGNED_BYTE, data);
+	switch (video_mode) {
+		case A2VIDEOBEAM_LEGACY:
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGB_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMPtr());
+			break;
+		case A2VIDEOBEAM_SHR:
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, (1+32+160), 200, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMPtr());
+			break;
+		default:
+			break;
+	}
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

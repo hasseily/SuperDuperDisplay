@@ -72,6 +72,8 @@
 		BB96E3EC2B66513700A3077C /* imgui_demo.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_demo.cpp; path = imgui/imgui_demo.cpp; sourceTree = "<group>"; };
 		BB96E3F22B66515400A3077C /* imgui_widgets.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_widgets.cpp; path = imgui/imgui_widgets.cpp; sourceTree = "<group>"; };
 		BB96E4082B66544900A3077C /* scripts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = scripts; sourceTree = "<group>"; };
+		BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = A2WindowBeam.cpp; sourceTree = "<group>"; };
+		BBB4E5C02B83ECCE00764C50 /* A2WindowBeam.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = A2WindowBeam.h; sourceTree = "<group>"; };
 		BBB524F82B6648A100A65C62 /* shader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = shader.h; sourceTree = "<group>"; };
 		BBB524F92B6648A100A65C62 /* MosaicMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MosaicMesh.h; sourceTree = "<group>"; };
 		BBB524FA2B6648A100A65C62 /* OpenGLHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OpenGLHelper.h; sourceTree = "<group>"; };
@@ -172,6 +174,8 @@
 		BB8330D82B6645B300071F38 /* SuperDuperDisplay */ = {
 			isa = PBXGroup;
 			children = (
+				BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */,
+				BBB4E5C02B83ECCE00764C50 /* A2WindowBeam.h */,
 				BBD102132B829BAE00360B33 /* assets */,
 				BBD102102B829B7C00360B33 /* ByteBuffer.h */,
 				BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */,

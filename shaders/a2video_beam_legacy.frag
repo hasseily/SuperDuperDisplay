@@ -39,6 +39,26 @@ uniform vec4 colorTint;					// text color tint (extra from 2gs)
 // For 80 col text, texture 2 is normal and 3 is alternate
 const int modeToTexture[6] = int[6](0, 2, 4, 4, 5, 6);
 
+// Colors for foreground and background
+const vec4 tintcolors[16] = vec4[16](
+	 vec4(0.000000,	0.000000,	0.000000,	1.000000)	/*BLACK,*/
+	,vec4(0.674510,	0.070588,	0.298039,	1.000000)	/*DEEP_RED,*/
+	,vec4(0.000000,	0.027451,	0.513725,	1.000000)	/*DARK_BLUE,*/
+	,vec4(0.666667,	0.101961,	0.819608,	1.000000)	/*MAGENTA,*/
+	,vec4(0.000000,	0.513725,	0.184314,	1.000000)	/*DARK_GREEN,*/
+	,vec4(0.623529,	0.592157,	0.494118,	1.000000)	/*DARK_GRAY,*/
+	,vec4(0.000000,	0.541176,	0.709804,	1.000000)	/*BLUE,*/
+	,vec4(0.623529,	0.619608,	1.000000,	1.000000)	/*LIGHT_BLUE,*/
+	,vec4(0.478431,	0.372549,	0.000000,	1.000000)	/*BROWN,*/
+	,vec4(1.000000,	0.447059,	0.278431,	1.000000)	/*ORANGE,*/
+	,vec4(0.470588,	0.407843,	0.498039,	1.000000)	/*LIGHT_GRAY,*/
+	,vec4(1.000000,	0.478431,	0.811765,	1.000000)	/*PINK,*/
+	,vec4(0.435294,	0.901961,	0.172549,	1.000000)	/*GREEN,*/
+	,vec4(1.000000,	0.964706,	0.482353,	1.000000)	/*YELLOW,*/
+	,vec4(0.423529,	0.933333,	0.698039,	1.000000)	/*AQUA,*/
+	,vec4(1.000000,	1.000000,	1.000000,	1.000000)	/*WHITE,*/
+);
+
 in vec2 vFragPos;       // The fragment position in pixels
 out vec4 fragColor;
 
@@ -48,7 +68,7 @@ void main()
 	// the x and y offsets from the origin
 	// REMINDER: we're working on dots, with 560 dots per line. And lines are doubled
 	uvec2 uFragPos = uvec2(vFragPos);
-	uvec3 targetTexel =  texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0).rbg;
+	uvec4 targetTexel =  texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0).rbga;
 	uvec2 fragOffset = uvec2(uFragPos.x % 14u, uFragPos.y % 16);	// TODO: IS IT uvec2 or vec2 ???
 	// The fragOffsets are:
 	// x is 0-14
@@ -94,7 +114,11 @@ void main()
 			
 			float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
 																	   // get the color of flashing or the one above
-			fragColor = ((1.f - tex) * isFlashing) + (tex * (1.f - isFlashing));
+			tex = ((1.f - tex) * isFlashing) + (tex * (1.f - isFlashing));
+			
+			// And provide for tint coloring that the 2gs can do
+			fragColor = ((1.f - tex) * tintcolors[(targetTexel.a & 0xF0u) >> 4])		// foreground (dot is on)
+							  + (tex * tintcolors[targetTexel.a & 0x0Fu]);				// background (dot is off)
 			return;
 			break;
 		}
@@ -193,8 +217,6 @@ For each pixel, determine which memory byte it is part of,
  in the texture. See UpdateDHiResCell() in RGBMonitor.cpp of the AppleWin codebase. Take 7 bits each of
  the 2 middle bytes and 3 bits each of the 2 end bytes for a total of 20 bits.
  */
-			// TODO: check for DHGRMONO
-
 			// In DHGR, as in all double modes, the even bytes are from AUX, odd bytes from MAIN
 			// We already have in targetTexel both MAIN and AUX bytes (R and G respectively)
 			// We need a previous MAIN byte and a subsequent AUX byte to calculate the colors
@@ -222,6 +244,14 @@ For each pixel, determine which memory byte it is part of,
 			fragColor = texture(a2ModesTextures[textureIndex], (vec2(0.5, 0.5) + vec2(xVal, yVal)) / vec2(textureSize2d));
 			return;
 			break;
+		}
+		case 6u:	// DHGR MONO
+		{
+			// Use the .g (AUX) if the dot is one of the first 7, otherwise .r (MAIN)
+			uint byteVal = ((targetTexel.r & 0x7Fu) << 7) + (targetTexel.g & 0x7Fu);
+			// Find out if the related bit is on, and set the color to white or black
+			fragColor = vec4(1.0f) * float((byteVal & (1u << (uFragPos.x % 14))) >> (uFragPos.x % 14));
+			fragColor.a = 1.0f;
 		}
 		default:
 		{

@@ -68,6 +68,28 @@ enum A2SoftSwitch_e
 	A2SS_GREYSCALE  = 0b100000000000000,
 };
 
+// Legacy mode VRAM is 4 bytes (main, aux, flags, colors)
+// for each "byte" of screen use
+// colors are 4-bit each of fg and bg colors as in the Apple 2gs
+
+constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = 40 * 192 * 4;
+
+// SHR mode VRAM is the standard bytes of screen use ($2000 to $9CFF)
+// plus, for each of the 200 lines, at the beginning of the line draw
+// (at end of HBLANK) the SCB (1 byte) and palette (32 bytes) of that line
+// SHR mode VRAM looks like this:
+
+// SCB        PALETTE              COLOR BYTES
+// [0 [(1 2) (3 4) ... (31 32)] [0 ......... 159]]	// line 0
+// [0 [(1 2) (3 4) ... (31 32)] [0 ......... 159]]	// line 1
+//                         .
+//                         .
+//                         .
+//                         .
+// [0 [(1 2) (3 4) ... (31 32)] [0 ......... 159]]	// line 199
+
+constexpr uint32_t _BEAM_VRAM_SIZE_SHR = (1 + 32 + 160) * 200;
+
 class A2VideoManager
 {
 public:
@@ -119,8 +141,10 @@ public:
 
 	// Methods for the single multipurpose beam racing shader
 	void BeamIsAtPosition(uint32_t x, uint32_t y);
-	void RequestBeamRendering();
+	void RequestBeamRendering(bool cycleHasLegacy, bool cycleHasSHR);
 	
+	uint8_t* GetLegacyVRAMPtr() { return a2legacy_vram; };
+	uint8_t* GetSHRVRAMPtr() { return a2shr_vram; }
 	void Render();	// render whatever mode is active (enabled windows)
 
 	// public singleton code
@@ -145,9 +169,12 @@ private:
 	static A2VideoManager* s_instance;
 	A2VideoManager()
 	{
-		a2legacy_vram = new uint8_t[_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 3];	// 3 bytes per "byte" (main, aux, flags)
+		a2legacy_vram = new uint8_t[_BEAM_VRAM_SIZE_LEGACY];
 		if (a2legacy_vram == NULL)
 			std::cerr << "FATAL ERROR: COULD NOT ALLOCATE a2legacy_vram MEMORY" << std::endl;
+		a2shr_vram = new uint8_t[_BEAM_VRAM_SIZE_SHR];
+		if (a2shr_vram == NULL)
+			std::cerr << "FATAL ERROR: COULD NOT ALLOCATE a2shr_vram MEMORY" << std::endl;
 		Initialize();
 	}
 
@@ -172,13 +199,21 @@ private:
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
     bool bIsRebooting = false;              // Rebooting semaphore
 	static uint16_t a2SoftSwitches;			// Soft switches states
-    
+	static uint8_t switch_c022;				// Exact value of the switch c022	fg/bg color
+	static uint8_t switch_c034;				// Exact value of the switch c034	border color
+
+	// beam render state variables
 	mutable std::mutex a2video_mutex;
 	bool bRequestBeamRendering = false;		// Requests beam rendering from the main thread
-
+	bool bVBlankHasLegacy = true;			// Does this vblank cycle have some legacy dots?
+	bool bVBlankHasSHR = false;				// Does this vblank cycle have some shr dots?
+	bool bBeamRenderLegacy = true;			// Should we render legacy of the previous vblank cycle?
+	bool bBeamRenderSHR = true;				// Should we render shr of the previous vblank cycle?
+	
 	// vram for beam renderers
 	uint8_t* a2legacy_vram;
-	
+	uint8_t* a2shr_vram;
+
 	// framebuffers for RGB graphics modes
 	std::vector<uint32_t>v_fblgr;
 	std::vector<uint32_t>v_fbdlgr;

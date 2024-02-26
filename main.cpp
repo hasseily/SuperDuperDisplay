@@ -167,10 +167,12 @@ int main(int argc, char* argv[])
     // Our state
 	static MemoryEditor mem_edit_a2e;
 	static MemoryEditor mem_edit_upload;
-
+	static MemoryEditor mem_edit_vram_legacy;
+	
 	mem_edit_a2e.Open = false;
 	mem_edit_upload.Open = false;
-
+	mem_edit_vram_legacy.Open = false;
+	
 	static bool bShouldTerminateNetworking = false;
 	static bool bShouldTerminateProcessing = false;
     bool show_demo_window = false;
@@ -334,11 +336,16 @@ int main(int argc, char* argv[])
 				ImGui::Checkbox("PostProcessing Window", &show_postprocessing_window);
 				ImGui::Checkbox("VSYNC On", &g_swapInterval);
 				ImGui::Checkbox("Use Beam Racing Renderer", &a2VideoManager->bShouldUseBeamRenderer);
+				if (a2VideoManager->bShouldUseBeamRenderer)
+					a2VideoManager->bShouldUseCPURGBRenderer = false;
 				ImGui::Checkbox("Use CPU RGB Renderer for L/H/D/GR", &a2VideoManager->bShouldUseCPURGBRenderer);
+				if (a2VideoManager->bShouldUseCPURGBRenderer)
+					a2VideoManager->bShouldUseBeamRenderer = false;
 				ImGui::Checkbox("Event Recorder Window", &show_recorder_window);
 				ImGui::Checkbox("Textures Window", &show_texture_window);
 				ImGui::Checkbox("Metrics Window", &show_metrics_window);
 				ImGui::Checkbox("Apple //e Memory Window", &mem_edit_a2e.Open);
+				ImGui::Checkbox("VRAM Legacy Memory Window", &mem_edit_vram_legacy.Open);
 				ImGui::Checkbox("Upload Region Memory Window", &mem_edit_upload.Open);
 				ImGui::Text("Load Memory Start: ");
 				ImGui::SameLine();
@@ -442,10 +449,16 @@ int main(int argc, char* argv[])
             mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", sdhrManager->GetApple2MemPtr(), 2*_A2_MEMORY_SHADOW_END);
         }
 
+		// Show the VRAM legacy window
+		if (mem_edit_vram_legacy.Open)
+		{
+			mem_edit_vram_legacy.DrawWindow("Memory Editor: Upload memory", a2VideoManager->GetLegacyVRAMPtr(), _BEAM_VRAM_SIZE_LEGACY);
+		}
+		
 		// Show the upload data region memory
 		if (mem_edit_upload.Open)
 		{
-            mem_edit_upload.DrawWindow("Memory Editor: Upload memory", sdhrManager->GetUploadRegionPtr(), _SDHR_UPLOAD_REGION_SIZE);
+            mem_edit_upload.DrawWindow("Memory Editor: Beam VRAM Legacy", sdhrManager->GetApple2MemPtr(), 2*_A2_MEMORY_SHADOW_END);
 		}
         
 		// Show the 16 textures loaded (which are always bound to GL_TEXTURE2 -> GL_TEXTURE18)

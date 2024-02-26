@@ -241,7 +241,6 @@ int process_events_thread(bool* shouldTerminateProcessing)
 void process_single_packet_header(SDHRPacketHeader* h,
                                   uint32_t packet_size,
                                   uint32_t& prev_seqno,
-                                  uint16_t& prev_addr,
                                   bool& first_drop)
 {
     //std::cerr << packet_size << std::endl;
@@ -288,11 +287,11 @@ void process_single_packet_header(SDHRPacketHeader* h,
 		uint32_t* event = (uint32_t*)p;
 		p += 4;
 		uint8_t ctrl_bits = (*event >> 24) & 0xff;
-			uint16_t addr = (*event >> 8) & 0xffff;
-			uint8_t data = *event & 0xff;
-			// bool m2sel = (ctrl_bits & 0x02) == 0x02;
-			bool m2b0 = (ctrl_bits & 0x04) == 0x04;
-			bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
+		uint16_t addr = (*event >> 8) & 0xffff;
+		uint8_t data = *event & 0xff;
+		// bool m2sel = (ctrl_bits & 0x02) == 0x02;
+		bool m2b0 = (ctrl_bits & 0x04) == 0x04;
+		bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
 		bool rw = (ctrl_bits & 0x01) == 0x01;
 
 		SDHREvent ev(iigs_mode, m2b0, rw, addr, data);
@@ -352,7 +351,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 
 	bool first_drop = true;
 	uint32_t prev_seqno = 0;
-	uint16_t prev_addr = 0;
 	int64_t last_recv_nsec;
 
 	while (!(*shouldTerminateNetworking)) {
@@ -393,7 +391,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			last_recv_nsec = nsec;
 
 			SDHRPacketHeader* h = (SDHRPacketHeader*)RecvBuf;
-			process_single_packet_header(h, retval, prev_seqno, prev_addr, first_drop);
+			process_single_packet_header(h, retval, prev_seqno, first_drop);
 		}
 	}
 
@@ -436,7 +434,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 
     bool first_drop = true;
     uint32_t prev_seqno = 0;
-    uint16_t prev_addr = 0;
     int64_t last_recv_nsec = 0;
 
     timespec ts;
@@ -466,7 +463,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
         last_recv_nsec = nsec;
 
         SDHRPacketHeader* h = (SDHRPacketHeader*)buf;
-        process_single_packet_header(h, retval, prev_seqno, prev_addr, first_drop);
+        process_single_packet_header(h, retval, prev_seqno, first_drop);
     }
 
     std::cout << "Client Closing" << std::endl;
@@ -513,7 +510,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 
 	bool first_drop = true;
 	uint32_t prev_seqno = 0;
-	uint16_t prev_addr = 0;
 	int64_t last_recv_nsec;
 
 	while (!(*shouldTerminateNetworking)) {
@@ -544,7 +540,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 
 		for (int i = 0; i < retval; ++i) {
 			SDHRPacketHeader* h = (SDHRPacketHeader*)bufs[i];
-            process_single_packet_header(h, msgs[i].msg_len, prev_seqno, prev_addr, first_drop);
+            process_single_packet_header(h, msgs[i].msg_len, prev_seqno, first_drop);
 		}
 	}
 

@@ -14,7 +14,7 @@ public:
 	const bool IsHBL();
 	const bool IsInBlank();
 	const uint32_t GetScanline();
-	const uint32_t GetByteYPos();
+	const uint32_t GetByteXPos();
 	uint32_t m_vbl_start = 0;	// debug to know when we think vbl started previously
 
 	bool isSHR = false;

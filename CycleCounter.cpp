@@ -85,8 +85,8 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 		}
 	}
 	bIsVBL = (m_cycle >= CYCLES_SCREEN);
-	bIsHBL = (GetByteYPos() < CYCLES_HBLANK);
-	A2VideoManager::GetInstance()->BeamIsAtPosition(GetScanline(), GetByteYPos());
+	bIsHBL = (GetByteXPos() < CYCLES_HBLANK);
+	A2VideoManager::GetInstance()->BeamIsAtPosition(GetScanline(), GetByteXPos());
 }
 
 const bool CycleCounter::IsVBL()
@@ -109,7 +109,7 @@ const uint32_t CycleCounter::GetScanline()
 	return m_cycle / (CYCLES_SCANLINES + CYCLES_HBLANK);
 }
 
-const uint32_t CycleCounter::GetByteYPos()
+const uint32_t CycleCounter::GetByteXPos()
 {
 	return m_cycle % (CYCLES_SCANLINES + CYCLES_HBLANK);
 }
