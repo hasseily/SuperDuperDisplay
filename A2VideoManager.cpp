@@ -582,7 +582,7 @@ void A2VideoManager::Render()
 	// for drawing the SDHR stuff is active
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
-
+		
 		// image asset 0: The apple 2e US font
 		glActiveTexture(_SDHR_START_TEXTURES);
 		image_assets[0].AssignByFilename(this, "assets/Apple2eFont14x16 - Regular.png");

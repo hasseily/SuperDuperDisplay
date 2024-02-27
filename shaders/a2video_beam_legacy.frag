@@ -31,7 +31,6 @@ The shader goes through the following phases:
 uniform int ticks;						// ms since start
 uniform usampler2D VRAMTEX;				// Video RAM texture
 uniform sampler2D a2ModesTextures[7];	// 4 font textures + lgr, hgr, dhgr
-uniform vec4 colorTint;					// text color tint (extra from 2gs)
 
 // mode -> texture
 // modes are: TEXT, DTEXT, LGR, DLGR, HGR, DHGR
@@ -75,7 +74,7 @@ void main()
 	// y is 0-16
 
 	// Extract the lower 3 bits to determine which mode to use
-	uint a2mode = targetTexel.b & 7u;	// 7 = 0b111 to mask lower 3 bits
+	uint a2mode = targetTexel.g & 7u;	// 7 = 0b111 to mask lower 3 bits
     uint textureIndex = modeToTexture[a2mode];	// this is the texture to use
 	
 	switch (a2mode) {
@@ -87,11 +86,12 @@ void main()
 			// In TEXT mode, all 14 dots are from MAIN
 			uint charVal = (targetTexel.g * (fragOffset.x / 7u) + targetTexel.r * (1u - (fragOffset.x / 7u))) * a2mode
 							+ targetTexel.r * (1 - a2mode);
+			charVal = targetTexel.r;
 			float vCharVal = float(charVal);
 			
 			// if ALTCHARSET (bit 4), use the alt texture
 			uint isAlt = ((targetTexel.b >> 4) & 1u);
-			textureIndex += 1u * isAlt;
+			textureIndex += isAlt;
 			
 			// Determine from char which font glyph to use
 			// and if we need to flash
@@ -110,15 +110,15 @@ void main()
 			// we would have multiplied the x value by 2 to take 1/2 of each column in 80 col mode.
 			// But we have a dedicated set of 7x16 font textures so don't need to
 			ivec2 textureSize2d = textureSize(a2ModesTextures[textureIndex],0);
-			vec4 tex = texture(a2ModesTextures[textureIndex], (vec2(charOrigin) + fragOffset) / vec2(textureSize2d)) * colorTint;
+			vec4 tex = texture(a2ModesTextures[textureIndex], vec2(charOrigin + fragOffset) / vec2(textureSize2d));
 			
 			float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
 																	   // get the color of flashing or the one above
 			tex = ((1.f - tex) * isFlashing) + (tex * (1.f - isFlashing));
 			
 			// And provide for tint coloring that the 2gs can do
-			fragColor = ((1.f - tex) * tintcolors[(targetTexel.a & 0xF0u) >> 4])		// foreground (dot is on)
-							  + (tex * tintcolors[targetTexel.a & 0x0Fu]);				// background (dot is off)
+			fragColor = (tex * tintcolors[(targetTexel.a & 0xF0u) >> 4])		// foreground (dot is on)
+						+ ((1.f - tex) * tintcolors[targetTexel.a & 0x0Fu]);	// background (dot is off)
 			return;
 			break;
 		}
@@ -149,6 +149,7 @@ void main()
 			// similarly to the TEXT modes, if we're in DLGR (a2mode - 2u), get every other column
 			fragColor = texture(a2ModesTextures[textureIndex],
 								(vec2(byteOrigin) + (fragOffset * uvec2(1u + (a2mode - 2u), 1u))) / vec2(textureSize2d));
+			return;
 			break;
 		}
 		case 4u:	// HGR

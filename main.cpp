@@ -453,13 +453,13 @@ int main(int argc, char* argv[])
 		// Show the VRAM legacy window
 		if (mem_edit_vram_legacy.Open)
 		{
-			mem_edit_vram_legacy.DrawWindow("Memory Editor: Upload memory", a2VideoManager->GetLegacyVRAMPtr(), _BEAM_VRAM_SIZE_LEGACY);
+			mem_edit_vram_legacy.DrawWindow("Memory Editor: Beam VRAM Legacy", a2VideoManager->GetLegacyVRAMPtr(), _BEAM_VRAM_SIZE_LEGACY);
 		}
 		
 		// Show the upload data region memory
 		if (mem_edit_upload.Open)
 		{
-            mem_edit_upload.DrawWindow("Memory Editor: Beam VRAM Legacy", sdhrManager->GetApple2MemPtr(), 2*_A2_MEMORY_SHADOW_END);
+            mem_edit_upload.DrawWindow("Memory Editor: Upload memory", sdhrManager->GetApple2MemPtr(), 2*_A2_MEMORY_SHADOW_END);
 		}
         
 		// Show the 16 textures loaded (which are always bound to GL_TEXTURE2 -> GL_TEXTURE18)

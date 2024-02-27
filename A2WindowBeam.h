@@ -34,7 +34,7 @@ public:
 
 	A2WindowBeam()
 		: enabled(false)
-		, video_mode(A2VIDEOBEAM_TOTAL_COUNT)
+		, video_mode(A2VIDEOBEAM_LEGACY)
 		, shaderProgram(nullptr)
 	{
 		// Assign the vertex array.
