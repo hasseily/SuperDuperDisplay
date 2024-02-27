@@ -65,7 +65,7 @@ static uint32_t gPaletteRGB[] =
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
 uint16_t A2VideoManager::a2SoftSwitches = 0;
-uint8_t A2VideoManager::switch_c022 = 0;
+uint8_t A2VideoManager::switch_c022 = 0b11110000;	// white fg, black bg
 uint8_t A2VideoManager::switch_c034 = 0;
 
 constexpr uint32_t CYCLES_HBLANK = 25;			// always 25 cycles
@@ -649,9 +649,6 @@ void A2VideoManager::Render()
 			}
 		}
 	}
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, oglHelper->get_intermediate_texture_id());
 
 	// CPU RENDERER
 	if (bShouldUseCPURGBRenderer)

@@ -35,6 +35,7 @@ void A2WindowBeam::Define(A2VideoModeBeam_e _video_mode, Shader* _shaderProgram)
 		screen_count = uXY({ 640u , 400u });
 		break;
 	default:
+		screen_count = uXY({ 560u , 384u });
 		break;
 
 	}
@@ -104,6 +105,7 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, (1+32+160), 200, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMPtr());
 				break;
 			default:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMPtr());
 				break;
 		}
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

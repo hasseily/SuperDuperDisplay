@@ -147,6 +147,7 @@ void OpenGLHelper::create_framebuffers(uint32_t width, uint32_t height)
 
 	glGenFramebuffers(2, FBO);
 	glGenTextures(2, output_texture_ids);
+	glActiveTexture(GL_TEXTURE0);
 	for (int i = 0; i < 2; ++i) {
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO[i]);
 		glBindTexture(GL_TEXTURE_2D, output_texture_ids[i]);
@@ -158,6 +159,9 @@ void OpenGLHelper::create_framebuffers(uint32_t width, uint32_t height)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_ids[i], 0);
 	}
+	
+	// Always bind the first output texture to GL_TEXTURE0
+	glBindTexture(GL_TEXTURE_2D, output_texture_ids[0]);
 
 	bDidChangeResolution = true;
 	callbackResolutionChange(fb_width, fb_height);
@@ -204,7 +208,8 @@ void OpenGLHelper::rescale_framebuffers(uint32_t width, uint32_t height)
 			std::cerr << "OpenGL rescale_framebuffer error: " << glerr << std::endl;
 		}
 	}
-	glBindTexture(GL_TEXTURE_2D, 0);
+	// Always bind the first output texture to GL_TEXTURE0
+	glBindTexture(GL_TEXTURE_2D, output_texture_ids[0]);
 	fb_width = width;
 	fb_height = height;
 	bDidChangeResolution = true;
