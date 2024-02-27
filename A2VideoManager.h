@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "A2Window.h"
+#include "A2WindowBeam.h"
 
 /*
 MEMORY MANAGEMENT SOFT SWITCHES
@@ -117,7 +118,8 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 
 	ImageAsset image_assets[8];
-	A2Window windows[A2VIDEO_TOTAL_COUNT];
+	A2Window windows[A2VIDEO_TOTAL_COUNT];				// mem snapshot GPU render
+	A2WindowBeam windowsbeam[A2VIDEOBEAM_TOTAL_COUNT];	// beam racing GPU render
 
 	// Margins when rendering in a window (pixels)
 	int windowMargins = 10;

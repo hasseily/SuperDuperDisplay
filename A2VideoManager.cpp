@@ -76,6 +76,7 @@ static Shader shader_hgr = Shader();
 static Shader shader_dhgr = Shader();
 static Shader shader_shr = Shader();
 static Shader shader_beam_legacy = Shader();
+static Shader shader_beam_shr = Shader();
 
 //////////////////////////////////////////////////////////////////////////
 // Image Asset Methods
@@ -147,7 +148,8 @@ void A2VideoManager::Initialize()
 	shader_dhgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_DHGR_FRAGMENT);
 	shader_shr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_SHR_FRAGMENT);
 	shader_beam_legacy.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
-	
+	shader_beam_shr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);		// TODO: MAKE SHR BEAM SHADER
+
 	// Initialize windows and meshes
 	
 	windows[A2VIDEO_TEXT].Define(A2VIDEO_TEXT, &shader_text);
@@ -158,6 +160,9 @@ void A2VideoManager::Initialize()
 	windows[A2VIDEO_DHGR].Define(A2VIDEO_DHGR, &shader_dhgr);
 	windows[A2VIDEO_SHR].Define(A2VIDEO_SHR, &shader_shr);
 	
+	windowsbeam[A2VIDEOBEAM_LEGACY].Define(A2VIDEOBEAM_LEGACY, &shader_beam_legacy);
+	windowsbeam[A2VIDEOBEAM_SHR].Define(A2VIDEOBEAM_SHR, &shader_beam_shr);
+
 	// Activate TEXT by default
 	SelectVideoModes();
 	// tell the next Render() call to run initialization routines
@@ -621,9 +626,12 @@ void A2VideoManager::Render()
 		if (bRequestBeamRendering)
 		{
 			a2video_mutex.lock();
+			windowsbeam[A2VIDEOBEAM_LEGACY].SetEnabled(bBeamRenderLegacy);
+			windowsbeam[A2VIDEOBEAM_SHR].SetEnabled(bBeamRenderSHR);
 			bRequestBeamRendering = false;
 			a2video_mutex.unlock();
-			// TODO: Make a "window" for the beam renderer, for vertices and everything else
+			windowsbeam[A2VIDEOBEAM_LEGACY].Render();
+			windowsbeam[A2VIDEOBEAM_SHR].Render();
 		}
 		goto ENDRENDER;
 	}

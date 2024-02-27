@@ -11,8 +11,8 @@ void A2WindowBeam::Reset()
 
 A2WindowBeam::~A2WindowBeam()
 {
-	if (DBTEX != UINT_MAX)
-		glDeleteTextures(1, &DBTEX);
+	if (VRAMTEX != UINT_MAX)
+		glDeleteTextures(1, &VRAMTEX);
 
 	if (VAO != UINT_MAX)
 	{
@@ -90,7 +90,6 @@ void A2WindowBeam::Render()
 	// Associate the texture VRAMTEX in GL_TEXTURE0+_SDHR_TBO_TEXUNIT with the buffer
 	// This is the apple 2's memory which is mapped to a "texture"
 	// Always update that buffer in the GPU
-	uint32_t _h = 200;	// max 200 lines
 	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
 	glBindTexture(GL_TEXTURE_2D, VRAMTEX);
 	switch (video_mode) {
@@ -119,7 +118,6 @@ void A2WindowBeam::Render()
 
 	bNeedsGPUVertexUpdate = false;
 
-	GLenum glerr;
 	shaderProgram->use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;

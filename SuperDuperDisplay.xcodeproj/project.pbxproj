@@ -15,6 +15,7 @@
 		BB96E3F32B66515400A3077C /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3F22B66515400A3077C /* imgui_widgets.cpp */; };
 		BB96E3FD2B66525300A3077C /* shaders in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBB525002B6648A200A65C62 /* shaders */; };
 		BB96E4092B66544900A3077C /* scripts in CopyFiles */ = {isa = PBXBuildFile; fileRef = BB96E4082B66544900A3077C /* scripts */; };
+		BBB238ED2B8DD3B200DFEE08 /* A2WindowBeam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */; };
 		BBB5251D2B6648A200A65C62 /* A2VideoManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525022B6648A200A65C62 /* A2VideoManager.cpp */; };
 		BBB5251E2B6648A200A65C62 /* shader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525042B6648A200A65C62 /* shader.cpp */; };
 		BBB5251F2B6648A200A65C62 /* SDHRManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525082B6648A200A65C62 /* SDHRManager.cpp */; };
@@ -174,22 +175,21 @@
 		BB8330D82B6645B300071F38 /* SuperDuperDisplay */ = {
 			isa = PBXGroup;
 			children = (
-				BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */,
-				BBB4E5C02B83ECCE00764C50 /* A2WindowBeam.h */,
-				BBD102132B829BAE00360B33 /* assets */,
-				BBD102102B829B7C00360B33 /* ByteBuffer.h */,
-				BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */,
-				BBD1020F2B829B7C00360B33 /* EventRecorder.h */,
-				BBD1020E2B829B7C00360B33 /* README.md */,
-				BBD102072B7CF23A00360B33 /* CycleCounter.cpp */,
-				BBD102062B7CF23100360B33 /* CycleCounter.h */,
 				BBB525022B6648A200A65C62 /* A2VideoManager.cpp */,
 				BBB524FC2B6648A100A65C62 /* A2VideoManager.h */,
 				BBB525172B6648A200A65C62 /* A2Window.cpp */,
 				BBB5251B2B6648A200A65C62 /* A2Window.h */,
+				BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */,
+				BBB4E5C02B83ECCE00764C50 /* A2WindowBeam.h */,
+				BBD102132B829BAE00360B33 /* assets */,
+				BBD102102B829B7C00360B33 /* ByteBuffer.h */,
 				BBB5250A2B6648A200A65C62 /* camera.h */,
 				BBB525102B6648A200A65C62 /* common.h */,
 				BBB525152B6648A200A65C62 /* ConcurrentQueue.h */,
+				BBD102072B7CF23A00360B33 /* CycleCounter.cpp */,
+				BBD102062B7CF23100360B33 /* CycleCounter.h */,
+				BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */,
+				BBD1020F2B829B7C00360B33 /* EventRecorder.h */,
 				BBB5250F2B6648A200A65C62 /* extras */,
 				BBB525132B6648A200A65C62 /* glad */,
 				BBB525192B6648A200A65C62 /* glm */,
@@ -206,6 +206,7 @@
 				BBB5251A2B6648A200A65C62 /* PostProcessor.cpp */,
 				BBB524FB2B6648A100A65C62 /* PostProcessor.h */,
 				BBB524FE2B6648A100A65C62 /* ProjectConfig.xconfig */,
+				BBD1020E2B829B7C00360B33 /* README.md */,
 				BBB525082B6648A200A65C62 /* SDHRManager.cpp */,
 				BBB5250D2B6648A200A65C62 /* SDHRManager.h */,
 				BBB525162B6648A200A65C62 /* SDHRNetworking.cpp */,
@@ -311,6 +312,7 @@
 				BBB525242B6648A200A65C62 /* SDHRNetworking.cpp in Sources */,
 				BBB525212B6648A200A65C62 /* OpenGLHelper.cpp in Sources */,
 				BBB5251E2B6648A200A65C62 /* shader.cpp in Sources */,
+				BBB238ED2B8DD3B200DFEE08 /* A2WindowBeam.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
