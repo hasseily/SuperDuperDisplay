@@ -51,7 +51,7 @@ public:
 	};
 	~A2WindowBeam();
 	void Define(A2VideoModeBeam_e video_mode, Shader* _shaderProgram);
-	void Render();
+	void Render(bool shouldUpdateDataInGPU);
 
 	Shader* GetShaderProgram() { return shaderProgram; };
 	void SetShaderProgram(Shader* _shader) { shaderProgram = _shader; };

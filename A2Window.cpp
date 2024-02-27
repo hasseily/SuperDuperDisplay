@@ -106,6 +106,8 @@ void A2Window::Update()
 
 	if (bNeedsGPUVertexUpdate)
 	{
+		bNeedsGPUVertexUpdate = false;
+
 		// load data into vertex buffers
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(A2Vertex), &vertices[0], GL_STATIC_DRAW);
@@ -179,8 +181,6 @@ void A2Window::Update()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2Window::Update error: " << glerr << std::endl;
 	}
-
-	bNeedsGPUVertexUpdate = false;
 }
 
 void A2Window::Render()
@@ -285,7 +285,7 @@ void A2Window::Render()
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glBindVertexArray(0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "MosaicMesh render error: " << glerr << std::endl;
+		std::cerr << "A2Window render error: " << glerr << std::endl;
 	}
 }
 

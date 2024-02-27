@@ -49,7 +49,7 @@ void A2WindowBeam::Define(A2VideoModeBeam_e _video_mode, Shader* _shaderProgram)
 
 }
 
-void A2WindowBeam::Render()
+void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 {
 	if (!IsEnabled())
 		return;
@@ -72,6 +72,8 @@ void A2WindowBeam::Render()
 
 	if (bNeedsGPUVertexUpdate)
 	{
+		bNeedsGPUVertexUpdate = false;
+		
 		// load data into vertex buffers
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(A2BeamVertex), &vertices[0], GL_STATIC_DRAW);
@@ -90,24 +92,26 @@ void A2WindowBeam::Render()
 	// Associate the texture VRAMTEX in GL_TEXTURE0+_SDHR_TBO_TEXUNIT with the buffer
 	// This is the apple 2's memory which is mapped to a "texture"
 	// Always update that buffer in the GPU
-	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
-	glBindTexture(GL_TEXTURE_2D, VRAMTEX);
-	switch (video_mode) {
-		case A2VIDEOBEAM_LEGACY:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGB_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMPtr());
-			break;
-		case A2VIDEOBEAM_SHR:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, (1+32+160), 200, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMPtr());
-			break;
-		default:
-			break;
+	if (shouldUpdateDataInGPU)
+	{
+		glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
+		glBindTexture(GL_TEXTURE_2D, VRAMTEX);
+		switch (video_mode) {
+			case A2VIDEOBEAM_LEGACY:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGB_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMPtr());
+				break;
+			case A2VIDEOBEAM_SHR:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, (1+32+160), 200, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMPtr());
+				break;
+			default:
+				break;
+		}
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
 
 	// reset the binding
 	glBindVertexArray(0);
@@ -115,8 +119,6 @@ void A2WindowBeam::Render()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2WindowBeam::Update error: " << glerr << std::endl;
 	}
-
-	bNeedsGPUVertexUpdate = false;
 
 	shaderProgram->use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {

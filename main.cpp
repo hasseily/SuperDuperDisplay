@@ -219,7 +219,8 @@ int main(int argc, char* argv[])
 #endif
     {
 		// Beam renderer does not use VSYNC. It synchronizes to the Apple 2's VBL.
-		SDL_GL_SetSwapInterval(g_swapInterval && (!a2VideoManager->bShouldUseBeamRenderer));
+		// SDL_GL_SetSwapInterval(g_swapInterval && (!a2VideoManager->bShouldUseBeamRenderer));
+		SDL_GL_SetSwapInterval(g_swapInterval);
         dt_LAST = dt_NOW;
         dt_NOW = SDL_GetPerformanceCounter();
 		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
@@ -230,7 +231,7 @@ int main(int argc, char* argv[])
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         SDL_Event event;
-        while (SDL_PollEvent(&event))
+		while (SDL_PollEvent(&event))
         {
             ImGui_ImplSDL2_ProcessEvent(&event);
             switch (event.type) {
@@ -468,7 +469,7 @@ int main(int argc, char* argv[])
             ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES - 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
             ImGui::Text("Texture ID: %d", (int)glhelper->get_texture_id_at_slot(_slotnum));
 			ImVec2 avail_size = ImGui::GetContentRegionAvail();
- 			ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+			ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			ImGui::End();
 		}
 

@@ -383,11 +383,9 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 {
 	if (_x < CYCLES_HBLANK)	// in HBLANK, nothing to do
 		return;
-	if (y > 200)	// in VBLANK, nothing to do
-		return;
 	// Theoretically at y==192 (start of VBLANK) we can render for legacy
 	// but SHR goes to 200 so let's wait until 200 anyway. We're in VBLANK still.
-	if (y == 200)	// Start of VBLANK
+	if (_x == CYCLES_HBLANK && y == 200)	// Start of VBLANK
 	{
 		RequestBeamRendering(bVBlankHasLegacy, bVBlankHasSHR);
 		// reset the legacy and shr flags at each vblank
@@ -395,6 +393,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 		bVBlankHasSHR = false;
 		return;
 	}
+	if (y >= 200)	// in VBLANK, nothing to do
+		return;
 	
 	// Set xx to 0 when after HBLANK. HBLANK is always at the start of the line
 	// However, VBLANK is at the end of the screen so we can use y as is
@@ -495,17 +495,17 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 		byteStartPtr[0] = *(SDHRManager::GetInstance()->GetApple2MemPtr() + startMem + (y * 40) + xx);
 		byteStartPtr[1] = *(SDHRManager::GetInstance()->GetApple2MemAuxPtr() + startMem + (y * 40) + xx);
 	}
-	byteStartPtr[3] = flags;
-	byteStartPtr[4] = colors;
+	byteStartPtr[2] = flags;
+	byteStartPtr[3] = colors;
 
 }
 
 void A2VideoManager::RequestBeamRendering(bool cycleHasLegacy, bool cycleHasSHR)
 {
 	std::lock_guard<std::mutex> lock(a2video_mutex);
-	bRequestBeamRendering = true;
 	bBeamRenderLegacy = cycleHasLegacy;
 	bBeamRenderSHR = cycleHasSHR;
+	bRequestBeamRendering = true;
 }
 
 void A2VideoManager::SelectVideoModes()
@@ -617,17 +617,15 @@ void A2VideoManager::Render()
 	// BEAM RENDERER
 	if (bShouldUseBeamRenderer)
 	{
-		// At line 200 the cycle counter flags to beam render
-		if (bRequestBeamRendering)
-		{
-			a2video_mutex.lock();
-			windowsbeam[A2VIDEOBEAM_LEGACY].SetEnabled(bBeamRenderLegacy);
-			windowsbeam[A2VIDEOBEAM_SHR].SetEnabled(bBeamRenderSHR);
-			bRequestBeamRendering = false;
-			a2video_mutex.unlock();
-			windowsbeam[A2VIDEOBEAM_LEGACY].Render();
-			windowsbeam[A2VIDEOBEAM_SHR].Render();
-		}
+		// At line 200 the cycle counter flags to update the VRAM in the GPU
+		a2video_mutex.lock();
+		bool shouldUpdateDataInGPU = bRequestBeamRendering;
+		windowsbeam[A2VIDEOBEAM_LEGACY].SetEnabled(bBeamRenderLegacy);
+		windowsbeam[A2VIDEOBEAM_SHR].SetEnabled(bBeamRenderSHR);
+		bRequestBeamRendering = false;
+		a2video_mutex.unlock();
+		windowsbeam[A2VIDEOBEAM_LEGACY].Render(shouldUpdateDataInGPU);
+		windowsbeam[A2VIDEOBEAM_SHR].Render(shouldUpdateDataInGPU);
 		goto ENDRENDER;
 	}
 	
