@@ -23,12 +23,12 @@ std::mutex mtx_cycle;	// protect the cycle counter
 
 static uint32_t dbg_last_vbl_cycle = 0;
 
-const uint32_t COUNT_SCANLINES = 192;		// EVEN IN SHR with 200 visible lines, the VBL triggers at line 192.
-const uint32_t CYCLES_SCANLINES = 40;		// each scanline is 40 bytes, 1 cycle per byte
-const uint32_t CYCLES_HBLANK = 25;			// always 25 cycles
-const uint32_t CYCLES_SCREEN = (CYCLES_SCANLINES + CYCLES_HBLANK) * COUNT_SCANLINES;
-const uint32_t CYCLES_TOTAL_NTSC = 17030;
-const uint32_t CYCLES_TOTAL_PAL = 20280;
+constexpr uint32_t COUNT_SCANLINES = 192;		// EVEN IN SHR with 200 visible lines, the VBL triggers at line 192.
+constexpr uint32_t CYCLES_SCANLINES = 40;		// each scanline is 40 bytes, 1 cycle per byte
+constexpr uint32_t CYCLES_HBLANK = 25;			// always 25 cycles
+constexpr uint32_t CYCLES_SCREEN = (CYCLES_SCANLINES + CYCLES_HBLANK) * COUNT_SCANLINES;
+constexpr uint32_t CYCLES_TOTAL_NTSC = 17030;
+constexpr uint32_t CYCLES_TOTAL_PAL = 20280;
 
 uint32_t cycles_vblank;
 uint32_t cycles_total;
@@ -86,7 +86,7 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 	}
 	bIsVBL = (m_cycle >= CYCLES_SCREEN);
 	bIsHBL = (GetByteXPos() < CYCLES_HBLANK);
-	A2VideoManager::GetInstance()->BeamIsAtPosition(GetScanline(), GetByteXPos());
+	A2VideoManager::GetInstance()->BeamIsAtPosition(GetByteXPos(), GetScanline());
 }
 
 const bool CycleCounter::IsVBL()

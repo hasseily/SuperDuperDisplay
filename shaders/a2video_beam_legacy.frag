@@ -30,7 +30,7 @@ The shader goes through the following phases:
 // Global uniforms
 uniform int ticks;						// ms since start
 uniform usampler2D VRAMTEX;				// Video RAM texture
-uniform sampler2D a2ModesTextures[5];	// 2 font textures + lgr, hgr, dhgr
+uniform sampler2D a2ModesTextures[7];	// 4 font textures + lgr, hgr, dhgr
 uniform vec4 colorTint;					// text color tint (extra from 2gs)
 
 // mode -> texture

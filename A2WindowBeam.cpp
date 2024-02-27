@@ -132,6 +132,15 @@ void A2WindowBeam::Render()
 	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
 	glBindTexture(GL_TEXTURE_2D, VRAMTEX);
 	shaderProgram->setInt("VRAMTEX", _SDHR_TBO_TEXUNIT);
+	
+	// And set all the modes textures that the shader will use
+	// 4 font textures + lgr, hgr, dhgr
+	char uniformName[25];
+	for (int i = 0; i < 7; ++i) {
+		snprintf(uniformName, 25, "a2ModesTextures[%d]", i);
+		shaderProgram->setInt(uniformName, _SDHR_START_TEXTURES + i - GL_TEXTURE0);
+	}
+
 	// back to the output buffer to draw our scene
 	glActiveTexture(GL_TEXTURE0);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());

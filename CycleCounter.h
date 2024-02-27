@@ -13,7 +13,9 @@ public:
 	const bool IsVBL();
 	const bool IsHBL();
 	const bool IsInBlank();
+	// Gets the scanline (0-191 or 0-199 for SHR when not VBLANK)
 	const uint32_t GetScanline();
+	// Gets the Byte's X Position (0-39 or 0-159 for SHR)
 	const uint32_t GetByteXPos();
 	uint32_t m_vbl_start = 0;	// debug to know when we think vbl started previously
 

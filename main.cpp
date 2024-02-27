@@ -300,7 +300,7 @@ int main(int argc, char* argv[])
 
         if (sdhrManager->IsSdhrEnabled())
             sdhrManager->Render();
-        else if (!a2VideoManager->bShouldUseBeamRenderer)
+        else
             a2VideoManager->Render();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
