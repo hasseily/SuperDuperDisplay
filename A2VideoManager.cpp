@@ -254,6 +254,8 @@ void A2VideoManager::ToggleA2Video(bool value)
 		if (oglHelper->request_framebuffer_resize(scrSz.x, scrSz.y))
 			bShouldInitializeRender = true;
 	}
+	if (bShouldUseBeamRenderer)
+		ForceBeamFullScreenRender();
 }
 
 void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool is_iigs)
@@ -545,6 +547,19 @@ void A2VideoManager::RequestBeamRendering(bool cycleHasLegacy, bool cycleHasSHR)
 	bBeamRenderLegacy = cycleHasLegacy;
 	bBeamRenderSHR = cycleHasSHR;
 	bRequestBeamRendering = true;
+}
+
+void A2VideoManager::ForceBeamFullScreenRender()
+{
+	// Forces a full screen render for the beam renderer
+	// Move the beam over the whole screen
+	for (uint32_t y = 0; y < 201; y++)	// renders at 200 (VBL)
+	{
+		for (uint32_t x = 0; x < 65; x++)	// HBL is the first 25
+		{
+			this->BeamIsAtPosition(x, y);
+		}
+	}
 }
 
 void A2VideoManager::SelectVideoModes()

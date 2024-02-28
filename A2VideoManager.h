@@ -144,6 +144,7 @@ public:
 	// Methods for the single multipurpose beam racing shader
 	void BeamIsAtPosition(uint32_t x, uint32_t y);
 	void RequestBeamRendering(bool cycleHasLegacy, bool cycleHasSHR);
+	void ForceBeamFullScreenRender();
 	
 	uint8_t* GetLegacyVRAMPtr() { return a2legacy_vram; };
 	uint8_t* GetSHRVRAMPtr() { return a2shr_vram; }

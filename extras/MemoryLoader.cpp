@@ -44,7 +44,7 @@ void MemoryLoad(uint32_t position, bool bAuxBank) {
 					if (fileSize > 0 && (position + fileSize) <= (_A2_MEMORY_SHADOW_END)) {
 						file.seekg(0, std::ios::beg); // Go back to the start of the file
 						file.read(reinterpret_cast<char*>(pMem), fileSize);
-						A2VideoManager::GetInstance()->SelectVideoModes();
+						A2VideoManager::GetInstance()->ToggleA2Video(true);
 					} else {
 						// Handle the error: file is too big or other issues
 						std::cerr << "Error: File is too large or other issue." << std::endl;

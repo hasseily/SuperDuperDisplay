@@ -336,12 +336,19 @@ int main(int argc, char* argv[])
 //				ImGui::Checkbox("Demo Window", &show_demo_window);
 				ImGui::Checkbox("PostProcessing Window", &show_postprocessing_window);
 				ImGui::Checkbox("VSYNC On", &g_swapInterval);
-				ImGui::Checkbox("Use Beam Racing Renderer", &a2VideoManager->bShouldUseBeamRenderer);
-				if (a2VideoManager->bShouldUseBeamRenderer)
-					a2VideoManager->bShouldUseCPURGBRenderer = false;
-				ImGui::Checkbox("Use CPU RGB Renderer for L/H/D/GR", &a2VideoManager->bShouldUseCPURGBRenderer);
-				if (a2VideoManager->bShouldUseCPURGBRenderer)
-					a2VideoManager->bShouldUseBeamRenderer = false;
+				if (ImGui::Checkbox("Use Beam Racing Renderer", &a2VideoManager->bShouldUseBeamRenderer))
+				{
+					if (a2VideoManager->bShouldUseBeamRenderer)
+					{
+						a2VideoManager->bShouldUseCPURGBRenderer = false;
+						a2VideoManager->ForceBeamFullScreenRender();
+					}
+				}
+				if (ImGui::Checkbox("Use CPU RGB Renderer for L/H/D/GR", &a2VideoManager->bShouldUseCPURGBRenderer))
+				{
+					if (a2VideoManager->bShouldUseCPURGBRenderer)
+						a2VideoManager->bShouldUseBeamRenderer = false;
+				}
 				ImGui::Checkbox("Event Recorder Window", &show_recorder_window);
 				ImGui::Checkbox("Textures Window", &show_texture_window);
 				ImGui::Checkbox("Metrics Window", &show_metrics_window);
