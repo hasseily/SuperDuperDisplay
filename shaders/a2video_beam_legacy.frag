@@ -67,14 +67,14 @@ void main()
 	// the x and y offsets from the origin
 	// REMINDER: we're working on dots, with 560 dots per line. And lines are doubled
 	uvec2 uFragPos = uvec2(vFragPos);
-	uvec4 targetTexel =  texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0).rbga;
+	uvec4 targetTexel =  texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0).rgba;
 	uvec2 fragOffset = uvec2(uFragPos.x % 14u, uFragPos.y % 16);	// TODO: IS IT uvec2 or vec2 ???
 	// The fragOffsets are:
 	// x is 0-14
 	// y is 0-16
 
 	// Extract the lower 3 bits to determine which mode to use
-	uint a2mode = targetTexel.g & 7u;	// 7 = 0b111 to mask lower 3 bits
+	uint a2mode = targetTexel.b & 7u;	// 7 = 0b111 to mask lower 3 bits
     uint textureIndex = modeToTexture[a2mode];	// this is the texture to use
 	
 	switch (a2mode) {
@@ -84,8 +84,8 @@ void main()
 			// Get the character value
 			// In DTEXT mode, the first 7 dots are AUX, last 7 are MAIN.
 			// In TEXT mode, all 14 dots are from MAIN
-			uint charVal = (targetTexel.g * (fragOffset.x / 7u) + targetTexel.r * (1u - (fragOffset.x / 7u))) * a2mode
-							+ targetTexel.r * (1 - a2mode);
+			uint charVal = (targetTexel.r * (fragOffset.x / 7u) + targetTexel.g * (1u - (fragOffset.x / 7u))) * a2mode
+							+ targetTexel.r * (1u - a2mode);
 			charVal = targetTexel.r;
 			float vCharVal = float(charVal);
 			
@@ -133,8 +133,8 @@ void main()
 			// In LGR mode, all 14 dots are from MAIN
 
 			// Get the byte value depending on MAIN or AUX
-			uint byteVal = (targetTexel.g * (fragOffset.x / 7u) + targetTexel.r * (1u - (fragOffset.x / 7u))) * a2mode
-				+ targetTexel.r * (1 - a2mode);
+			uint byteVal = (targetTexel.r * (fragOffset.x / 7u) + targetTexel.g * (1u - (fragOffset.x / 7u))) * (a2mode - 2u)
+				+ targetTexel.r * (1 - (a2mode - 2u));
 			// get the color depending on vertical position
 			uvec2 byteOrigin;
 			if (fragOffset.y < 8)
