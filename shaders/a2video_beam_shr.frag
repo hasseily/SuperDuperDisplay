@@ -22,6 +22,16 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  so they are always fixed for the line. This has been verified on original hardware
  by a number of people.
  
+ As a reminder, the SCB has the following bits:
+ Bits 0-3 Palette number
+ Bit 4 Reserved (defaults to 0)
+ Bit 5 Mode fill (1=on, 0=off)
+ Bit 6 Interrupt (1=requested, 0=not requested)
+ Bit 7 Horizontal pixel count (0=320px, 1=640px)
+ 
+ We set bit 4 of the SCB in the GPU to state if the line is unused.
+ If so, then we make the whole line transparent.
+ 
  Also note that the colorfill situation has been precalculated when generating the VRAM.
  
  The shader goes through the following phases:
@@ -70,20 +80,30 @@ vec4 ConvertIIgs2RGB(uint gscolor)
 
 void main()
 {
-	// first grab the scanline color byte value and the scb
-	// The scanline color byte value gives the color for either 4 dots in 640 mode,
-	// or 2 doubled dots in 320 mode
-	// REMINDER: we're working on dots, with 640 dots per line. And lines are doubled
-	uint xpos = uint(vFragPos.x);
-	uint fragOffset = 3u - (xpos % 4u);
+	// first grab the the scb
 	uint scanline = uint(vFragPos.y) / 2u;
-	uint byteVal = texelFetch(VRAMTEX, ivec2(33u + uint(float(xpos + 0.5) / 4.0), scanline), 0).r;
 	uint scb = texelFetch(VRAMTEX, ivec2(0, scanline), 0).r;
 	
 	// Parse the useful scb information
 	is640Mode = bool(scb & 0x80u);
 	// isColorFill = bool(scb & 0x20u);	// unused, already handled when generating VRAM
+	if (bool(scb & 0x10u))		// if the CPU told us this line is unused, set the pixel to transparent
+	{
+		fragColor = vec4(0.0,0.0,0.0,0.0);
+		return;
+	}
 	
+	
+	// Determine the byte and the pixel for this byte
+	uint xpos = uint(vFragPos.x);
+	uint fragOffset = 3u - (xpos % 4u);			// reversed so that palette calc is easier
+	
+	// Grab the scanline color byte value
+	// The scanline color byte value gives the color for either 4 dots in 640 mode,
+	// or 2 doubled dots in 320 mode
+	// REMINDER: we're working on dots, with 640 dots per line. And lines are doubled
+	uint byteVal = texelFetch(VRAMTEX, ivec2(33u + uint(float(xpos + 0.5) / 4.0), scanline), 0).r;
+
 	uint colorIdx = 0u;
 	
 	if (is640Mode)

@@ -423,6 +423,13 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool
 
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 {
+	if (_x == 0)
+	{
+		// Always at the start of the row, set the SHR SCB to 0x10
+		// Because we check bit 4 of the SCB to know if that line is drawn as SHR
+		// The 2gs will always set bit 4 to 0 when sending it over
+		a2shr_vram[(_COLORBYTESOFFSET + 160) * y] = 0x10;
+	}
 	if (_x < CYCLES_HBLANK)	// in HBLANK, nothing to do
 		return;
 	// Theoretically at y==192 (start of VBLANK) we can render for legacy
@@ -433,9 +440,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 		// reset the legacy and shr flags at each vblank
 		bVBlankHasLegacy = false;
 		bVBlankHasSHR = false;
-		for (uint32_t i = 0; i < 200; i++) {
-			a2shr_vram[(_COLORBYTESOFFSET + 160) * i] = 0;	// set all the SHR lines as "Not to be drawn"
-		}
 		return;
 	}
 	if (y >= 200)	// in VBLANK, nothing to do
