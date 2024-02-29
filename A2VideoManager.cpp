@@ -108,6 +108,7 @@ uint8_t A2VideoManager::switch_c022 = 0b11110000;	// white fg, black bg
 uint8_t A2VideoManager::switch_c034 = 0;
 
 constexpr uint32_t CYCLES_HBLANK = 25;			// always 25 cycles
+constexpr uint8_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
 
 static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
 
@@ -189,7 +190,7 @@ void A2VideoManager::Initialize()
 	shader_dhgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_DHGR_FRAGMENT);
 	shader_shr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_SHR_FRAGMENT);
 	shader_beam_legacy.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
-	shader_beam_shr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);		// TODO: MAKE SHR BEAM SHADER
+	shader_beam_shr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_SHR_FRAGMENT);
 
 	// Initialize windows and meshes
 	
@@ -432,6 +433,9 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 		// reset the legacy and shr flags at each vblank
 		bVBlankHasLegacy = false;
 		bVBlankHasSHR = false;
+		for (uint32_t i = 0; i < 200; i++) {
+			a2shr_vram[(_COLORBYTESOFFSET + 160) * i] = 0;	// set all the SHR lines as "Not to be drawn"
+		}
 		return;
 	}
 	if (y >= 200)	// in VBLANK, nothing to do
@@ -443,20 +447,39 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	if (IsSoftSwitch(A2SS_SHR))
 	{
 		bVBlankHasSHR = true;		// at least 1 byte in this vblank cycle is in SHR
-		auto lineStartPtr = a2shr_vram + (1 + 32 + 160) * y;
+		uint8_t* lineStartPtr = a2shr_vram + (_COLORBYTESOFFSET + 160) * y;
 		auto memPtr = SDHRManager::GetInstance()->GetApple2MemAuxPtr();
 		if (xx == 0)
 		{
 			// it's the beginning of the line
 			// Get the SCB
 			lineStartPtr[0] = *(memPtr + _A2VIDEO_SHR_SCB_START + y);
-			// Get the palettes
+			// Get the palette
 			memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
-				   memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) << 5),
+				   memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
 				   32);					// palette length is 32 bytes
 		}
-		// Get the color info
-		lineStartPtr[1 + 32 + xx] = *(memPtr + _A2VIDEO_SHR_START + y * _A2VIDEO_SHR_BYTES_PER_LINE + xx);
+		// Get the color info for the 4 bytes where the beam is
+		auto xfb = xx * 4;	// the x first byte, given that every beam x renders 4 bytes
+		auto scb = lineStartPtr[0];
+		for (uint8_t i = 0; i < 4; i++)
+		{
+			lineStartPtr[_COLORBYTESOFFSET + xfb + i] = *(memPtr + _A2VIDEO_SHR_START + y * _A2VIDEO_SHR_BYTES_PER_LINE + xfb + i);
+			// Pre-calculate colorfill, so that the shader doesn't have to do it
+			// It's completely wasted on the shader. Here it's much more efficient
+			if (!(scb & 0x80u) && (scb & 0x20u))	// 320 mode and colorfill
+			{
+				auto byteColor = lineStartPtr[_COLORBYTESOFFSET + xfb + i];
+				// if the first color of the byte is 0, give it the last color of the previous byte
+				// assuming this is not the first byte of the line
+				if (((byteColor & 0xF0) == 0) && ((xfb + i) != 0))
+					byteColor |= (lineStartPtr[_COLORBYTESOFFSET + xfb + i - 1] & 0b1111) << 4;
+				// if the second color of the byte is 0, give it the first color of the byte
+				if ((byteColor & 0x0F) == 0)
+					byteColor |= (byteColor >> 4);
+				lineStartPtr[_COLORBYTESOFFSET + xfb + i] = byteColor;
+			}
+		}
 		return;
 	}
 	
@@ -703,6 +726,9 @@ void A2VideoManager::Render()
 			}
 		}
 	}
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, oglh->get_intermediate_texture_id());
 
 	// CPU RENDERER
 	if (bShouldUseCPURGBRenderer)

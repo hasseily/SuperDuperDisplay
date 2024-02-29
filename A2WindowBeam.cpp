@@ -102,7 +102,10 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMPtr());
 				break;
 			case A2VIDEOBEAM_SHR:
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, (1+32+160), 200, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMPtr());
+				// Adjust the unpack alignment for textures with arbitrary widths
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 1+32+160, 200, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMPtr());
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				break;
 			default:
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMPtr());

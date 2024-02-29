@@ -12,16 +12,17 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 Apple 2 video beam shader for legacy modes (not SHR).
 
 This shader expects as input a VRAMTEX texture that has the following features:
-- Type GL_RGB8UI, which is 3 bytes for each texel
+- Type GL_RGB8UI, which is 4 bytes for each texel
 - Color R is the MAIN memory byte
 - Color G is the AUX memory byte
 - Color B is 8 bits of state, including the graphics mode and soft switches
+- Color A is the fore and background colors, as specified in the C022 softswitch
 - 40 pixels wide, where MAIN and AUX are interleaved, starting with AUX
 - 192 lines high, which is the Apple 2 scanlines
 
 The shader goes through the following phases:
 - The fragment determines which VRAMTEX texel it's part of, including the x offset
-	to the start of the texel (there is no y offset, each byte is on one scanline).
+	to the start of the texel (there is only y offset for TEXT and LGR modes)
 - It grabs the texel and determines the video mode to use
 - It runs the video mode code on that byte and chooses the correct fragment
 
@@ -67,8 +68,8 @@ void main()
 	// the x and y offsets from the origin
 	// REMINDER: we're working on dots, with 560 dots per line. And lines are doubled
 	uvec2 uFragPos = uvec2(vFragPos);
-	uvec4 targetTexel =  texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0).rgba;
-	uvec2 fragOffset = uvec2(uFragPos.x % 14u, uFragPos.y % 16);	// TODO: IS IT uvec2 or vec2 ???
+	uvec4 targetTexel = texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0).rgba;
+	uvec2 fragOffset = uvec2(uFragPos.x % 14u, uFragPos.y % 16);
 	// The fragOffsets are:
 	// x is 0-14
 	// y is 0-16

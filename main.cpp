@@ -168,11 +168,13 @@ int main(int argc, char* argv[])
 	static MemoryEditor mem_edit_a2e;
 	static MemoryEditor mem_edit_upload;
 	static MemoryEditor mem_edit_vram_legacy;
-	
+	static MemoryEditor mem_edit_vram_shr;
+
 	mem_edit_a2e.Open = false;
 	mem_edit_upload.Open = false;
 	mem_edit_vram_legacy.Open = false;
-	
+	mem_edit_vram_shr.Open = false;
+
 	static bool bShouldTerminateNetworking = false;
 	static bool bShouldTerminateProcessing = false;
     bool show_demo_window = false;
@@ -354,6 +356,7 @@ int main(int argc, char* argv[])
 				ImGui::Checkbox("Metrics Window", &show_metrics_window);
 				ImGui::Checkbox("Apple //e Memory Window", &mem_edit_a2e.Open);
 				ImGui::Checkbox("VRAM Legacy Memory Window", &mem_edit_vram_legacy.Open);
+				ImGui::Checkbox("VRAM SHR Memory Window", &mem_edit_vram_shr.Open);
 				ImGui::Checkbox("Upload Region Memory Window", &mem_edit_upload.Open);
 				ImGui::Text("Load Memory Start: ");
 				ImGui::SameLine();
@@ -463,6 +466,12 @@ int main(int argc, char* argv[])
 			mem_edit_vram_legacy.DrawWindow("Memory Editor: Beam VRAM Legacy", a2VideoManager->GetLegacyVRAMPtr(), _BEAM_VRAM_SIZE_LEGACY);
 		}
 		
+		// Show the VRAM SHR window
+		if (mem_edit_vram_shr.Open)
+		{
+			mem_edit_vram_shr.DrawWindow("Memory Editor: Beam VRAM SHR", a2VideoManager->GetSHRVRAMPtr(), _BEAM_VRAM_SIZE_SHR);
+		}
+		
 		// Show the upload data region memory
 		if (mem_edit_upload.Open)
 		{
@@ -473,10 +482,15 @@ int main(int argc, char* argv[])
         if (show_texture_window)
 		{
 			ImGui::Begin("Texture Viewer", &show_texture_window);
-            ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES - 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES + 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
             ImGui::Text("Texture ID: %d", (int)glhelper->get_texture_id_at_slot(_slotnum));
 			ImVec2 avail_size = ImGui::GetContentRegionAvail();
-			ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+			if (_slotnum < _SDHR_MAX_TEXTURES)
+				ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+			if (_slotnum == _SDHR_MAX_TEXTURES)
+				ImGui::Image((void*)glhelper->get_intermediate_texture_id(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+			if (_slotnum == (_SDHR_MAX_TEXTURES + 1))
+				ImGui::Image((void*)glhelper->get_output_texture_id(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			ImGui::End();
 		}
 
