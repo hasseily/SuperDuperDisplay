@@ -524,10 +524,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 		else {	// standard lores
 			flags = 2;	// LGR
 		}
-	}
-	// Now check the text modes
-	if (IsSoftSwitch(A2SS_TEXT) || IsSoftSwitch(A2SS_MIXED))
-	{
+	} else { 	// Now check the text modes
 		if (IsSoftSwitch(A2SS_80COL))
 			flags = 1;	// DTEXT
 		else

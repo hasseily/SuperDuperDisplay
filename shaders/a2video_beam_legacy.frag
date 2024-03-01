@@ -31,13 +31,13 @@ The shader goes through the following phases:
 // Global uniforms
 uniform int ticks;						// ms since start
 uniform usampler2D VRAMTEX;				// Video RAM texture
-uniform sampler2D a2ModesTextures[7];	// 4 font textures + lgr, hgr, dhgr
-
-// mode -> texture
-// modes are: TEXT, DTEXT, LGR, DLGR, HGR, DHGR
-// For 40 col text, texture 0 is normal and 1 is alternate
-// For 80 col text, texture 2 is normal and 3 is alternate
-const uint modeToTexture[6] = uint[6](0u, 2u, 4u, 4u, 5u, 6u);
+uniform sampler2D a2ModesTex0;			// font 14x16 normal
+uniform sampler2D a2ModesTex1;			// font 14x16 alternate
+uniform sampler2D a2ModesTex2;			// font  7x16 normal
+uniform sampler2D a2ModesTex3;			// font  7x16 alternate
+uniform sampler2D a2ModesTex4;			// LGR
+uniform sampler2D a2ModesTex5;			// HGR
+uniform sampler2D a2ModesTex6;			// DHGR
 
 // Colors for foreground and background
 const vec4 tintcolors[16] = vec4[16](
@@ -71,28 +71,22 @@ void main()
 	uvec4 targetTexel = texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0).rgba;
 	uvec2 fragOffset = uvec2(uFragPos.x % 14u, uFragPos.y % 16u);
 	// The fragOffsets are:
-	// x is 0-14
-	// y is 0-16
+	// x is 0-13
+	// y is 0-15
 
 	// Extract the lower 3 bits to determine which mode to use
 	uint a2mode = targetTexel.b & 7u;	// 7 = 0b111 to mask lower 3 bits
-    uint textureIndex = modeToTexture[a2mode];	// this is the texture to use
 	
 	switch (a2mode) {
 		case 0u:	// TEXT
-		case 1u:	// DTEXT
 		{
 			// Get the character value
-			// In DTEXT mode, the first 7 dots are AUX, last 7 are MAIN.
 			// In TEXT mode, all 14 dots are from MAIN
-			uint charVal = (targetTexel.r * (fragOffset.x / 7u) + targetTexel.g * (1u - (fragOffset.x / 7u))) * a2mode
-							+ targetTexel.r * (1u - a2mode);
-			charVal = targetTexel.r;
+			uint charVal = targetTexel.r;
 			float vCharVal = float(charVal);
 			
 			// if ALTCHARSET (bit 4), use the alt texture
 			uint isAlt = ((targetTexel.b >> 4) & 1u);
-			textureIndex += isAlt;
 			
 			// Determine from char which font glyph to use
 			// and if we need to flash
@@ -103,15 +97,71 @@ void main()
 			float a_flash = (1.0 - step(float(0x80), vCharVal)) * (1.0 - a_inverse) * (1.0 - float(isAlt));
 			
 			// what's our character's starting origin in the character map?
-			// each glyph is 14x16 for TEXT and 7x16 for DTEXT
-			uvec2 charOrigin = uvec2(charVal & 0xFu, charVal >> 4) * uvec2(7u * (2u - a2mode), 16u);
+			// each glyph is 14x16 for TEXT
+			uvec2 charOrigin = uvec2(charVal & 0xFu, charVal >> 4) * uvec2(14u, 16u);
 			
+			// Now get the texture color
+			ivec2 textureSize2d;
+			vec4 tex;
+			if (bool(isAlt))
+			{
+				textureSize2d = textureSize(a2ModesTex1,0);
+				tex = texture(a2ModesTex1, vec2(charOrigin + fragOffset) / vec2(textureSize2d));
+			} else {
+				textureSize2d = textureSize(a2ModesTex0,0);
+				tex = texture(a2ModesTex0, vec2(charOrigin + fragOffset) / vec2(textureSize2d));
+			}
+
+			float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
+																	   // get the color of flashing or the one above
+			tex = ((1.f - tex) * isFlashing) + (tex * (1.f - isFlashing));
+			
+			// And provide for tint coloring that the 2gs can do
+			fragColor = (tex * tintcolors[(targetTexel.a & 0xF0u) >> 4])		// foreground (dot is on)
+			+ ((1.f - tex) * tintcolors[targetTexel.a & 0x0Fu]);	// background (dot is off)
+			return;
+			break;
+		}
+		case 1u:	// DTEXT
+		{
+			// Get the character value
+			// In DTEXT mode, the first 7 dots are AUX, last 7 are MAIN.
+			uint charVal = targetTexel.r * (fragOffset.x / 7u) + targetTexel.g * (1u - (fragOffset.x / 7u));
+			float vCharVal = float(charVal);
+			
+			// if ALTCHARSET (bit 4), use the alt texture
+			uint isAlt = ((targetTexel.b >> 4) & 1u);
+			
+			// Determine from char which font glyph to use
+			// and if we need to flash
+			// Determine if it's inverse when the char is below 0x40
+			// And then if the char is below 0x80 and not inverse, it's flashing,
+			// but only if it's the regular charset
+			float a_inverse = 1.0 - step(float(0x40), vCharVal);
+			float a_flash = (1.0 - step(float(0x80), vCharVal)) * (1.0 - a_inverse) * (1.0 - float(isAlt));
+			
+			// what's our character's starting origin in the character map?
+			// each glyph is 7x16 for DTEXT
+			uvec2 charOrigin = uvec2(charVal & 0xFu, charVal >> 4) * uvec2(7u, 16u);
+			
+			// The fragment offset in DTEXT is 0-13. But 0-6 is in one glyph, and 7-13 is in another.
+			// Now let's move the fragOffset to always be 0-6 so that the glyph handling is correct
+			fragOffset.x =  ((fragOffset.x - 7u) * (fragOffset.x / 7u)) + fragOffset.x * (1u - (fragOffset.x / 7u));
+
 			// Now get the texture color
 			// When getting from the texture color, in DTEXT if we didn't have a dedicated set of 7x16 glyphs
 			// we would have multiplied the x value by 2 to take 1/2 of each column in 80 col mode.
 			// But we have a dedicated set of 7x16 font textures so don't need to
-			ivec2 textureSize2d = textureSize(a2ModesTextures[textureIndex],0);
-			vec4 tex = texture(a2ModesTextures[textureIndex], vec2(charOrigin + fragOffset) / vec2(textureSize2d));
+			ivec2 textureSize2d;
+			vec4 tex;
+			if (bool(isAlt))
+			{
+				textureSize2d = textureSize(a2ModesTex3,0);
+				tex = texture(a2ModesTex3, vec2(charOrigin + fragOffset) / vec2(textureSize2d));
+			} else {
+				textureSize2d = textureSize(a2ModesTex2,0);
+				tex = texture(a2ModesTex2, vec2(charOrigin + fragOffset) / vec2(textureSize2d));
+			}
 			
 			float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
 																	   // get the color of flashing or the one above
@@ -146,9 +196,9 @@ void main()
 				// It's a bottom pixel, it uses the color of the 4 high bits
 				byteOrigin = uvec2(0u, (byteVal >> 4) * 16u);
 			}
-			ivec2 textureSize2d = textureSize(a2ModesTextures[textureIndex],0);
-			// similarly to the TEXT modes, if we're in DLGR (a2mode - 2u), get every other column
-			fragColor = texture(a2ModesTextures[textureIndex],
+			ivec2 textureSize2d = textureSize(a2ModesTex4,0);
+			// if we're in DLGR (a2mode - 2u), get every other column
+			fragColor = texture(a2ModesTex4,
 								(vec2(byteOrigin) + (fragOffset * uvec2(1u + (a2mode - 2u), 1u))) / vec2(textureSize2d));
 			return;
 			break;
@@ -203,8 +253,8 @@ For each pixel, determine which memory byte it is part of,
 
 			// Now get the texture color. We know the X offset as well as the fragment's offset on top of that.
 			// The y value is just the byte's value
-			ivec2 textureSize2d = textureSize(a2ModesTextures[textureIndex],0);
-			fragColor = texture(a2ModesTextures[textureIndex], vec2(texXOffset + int(fragOffset.x), targetTexel.r) / vec2(textureSize2d));
+			ivec2 textureSize2d = textureSize(a2ModesTex5,0);
+			fragColor = texture(a2ModesTex5, vec2(texXOffset + int(fragOffset.x), targetTexel.r) / vec2(textureSize2d));
 			return;
 			break;
 		}
@@ -242,8 +292,8 @@ For each pixel, determine which memory byte it is part of,
 			int vValue = (wordVal >> (4 + int(fragOffset.x) - vColor));
 			int xVal = 10 * ((vValue >> 8) & 0xFF) + vColor;
 			int yVal = vValue & 0xFF;
-			ivec2 textureSize2d = textureSize(a2ModesTextures[textureIndex],0);
-			fragColor = texture(a2ModesTextures[textureIndex], (vec2(0.5, 0.5) + vec2(xVal, yVal)) / vec2(textureSize2d));
+			ivec2 textureSize2d = textureSize(a2ModesTex6,0);
+			fragColor = texture(a2ModesTex6, (vec2(0.5, 0.5) + vec2(xVal, yVal)) / vec2(textureSize2d));
 			return;
 			break;
 		}
