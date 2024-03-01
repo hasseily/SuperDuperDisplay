@@ -37,7 +37,7 @@ uniform sampler2D a2ModesTextures[7];	// 4 font textures + lgr, hgr, dhgr
 // modes are: TEXT, DTEXT, LGR, DLGR, HGR, DHGR
 // For 40 col text, texture 0 is normal and 1 is alternate
 // For 80 col text, texture 2 is normal and 3 is alternate
-const int modeToTexture[6] = int[6](0, 2, 4, 4, 5, 6);
+const uint modeToTexture[6] = uint[6](0u, 2u, 4u, 4u, 5u, 6u);
 
 // Colors for foreground and background
 const vec4 tintcolors[16] = vec4[16](
@@ -69,7 +69,7 @@ void main()
 	// REMINDER: we're working on dots, with 560 dots per line. And lines are doubled
 	uvec2 uFragPos = uvec2(vFragPos);
 	uvec4 targetTexel = texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0).rgba;
-	uvec2 fragOffset = uvec2(uFragPos.x % 14u, uFragPos.y % 16);
+	uvec2 fragOffset = uvec2(uFragPos.x % 14u, uFragPos.y % 16u);
 	// The fragOffsets are:
 	// x is 0-14
 	// y is 0-16
@@ -104,7 +104,7 @@ void main()
 			
 			// what's our character's starting origin in the character map?
 			// each glyph is 14x16 for TEXT and 7x16 for DTEXT
-			uvec2 charOrigin = uvec2(charVal & 0xFu, charVal >> 4) * uvec2(7 * (2 - a2mode), 16);
+			uvec2 charOrigin = uvec2(charVal & 0xFu, charVal >> 4) * uvec2(7u * (2u - a2mode), 16u);
 			
 			// Now get the texture color
 			// When getting from the texture color, in DTEXT if we didn't have a dedicated set of 7x16 glyphs
@@ -135,7 +135,7 @@ void main()
 
 			// Get the byte value depending on MAIN or AUX
 			uint byteVal = (targetTexel.r * (fragOffset.x / 7u) + targetTexel.g * (1u - (fragOffset.x / 7u))) * (a2mode - 2u)
-				+ targetTexel.r * (1 - (a2mode - 2u));
+				+ targetTexel.r * (1u - (a2mode - 2u));
 			// get the color depending on vertical position
 			uvec2 byteOrigin;
 			if (fragOffset.y < 8)
