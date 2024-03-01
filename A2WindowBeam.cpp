@@ -142,13 +142,11 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	
 	// And set all the modes textures that the shader will use
 	// 4 font textures + lgr, hgr, dhgr
-	shaderProgram->setInt("a2ModesTex0", _SDHR_START_TEXTURES + 0 - GL_TEXTURE0);
-	shaderProgram->setInt("a2ModesTex1", _SDHR_START_TEXTURES + 1 - GL_TEXTURE0);
-	shaderProgram->setInt("a2ModesTex2", _SDHR_START_TEXTURES + 2 - GL_TEXTURE0);
-	shaderProgram->setInt("a2ModesTex3", _SDHR_START_TEXTURES + 3 - GL_TEXTURE0);
-	shaderProgram->setInt("a2ModesTex4", _SDHR_START_TEXTURES + 4 - GL_TEXTURE0);
-	shaderProgram->setInt("a2ModesTex5", _SDHR_START_TEXTURES + 5 - GL_TEXTURE0);
-	shaderProgram->setInt("a2ModesTex6", _SDHR_START_TEXTURES + 6 - GL_TEXTURE0);
+	shaderProgram->setInt("a2ModesTex0", _SDHR_START_TEXTURES + 0 - GL_TEXTURE0);	// D/TEXT font regular
+	shaderProgram->setInt("a2ModesTex1", _SDHR_START_TEXTURES + 1 - GL_TEXTURE0);	// D/TEXT font alternate
+	shaderProgram->setInt("a2ModesTex2", _SDHR_START_TEXTURES + 4 - GL_TEXTURE0);	// D/LGR
+	shaderProgram->setInt("a2ModesTex3", _SDHR_START_TEXTURES + 5 - GL_TEXTURE0);	// HGR
+	shaderProgram->setInt("a2ModesTex4", _SDHR_START_TEXTURES + 6 - GL_TEXTURE0);	// DHGR
 
 	// back to the output buffer to draw our scene
 	glActiveTexture(GL_TEXTURE0);
