@@ -102,7 +102,7 @@ void main()
 	// The scanline color byte value gives the color for either 4 dots in 640 mode,
 	// or 2 doubled dots in 320 mode
 	// REMINDER: we're working on dots, with 640 dots per line. And lines are doubled
-	uint byteVal = texelFetch(VRAMTEX, ivec2(33u + uint(float(xpos + 0.5) / 4.0), scanline), 0).r;
+	uint byteVal = texelFetch(VRAMTEX, ivec2(33u + uint(float(xpos) / 4.0), scanline), 0).r;
 
 	uint colorIdx = 0u;
 	
