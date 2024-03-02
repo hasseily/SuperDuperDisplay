@@ -154,7 +154,7 @@ void main()
 			ivec2 textureSize2d = textureSize(a2ModesTex2,0);
 			// if we're in DLGR (a2mode - 2u), get every other column
 			fragColor = texture(a2ModesTex2,
-								(vec2(byteOrigin) + (fragOffset * uvec2(1u + (a2mode - 2u), 1u))) / vec2(textureSize2d));
+								(vec2(byteOrigin) + vec2(fragOffset * uvec2(1u + (a2mode - 2u), 1u))) / vec2(textureSize2d));
 			return;
 			break;
 		}
@@ -257,7 +257,7 @@ For each pixel, determine which memory byte it is part of,
 			// Use the .g (AUX) if the dot is one of the first 7, otherwise .r (MAIN)
 			uint byteVal = ((targetTexel.r & 0x7Fu) << 7) + (targetTexel.g & 0x7Fu);
 			// Find out if the related bit is on, and set the color to white or black
-			fragColor = vec4(1.0f) * float((byteVal & (1u << (uFragPos.x % 14))) >> (uFragPos.x % 14));
+			fragColor = vec4(1.0f) * float((byteVal & (1u << (uFragPos.x % 14u))) >> (uFragPos.x % 14u));
 			fragColor.a = 1.0f;
 		}
 		default:
