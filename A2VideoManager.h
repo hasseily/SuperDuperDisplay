@@ -129,7 +129,7 @@ public:
 	uint32_t color_background = 0;
     bool bShouldReboot = false;             // When an Appletini reboot packet arrives
 	bool bShouldUseCPURGBRenderer = false;	// Use CPU RGB renderer for graphics
-	bool bShouldUseBeamRenderer = false;	// Use the beam racing renderer for graphics
+	bool bShouldUseBeamRenderer = true;	// Use the beam racing renderer for graphics
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
