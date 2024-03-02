@@ -28,8 +28,8 @@ class EventRecorder
 public:
 	void RecordEvent(SDHREvent* sdhr_event);
 	void DisplayImGuiRecorderWindow(bool* p_open);
-	void Update();	// call this from the main loop
-
+	void Update();
+	
 	const bool IsRecording() {
 		return bIsRecording;
 	};

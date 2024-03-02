@@ -17,8 +17,11 @@ public:
 	const uint32_t GetScanline();
 	// Gets the Byte's X Position (0-39 or 0-159 for SHR)
 	const uint32_t GetByteXPos();
-	uint32_t m_vbl_start = 0;	// debug to know when we think vbl started previously
-
+	// Gets the number of cycles for the screen
+	const uint32_t GetScreenCycles();
+	// Shift the VBL start. It effectively moves the current cycle.
+	void SetVBLStart(uint32_t _vblStart);
+	
 	bool isSHR = false;
 
 	// public singleton code
@@ -39,6 +42,9 @@ private:
 	{
 		Initialize();
 	}
+	
+	uint32_t m_prev_vbl_start = 0;	// debug to know when we think vbl started previously
+
 };
 
 #endif // CYCLECOUNTER_H

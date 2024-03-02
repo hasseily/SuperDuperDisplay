@@ -157,4 +157,12 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	}
 }
 
+void A2VideoManager::ActivateBeam()
+{
+	bBeamIsActive = true;
+}
 
+void A2VideoManager::DeactivateBeam()
+{
+	bBeamIsActive = false;
+}

@@ -2,6 +2,7 @@
 #include "common.h"
 #include "SDHRManager.h"
 #include "CycleCounter.h"
+#include "A2VideoManager.h"
 #include "imgui.h"
 #include "imgui_internal.h"		// for PushItemFlag
 #include "extras/ImGuiFileDialog.h"
@@ -134,12 +135,10 @@ void EventRecorder::StopReplay()
 	if (bIsInReplayMode)
 	{
 		bShouldStopReplay = true;
+		bIsInReplayMode = false;
 		if (thread_replay.joinable())
 			thread_replay.join();
 	}
-	// Don't automatically exit replay mode
-	// Let the user do it manually
-	// bIsInReplayMode = false;
 }
 
 void EventRecorder::StartReplay()
@@ -173,6 +172,7 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 	auto startTime = high_resolution_clock::now();
 	auto elapsed = high_resolution_clock::now() - startTime;
 
+	A2VideoManager::GetInstance()->ActivateBeam();
 	while (!*shouldStopReplay)
 	{
 		if (*shouldPauseReplay)
@@ -218,12 +218,11 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 				if (elapsed >= targetDuration)
 					break;
 			}
-		}
-		else {
-			std::this_thread::sleep_for(std::chrono::seconds(1));
-			continue;
+		} else {
+			break;
 		}
 	}
+	A2VideoManager::GetInstance()->DeactivateBeam();
 	return 0;
 }
 
@@ -437,11 +436,8 @@ void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
 
 void EventRecorder::Update()
 {
-
-	if (bIsInReplayMode)
-	{
-		// Stop replay if we reached the end
-		if (currentReplayEvent >= v_events.size())
-			PauseReplay(true);
-	}
+	if (currentReplayEvent >= v_events.size())
+		bShouldStopReplay = true;
+	if (bShouldStopReplay)
+		StopReplay();
 }

@@ -209,6 +209,7 @@ int main(int argc, char* argv[])
 	int _slotnum = 0;
 	bool mem_load_aux_bank = false;
 	int mem_load_position = 0;
+	int vbl_slider_val;
 
 	// Get the instances of all singletons before creating threads
 	// This ensures thread safety
@@ -244,6 +245,8 @@ int main(int argc, char* argv[])
     {
 		// Beam renderer does not use VSYNC. It synchronizes to the Apple 2's VBL.
 		// SDL_GL_SetSwapInterval(g_swapInterval && (!a2VideoManager->bShouldUseBeamRenderer));
+		if (!a2VideoManager->ShouldRender())
+			continue;
 		SDL_GL_SetSwapInterval(g_swapInterval);
         dt_LAST = dt_NOW;
         dt_NOW = SDL_GetPerformanceCounter();
@@ -323,6 +326,8 @@ int main(int argc, char* argv[])
             }   // switch event.type
         }   // while SDL_PollEvent
 
+		eventRecorder->Update();
+		
         if (sdhrManager->IsSdhrEnabled())
             sdhrManager->Render();
         else
@@ -355,26 +360,15 @@ int main(int argc, char* argv[])
 				ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
 				ImGui::Text("Screen Size:%03d x %03d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);
 				ImGui::Separator();
-				ImGui::Text("VBL Start:%05d", cycleCounter->m_vbl_start);
+				vbl_slider_val = cycleCounter->GetScreenCycles();
+				if (ImGui::SliderInt("Set VBL Start", &vbl_slider_val, 0, (int)cycleCounter->GetScreenCycles()))
+				{
+					cycleCounter->SetVBLStart(vbl_slider_val);
+				}
 				ImGui::Separator();
 //				ImGui::Checkbox("Demo Window", &show_demo_window);
 				ImGui::Checkbox("PostProcessing Window", &show_postprocessing_window);
 				ImGui::Checkbox("VSYNC On", &g_swapInterval);
-				if (ImGui::Checkbox("Use Beam Racing Renderer", &a2VideoManager->bShouldUseBeamRenderer))
-				{
-					if (a2VideoManager->bShouldUseBeamRenderer)
-					{
-						a2VideoManager->bShouldUseCPURGBRenderer = false;
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					a2VideoManager->Initialize();
-				}
-				if (ImGui::Checkbox("Use CPU RGB Renderer for L/H/D/GR", &a2VideoManager->bShouldUseCPURGBRenderer))
-				{
-					if (a2VideoManager->bShouldUseCPURGBRenderer)
-						a2VideoManager->bShouldUseBeamRenderer = false;
-					a2VideoManager->Initialize();
-				}
 				ImGui::Checkbox("Event Recorder Window", &show_recorder_window);
 				ImGui::Checkbox("Textures Window", &show_texture_window);
 				ImGui::Checkbox("Metrics Window", &show_metrics_window);
@@ -401,7 +395,10 @@ int main(int argc, char* argv[])
 				ImGui::Checkbox("Untextured Geometry", &glhelper->bDebugNoTextures);         // Show textures toggle
 				ImGui::Checkbox("Perspective Projection", &glhelper->bUsePerspective);       // Change projection type
                 ImGui::Separator();
-				ImGui::Text("[ Soft Switches ]");
+				ImGui::Text("[ Soft Switches ]  ");
+				ImGui::SameLine();
+				if (ImGui::Button("Run Vertical Refresh"))
+					a2VideoManager->ForceBeamFullScreenRender();
                 bool ssValue0 = a2VideoManager->IsSoftSwitch(A2SS_80STORE);
                 if (ImGui::Checkbox("A2SS_80STORE", &ssValue0)) {
                     a2VideoManager->SetSoftSwitch(A2SS_80STORE, ssValue0);
@@ -593,9 +590,6 @@ int main(int argc, char* argv[])
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL end of render error: " << glerr << std::endl;
 		}
-
-        // Update Event Recorder, could be replaying things
-        EventRecorder::GetInstance()->Update();
         
         // Check if we should reboot
         if (a2VideoManager->bShouldReboot)
@@ -621,7 +615,7 @@ int main(int argc, char* argv[])
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_GL_DeleteContext(gl_context);
+    //SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
     SDL_Quit();
 

@@ -71,16 +71,16 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 					cycles_vblank = cycles_total - CYCLES_SCREEN;
 					std::cout << "	VBL in cycle: " << m_cycle << ". Switched to NTSC." << std::endl;
 				}
-				m_vbl_start = CYCLES_SCREEN;
+				m_prev_vbl_start = CYCLES_SCREEN;
 				m_cycle = CYCLES_SCREEN;
 				m_cycle_alignments = 0;
 			}
 			else {
-				m_vbl_start = m_cycle;
+				m_prev_vbl_start = m_cycle;
 				m_cycle = CYCLES_SCREEN;
 				m_cycle_alignments++;
 				std::cout << "VBL Alignment " << m_cycle_alignments 
-					<< ": " << m_vbl_start << " ---> " << m_cycle << std::endl;
+					<< ": " << m_prev_vbl_start << " ---> " << m_cycle << std::endl;
 			}
 		}
 	}
@@ -114,3 +114,19 @@ const uint32_t CycleCounter::GetByteXPos()
 	return m_cycle % (CYCLES_SCANLINES + CYCLES_HBLANK);
 }
 
+const uint32_t CycleCounter::GetScreenCycles()
+{
+	return CYCLES_SCREEN;
+}
+
+void CycleCounter::SetVBLStart(uint32_t _vblStart)
+{
+	// Don't allow a VBL start that's after the screen cycles
+	if (_vblStart > CYCLES_SCREEN)
+		return;
+	m_prev_vbl_start = CYCLES_SCREEN;
+	// move the cycle to the requested change to the VBL
+	m_cycle = m_cycle + (_vblStart - CYCLES_SCREEN);
+	m_cycle_alignments = 0;
+	return;
+}

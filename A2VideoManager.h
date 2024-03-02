@@ -8,7 +8,6 @@
 #include <mutex>
 
 #include "common.h"
-#include "A2Window.h"
 #include "A2WindowBeam.h"
 
 /*
@@ -118,7 +117,6 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 
 	ImageAsset image_assets[8];
-	A2Window windows[A2VIDEO_TOTAL_COUNT];				// mem snapshot GPU render
 	A2WindowBeam windowsbeam[A2VIDEOBEAM_TOTAL_COUNT];	// beam racing GPU render
 
 	// Margins when rendering in a window (pixels)
@@ -128,8 +126,6 @@ public:
 	uint32_t color_foreground = UINT32_MAX;
 	uint32_t color_background = 0;
     bool bShouldReboot = false;             // When an Appletini reboot packet arrives
-	bool bShouldUseCPURGBRenderer = false;	// Use CPU RGB renderer for graphics
-	bool bShouldUseBeamRenderer = true;	// Use the beam racing renderer for graphics
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
@@ -137,7 +133,6 @@ public:
 
 	void NotifyA2MemoryDidChange(uint16_t addr);	// Apple 2's memory changed at addr
 	void ToggleA2Video(bool value);
-	void SelectVideoModes();			// Based on soft switches, decided on video modes
 	uXY ScreenSize();
 	void ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool is_iigs);
 
@@ -147,7 +142,10 @@ public:
 	void ForceBeamFullScreenRender();
 	
 	uint8_t* GetLegacyVRAMPtr() { return a2legacy_vram; };
-	uint8_t* GetSHRVRAMPtr() { return a2shr_vram; }
+	uint8_t* GetSHRVRAMPtr() { return a2shr_vram; };
+	void ActivateBeam();	// The apple 2 is rendering!
+	void DeactivateBeam();	// We don't have a connection to the Apple 2!
+	bool ShouldRender();
 	void Render();	// render whatever mode is active (enabled windows)
 
 	// public singleton code
@@ -178,20 +176,6 @@ private:
 	}
 
 	//////////////////////////////////////////////////////////////////////////
-	// Internal methods
-	//////////////////////////////////////////////////////////////////////////
-
-	// these are the CPU-calculated RGB version
-	void UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
-	void UpdateDLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
-	void UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
-	void UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer);
-	void UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* framebuffer);
-	// Renders graphics mode depending on mixed mode switch
-	void RenderSubMixed(std::vector<uint32_t>*framebuffer);
-	
-	uint32_t ConvertIIgs2RGB(uint16_t color);
-	//////////////////////////////////////////////////////////////////////////
 	// Internal data
 	//////////////////////////////////////////////////////////////////////////
 	bool bA2VideoEnabled = true;			// Is standard Apple 2 video enabled?
@@ -208,17 +192,12 @@ private:
 	bool bVBlankHasSHR = false;				// Does this vblank cycle have some shr dots?
 	bool bBeamRenderLegacy = true;			// Should we render legacy of the previous vblank cycle?
 	bool bBeamRenderSHR = false;			// Should we render shr of the previous vblank cycle?
+	bool bBeamIsActive = false;				// Is the beam active?
 	
 	// vram for beam renderers
 	uint8_t* a2legacy_vram;
 	uint8_t* a2shr_vram;
 
-	// framebuffers for RGB graphics modes
-	std::vector<uint32_t>v_fblgr;
-	std::vector<uint32_t>v_fbdlgr;
-	std::vector<uint32_t>v_fbhgr;
-	std::vector<uint32_t>v_fbdhgr;
-	std::vector<uint32_t>v_fbshr;
 };
 #endif // A2VIDEOMANAGER_H
 

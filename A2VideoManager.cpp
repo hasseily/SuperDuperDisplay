@@ -15,6 +15,7 @@
 #include "OpenGLHelper.h"
 #include "SDHRManager.h"
 #include "CycleCounter.h"
+#include "EventRecorder.h"
 #include "GRAddr2XY.h"
 
 static inline uint32_t SETRGBCOLOR(uint8_t r, uint8_t g, uint8_t b)
@@ -112,11 +113,6 @@ constexpr uint8_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset ever
 
 static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
 
-static Shader shader_text = Shader();
-static Shader shader_lgr = Shader();
-static Shader shader_hgr = Shader();
-static Shader shader_dhgr = Shader();
-static Shader shader_shr = Shader();
 static Shader shader_beam_legacy = Shader();
 static Shader shader_beam_shr = Shader();
 
@@ -162,12 +158,7 @@ void A2VideoManager::Initialize()
 	memset(a2shr_vram, 0, _BEAM_VRAM_SIZE_SHR);
 	bVBlankHasLegacy = true;
 	bVBlankHasSHR = false;
-	
-	v_fblgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
-	v_fbdlgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
-	v_fbhgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT, 0);
-	v_fbdhgr = std::vector<uint32_t>(_A2VIDEO_MIN_WIDTH * _A2VIDEO_MIN_HEIGHT * 2, 0);
-	v_fbshr = std::vector<uint32_t>(_A2VIDEO_SHR_WIDTH * _A2VIDEO_SHR_HEIGHT, 0);
+	bBeamIsActive = false;
 	
 	color_border = 0;
 	color_foreground = UINT32_MAX;
@@ -184,29 +175,13 @@ void A2VideoManager::Initialize()
 	}
 
 	// Generate shaders
-	shader_text.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_TEXT_FRAGMENT);
-	shader_lgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_LGR_FRAGMENT);
-	shader_hgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_HGR_FRAGMENT);
-	shader_dhgr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_DHGR_FRAGMENT);
-	shader_shr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_SHR_FRAGMENT);
 	shader_beam_legacy.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
 	shader_beam_shr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_SHR_FRAGMENT);
 
-	// Initialize windows and meshes
-	
-	windows[A2VIDEO_TEXT].Define(A2VIDEO_TEXT, &shader_text);
-	windows[A2VIDEO_DTEXT].Define(A2VIDEO_DTEXT, &shader_text);
-	windows[A2VIDEO_LGR].Define(A2VIDEO_LGR, &shader_lgr);
-	windows[A2VIDEO_DLGR].Define(A2VIDEO_DLGR, &shader_lgr);
-	windows[A2VIDEO_HGR].Define(A2VIDEO_HGR, &shader_hgr);
-	windows[A2VIDEO_DHGR].Define(A2VIDEO_DHGR, &shader_dhgr);
-	windows[A2VIDEO_SHR].Define(A2VIDEO_SHR, &shader_shr);
-	
+	// Initialize windows
 	windowsbeam[A2VIDEOBEAM_LEGACY].Define(A2VIDEOBEAM_LEGACY, &shader_beam_legacy);
 	windowsbeam[A2VIDEOBEAM_SHR].Define(A2VIDEOBEAM_SHR, &shader_beam_shr);
 
-	// Activate TEXT by default
-	SelectVideoModes();
 	// tell the next Render() call to run initialization routines
 	bShouldInitializeRender = true;
 }
@@ -233,7 +208,6 @@ void A2VideoManager::SetSoftSwitch(A2SoftSwitch_e ss, bool state)
 		a2SoftSwitches |= ss;
 	else
 		a2SoftSwitches &= ~ss;
-	A2VideoManager::GetInstance()->ToggleA2Video(bA2VideoEnabled);
 }
 
 void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
@@ -250,13 +224,11 @@ void A2VideoManager::ToggleA2Video(bool value)
 	bA2VideoEnabled = value;
 	if (bA2VideoEnabled)
 	{
-		SelectVideoModes();
 		auto scrSz = ScreenSize();
 		if (oglHelper->request_framebuffer_resize(scrSz.x, scrSz.y))
 			bShouldInitializeRender = true;
 	}
-	if (bShouldUseBeamRenderer)
-		ForceBeamFullScreenRender();
+	ForceBeamFullScreenRender();
 }
 
 void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool is_iigs)
@@ -418,7 +390,6 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool
 	default:
 		break;
 	}
-	ToggleA2Video(bA2VideoEnabled);	// force video refresh
 }
 
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
@@ -437,11 +408,10 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	if (y >= 200)	// in VBLANK, nothing to do
 		return;
 
-	bRequestVRAMUpdates = false;
 	// Anything here below means the VRAMs are getting modified
 	// No rendering should be done while the VRAMs are being modified
 	
-	// std::lock_guard<std::mutex> lock(a2video_mutex);
+	std::lock_guard<std::mutex> lock(a2video_mutex);
 	if (_x == 0)
 	{
 		// Always at the start of the row, set the SHR SCB to 0x10
@@ -574,7 +544,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 
 void A2VideoManager::RequestVRAMUpdates(bool cycleHasLegacy, bool cycleHasSHR)
 {
-	// std::lock_guard<std::mutex> lock(a2video_mutex);
 	bBeamRenderLegacy = cycleHasLegacy;
 	bBeamRenderSHR = cycleHasSHR;
 	bRequestVRAMUpdates = true;
@@ -593,62 +562,16 @@ void A2VideoManager::ForceBeamFullScreenRender()
 	}
 }
 
-void A2VideoManager::SelectVideoModes()
-{
-	for (auto& _w : this->windows) {
-		_w.SetEnabled(false);
-	}
-	
-	// SHR overrides all other modes
-	if (IsSoftSwitch(A2SS_SHR))
-	{
-		this->windows[A2VIDEO_SHR].SetEnabled(true);
-		return;
-	}
-	
-	// Other Apple 2 modes, starting with graphics
-	if (!IsSoftSwitch(A2SS_TEXT))
-	{
-		if (IsSoftSwitch(A2SS_80COL) && IsSoftSwitch(A2SS_DHGR))	// double resolution
-		{
-			if (IsSoftSwitch(A2SS_HIRES))
-				this->windows[A2VIDEO_DHGR].SetEnabled(true);
-			else
-				this->windows[A2VIDEO_DLGR].SetEnabled(true);
-		}
-		else if (IsSoftSwitch(A2SS_HIRES))	// standard hires
-		{
-			this->windows[A2VIDEO_HGR].SetEnabled(true);
-		}
-		else {	// standard lores
-			this->windows[A2VIDEO_LGR].SetEnabled(true);
-		}
-	}
-	// Now check the text modes
-	if (IsSoftSwitch(A2SS_TEXT) || IsSoftSwitch(A2SS_MIXED))
-	{
-		if (IsSoftSwitch(A2SS_80COL))
-			this->windows[A2VIDEO_DTEXT].SetEnabled(true);
-		else
-		{
-			this->windows[A2VIDEO_TEXT].SetEnabled(true);
-		}
-	}
-	return;
-}
-
 uXY A2VideoManager::ScreenSize()
 {
 	uXY maxSize = uXY({ _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT});
 	uXY s = maxSize;
-	for (auto& _w : this->windows) {
-		if (_w.IsEnabled())
-		{
-			s = _w.Get_screen_count();
-			maxSize.x = (s.x > maxSize.x ? s.x : maxSize.x);
-			maxSize.y = (s.y > maxSize.y ? s.y : maxSize.y);
-		}
+	if (this->windowsbeam[A2VIDEOBEAM_SHR].IsEnabled())
+	{
+		s = uXY({ _A2VIDEO_SHR_WIDTH, _A2VIDEO_SHR_HEIGHT});
 	}
+	maxSize.x = (s.x > maxSize.x ? s.x : maxSize.x);
+	maxSize.y = (s.y > maxSize.y ? s.y : maxSize.y);
 	return maxSize;
 }
 
@@ -697,556 +620,33 @@ void A2VideoManager::Render()
 				<< 0 << " - " << glerr << std::endl;
 		}
 		glActiveTexture(GL_TEXTURE0);
-		if (bShouldUseBeamRenderer)
-		{
-			// Make sure the beam renderer has gone through one pass of the VRAM updates
-			// Unless we want SDD to display a "splash screen", in which case this is where
-			// we'd do it.
-			ForceBeamFullScreenRender();
-		}
+
+		// Make sure the beam renderer has gone through one pass of the VRAM updates
+		// Unless we want SDD to display a "splash screen", in which case this is where
+		// we'd do it.
+		ForceBeamFullScreenRender();
 	}
 
-	// BEAM RENDERER
-	if (bShouldUseBeamRenderer)
+	std::lock_guard<std::mutex> lock(a2video_mutex);
+
+	// At line 200 the cycle counter flags to update the VRAM in the GPU
+	if (bRequestVRAMUpdates)
 	{
-		// At line 200 the cycle counter flags to update the VRAM in the GPU
-		if (bRequestVRAMUpdates)
-		{
-//			a2video_mutex.lock();
-			windowsbeam[A2VIDEOBEAM_LEGACY].SetEnabled(bBeamRenderLegacy);
-			windowsbeam[A2VIDEOBEAM_SHR].SetEnabled(bBeamRenderSHR);
-//			a2video_mutex.unlock();
-		}
-		windowsbeam[A2VIDEOBEAM_LEGACY].Render(bRequestVRAMUpdates);
-		windowsbeam[A2VIDEOBEAM_LEGACY].Render(bRequestVRAMUpdates);
-		bRequestVRAMUpdates = false;
-		goto ENDRENDER;
+		windowsbeam[A2VIDEOBEAM_LEGACY].SetEnabled(bBeamRenderLegacy);
+		windowsbeam[A2VIDEOBEAM_SHR].SetEnabled(bBeamRenderSHR);
 	}
-	
-	// GPU RENDERER
-	for (auto& _w : this->windows) {
-		if (bShouldUseCPURGBRenderer)
-		{
-			// Only GPU render the text modes
-			auto _vidM = _w.Get_video_mode();
-			if ((_vidM == A2VIDEO_TEXT) || (_vidM == A2VIDEO_DTEXT))
-			{
-				_w.Update();
-				_w.Render();
-			}
-		}
-		else {
-			if (!this->windows[A2VIDEO_SHR].IsEnabled() || (_w.Get_video_mode() == A2VIDEO_SHR))
-			{
-				// When SHR is enabled, it turns off every other mode
-				_w.Render();
-			}
-		}
-	}
+	windowsbeam[A2VIDEOBEAM_LEGACY].Render(bRequestVRAMUpdates);
+	windowsbeam[A2VIDEOBEAM_SHR].Render(bRequestVRAMUpdates);
+	bRequestVRAMUpdates = false;
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, oglh->get_intermediate_texture_id());
-
-	// CPU RENDERER
-	if (bShouldUseCPURGBRenderer)
-	{
-		// Check for page 2
-		bool isPage2 = false;
-		// Careful: it's only page 2 if 80STORE is off
-		if (IsSoftSwitch(A2SS_PAGE2) && !IsSoftSwitch(A2SS_80STORE))
-			isPage2 = true;
-
-		if (this->windows[A2VIDEO_SHR].IsEnabled())
-		{
-			this->windows[A2VIDEO_SHR].Update();
-			// Update one line at a time
-			// We doubled the SHR pixel height so only send 1 of 2 lines
-			for (uint8_t i = 0; i < _A2VIDEO_SHR_HEIGHT / 2; i++)
-			{
-				this->UpdateSHRLine(i, &v_fbshr);
-			}
-			this->RenderSubMixed(&v_fbshr);
-			goto ENDRENDER;
-		}
-		if (this->windows[A2VIDEO_LGR].IsEnabled())
-		{
-			this->windows[A2VIDEO_LGR].Update();
-			for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
-			{
-				this->UpdateLoResRGBCell(
-					(isPage2 ? _A2VIDEO_TEXT2_START : _A2VIDEO_TEXT1_START) + i,
-					(isPage2 ? _A2VIDEO_TEXT2_START : _A2VIDEO_TEXT1_START),
-					&v_fblgr);
-			}
-			this->RenderSubMixed(&v_fblgr);
-		}
-		if (this->windows[A2VIDEO_DLGR].IsEnabled())
-		{
-			for (size_t i = 0; i < _A2VIDEO_TEXT_SIZE; i++)
-			{
-				// TODO: There should be no DLORES page 2
-				this->UpdateDLoResRGBCell(
-					(isPage2 ? _A2VIDEO_TEXT2_START : _A2VIDEO_TEXT1_START) + i,
-					(isPage2 ? _A2VIDEO_TEXT2_START : _A2VIDEO_TEXT1_START),
-					&v_fbdlgr);
-			}
-			this->RenderSubMixed(&v_fbdlgr);
-		}
-		if (this->windows[A2VIDEO_HGR].IsEnabled())
-		{
-			for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
-			{
-				this->UpdateHiResRGBCell(
-					(isPage2 ? _A2VIDEO_HGR2_START : _A2VIDEO_HGR1_START) + i,
-					(isPage2 ? _A2VIDEO_HGR2_START : _A2VIDEO_HGR1_START),
-					&v_fbhgr);
-			}
-			this->RenderSubMixed(&v_fbhgr);
-		}
-		if (this->windows[A2VIDEO_DHGR].IsEnabled())
-		{
-			for (size_t i = 0; i < _A2VIDEO_HGR_SIZE; i++)
-			{
-				this->UpdateDHiResRGBCell(
-					(isPage2 ? _A2VIDEO_HGR2_START : _A2VIDEO_HGR1_START) + i,
-					(isPage2 ? _A2VIDEO_HGR2_START : _A2VIDEO_HGR1_START),
-					&v_fbdhgr);
-			}
-			this->RenderSubMixed(&v_fbdhgr);
-		}
-	}
-ENDRENDER:
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
 	}
 	oglh->finalize_render();
 }
 
-void A2VideoManager::RenderSubMixed(std::vector<uint32_t>* framebuffer)
+bool A2VideoManager::ShouldRender()
 {
-	// SHR overrides all other modes, no MIXED mode either
-	if (IsSoftSwitch(A2SS_SHR))
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
-			_A2VIDEO_SHR_WIDTH, _A2VIDEO_SHR_HEIGHT,
-			0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&framebuffer->at(0)));
-		return;
-	}
-	
-	if (IsSoftSwitch(A2SS_MIXED))
-		glTexSubImage2D(GL_TEXTURE_2D, 0,
-			0, 0, _A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_MIXED_HEIGHT,
-			GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&framebuffer->at(0)));
-	else
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
-			_A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT,
-			0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)(&framebuffer->at(0)));
+	// Only render when VRAM needs updating, in VBLANK
+	return (bRequestVRAMUpdates || (!bBeamIsActive));
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// CPU-DRIVEN ORIGINAL A2 MODES GRAPHICS METHODS
-// RGB Videocard code from AppleWin
-///////////////////////////////////////////////////////////////////////////////
-
-void A2VideoManager::UpdateSHRLine(uint8_t line_number, std::vector<uint32_t>* framebuffer)
-{
-	// SHR is all in AUX (E1) Bank
-	uint8_t* pLine = SDHRManager::GetInstance()->GetApple2MemAuxPtr() + _A2VIDEO_SHR_START + line_number * _A2VIDEO_SHR_BYTES_PER_LINE;
-	uint32_t* pVideoAddress = &framebuffer->at(line_number * _A2VIDEO_SHR_WIDTH * 2);
-	uint32_t shrByte;
-
-	const uint32_t k_shr_colors_per_palette = 16;
-	const uint32_t k_shr_color_size = 2;
-
-	// Grab Scanline Control Byte information
-	bool _is640Mode;
-	bool _isColorFillMode;
-	uint8_t* _pscb = SDHRManager::GetInstance()->GetApple2MemAuxPtr() + _A2VIDEO_SHR_SCB_START;
-	uint8_t _scb = *(_pscb + line_number);	// the scan control byte value
-	_is640Mode = _scb & 0x80;
-	_isColorFillMode = _scb & 0x20;
-	// A palette is a 16-entry array of 4-bit-per-channel RGB colors (last 4 bits are reserved)
-	// So each palette has 16 colors from any of 4096 colors
-	uint16_t* palette = (uint16_t*)(SDHRManager::GetInstance()->GetApple2MemAuxPtr() +
-		_A2VIDEO_SHR_PALETTE_START +
-		((_scb & 0xf) * k_shr_colors_per_palette * k_shr_color_size)
-		);
-	// Now that we have the scanline control byte data, iterate through each pixel
-	for (uint8_t i = 0; i < _A2VIDEO_SHR_BYTES_PER_LINE; i++)
-	{
-		shrByte = *reinterpret_cast<uint32_t*>(pLine + i);
-		if (!_is640Mode) // 320 mode, 2 pixels per byte. Can use colorfill.
-		{
-			uint8_t pixel1 = (shrByte >> 4) & 0xf;
-			uint32_t color1 = this->ConvertIIgs2RGB(palette[pixel1]);
-			if (_isColorFillMode && pixel1 == 0 && (i > 0))
-				color1 = *(pVideoAddress - 1);
-			*pVideoAddress++ = color1;
-			*pVideoAddress++ = color1;
-
-			uint8_t pixel2 = shrByte & 0xf;
-			uint32_t color2 = this->ConvertIIgs2RGB(palette[pixel2]);
-			if (_isColorFillMode && pixel2 == 0)
-				color2 = color1;
-			*pVideoAddress++ = color2;
-			*pVideoAddress++ = color2;
-		}
-		else // 640 mode, 4 pixels per byte. Cannot use colorfill.
-		{
-			uint8_t pixel1 = (shrByte >> 6) & 0x3;
-			uint32_t color1 = this->ConvertIIgs2RGB(palette[0x8 + pixel1]);
-			*pVideoAddress++ = color1;
-
-			uint8_t pixel2 = (shrByte >> 4) & 0x3;
-			uint32_t color2 = this->ConvertIIgs2RGB(palette[0xC + pixel2]);
-			*pVideoAddress++ = color2;
-
-			uint8_t pixel3 = (shrByte >> 2) & 0x3;
-			uint32_t color3 = this->ConvertIIgs2RGB(palette[0x0 + pixel3]);
-			*pVideoAddress++ = color3;
-
-			uint8_t pixel4 = shrByte & 0x3;
-			uint32_t color4 = this->ConvertIIgs2RGB(palette[0x4 + pixel4]);
-			*pVideoAddress++ = color4;
-		}
-		
-			// duplicate on the next row (it may be overridden by the scanlines)
-		for (size_t j = 4; j >0; j--)
-		{
-			*(pVideoAddress - j + _A2VIDEO_SHR_WIDTH) = *(pVideoAddress - j);
-		}
-	}
-}
-
-const uint16_t BLUE_MASK = 0x000F;        // 0000 0000 0000 1111
-const uint16_t GREEN_MASK = 0x00F0;       // 0000 0000 1111 0000
-const uint16_t RED_MASK = 0x0F00;         // 0000 1111 0000 0000
-// the 4 high bits are reserved
-
-const uint16_t BLUE_SHIFT = 0;
-const uint16_t GREEN_SHIFT = 4;
-const uint16_t RED_SHIFT = 8;
-
-uint32_t A2VideoManager::ConvertIIgs2RGB(uint16_t color)
-{
-	uint8_t red = (color & RED_MASK) >> RED_SHIFT;
-	uint8_t green = (color & GREEN_MASK) >> GREEN_SHIFT;
-	uint8_t blue = (color & BLUE_MASK) >> BLUE_SHIFT;
-	uint8_t alpha = 0xFF; // Fully opaque
-
-	// Scale up from 4 bits to 8 bits
-	red *= 16;
-	green *= 16;
-	blue *= 16;
-
-	// Combine into a 32-bit value (RGBA format)
-	uint32_t rgba = (alpha << 24) | (blue << 16) | (green << 8) | red;
-
-	return rgba;
-}
-
-void A2VideoManager::UpdateLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer)
-{
-	int x = LGR_ADDR2X[addr - addr_start];	// x start in pixels
-	int y = LGR_ADDR2Y[addr - addr_start];	// y in pixels
-	if (x < 0 || y < 0)	// the holes!
-		return;
-
-	// Everything is double the resolution
-	x *= 2;
-	y *= 2;
-	uint8_t val = *(SDHRManager::GetInstance()->GetApple2MemPtr() + addr);
-
-	uint8_t colorIdx;
-	// Set all 14 dots in the top 4 rows for the low 4 bits color
-	// and the bottom 4 rows for the high bits color
-	// Duplicate each row for the double resolution rows
-	for (size_t j = 0; j < 8; j++)
-	{
-		colorIdx = (j < 4) ? (val & 0xF) : (val & 0xF0) >> 4;
-		for (size_t i = 0; i < 14; i++)
-		{
-			framebuffer->at(y * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];	// LoRes colors start at index 12
-			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
-		}
-		y += 2;
-	}
-}
-
-#define ROL_NIB(x) ( (((x)<<1)&0xF) | (((x)>>3)&1) )
-
-void A2VideoManager::UpdateDLoResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer)
-{
-	int x = LGR_ADDR2X[addr - addr_start];	// x start in pixels
-	int y = LGR_ADDR2Y[addr - addr_start];	// y in pixels
-	if (x < 0 || y < 0)	// the holes!
-		return;
-
-	// Everything is double the resolution
-	x *= 2;
-	y *= 2;
-
-	uint8_t mainval = *(SDHRManager::GetInstance()->GetApple2MemPtr() + addr);
-	uint8_t auxval = *(SDHRManager::GetInstance()->GetApple2MemAuxPtr() + addr);
-
-	const uint8_t auxval_h = auxval >> 4;
-	const uint8_t auxval_l = auxval & 0xF;
-	auxval = (ROL_NIB(auxval_h) << 4) | ROL_NIB(auxval_l);
-
-	uint8_t colorIdx;
-	// Set all 7 dots of aux mem in the top 4 rows for the low 4 bits color
-	// and the bottom 4 rows for the high bits color
-	// Duplicate each row for the double resolution rows
-	// And do it again for the 7 dots of main mem
-	for (size_t j = 0; j < 8; j++)
-	{
-		colorIdx = (j < 4) ? (auxval & 0xF) : (auxval & 0xF0) >> 4;
-		for (size_t i = 0; i < 7; i++)
-		{
-			framebuffer->at(y * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];	// LoRes colors start at index 12
-			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
-		}
-		colorIdx = (j < 4) ? (mainval & 0xF) : (mainval & 0xF0) >> 4;
-		for (size_t i = 7; i < 14; i++)
-		{
-			framebuffer->at(y * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];	// LoRes colors start at index 12
-			framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + x + i) = gPaletteRGB[colorIdx + 12];
-		}
-
-		y += 2;
-	}
-}
-
-// Updates a single cell given a memory byte change
-// The "cell" is 7 consecutive bits
-void A2VideoManager::UpdateHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer)
-{
-	// first get the number of bytes from the start of the lines, i.e. the xb value
-	int x = HGR_ADDR2X[addr - addr_start];	// x start in pixels
-	int y = HGR_ADDR2Y[addr - addr_start];	// y in pixels
-	if (x < 0 || y < 0)	// the holes!
-		return;
-	uint8_t xb = x / 7;	// x in bytes
-	uint8_t xoffset = xb & 1; // offset to start of the 2 bytes. Always start with the even byte
-	addr -= xoffset;
-	x = HGR_ADDR2X[addr - addr_start];
-	// Everything is double the resolution
-	x *= 2;
-	y *= 2;
-
-	uint8_t* pMain = SDHRManager::GetInstance()->GetApple2MemPtr() + addr;
-
-	// We need all 28 bits because each pixel needs a three bit evaluation
-	// Anything outside the bounds of the row is 0
-	uint8_t byteval1 = (xb < 2 ? 0 : *(pMain - 1));
-	uint8_t byteval2 = *pMain;
-	uint8_t byteval3 = *(pMain + 1);
-	uint8_t byteval4 = (xb >= 38 ? 0 : *(pMain + 2));
-
-	// all 28 bits chained
-	uint32_t dwordval = (byteval1 & 0x7F) | ((byteval2 & 0x7F) << 7) | ((byteval3 & 0x7F) << 14) | ((byteval4 & 0x7F) << 21);
-
-	// Extraction of 14 color pixels
-	uint32_t colors[14];
-	int color = 0;
-	uint32_t dwordval_tmp = dwordval;
-	dwordval_tmp = dwordval_tmp >> 7;
-	bool offset = (byteval2 & 0x80) ? true : false;
-	for (int i = 0; i < 14; i++)
-	{
-		if (i == 7) offset = (byteval3 & 0x80) ? true : false;
-		color = dwordval_tmp & 0x3;
-		// Two cases for the two palettes
-		if (offset)
-			colors[i] = gPaletteRGB[1 + color];
-		else
-			colors[i] = gPaletteRGB[6 - color];
-		if (i % 2) dwordval_tmp >>= 2;
-	}
-	// Black and White
-	uint32_t bw[2];
-	bw[0] = gPaletteRGB[0];
-	bw[1] = gPaletteRGB[1];
-
-	uint32_t mask = 0x01C0; //  00|000001 1|1000000
-	uint32_t chck1 = 0x0140; //  00|000001 0|1000000
-	uint32_t chck2 = 0x0080; //  00|000000 1|0000000
-
-	// To remove bleed when a pixel is between 2 white pixels
-	uint32_t mask0 = 0b0000001111100000;
-	uint32_t chck01 = 0b0000001101100000;
-
-	// HIRES render in RGB works on a pixel-basis (1-bit data in framebuffer)
-	// The pixel can be 'color', if it makes a 101 or 010 pattern with the two neighbour bits
-	// In all other cases, it's black if 0 and white if 1
-	// The value of 'color' is defined on a 2-bits basis
-
-	if (xoffset)
-	{
-		// Second byte of the 14 pixels block
-		dwordval = dwordval >> 7;
-		xoffset = 7;
-	}
-
-	uint32_t dst = (y * _A2VIDEO_MIN_WIDTH) + x + (xoffset * 2);	// destination offset in the pixel framebuffer
-
-	for (int i = xoffset; i < xoffset + 7; i++)
-	{
-		// remove bleed if a 0 pixel is between 2 white pixels ( 11 0 11 )
-		if ((dwordval & mask0) == chck01)
-		{
-			framebuffer->at(dst) = bw[0];
-			framebuffer->at(dst+1) = bw[0];
-			dst += 2;
-		}
-		else if (((dwordval & mask) == chck1) || ((dwordval & mask) == chck2))
-		{
-			// Color pixel
-			framebuffer->at(dst) = colors[i];
-			framebuffer->at(dst+1) = colors[i];
-			dst += 2;
-		}
-		else
-		{
-			// B&W pixel
-			framebuffer->at(dst) = bw[(dwordval & chck2 ? 1 : 0)];
-			framebuffer->at(dst + 1) = framebuffer->at(dst);
-			dst += 2;
-		}
-		// Next pixel
-		dwordval = dwordval >> 1;
-	}
-	// duplicate on the next row (it may be overridden by the scanlines)
-	for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
-	{
-		framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + i) = framebuffer->at(y * _A2VIDEO_MIN_WIDTH + i);
-	}
-}
-
-void A2VideoManager::UpdateDHiResRGBCell(uint16_t addr, const uint16_t addr_start, std::vector<uint32_t>* framebuffer)
-{
-	// first get the number of bytes from the start of the lines, i.e. the xb value
-	int x = HGR_ADDR2X[addr - addr_start];	// x start in pixels
-	int y = HGR_ADDR2Y[addr - addr_start];	// y in pixels
-	if (x < 0 || y < 0)	// the holes!
-		return;
-	uint8_t xb = x / 7;	// x in bytes
-	uint8_t xoffset = xb & 1; // offset to start of the 2 bytes. Always start with the even byte
-	addr -= xoffset;
-	x = HGR_ADDR2X[addr - addr_start];
-	// Everything is double the resolution
-	x *= 2;
-	y *= 2;
-	
-	uint8_t* pMain = SDHRManager::GetInstance()->GetApple2MemPtr() + addr;
-	uint8_t* pAux = SDHRManager::GetInstance()->GetApple2MemAuxPtr() + addr;
-	
-	// We need all 28 bits because one 4-bits pixel overlaps two 14-bits cells
-	uint8_t byteval1 = *pAux;
-	uint8_t byteval2 = *pMain;
-	uint8_t byteval3 = *(pAux + 1);
-	uint8_t byteval4 = *(pMain + 1);
-	
-	// all 28 bits chained
-	uint32_t dwordval = (byteval1 & 0x7F) | ((byteval2 & 0x7F) << 7) | ((byteval3 & 0x7F) << 14) | ((byteval4 & 0x7F) << 21);
-	
-	// Extraction of 7 color pixels and 7x4 bits
-	int bits[7];
-	uint32_t colors[7];
-	int color = 0;
-	uint32_t dwordval_tmp = dwordval;
-	for (int i = 0; i < 7; i++)
-	{
-		bits[i] = dwordval_tmp & 0xF;
-		color = ((bits[i] & 7) << 1) | ((bits[i] & 8) >> 3); // DHGR colors are rotated 1 bit to the right
-		colors[i] = *reinterpret_cast<const uint32_t*>(&gPaletteRGB[12 + color]);
-		dwordval_tmp >>= 4;
-	}
-	
-	// black and white colors
-	uint32_t bw[2];
-	bw[0] = gPaletteRGB[0];
-	bw[1] = gPaletteRGB[1];
-	
-	// destination offset in the pixel framebuffer
-	// We process a complete byte very time, so the offset for even/odd is 7 pixels * 2
-	uint32_t dst = (y * _A2VIDEO_MIN_WIDTH) + x + (xoffset * 14);
-	uint32_t* pDst = &framebuffer->at(dst);
-	
-	if (xoffset == 0)	// First cell
-	{
-		if (IsSoftSwitch(A2SS_DHGRMONO))	// Is Black and White
-		{
-			for (int i = 0; i < 14; i++)
-			{
-				*(pDst++) = bw[dwordval & 1];
-				dwordval >>= 1;
-			}
-		} else {
-			// Color cell 0
-			*(pDst++) = colors[0];
-			*(pDst++) = colors[0];
-			*(pDst++) = colors[0];
-			*(pDst++) = colors[0];
-			// Color cell 1
-			*(pDst++) = colors[1];
-			*(pDst++) = colors[1];
-			*(pDst++) = colors[1];
-			
-			// Remaining of color cell 1
-			*(pDst++) = colors[1];
-			
-			// Color cell 2
-			*(pDst++) = colors[2];
-			*(pDst++) = colors[2];
-			*(pDst++) = colors[2];
-			*(pDst++) = colors[2];
-			// Color cell 3
-			*(pDst++) = colors[3];
-			*(pDst++) = colors[3];
-		}
-	}
-	else  // Second cell
-	{
-		if (IsSoftSwitch(A2SS_DHGRMONO))	// Is Black and White
-		{
-			dwordval >>= 14;
-			for (int i = 0; i < 14; i++)
-			{
-				*(pDst++) = bw[dwordval & 1];
-				dwordval >>= 1;
-			}
-		} else {
-			// Remaining of color cell 3
-			*(pDst++) = colors[3];
-			*(pDst++) = colors[3];
-			
-			// Color cell 4
-			*(pDst++) = colors[4];
-			*(pDst++) = colors[4];
-			*(pDst++) = colors[4];
-			*(pDst++) = colors[4];
-			// Color cell 5
-			*(pDst++) = colors[5];
-			
-			// Remaining of color cell 5
-			*(pDst++) = colors[5];
-			*(pDst++) = colors[5];
-			*(pDst++) = colors[5];
-			
-			// Color cell 6
-			*(pDst++) = colors[6];
-			*(pDst++) = colors[6];
-			*(pDst++) = colors[6];
-			*(pDst++) = colors[6];
-		}
-	}
-	
-	// duplicate on the next row (it may be overridden by the scanlines)
-	for (size_t i = 0; i < _A2VIDEO_MIN_WIDTH; i++)
-	{
-		framebuffer->at((y + 1) * _A2VIDEO_MIN_WIDTH + i) = framebuffer->at(y * _A2VIDEO_MIN_WIDTH + i);
-	}
-}
-
-
