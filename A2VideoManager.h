@@ -143,7 +143,7 @@ public:
 
 	// Methods for the single multipurpose beam racing shader
 	void BeamIsAtPosition(uint32_t x, uint32_t y);
-	void RequestBeamRendering(bool cycleHasLegacy, bool cycleHasSHR);
+	void RequestVRAMUpdates(bool cycleHasLegacy, bool cycleHasSHR);
 	void ForceBeamFullScreenRender();
 	
 	uint8_t* GetLegacyVRAMPtr() { return a2legacy_vram; };
@@ -162,13 +162,9 @@ public:
 	inline bool IsSoftSwitch(A2SoftSwitch_e ss) { return (a2SoftSwitches & ss); };
 	void SetSoftSwitch(A2SoftSwitch_e ss, bool state);
     
+	void Initialize();
 	void ResetComputer();
 private:
-	//////////////////////////////////////////////////////////////////////////
-	// Singleton pattern
-	//////////////////////////////////////////////////////////////////////////
-	void Initialize();
-
 	static A2VideoManager* s_instance;
 	A2VideoManager()
 	{
@@ -207,11 +203,11 @@ private:
 
 	// beam render state variables
 	mutable std::mutex a2video_mutex;
-	bool bRequestBeamRendering = false;		// Requests beam rendering from the main thread
+	bool bRequestVRAMUpdates = true;		// Requests beam rendering from the main thread
 	bool bVBlankHasLegacy = true;			// Does this vblank cycle have some legacy dots?
 	bool bVBlankHasSHR = false;				// Does this vblank cycle have some shr dots?
 	bool bBeamRenderLegacy = true;			// Should we render legacy of the previous vblank cycle?
-	bool bBeamRenderSHR = true;				// Should we render shr of the previous vblank cycle?
+	bool bBeamRenderSHR = false;			// Should we render shr of the previous vblank cycle?
 	
 	// vram for beam renderers
 	uint8_t* a2legacy_vram;

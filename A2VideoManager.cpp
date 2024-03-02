@@ -423,6 +423,25 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool
 
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 {
+	// Theoretically at y==192 (start of VBLANK) we can render for legacy
+	// but SHR goes to 200 so let's wait until 200 anyway. We're in VBLANK still.
+	if (_x == CYCLES_HBLANK && y == 200)	// Start of VBLANK
+	{
+		RequestVRAMUpdates(bVBlankHasLegacy, bVBlankHasSHR);
+		// reset the legacy and shr flags at each vblank
+		bVBlankHasLegacy = false;
+		bVBlankHasSHR = false;
+		return;
+	}
+
+	if (y >= 200)	// in VBLANK, nothing to do
+		return;
+
+	bRequestVRAMUpdates = false;
+	// Anything here below means the VRAMs are getting modified
+	// No rendering should be done while the VRAMs are being modified
+	
+	// std::lock_guard<std::mutex> lock(a2video_mutex);
 	if (_x == 0)
 	{
 		// Always at the start of the row, set the SHR SCB to 0x10
@@ -431,18 +450,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 		a2shr_vram[(_COLORBYTESOFFSET + 160) * y] = 0x10;
 	}
 	if (_x < CYCLES_HBLANK)	// in HBLANK, nothing to do
-		return;
-	// Theoretically at y==192 (start of VBLANK) we can render for legacy
-	// but SHR goes to 200 so let's wait until 200 anyway. We're in VBLANK still.
-	if (_x == CYCLES_HBLANK && y == 200)	// Start of VBLANK
-	{
-		RequestBeamRendering(bVBlankHasLegacy, bVBlankHasSHR);
-		// reset the legacy and shr flags at each vblank
-		bVBlankHasLegacy = false;
-		bVBlankHasSHR = false;
-		return;
-	}
-	if (y >= 200)	// in VBLANK, nothing to do
 		return;
 	
 	// Set xx to 0 when after HBLANK. HBLANK is always at the start of the line
@@ -565,12 +572,12 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 
 }
 
-void A2VideoManager::RequestBeamRendering(bool cycleHasLegacy, bool cycleHasSHR)
+void A2VideoManager::RequestVRAMUpdates(bool cycleHasLegacy, bool cycleHasSHR)
 {
-	std::lock_guard<std::mutex> lock(a2video_mutex);
+	// std::lock_guard<std::mutex> lock(a2video_mutex);
 	bBeamRenderLegacy = cycleHasLegacy;
 	bBeamRenderSHR = cycleHasSHR;
-	bRequestBeamRendering = true;
+	bRequestVRAMUpdates = true;
 }
 
 void A2VideoManager::ForceBeamFullScreenRender()
@@ -690,20 +697,29 @@ void A2VideoManager::Render()
 				<< 0 << " - " << glerr << std::endl;
 		}
 		glActiveTexture(GL_TEXTURE0);
+		if (bShouldUseBeamRenderer)
+		{
+			// Make sure the beam renderer has gone through one pass of the VRAM updates
+			// Unless we want SDD to display a "splash screen", in which case this is where
+			// we'd do it.
+			ForceBeamFullScreenRender();
+		}
 	}
 
 	// BEAM RENDERER
 	if (bShouldUseBeamRenderer)
 	{
 		// At line 200 the cycle counter flags to update the VRAM in the GPU
-		a2video_mutex.lock();
-		bool shouldUpdateDataInGPU = bRequestBeamRendering;
-		windowsbeam[A2VIDEOBEAM_LEGACY].SetEnabled(bBeamRenderLegacy);
-		windowsbeam[A2VIDEOBEAM_SHR].SetEnabled(bBeamRenderSHR);
-		bRequestBeamRendering = false;
-		a2video_mutex.unlock();
-		windowsbeam[A2VIDEOBEAM_LEGACY].Render(shouldUpdateDataInGPU);
-		windowsbeam[A2VIDEOBEAM_SHR].Render(shouldUpdateDataInGPU);
+		if (bRequestVRAMUpdates)
+		{
+//			a2video_mutex.lock();
+			windowsbeam[A2VIDEOBEAM_LEGACY].SetEnabled(bBeamRenderLegacy);
+			windowsbeam[A2VIDEOBEAM_SHR].SetEnabled(bBeamRenderSHR);
+//			a2video_mutex.unlock();
+		}
+		windowsbeam[A2VIDEOBEAM_LEGACY].Render(bRequestVRAMUpdates);
+		windowsbeam[A2VIDEOBEAM_LEGACY].Render(bRequestVRAMUpdates);
+		bRequestVRAMUpdates = false;
 		goto ENDRENDER;
 	}
 	

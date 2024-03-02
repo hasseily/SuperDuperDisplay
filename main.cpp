@@ -1,7 +1,6 @@
-// Dear ImGui: standalone example application for SDL2 + OpenGL
-// (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
+// Super Duper Display uses ImGUI and its renderer for SDL2 + OpenGL
+
+#define GL_SILENCE_DEPRECATION // Silence deprecation warnings on macOS for OpenGL
 
 #define IMGUI_USER_CONFIG "../my_imgui_config.h"
 #include "imgui.h"
@@ -41,6 +40,18 @@ static uint32_t fbWidth = 0;
 static uint32_t fbHeight = 0;
 static bool g_swapInterval = true;  // VSYNC
 static SDL_Window* window;
+
+// OpenGL Debug callback function
+void GLAPIENTRY DebugCallbackKHR(GLenum source,
+								 GLenum type,
+								 GLuint id,
+								 GLenum severity,
+								 GLsizei length,
+								 const GLchar* message,
+								 const void* userParam) {
+	std::cerr << "GL CALLBACK: " << (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "")
+	<< " type = " << type << ", severity = " << severity << ", message = " << message << std::endl;
+}
 
 void callback_resolutionChange(int w, int h)
 {
@@ -134,8 +145,19 @@ int main(int argc, char* argv[])
 	}
 	while ((glerr = glGetError()) != GL_NO_ERROR) {
         // reset and clear error
-		// std::cerr << "gladLoadGL error: " << glerr << std::endl;
+		std::cerr << "gladLoadGL error: " << glerr << std::endl;
 	}
+	
+#ifdef DEBUG
+	if (GLAD_GL_KHR_debug) {
+		glDebugMessageCallback(DebugCallbackKHR, nullptr);
+		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);
+	} else {
+		std::cerr << "GL_KHR_debug not supported." << std::endl;
+	}
+#endif
+	
     // glEnable(GL_DEPTH_TEST); // TODO: Check if necessary
     glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
@@ -345,11 +367,13 @@ int main(int argc, char* argv[])
 						a2VideoManager->bShouldUseCPURGBRenderer = false;
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
+					a2VideoManager->Initialize();
 				}
 				if (ImGui::Checkbox("Use CPU RGB Renderer for L/H/D/GR", &a2VideoManager->bShouldUseCPURGBRenderer))
 				{
 					if (a2VideoManager->bShouldUseCPURGBRenderer)
 						a2VideoManager->bShouldUseBeamRenderer = false;
+					a2VideoManager->Initialize();
 				}
 				ImGui::Checkbox("Event Recorder Window", &show_recorder_window);
 				ImGui::Checkbox("Textures Window", &show_texture_window);
@@ -483,14 +507,22 @@ int main(int argc, char* argv[])
 		{
 			ImGui::Begin("Texture Viewer", &show_texture_window);
             ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES + 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::Text("Texture ID: %d", (int)glhelper->get_texture_id_at_slot(_slotnum));
 			ImVec2 avail_size = ImGui::GetContentRegionAvail();
 			if (_slotnum < _SDHR_MAX_TEXTURES)
+			{
+				ImGui::Text("Texture ID: %d", (int)glhelper->get_texture_id_at_slot(_slotnum));
 				ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum), avail_size, ImVec2(0, 0), ImVec2(1, 1));
-			if (_slotnum == _SDHR_MAX_TEXTURES)
+			}
+			else if (_slotnum == _SDHR_MAX_TEXTURES)
+			{
+				ImGui::Text("Intermediate Texture ID: %d", (int)glhelper->get_intermediate_texture_id());
 				ImGui::Image((void*)glhelper->get_intermediate_texture_id(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
-			if (_slotnum == (_SDHR_MAX_TEXTURES + 1))
+			}
+			else if (_slotnum == (_SDHR_MAX_TEXTURES + 1))
+			{
+				ImGui::Text("Output Texture ID: %d", (int)glhelper->get_output_texture_id());
 				ImGui::Image((void*)glhelper->get_output_texture_id(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+			}
 			ImGui::End();
 		}
 

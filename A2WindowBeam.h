@@ -30,7 +30,7 @@ public:
 	void SetEnabled(bool val) { 
 		enabled = val;
 	}
-	bool bNeedsGPUVertexUpdate = false;	// Update the GPU if the vertex data has changed
+	bool bNeedsGPUVertexUpdate = true;	// Update the GPU if the vertex data has changed
 
 	A2WindowBeam()
 		: enabled(false)

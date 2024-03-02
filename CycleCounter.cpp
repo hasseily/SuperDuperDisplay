@@ -36,7 +36,7 @@ uint32_t cycles_total;
 void CycleCounter::Initialize()
 {
 	// So we can render on startup, move the cycle counter to after HBlank
-	std::lock_guard<std::mutex> lock(mtx_cycle);	// unlocked when goes out of scope
+	// std::lock_guard<std::mutex> lock(mtx_cycle);	// unlocked when goes out of scope
 	m_cycle = CYCLES_HBLANK;
 	bIsHBL = false;
 
@@ -47,7 +47,7 @@ void CycleCounter::Initialize()
 
 void CycleCounter::IncrementCycles(int inc, bool isVBL)
 {
-	std::lock_guard<std::mutex> lock(mtx_cycle);
+	// std::lock_guard<std::mutex> lock(mtx_cycle);
 	m_cycle += inc;
 	m_cycle = (m_cycle % cycles_total);
 	if (isVBL)
