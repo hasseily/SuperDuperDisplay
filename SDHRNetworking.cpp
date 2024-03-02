@@ -376,9 +376,10 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 				return 1;
 			}
 			if (connected && nsec > last_recv_nsec + 10000000000ll) {
-				std::cout << "Client disconnected" << std::endl;
 				connected = false;
 				first_drop = true;
+				A2VideoManager::GetInstance()->DeactivateBeam();
+				std::cout << "Client disconnected" << std::endl;
 				continue;
 			}
 			if (retval == -1) {
@@ -386,6 +387,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			}
 			if (!connected) {
 				connected = true;
+				A2VideoManager::GetInstance()->ActivateBeam();
 				std::cout << "Client connected" << std::endl;
 			}
 			last_recv_nsec = nsec;
@@ -447,9 +449,10 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
             return 1;
         }
         if (connected && nsec > last_recv_nsec + 10000000000ll) {
-            std::cout << "Client disconnected" << std::endl;
             connected = false;
             first_drop = true;
+			A2VideoManager::GetInstance()->DeactivateBeam();
+			std::cout << "Client disconnected" << std::endl;
             continue;
         }
         if (retval == -1) {
@@ -458,6 +461,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 
         if (!connected) {
             connected = true;
+			A2VideoManager::GetInstance()->ActivateBeam();
             std::cout << "Client connected" << std::endl;
         }
         last_recv_nsec = nsec;
@@ -523,9 +527,10 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			return 1;
 		}
 		if (connected && nsec > last_recv_nsec + 10000000000ll) {
-			std::cout << "Client disconnected" << std::endl;
 			connected = false;
 			first_drop = true;
+			A2VideoManager::GetInstance()->DeactivateBeam();
+			std::cout << "Client disconnected" << std::endl;
 			continue;
 		}
 		if (retval == -1) {
@@ -534,6 +539,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 
         if (!connected) {
 			connected = true;
+			A2VideoManager::GetInstance()->ActivateBeam();
 			std::cout << "Client connected" << std::endl;
 		}
 		last_recv_nsec = nsec;
