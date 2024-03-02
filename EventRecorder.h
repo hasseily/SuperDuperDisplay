@@ -23,12 +23,22 @@
 #define RECORDER_TOTALMEMSIZE 128 * 1024		// 128k memory snapshot
 #define RECORDER_MEM_SNAPSHOT_CYCLES 1'000'000	// snapshot memory every x cycles
 
+enum EventRecorderStates_e
+{
+	EventRecorderState_STOPPED,
+	EventRecorderState_PAUSED,
+	EventRecorderState_RUNNING,
+	EventRecorderState_RECORDING,
+	EventRecorderState_TOTAL_COUNT
+};
+
 class EventRecorder
 {
 public:
 	void RecordEvent(SDHREvent* sdhr_event);
 	void DisplayImGuiRecorderWindow(bool* p_open);
 	void Update();
+	const EventRecorderStates_e GetState();
 	
 	const bool IsRecording() {
 		return bIsRecording;
@@ -72,7 +82,8 @@ private:
 	bool bIsRecording = false;
 	bool bHasRecording = false;
 	bool bIsInReplayMode = false;	// if in replay mode, don't process real events
-
+	EventRecorderStates_e m_state = EventRecorderState_STOPPED;
+	
 	std::vector<ByteBuffer> v_memSnapshots;	// memory snapshots at regular intervals
 	std::vector<SDHREvent> v_events;
 

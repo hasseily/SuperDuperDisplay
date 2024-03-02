@@ -177,9 +177,11 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 	{
 		if (*shouldPauseReplay)
 		{
+			m_state = EventRecorderState_PAUSED;
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 			continue;
 		}
+		m_state = EventRecorderState_RUNNING;
 		// Check if the user requested to move to a different area in the recording
 		if (bUserMovedEventSlider)
 		{
@@ -222,6 +224,7 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			break;
 		}
 	}
+	m_state = EventRecorderState_STOPPED;
 	A2VideoManager::GetInstance()->DeactivateBeam();
 	return 0;
 }
@@ -235,6 +238,7 @@ void EventRecorder::StartRecording()
 	ClearRecording();
 	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
 	bIsRecording = true;
+	m_state = EventRecorderState_RECORDING;
 }
 
 void EventRecorder::StopRecording()
@@ -242,6 +246,7 @@ void EventRecorder::StopRecording()
 	bIsRecording = false;
 	bHasRecording = true;
 	SaveRecording();
+	m_state = EventRecorderState_STOPPED;
 }
 
 void EventRecorder::ClearRecording()
@@ -324,7 +329,7 @@ void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
 				this->StartReplay();
 		}
 		ImGui::SameLine();
-		if (bShouldPauseReplay)
+		if (m_state == EventRecorderState_PAUSED)
 		{
 			if (ImGui::Button("Unpause##Recording"))
 				this->PauseReplay(false);
@@ -440,4 +445,21 @@ void EventRecorder::Update()
 		bShouldStopReplay = true;
 	if (bShouldStopReplay)
 		StopReplay();
+	
+	switch (m_state) {
+		case EventRecorderState_STOPPED:
+			A2VideoManager::GetInstance()->DeactivateBeam();
+			break;
+		case EventRecorderState_PAUSED:
+			A2VideoManager::GetInstance()->DeactivateBeam();
+			break;
+		case EventRecorderState_RUNNING:
+			A2VideoManager::GetInstance()->ActivateBeam();
+			break;
+		case EventRecorderState_RECORDING:
+			A2VideoManager::GetInstance()->ActivateBeam();
+			break;
+		default:
+			break;
+	}
 }

@@ -580,6 +580,9 @@ void A2VideoManager::Render()
 	if (!bA2VideoEnabled)
 		return;
 
+	if ((!bShouldInitializeRender) && (!bRequestVRAMUpdates))
+		return;
+	
 	GLenum glerr;
 	auto oglh = OpenGLHelper::GetInstance();
 
@@ -638,6 +641,7 @@ void A2VideoManager::Render()
 	windowsbeam[A2VIDEOBEAM_LEGACY].Render(bRequestVRAMUpdates);
 	windowsbeam[A2VIDEOBEAM_SHR].Render(bRequestVRAMUpdates);
 	bRequestVRAMUpdates = false;
+
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;

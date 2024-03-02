@@ -243,8 +243,16 @@ int main(int argc, char* argv[])
     while (!done)
 #endif
     {
+		// Check if we should reboot
+		if (a2VideoManager->bShouldReboot)
+		{
+			std::cerr << "reset detected" << std::endl;
+			a2VideoManager->bShouldReboot = false;
+			a2VideoManager->ResetComputer();
+		}
+		eventRecorder->Update();
+
 		// Beam renderer does not use VSYNC. It synchronizes to the Apple 2's VBL.
-		// SDL_GL_SetSwapInterval(g_swapInterval && (!a2VideoManager->bShouldUseBeamRenderer));
 		if (!a2VideoManager->ShouldRender())
 			continue;
 		SDL_GL_SetSwapInterval(g_swapInterval);
@@ -325,8 +333,6 @@ int main(int argc, char* argv[])
                 break;
             }   // switch event.type
         }   // while SDL_PollEvent
-
-		eventRecorder->Update();
 		
         if (sdhrManager->IsSdhrEnabled())
             sdhrManager->Render();
@@ -590,14 +596,7 @@ int main(int argc, char* argv[])
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL end of render error: " << glerr << std::endl;
 		}
-        
-        // Check if we should reboot
-        if (a2VideoManager->bShouldReboot)
-        {
-            std::cerr << "reset detected" << std::endl;
-            a2VideoManager->bShouldReboot = false;
-			a2VideoManager->ResetComputer();
-        }
+
     }
 #ifdef __EMSCRIPTEN__
     EMSCRIPTEN_MAINLOOP_END;
