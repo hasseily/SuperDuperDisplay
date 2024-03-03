@@ -112,15 +112,17 @@ void EventRecorder::WriteEvent(const SDHREvent& event, std::ofstream& file) {
 	file.write(reinterpret_cast<const char*>(&event.is_iigs), sizeof(event.is_iigs));
 	file.write(reinterpret_cast<const char*>(&event.m2b0), sizeof(event.m2b0));
 	file.write(reinterpret_cast<const char*>(&event.rw), sizeof(event.rw));
+	file.write(reinterpret_cast<const char*>(&event.cycle), sizeof(event.cycle));
 	file.write(reinterpret_cast<const char*>(&event.addr), sizeof(event.addr));
 	file.write(reinterpret_cast<const char*>(&event.data), sizeof(event.data));
 }
 
 void EventRecorder::ReadEvent(std::ifstream& file) {
-	auto event = SDHREvent(false, false, 0, 0, 0);
+	auto event = SDHREvent(false, false, 0, BeamCycle(), 0, 0);
 	file.read(reinterpret_cast<char*>(&event.is_iigs), sizeof(event.is_iigs));
 	file.read(reinterpret_cast<char*>(&event.m2b0), sizeof(event.m2b0));
 	file.read(reinterpret_cast<char*>(&event.rw), sizeof(event.rw));
+	file.read(reinterpret_cast<char*>(&event.cycle), sizeof(event.cycle));
 	file.read(reinterpret_cast<char*>(&event.addr), sizeof(event.addr));
 	file.read(reinterpret_cast<char*>(&event.data), sizeof(event.data));
 	v_events.push_back(std::move(event));
@@ -197,8 +199,6 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			for (auto i = first_event_index; i < *currentReplayEvent; i++)
 			{
 				auto e = v_events.at(i);
-				isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == 0));
-				CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
 				insert_event(&e);
 			}
 		}
@@ -207,13 +207,11 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 		{
 			if (*shouldStopReplay)	// In case a stop was sent while sleeping
 				break;
+			startTime = high_resolution_clock::now();
 			auto e = v_events.at(*currentReplayEvent);
-			bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == 0));
-			CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
 			insert_event(&e);
 			*currentReplayEvent += 1;
 			// wait 1 clock cycle before adding the next event
-			startTime = high_resolution_clock::now();
 			while (true)
 			{
 				elapsed = high_resolution_clock::now() - startTime;

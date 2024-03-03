@@ -601,6 +601,7 @@ int main(int argc, char* argv[])
 
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		SDL_GL_SwapWindow(window);
+		std::cout << "frame index: " << CycleCounter::GetInstance()->frameIndex << std::endl;
 
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL end of render error: " << glerr << std::endl;

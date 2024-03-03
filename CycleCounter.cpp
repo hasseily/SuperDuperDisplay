@@ -35,6 +35,7 @@ void CycleCounter::Initialize()
 	m_region = VideoRegion_e::NTSC;
 	cycles_total = CYCLES_TOTAL_NTSC;
 	cycles_vblank = cycles_total - CYCLES_SCREEN;
+	frameIndex = 0;
 }
 
 void CycleCounter::Reset()
@@ -42,7 +43,7 @@ void CycleCounter::Reset()
 	Initialize();
 }
 
-void CycleCounter::IncrementCycles(int inc, bool isVBL)
+BeamCycle CycleCounter::IncrementCycles(int inc, bool isVBL)
 {
 	m_cycle += inc;
 	m_cycle = (m_cycle % cycles_total);
@@ -70,7 +71,18 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 	}
 	bIsVBL = (m_cycle >= CYCLES_SCREEN);
 	bIsHBL = (GetByteXPos() < CYCLES_HBLANK);
-	A2VideoManager::GetInstance()->BeamIsAtPosition(GetByteXPos(), GetScanline());
+	if (m_cycle == 0)
+		++frameIndex;
+	frameIndex = frameIndex % (m_region == VideoRegion_e::NTSC ? 60 : 50);
+	BeamCycle res;
+	res.x = GetByteXPos();
+	res.y = GetScanline();
+	return res;
+}
+
+void CycleCounter::SetCycle(BeamCycle _cycle)
+{
+	m_cycle = _cycle.x + (_cycle.y * (CYCLES_SCANLINES + CYCLES_HBLANK));
 }
 
 const VideoRegion_e CycleCounter::GetVideoRegion()

@@ -20,6 +20,7 @@
 
 #include <iostream>
 #include <cstring>
+#include "CycleCounter.h"
 
 #ifdef __NETWORKING_WINDOWS__
 #include <winsock2.h>
@@ -53,12 +54,14 @@ struct SDHREvent {
     bool is_iigs;   // 2gs == 1, 2e == 0
     bool m2b0; 
 	bool rw;        // read == 1, write == 0
+	BeamCycle cycle;	// current cycle in the frame
 	uint16_t addr;
 	uint8_t data;
-	SDHREvent(bool is_iigs_, bool m2b0_, bool rw_, uint16_t addr_, uint8_t data_) :
+	SDHREvent(bool is_iigs_, bool m2b0_, bool rw_, BeamCycle cycle_, uint16_t addr_, uint8_t data_) :
 		is_iigs(is_iigs_),
                 m2b0(m2b0_),
 		rw(rw_),
+		cycle(cycle_),
 		addr(addr_),
 		data(data_) {}
 };

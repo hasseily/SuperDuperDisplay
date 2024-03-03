@@ -13,10 +13,17 @@ enum class VideoRegion_e
 	PAL = 2
 };
 
+struct BeamCycle {
+	uint16_t x;
+	uint16_t y;
+	BeamCycle(uint16_t _x = 0, uint16_t _y = 0) : x(_x), y(_y) {}
+};
+
 class CycleCounter
 {
 public:
-	void IncrementCycles(int inc, bool isVBL);
+	BeamCycle IncrementCycles(int inc, bool isVBL);	// returns the new cycle
+	void SetCycle(BeamCycle _cycle);
 	const bool IsVBL();
 	const bool IsHBL();
 	const bool IsInBlank();
@@ -34,6 +41,7 @@ public:
 	void SetVBLStart(uint32_t _vblStart);
 	
 	bool isSHR = false;
+	uint32_t frameIndex = 0;
 
 	// public singleton code
 	static CycleCounter* GetInstance()

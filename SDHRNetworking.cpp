@@ -70,7 +70,7 @@ void terminate_processing_thread()
 {
 	// Force a dummy event to process, so that shouldTerminateProcessing is triggered
 	// and the loop is closed cleanly.
-	SDHREvent e = SDHREvent(0, 0, 1, 0, 0);
+	SDHREvent e = SDHREvent(0, 0, 1, BeamCycle(), 0, 0);
 	events.push(e);
 }
 
@@ -85,8 +85,20 @@ int process_events_thread(bool* shouldTerminateProcessing)
 	auto a2VideoMgr = A2VideoManager::GetInstance();
 	while (!(*shouldTerminateProcessing)) {
 		auto e = events.pop();	// The thread will wait until there's an event to pop
-		// std::cout << e.is_iigs << " " << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
+		// std::cout << e.is_iigs << " " << e.rw << " " << e.cycle << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
 
+		// Update the current VRAM based on the cycle
+		A2VideoManager::GetInstance()->BeamIsAtPosition(e.cycle.x, e.cycle.y);
+
+		// Get rid of useless processing
+		if (e.is_iigs && e.m2b0) {
+			// ignore updates from iigs_mode firmware with m2sel high
+			continue;
+		}
+		if (e.rw && ((e.addr & 0xF000) != 0xC000)) {
+			// ignoring all read events not softswitches
+			continue;
+		}
         /*
          *********************************
          HANDLE SIMPLE MEMORY WRITE EVENTS
@@ -294,21 +306,15 @@ void process_single_packet_header(SDHRPacketHeader* h,
 		bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
 		bool rw = (ctrl_bits & 0x01) == 0x01;
 
-		SDHREvent ev(iigs_mode, m2b0, rw, addr, data);
+		// Update the cycle counting and VBL hit
+		bool isVBL = ((addr == 0xC019) && rw && ((data >> 7) == 0));
+		BeamCycle cycle = CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
+		
+		SDHREvent ev(iigs_mode, m2b0, rw, cycle, addr, data);
 		eventRecorder = EventRecorder::GetInstance();
 		if (eventRecorder->IsRecording())
 			eventRecorder->RecordEvent(&ev);
-		// Update the cycle counting and VBL hit
-		bool isVBL = ((addr == 0xC019) && rw && ((data >> 7) == 0));
-		CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
-		if (iigs_mode && m2b0) {
-			// ignore updates from iigs_mode firmware with m2sel high
-			continue;
-		}
-		if (rw && ((addr & 0xF000) != 0xC000)) {
-			// ignoring all read events not softswitches
-			continue;
-		}
+
 		if (! eventRecorder->IsInReplayMode())
 			events.push(ev);
     }
