@@ -184,6 +184,8 @@ void A2VideoManager::Initialize()
 
 	// tell the next Render() call to run initialization routines
 	bShouldInitializeRender = true;
+	
+	CycleCounter::GetInstance()->Reset();
 }
 
 A2VideoManager::~A2VideoManager()

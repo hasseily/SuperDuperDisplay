@@ -209,6 +209,7 @@ int main(int argc, char* argv[])
 	int _slotnum = 0;
 	bool mem_load_aux_bank = false;
 	int mem_load_position = 0;
+	bool vbl_region_is_PAL;
 	int vbl_slider_val;
 
 	// Get the instances of all singletons before creating threads
@@ -366,6 +367,14 @@ int main(int argc, char* argv[])
 				ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
 				ImGui::Text("Screen Size:%03d x %03d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);
 				ImGui::Separator();
+				vbl_region_is_PAL = (cycleCounter->GetVideoRegion() == VideoRegion_e::PAL);
+				if (ImGui::Checkbox("PAL Mode", &vbl_region_is_PAL))
+				{
+					if (vbl_region_is_PAL)
+						cycleCounter->SetVideoRegion(VideoRegion_e::PAL);
+					else
+						cycleCounter->SetVideoRegion(VideoRegion_e::NTSC);
+				}
 				vbl_slider_val = cycleCounter->GetScreenCycles();
 				if (ImGui::SliderInt("Set VBL Start", &vbl_slider_val, 0, (int)cycleCounter->GetScreenCycles()))
 				{
