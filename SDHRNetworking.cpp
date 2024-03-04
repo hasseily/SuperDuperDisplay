@@ -6,12 +6,35 @@
 #include <time.h>
 #include <fcntl.h>
 
-static ConcurrentQueue<SDHREvent> events;
+
+#ifdef __NETWORKING_WINDOWS__
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#pragma comment(lib, "Ws2_32.lib")
+typedef SOCKET        __SOCKET;
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <poll.h>
+typedef int        __SOCKET;
+#ifdef __NETWORKING_APPLE__
+//#include <sys/uio.h>
+struct mmsghdr {
+	struct msghdr msg_hdr;  // The standard msghdr structure
+	unsigned int  msg_len;  // Number of bytes received or sent
+};
+#endif
+#endif
+
+static ConcurrentQueue<std::unique_ptr<Packet>> packetQueue;
 static EventRecorder* eventRecorder;
 
 ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_addr)
 {
-	events.clear();
+	packetQueue.clear();
 
 #ifdef __NETWORKING_WINDOWS__
 	WSADATA wsaData;
@@ -58,51 +81,45 @@ ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_a
 
 void insert_event(SDHREvent* e)
 {
-	events.push(*e);
+	assert("ERROR: CANNOT INSERT EVENT");
 }
 
 void clear_events()
 {
-	events.clear();
+	assert("ERROR: CANNOT CLEAR EVENTS");
 }
 
 void terminate_processing_thread()
 {
-	// Force a dummy event to process, so that shouldTerminateProcessing is triggered
+	// Force a dummy packet to process, so that shouldTerminateProcessing is triggered
 	// and the loop is closed cleanly.
-	SDHREvent e = SDHREvent(0, 0, 1, 0, 0);
-	events.push(e);
+	auto packet = std::make_unique<Packet>();
+	packetQueue.push(std::move(packet));
 }
 
-// Platform-independent event processing
-// Filters and assigns events to memory, control or data
-// Events assigned to data have their data bytes appended to a command_buffer
-// The command_buffer is then further processed by SDHRManager
-int process_events_thread(bool* shouldTerminateProcessing)
+void process_single_event(const SDHREvent& e)
 {
-	std::cout << "Starting Processing Thread\n";
+	// std::cout << e.is_iigs << " " << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
+	
 	auto sdhrMgr = SDHRManager::GetInstance();
 	auto a2VideoMgr = A2VideoManager::GetInstance();
-	while (!(*shouldTerminateProcessing)) {
-		auto e = events.pop();	// The thread will wait until there's an event to pop
-		// std::cout << e.is_iigs << " " << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
-
-        /*
-         *********************************
-         HANDLE SIMPLE MEMORY WRITE EVENTS
-         *********************************
-        */
-		if ((e.addr >= _A2_MEMORY_SHADOW_BEGIN) && (e.addr < _A2_MEMORY_SHADOW_END)) {
-			uint8_t _sw = 0;	// switches state
-			if (a2VideoMgr->IsSoftSwitch(A2SS_80STORE))
-				_sw |= 0b001;
-			if (a2VideoMgr->IsSoftSwitch(A2SS_RAMWRT))
-				_sw |= 0b010;
-			if (a2VideoMgr->IsSoftSwitch(A2SS_PAGE2))
-				_sw |= 0b100;
-			bool bIsAux = false;
-			switch (_sw)
-			{
+	
+	/*
+	 *********************************
+	 HANDLE SIMPLE MEMORY WRITE EVENTS
+	 *********************************
+	 */
+	if ((e.addr >= _A2_MEMORY_SHADOW_BEGIN) && (e.addr < _A2_MEMORY_SHADOW_END)) {
+		uint8_t _sw = 0;	// switches state
+		if (a2VideoMgr->IsSoftSwitch(A2SS_80STORE))
+			_sw |= 0b001;
+		if (a2VideoMgr->IsSoftSwitch(A2SS_RAMWRT))
+			_sw |= 0b010;
+		if (a2VideoMgr->IsSoftSwitch(A2SS_PAGE2))
+			_sw |= 0b100;
+		bool bIsAux = false;
+		switch (_sw)
+		{
 			case 0b010:
 				// Only writes 0000-01FF to MAIN
 				bIsAux = true;
@@ -131,98 +148,98 @@ int process_events_thread(bool* shouldTerminateProcessing)
 				break;
 			default:
 				break;
-			}
-			if (e.is_iigs && e.m2b0)
-				bIsAux = true;
-
-			if (bIsAux)
-			{
-				sdhrMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
-				a2VideoMgr->NotifyA2MemoryDidChange(e.addr + 0x10000);
-			}
-			else {
-				sdhrMgr->GetApple2MemPtr()[e.addr] = e.data;
-				a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
-			}
-			continue;
 		}
-        /*
-         *********************************
-         HANDLE SOFT SWITCHES EVENTS
-         *********************************
-        */
-		if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
-			// Send soft switches to the A2VideoManager
-			if (e.addr >> 8 == 0xc0)
-				a2VideoMgr->ProcessSoftSwitch(e.addr, e.data, e.rw, e.is_iigs);
-			// ignore non-control
-			continue;
-		}
-        /*
-         *********************************
-         HANDLE SDHR (0xC0A0/1) EVENTS
-         *********************************
-        */
-		//std::cerr << "cmd " << e.addr << " " << (uint32_t) e.data << std::endl;
-		SDHRCtrl_e _ctrl;
-		switch (e.addr & 0x0f)
+		if (e.is_iigs && e.m2b0)
+			bIsAux = true;
+		
+		if (bIsAux)
 		{
+			sdhrMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
+			a2VideoMgr->NotifyA2MemoryDidChange(e.addr + 0x10000);
+		}
+		else {
+			sdhrMgr->GetApple2MemPtr()[e.addr] = e.data;
+			a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
+		}
+		return;
+	}
+	/*
+	 *********************************
+	 HANDLE SOFT SWITCHES EVENTS
+	 *********************************
+	 */
+	if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
+		// Send soft switches to the A2VideoManager
+		if (e.addr >> 8 == 0xc0)
+			a2VideoMgr->ProcessSoftSwitch(e.addr, e.data, e.rw, e.is_iigs);
+		// ignore non-control
+		return;
+	}
+	/*
+	 *********************************
+	 HANDLE SDHR (0xC0A0/1) EVENTS
+	 *********************************
+	 */
+	//std::cerr << "cmd " << e.addr << " " << (uint32_t) e.data << std::endl;
+	SDHRCtrl_e _ctrl;
+	switch (e.addr & 0x0f)
+	{
 		case 0x00:
 			// std::cout << "This is a control packet!" << std::endl;
 			_ctrl = (SDHRCtrl_e)e.data;
 			switch (_ctrl)
 			{
-			case SDHR_CTRL_DISABLE:
-				#ifdef DEBUG
-				std::cout << "CONTROL: Disable SDHR" << std::endl;
-				#endif
-				sdhrMgr->ToggleSdhr(false);
-				a2VideoMgr->ToggleA2Video(true);
-				break;
-			case SDHR_CTRL_ENABLE:
-				//#ifdef DEBUG
-				std::cout << "CONTROL: Enable SDHR" << std::endl;
-				//#endif
-				sdhrMgr->ToggleSdhr(true);
-				a2VideoMgr->ToggleA2Video(false);
-				break;
-			case SDHR_CTRL_RESET:
-				//#ifdef DEBUG
-				std::cout << "CONTROL: Reset SDHR" << std::endl;
-				//#endif
-				sdhrMgr->ResetSdhr();
-				break;
-			case SDHR_CTRL_PROCESS:
-			{
-				/*
-				At this point we have a complete set of commands to process.
-				Wait for the main thread to finish loading any previous changes into the GPU, then process
-				the commands.
-				*/
-
-				#ifdef DEBUG
-				std::cout << "CONTROL: Process SDHR" << std::endl;
-				#endif
-				while (sdhrMgr->dataState != DATASTATE_e::DATA_IDLE) {};
-				bool processingSucceeded = sdhrMgr->ProcessCommands();
-				sdhrMgr->dataState = DATASTATE_e::DATA_UPDATED;
-				if (processingSucceeded)
-				{
-					#ifdef DEBUG
-					std::cout << "Processing SDHR succeeded!" << std::endl;
-					#endif
-				}
-				else {
+				case SDHR_CTRL_DISABLE:
+#ifdef DEBUG
+					std::cout << "CONTROL: Disable SDHR" << std::endl;
+#endif
+					sdhrMgr->ToggleSdhr(false);
+					a2VideoMgr->ToggleA2Video(true);
+					break;
+				case SDHR_CTRL_ENABLE:
 					//#ifdef DEBUG
-					std::cerr << "ERROR: Processing SDHR failed!" << std::endl;
+					std::cout << "CONTROL: Enable SDHR" << std::endl;
 					//#endif
+					sdhrMgr->ToggleSdhr(true);
+					a2VideoMgr->ToggleA2Video(false);
+					break;
+				case SDHR_CTRL_RESET:
+					//#ifdef DEBUG
+					std::cout << "CONTROL: Reset SDHR" << std::endl;
+					//#endif
+					sdhrMgr->ResetSdhr();
+					break;
+				case SDHR_CTRL_PROCESS:
+				{
+					/*
+					 At this point we have a complete set of commands to process.
+					 Wait for the main thread to finish loading any previous changes into the GPU, then process
+					 the commands.
+					 */
+					
+#ifdef DEBUG
+					std::cout << "CONTROL: Process SDHR" << std::endl;
+#endif
+					while (sdhrMgr->dataState != DATASTATE_e::DATA_IDLE) {};
+					bool processingSucceeded = sdhrMgr->ProcessCommands();
+					sdhrMgr->dataState = DATASTATE_e::DATA_UPDATED;
+					if (processingSucceeded)
+					{
+#ifdef DEBUG
+						std::cout << "Processing SDHR succeeded!" << std::endl;
+#endif
+					}
+					else {
+						//#ifdef DEBUG
+						std::cerr << "ERROR: Processing SDHR failed!" << std::endl;
+						//#endif
+					}
+					sdhrMgr->ClearBuffer();
+					break;
 				}
-				sdhrMgr->ClearBuffer();
-				break;
-			}
-			default:
-				std::cerr << "ERROR: Unknown control packet type: " << std::hex << (uint32_t)e.data << std::endl;
-				break;
+				default:
+					std::cerr << "ERROR: Unknown control packet type: " << std::hex << (uint32_t)e.data << std::endl;
+					break;
 			}
 			break;
 		case 0x01:
@@ -232,58 +249,55 @@ int process_events_thread(bool* shouldTerminateProcessing)
 		default:
 			std::cerr << "ERROR: Unknown packet type: " << std::hex << e.addr << std::endl;
 			break;
-		}
 	}
-	std::cout << "Stopped Processing Thread\n";
-	return 0;
 }
 
 void process_single_packet_header(SDHRPacketHeader* h,
-                                  uint32_t packet_size,
-                                  uint32_t& prev_seqno,
-                                  bool& first_drop)
+								  uint32_t packet_size,
+								  uint32_t prev_seqno,
+								  bool first_drop)
 {
-    //std::cerr << packet_size << std::endl;
-    uint32_t seqno = h->seqno;
-
-    // std::cerr << "Receiving seqno " << seqno << std::endl;
-
-    if (seqno < prev_seqno)
-        std::cerr << "FOUND EARLIER PACKET" << std::endl;
-    if (seqno != prev_seqno + 1) {
-        if (first_drop) {
-            first_drop = false;
-        }
-        else {
-            std::cerr << "seqno drops: "
-                << seqno - prev_seqno + 1 << std::endl;
-            // this is pretty bad, should probably go into error
-        }
-    }
-    prev_seqno = seqno;
-    switch (h->cmdtype)
-    {
-    case 0:    // bus event
-        break;
-    case 1:    // echo
-        // TODO
-        return;
-    case 2: // computer reset
-        A2VideoManager::GetInstance()->bShouldReboot = true;
-        return;
-    case 3: // datetime request
-        // TODO
-        return;
-    default:
-        std::cerr << "ignoring cmd" << std::endl;
-        return;
-    };
-
-    // bus event
-    uint8_t* p = (uint8_t*)h + sizeof(SDHRPacketHeader);
-    uint8_t* e = (uint8_t*)h + packet_size;
-
-    while (p < e) {
+	//std::cerr << packet_size << std::endl;
+	uint32_t seqno = h->seqno;
+	
+	// std::cerr << "Receiving seqno " << seqno << std::endl;
+	
+	if (seqno < prev_seqno)
+		std::cerr << "FOUND EARLIER PACKET" << std::endl;
+	if (seqno != prev_seqno + 1) {
+		if (first_drop) {
+			first_drop = false;
+		}
+		else {
+			std::cerr << "seqno drops: "
+			<< seqno - prev_seqno + 1 << std::endl;
+			// this is pretty bad, should probably go into error
+		}
+	}
+	prev_seqno = seqno;
+	switch (h->cmdtype)
+	{
+		case 0:    // bus event
+			break;
+		case 1:    // echo
+				   // TODO
+			return;
+		case 2: // computer reset
+			A2VideoManager::GetInstance()->bShouldReboot = true;
+			return;
+		case 3: // datetime request
+				// TODO
+			return;
+		default:
+			std::cerr << "ignoring cmd" << std::endl;
+			return;
+	};
+	
+	// bus event
+	uint8_t* p = (uint8_t*)h + sizeof(SDHRPacketHeader);
+	uint8_t* e = (uint8_t*)h + packet_size;
+	
+	while (p < e) {
 		uint32_t* event = (uint32_t*)p;
 		p += 4;
 		uint8_t ctrl_bits = (*event >> 24) & 0xff;
@@ -293,7 +307,7 @@ void process_single_packet_header(SDHRPacketHeader* h,
 		bool m2b0 = (ctrl_bits & 0x04) == 0x04;
 		bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
 		bool rw = (ctrl_bits & 0x01) == 0x01;
-
+		
 		SDHREvent ev(iigs_mode, m2b0, rw, addr, data);
 		eventRecorder = EventRecorder::GetInstance();
 		if (eventRecorder->IsRecording())
@@ -310,17 +324,165 @@ void process_single_packet_header(SDHRPacketHeader* h,
 			continue;
 		}
 		if (! eventRecorder->IsInReplayMode())
-			events.push(ev);
-    }
+			process_single_event(ev);
+	}
+}
+
+// Platform-independent event processing
+// Filters and assigns events to memory, control or data
+// Events assigned to data have their data bytes appended to a command_buffer
+// The command_buffer is then further processed by SDHRManager
+int process_events_thread(bool* shouldTerminateProcessing)
+{
+	std::cout << "Starting Processing Thread\n";
+	while (!(*shouldTerminateProcessing)) {
+		// Get a packet from the queue
+		// Each packet should have a minimum of 64 events
+		auto p = packetQueue.pop();
+		
+		if (p->size > 0)
+		{
+			SDHRPacketHeader* h = (SDHRPacketHeader*)p->data.get();
+			process_single_packet_header(h, p->retval,
+										 p->prev_seqno, p->first_drop);
+		}
+	}
+	std::cout << "Stopped Processing Thread\n";
+	return 0;
 }
 
 int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 {
 	std::cout << "Starting Network Thread\n";
-
+	
 #ifdef __NETWORKING_WINDOWS__
+	WSADATA wsaData;
+	int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (result != 0) {
+		std::cerr << "WSAStartup failed: " << result << std::endl;
+		return 1;
+	}
+#endif
+	
+	int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		std::cerr << "Error opening socket" << std::endl;
+#ifdef __NETWORKING_WINDOWS__
+		WSACleanup();
+#endif
+		return 1;
+	}
+	
+	struct sockaddr_in serveraddr;
+	memset(&serveraddr, 0, sizeof(serveraddr));
+	serveraddr.sin_family = AF_INET;
+	serveraddr.sin_port = htons((unsigned short)port);
+	serveraddr.sin_addr.s_addr = INADDR_ANY;
+	
+	if (bind(sockfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0) {
+		std::cerr << "Error on binding" << std::endl;
+#ifdef __NETWORKING_WINDOWS__
+		closesocket(sockfd);
+		WSACleanup();
+#else
+		close(sockfd);
+#endif
+		return 1;
+	}
+	
+	// Polling structure
+#ifdef __NETWORKING_WINDOWS__
+	WSAPOLLFD fds[1];
+#else
+	struct pollfd fds[1];
+#endif
+	fds[0].fd = sockfd;
+	fds[0].events = POLLIN; // Check for data to read
+	
+	std::cout << "Waiting for packets..." << std::endl;
+	bool connected = false;
+	
+	bool first_drop = true;
+	uint32_t prev_seqno = 0;
+	int64_t last_recv_nsec = 0;
+	
+	while (!(*shouldTerminateNetworking)) {
+#ifdef __NETWORKING_WINDOWS__
+		LARGE_INTEGER frequency;        // ticks per second
+		LARGE_INTEGER t1;               // ticks
+		QueryPerformanceFrequency(&frequency);
+		QueryPerformanceCounter(&t1);
+		int64_t nsec = t1.QuadPart * 100'000'000'0ll / frequency.QuadPart;
+#else
+		timespec ts;
+		clock_gettime(CLOCK_MONOTONIC, &ts);
+		int64_t nsec = ts.tv_sec * 100'000'000'0ll + ts.tv_nsec;
+#endif
+		int retval = 0;
+		
+		// Poll and timeout every second to allow for thread termination
+		// Timeout is 1000 ms
+#ifdef __NETWORKING_WINDOWS__
+		retval = WSAPoll(fds, 1, 1000);
+#else
+		retval = poll(fds, 1, 1000);
+#endif
+		
+		if (retval < 0 && errno != EWOULDBLOCK) {
+			std::cerr << "Error in recvmmsg" << std::endl;
+			return 1;
+		}
+		if (connected && nsec > last_recv_nsec + 1'000'000'000'0ll) {
+			connected = false;
+			first_drop = true;
+			A2VideoManager::GetInstance()->DeactivateBeam();
+			std::cout << "Client disconnected" << std::endl;
+			continue;
+		}
+		if (retval == -1) {
+			continue;
+		}
+		
+		if (!connected) {
+			connected = true;
+			A2VideoManager::GetInstance()->ActivateBeam();
+			std::cout << "Client connected" << std::endl;
+		}
+		last_recv_nsec = nsec;
+		
+		if (fds[0].revents & POLLIN) {
+			auto packet = std::make_unique<Packet>();
+			sockaddr_in src_addr;
+			socklen_t addrlen = sizeof(src_addr);
+			
+			packet->size = recvfrom(sockfd, reinterpret_cast<char*>(packet->data.get()), PKT_BUFSZ, 0, (struct sockaddr *)&src_addr, &addrlen);
+			if (packet->size > 0) {
+				packetQueue.push(std::move(packet));
+				std::cout << "Received packet size: " << packet->size << std::endl;
+			}
+		}
+	}
+	
+#ifdef __NETWORKING_WINDOWS__
+	closesocket(sockfd);
+	WSACleanup();
+#else
+	close(sockfd);
+#endif
+	
+	return 0;
+}
 
-#define BUFSZ 2048
+	
+	
+	/*
+	
+ORIGINAL CODE
+	
+	
+	
+	
+#ifdef __NETWORKING_WINDOWS__
 
 	__SOCKET sockfd;
 	struct sockaddr_in serveraddr;
@@ -330,8 +492,8 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	serveraddr.sin_port = htons((unsigned short)port);
 	serveraddr.sin_addr.s_addr = INADDR_ANY;
 
-	uint8_t RecvBuf[BUFSZ];
-	int BufLen = BUFSZ;
+	uint8_t RecvBuf[PKT_BUFSZ];
+	int BufLen = PKT_BUFSZ;
 
 	if (socket_bind_and_listen(&sockfd, serveraddr) == ENET_RES::ERR)
 		return 1;
@@ -404,8 +566,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 #endif
 #ifdef __NETWORKING_APPLE__
 
-#define BUFSZ 2048
-
     int sockfd;
     struct sockaddr_in serveraddr;
     memset(&serveraddr, 0, sizeof(serveraddr));
@@ -421,9 +581,9 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
     struct iovec iovec;
     uint8_t* buf;
 
-    buf = new uint8_t[BUFSZ];
+    buf = new uint8_t[PKT_BUFSZ];
     iovec.iov_base = buf;
-    iovec.iov_len = BUFSZ;
+    iovec.iov_len = PKT_BUFSZ;
     msg.msg_iov = &iovec;
     msg.msg_iovlen = 1;
     
@@ -480,7 +640,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 #endif
 #ifdef __NETWORKING_LINUX__
 #define VLEN 256
-#define BUFSZ 2048
 
 	__SOCKET sockfd;
 	struct sockaddr_in serveraddr;
@@ -498,9 +657,9 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
     uint8_t** bufs = new uint8_t*[VLEN];
 
 	for (int i = 0; i < VLEN; ++i) {
-        bufs[i] = new uint8_t[BUFSZ];
+        bufs[i] = new uint8_t[PKT_BUFSZ];
 		iovecs[i].iov_base = bufs[i];
-		iovecs[i].iov_len = BUFSZ;
+		iovecs[i].iov_len = PKT_BUFSZ;
 		msgs[i].msg_hdr.msg_iov = &iovecs[i];
 		msgs[i].msg_hdr.msg_iovlen = 1;
 	}
@@ -563,4 +722,4 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 
 	return 0;
 #endif // __NETWORKING_WINDOWS__
-}
+*/

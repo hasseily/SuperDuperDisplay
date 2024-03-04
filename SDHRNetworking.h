@@ -21,25 +21,17 @@
 #include <iostream>
 #include <cstring>
 
-#ifdef __NETWORKING_WINDOWS__
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "Ws2_32.lib")
-typedef SOCKET        __SOCKET;
-#else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-typedef int        __SOCKET;
-#ifdef __NETWORKING_APPLE__
-//#include <sys/uio.h>
-struct mmsghdr {
-    struct msghdr msg_hdr;  // The standard msghdr structure
-    unsigned int  msg_len;  // Number of bytes received or sent
+#define PKT_BUFSZ 2048
+
+struct Packet {
+	std::unique_ptr<uint8_t[]> data;
+	ssize_t size;
+	uint32_t retval;
+	uint32_t prev_seqno;
+	bool first_drop;
+	Packet() : data(std::make_unique<uint8_t[]>(PKT_BUFSZ)), size(0),
+					retval(0), prev_seqno(0), first_drop(false) {}
 };
-#endif
-#endif
 
 #pragma pack(push, 1)
 struct SDHRPacketHeader {
@@ -78,7 +70,8 @@ enum class ENET_RES
 int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking);
 
 // Call this method as a new thread
-// It loops indefinitely and processes the events queue
+// It loops indefinitely and processes the packets queue
+// Each packet contains a minumum of 64 events.
 // If the events are SDHR data, it appends them to a command_buffer
 // When it parses a SDHR_PROCESS_EVENTS event, it calls SDHRManager
 // which itself processes the command_buffer
