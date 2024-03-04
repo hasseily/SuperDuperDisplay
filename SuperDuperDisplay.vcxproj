@@ -158,7 +158,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="A2Window.cpp" />
     <ClCompile Include="A2WindowBeam.cpp" />
     <ClCompile Include="CycleCounter.cpp" />
     <ClCompile Include="EventRecorder.cpp" />
@@ -184,7 +183,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="A2VideoManager.h" />
-    <ClInclude Include="A2Window.h" />
     <ClInclude Include="A2WindowBeam.h" />
     <ClInclude Include="ByteBuffer.h" />
     <ClInclude Include="camera.h" />

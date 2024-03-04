@@ -23,17 +23,16 @@
 
 #define PKT_BUFSZ 2048
 
+#pragma pack(push, 1)
+
 struct Packet {
-	std::unique_ptr<uint8_t[]> data;
-	ssize_t size;
-	uint32_t retval;
-	uint32_t prev_seqno;
-	bool first_drop;
-	Packet() : data(std::make_unique<uint8_t[]>(PKT_BUFSZ)), size(0),
-					retval(0), prev_seqno(0), first_drop(false) {}
+	uint8_t data[PKT_BUFSZ];
+	size_t size;
+	Packet() : size(1) {
+		memset(data, 0, 1);
+	}
 };
 
-#pragma pack(push, 1)
 struct SDHRPacketHeader {
 	uint32_t seqno;
 	uint32_t cmdtype;
@@ -48,11 +47,7 @@ struct SDHREvent {
 	uint16_t addr;
 	uint8_t data;
 	SDHREvent(bool is_iigs_, bool m2b0_, bool rw_, uint16_t addr_, uint8_t data_) :
-		is_iigs(is_iigs_),
-                m2b0(m2b0_),
-		rw(rw_),
-		addr(addr_),
-		data(data_) {}
+		is_iigs(is_iigs_), m2b0(m2b0_), rw(rw_), addr(addr_), data(data_) {}
 };
 
 enum class ENET_RES
@@ -76,7 +71,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking);
 // When it parses a SDHR_PROCESS_EVENTS event, it calls SDHRManager
 // which itself processes the command_buffer
 int process_events_thread(bool* shouldTerminateProcessing);
+void process_single_event(SDHREvent& e);
 void terminate_processing_thread();
 
-void insert_event(SDHREvent* e);
-void clear_events();
+void clear_queue();

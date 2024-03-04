@@ -29,8 +29,10 @@ struct mmsghdr {
 #endif
 #endif
 
-static ConcurrentQueue<std::unique_ptr<Packet>> packetQueue;
+static ConcurrentQueue<std::shared_ptr<Packet>> packetQueue;
 static EventRecorder* eventRecorder;
+static uint32_t prev_seqno;
+static bool bFirstDrop;
 
 ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_addr)
 {
@@ -84,23 +86,38 @@ void insert_event(SDHREvent* e)
 	assert("ERROR: CANNOT INSERT EVENT");
 }
 
-void clear_events()
+void clear_queue()
 {
-	assert("ERROR: CANNOT CLEAR EVENTS");
+	packetQueue.clear();
 }
 
 void terminate_processing_thread()
 {
 	// Force a dummy packet to process, so that shouldTerminateProcessing is triggered
 	// and the loop is closed cleanly.
-	auto packet = std::make_unique<Packet>();
+	auto packet = std::make_shared<Packet>();
 	packetQueue.push(std::move(packet));
 }
 
-void process_single_event(const SDHREvent& e)
+void process_single_event(SDHREvent& e)
 {
 	// std::cout << e.is_iigs << " " << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
 	
+	eventRecorder = EventRecorder::GetInstance();
+	if (eventRecorder->IsRecording())
+		eventRecorder->RecordEvent(&e);
+	// Update the cycle counting and VBL hit
+	bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == 0));
+	CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
+	if (e.is_iigs && e.m2b0) {
+		// ignore updates from iigs_mode firmware with m2sel high
+		return;
+	}
+	if (e.rw && ((e.addr & 0xF000) != 0xC000)) {
+		// ignoring all read events not softswitches
+		return;
+	}
+
 	auto sdhrMgr = SDHRManager::GetInstance();
 	auto a2VideoMgr = A2VideoManager::GetInstance();
 	
@@ -253,24 +270,21 @@ void process_single_event(const SDHREvent& e)
 }
 
 void process_single_packet_header(SDHRPacketHeader* h,
-								  uint32_t packet_size,
-								  uint32_t prev_seqno,
-								  bool first_drop)
+								  uint32_t packet_size)
 {
-	//std::cerr << packet_size << std::endl;
 	uint32_t seqno = h->seqno;
 	
+	// std::cerr << "packet size is: " << packet_size << std::endl;
 	// std::cerr << "Receiving seqno " << seqno << std::endl;
 	
 	if (seqno < prev_seqno)
 		std::cerr << "FOUND EARLIER PACKET" << std::endl;
 	if (seqno != prev_seqno + 1) {
-		if (first_drop) {
-			first_drop = false;
+		if (bFirstDrop) {
+			bFirstDrop = false;
 		}
 		else {
-			std::cerr << "seqno drops: "
-			<< seqno - prev_seqno + 1 << std::endl;
+			std::cerr << "seqno drops: " << seqno - prev_seqno + 1 << std::endl;
 			// this is pretty bad, should probably go into error
 		}
 	}
@@ -309,22 +323,7 @@ void process_single_packet_header(SDHRPacketHeader* h,
 		bool rw = (ctrl_bits & 0x01) == 0x01;
 		
 		SDHREvent ev(iigs_mode, m2b0, rw, addr, data);
-		eventRecorder = EventRecorder::GetInstance();
-		if (eventRecorder->IsRecording())
-			eventRecorder->RecordEvent(&ev);
-		// Update the cycle counting and VBL hit
-		bool isVBL = ((addr == 0xC019) && rw && ((data >> 7) == 0));
-		CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
-		if (iigs_mode && m2b0) {
-			// ignore updates from iigs_mode firmware with m2sel high
-			continue;
-		}
-		if (rw && ((addr & 0xF000) != 0xC000)) {
-			// ignoring all read events not softswitches
-			continue;
-		}
-		if (! eventRecorder->IsInReplayMode())
-			process_single_event(ev);
+		process_single_event(ev);
 	}
 }
 
@@ -342,9 +341,12 @@ int process_events_thread(bool* shouldTerminateProcessing)
 		
 		if (p->size > 0)
 		{
-			SDHRPacketHeader* h = (SDHRPacketHeader*)p->data.get();
-			process_single_packet_header(h, p->retval,
-										 p->prev_seqno, p->first_drop);
+			SDHRPacketHeader* h = (SDHRPacketHeader*)p->data;
+			process_single_packet_header(h, p->size);
+			// std::cerr << "Processing: " << h->seqno << std::endl;
+		}
+		else {
+			std::cerr << "Empty packet!\n";
 		}
 	}
 	std::cout << "Stopped Processing Thread\n";
@@ -354,7 +356,11 @@ int process_events_thread(bool* shouldTerminateProcessing)
 int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 {
 	std::cout << "Starting Network Thread\n";
-	
+	eventRecorder = EventRecorder::GetInstance();
+
+	prev_seqno = 0;
+	bFirstDrop = false;
+
 #ifdef __NETWORKING_WINDOWS__
 	WSADATA wsaData;
 	int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -402,8 +408,6 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	std::cout << "Waiting for packets..." << std::endl;
 	bool connected = false;
 	
-	bool first_drop = true;
-	uint32_t prev_seqno = 0;
 	int64_t last_recv_nsec = 0;
 	
 	while (!(*shouldTerminateNetworking)) {
@@ -434,7 +438,8 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		}
 		if (connected && nsec > last_recv_nsec + 1'000'000'000'0ll) {
 			connected = false;
-			first_drop = true;
+			prev_seqno = 0;
+			bFirstDrop = true;
 			A2VideoManager::GetInstance()->DeactivateBeam();
 			std::cout << "Client disconnected" << std::endl;
 			continue;
@@ -451,14 +456,15 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		last_recv_nsec = nsec;
 		
 		if (fds[0].revents & POLLIN) {
-			auto packet = std::make_unique<Packet>();
+			auto packet = std::make_shared<Packet>();
 			sockaddr_in src_addr;
 			socklen_t addrlen = sizeof(src_addr);
 			
-			packet->size = recvfrom(sockfd, reinterpret_cast<char*>(packet->data.get()), PKT_BUFSZ, 0, (struct sockaddr *)&src_addr, &addrlen);
+			packet->size = recvfrom(sockfd, reinterpret_cast<char*>(packet->data), PKT_BUFSZ, 0, (struct sockaddr *)&src_addr, &addrlen);
 			if (packet->size > 0) {
-				packetQueue.push(std::move(packet));
-				std::cout << "Received packet size: " << packet->size << std::endl;
+				if (!eventRecorder->IsInReplayMode())
+					packetQueue.push(std::move(packet));
+				// std::cout << "Received packet size: " << packet->size << std::endl;
 			}
 		}
 	}

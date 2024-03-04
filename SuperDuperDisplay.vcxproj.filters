@@ -45,9 +45,6 @@
     <ClCompile Include="A2VideoManager.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="A2Window.cpp">
-      <Filter>sources</Filter>
-    </ClCompile>
     <ClCompile Include="imgui\imgui.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
@@ -138,9 +135,6 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="A2VideoManager.h">
-      <Filter>headers</Filter>
-    </ClInclude>
-    <ClInclude Include="A2Window.h">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="GRAddr2XY.h">

@@ -221,6 +221,13 @@ int main(int argc, char* argv[])
 	auto eventRecorder = EventRecorder::GetInstance();
 	auto cycleCounter = CycleCounter::GetInstance();
 
+	std::cout << "Renderer Initializing..." << std::endl;
+	while (!a2VideoManager->IsReady())
+	{
+		// Wait for shaders to compile
+	}
+	std::cout << "Renderer Ready!" << std::endl;
+
 	// Run the network thread that will update the internal state as well as the apple 2 memory
 	std::thread thread_server(socket_server_thread, (uint16_t)_SDHR_SERVER_PORT, &bShouldTerminateNetworking);
     // And run the processing thread

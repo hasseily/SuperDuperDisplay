@@ -168,7 +168,7 @@ void EventRecorder::RewindReplay()
 int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldStopReplay, size_t* currentReplayEvent)
 {
 	using namespace std::chrono;
-	auto targetDuration = duration<double, std::nano>(977.7778337);	// Duration of an Apple 2 clock cycle (not stretched)
+	auto targetDuration = duration<double, std::nano>(1977.7778337);	// Duration of an Apple 2 clock cycle (not stretched)
 	auto startTime = high_resolution_clock::now();
 	auto elapsed = high_resolution_clock::now() - startTime;
 
@@ -191,7 +191,7 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			// These events can be run at max speed
 			auto snapshot_index = *currentReplayEvent / m_current_snapshot_cycles;
 			ApplyRAMSnapshot(snapshot_index);
-			clear_events();
+			clear_queue();
 			bool isVBL = false;
 			auto first_event_index = snapshot_index * m_current_snapshot_cycles;
 			for (auto i = first_event_index; i < *currentReplayEvent; i++)
@@ -199,7 +199,7 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 				auto e = v_events.at(i);
 				isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == 0));
 				CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
-				insert_event(&e);
+				process_single_event(e);
 			}
 		}
 
@@ -210,7 +210,7 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			auto e = v_events.at(*currentReplayEvent);
 			bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == 0));
 			CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
-			insert_event(&e);
+			process_single_event(e);
 			*currentReplayEvent += 1;
 			// wait 1 clock cycle before adding the next event
 			startTime = high_resolution_clock::now();

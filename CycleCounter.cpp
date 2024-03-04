@@ -46,6 +46,8 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 {
 	m_cycle += inc;
 	m_cycle = (m_cycle % cycles_total);
+	/*
+	* XXX: WE DON'T TRY TO UPDATE VBL OR REGION AUTOMATICALLY
 	if (isVBL)
 	{
 		if (m_cycle < CYCLES_SCREEN)
@@ -68,6 +70,7 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 			}
 		}
 	}
+	*/
 	bIsVBL = (m_cycle >= CYCLES_SCREEN);
 	bIsHBL = (GetByteXPos() < CYCLES_HBLANK);
 	A2VideoManager::GetInstance()->BeamIsAtPosition(GetByteXPos(), GetScanline());

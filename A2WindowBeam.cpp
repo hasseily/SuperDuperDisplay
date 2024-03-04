@@ -97,6 +97,7 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	{
 		glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
 		glBindTexture(GL_TEXTURE_2D, VRAMTEX);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 		switch (video_mode) {
 			case A2VIDEOBEAM_LEGACY:
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMPtr());

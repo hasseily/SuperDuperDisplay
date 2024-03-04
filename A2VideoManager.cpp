@@ -154,6 +154,7 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 
 void A2VideoManager::Initialize()
 {
+	bIsReady = false;
 	memset(a2legacy_vram, 0, _BEAM_VRAM_SIZE_LEGACY);
 	memset(a2shr_vram, 0, _BEAM_VRAM_SIZE_SHR);
 	bVBlankHasLegacy = true;
@@ -186,6 +187,7 @@ void A2VideoManager::Initialize()
 	bShouldInitializeRender = true;
 	
 	CycleCounter::GetInstance()->Reset();
+	bIsReady = true;
 }
 
 A2VideoManager::~A2VideoManager()
@@ -210,6 +212,11 @@ void A2VideoManager::SetSoftSwitch(A2SoftSwitch_e ss, bool state)
 		a2SoftSwitches |= ss;
 	else
 		a2SoftSwitches &= ~ss;
+}
+
+bool A2VideoManager::IsReady()
+{
+	return bIsReady;
 }
 
 void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)

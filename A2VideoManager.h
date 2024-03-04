@@ -131,6 +131,7 @@ public:
 	// Methods
 	//////////////////////////////////////////////////////////////////////////
 
+	bool IsReady();		// true after full initialization
 	void NotifyA2MemoryDidChange(uint16_t addr);	// Apple 2's memory changed at addr
 	void ToggleA2Video(bool value);
 	uXY ScreenSize();
@@ -178,6 +179,7 @@ private:
 	//////////////////////////////////////////////////////////////////////////
 	// Internal data
 	//////////////////////////////////////////////////////////////////////////
+	bool bIsReady = false;
 	bool bA2VideoEnabled = true;			// Is standard Apple 2 video enabled?
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
     bool bIsRebooting = false;              // Rebooting semaphore
