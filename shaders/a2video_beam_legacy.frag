@@ -114,10 +114,10 @@ void main()
 			if (bool(isAlt))
 			{
 				textureSize2d = textureSize(a2ModesTex1,0);
-				tex = texture(a2ModesTex1, vec2(charOrigin + fragOffset) / vec2(textureSize2d));
+				tex = texture(a2ModesTex1, (vec2(charOrigin + fragOffset) + vec2(0.5,0.5)) / vec2(textureSize2d));
 			} else {
 				textureSize2d = textureSize(a2ModesTex0,0);
-				tex = texture(a2ModesTex0, vec2(charOrigin + fragOffset) / vec2(textureSize2d));
+				tex = texture(a2ModesTex0, (vec2(charOrigin + fragOffset) + vec2(0.5,0.5)) / vec2(textureSize2d));
 			}
 
 			float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
@@ -152,7 +152,7 @@ void main()
 			ivec2 textureSize2d = textureSize(a2ModesTex2,0);
 			// if we're in DLGR (a2mode - 2u), get every other column
 			fragColor = texture(a2ModesTex2,
-								(vec2(byteOrigin) + vec2(fragOffset * uvec2(1u + (a2mode - 2u), 1u))) / vec2(textureSize2d));
+								(vec2(byteOrigin) + vec2(fragOffset * uvec2(1u + (a2mode - 2u), 1u)) + vec2(0.5,0.5)) / vec2(textureSize2d));
 			return;
 			break;
 		}
@@ -207,7 +207,7 @@ For each pixel, determine which memory byte it is part of,
 			// Now get the texture color. We know the X offset as well as the fragment's offset on top of that.
 			// The y value is just the byte's value
 			ivec2 textureSize2d = textureSize(a2ModesTex3,0);
-			fragColor = texture(a2ModesTex3, vec2(texXOffset + int(fragOffset.x), targetTexel.r) / vec2(textureSize2d));
+			fragColor = texture(a2ModesTex3, (vec2(texXOffset + int(fragOffset.x), targetTexel.r) + vec2(0.5,0.5)) / vec2(textureSize2d));
 			return;
 			break;
 		}
@@ -246,7 +246,7 @@ For each pixel, determine which memory byte it is part of,
 			int xVal = 10 * ((vValue >> 8) & 0xFF) + vColor;
 			int yVal = vValue & 0xFF;
 			ivec2 textureSize2d = textureSize(a2ModesTex4,0);
-			fragColor = texture(a2ModesTex4, (vec2(0.5, 0.5) + vec2(xVal, yVal)) / vec2(textureSize2d));
+			fragColor = texture(a2ModesTex4, (vec2(xVal, yVal) + vec2(0.5, 0.5)) / vec2(textureSize2d));
 			return;
 			break;
 		}
