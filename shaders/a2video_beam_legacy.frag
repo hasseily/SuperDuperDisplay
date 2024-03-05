@@ -33,11 +33,9 @@ uniform int ticks;						// ms since start
 uniform usampler2D VRAMTEX;				// Video RAM texture
 uniform sampler2D a2ModesTex0;			// font 14x16 normal
 uniform sampler2D a2ModesTex1;			// font 14x16 alternate
-uniform sampler2D a2ModesTex2;			// font  7x16 normal
-uniform sampler2D a2ModesTex3;			// font  7x16 alternate
-uniform sampler2D a2ModesTex4;			// LGR
-uniform sampler2D a2ModesTex5;			// HGR
-uniform sampler2D a2ModesTex6;			// DHGR
+uniform sampler2D a2ModesTex2;			// LGR
+uniform sampler2D a2ModesTex3;			// HGR
+uniform sampler2D a2ModesTex4;			// DHGR
 
 // Colors for foreground and background
 const vec4 tintcolors[16] = vec4[16](
@@ -88,8 +86,8 @@ void main()
 							+ a2mode * (targetTexel.r * (fragOffset.x / 7u) + targetTexel.g * (1u - (fragOffset.x / 7u)));
 			float vCharVal = float(charVal);
 			
-			// if ALTCHARSET (bit 4), use the alt texture
-			uint isAlt = ((targetTexel.b >> 4) & 1u);
+			// if ALTCHARSET (bit 3), use the alt texture
+			uint isAlt = ((targetTexel.b >> 3) & 1u);
 			
 			// Determine from char which font glyph to use
 			// and if we need to flash

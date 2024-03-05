@@ -499,7 +499,12 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 		else if (IsSoftSwitch(A2SS_80COL) && IsSoftSwitch(A2SS_DHGR))	// double resolution
 		{
 			if (IsSoftSwitch(A2SS_HIRES))
-				flags = 5;	// DHGR
+			{
+				if (IsSoftSwitch(A2SS_DHGRMONO))
+					flags = 6;	// DHGRMONO
+				else
+					flags = 5;	// DHGR
+			}
 			else
 				flags = 3;	// DLGR
 		}
@@ -518,10 +523,10 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 			flags = 0;	// TEXT
 		}
 	}
-	
+		
 	// Fill in the rest of the flags. We already use bits 0-2 for the modes
-	flags += ((IsSoftSwitch(A2SS_ALTCHARSET) ? 1 : 0) << 3);	// bit 3 is alt charset
-	flags += ((switch_c034 & 0b111) << 4);						// bits 4-7 are border color
+	flags |= ((IsSoftSwitch(A2SS_ALTCHARSET) ? 1 : 0) << 3);	// bit 3 is alt charset
+	flags |= ((switch_c034 & 0b111) << 4);						// bits 4-7 are border color
 																// and the colors
 	colors = switch_c022;
 	// Check for page 2
@@ -532,10 +537,10 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	
 	// Finally set the 4 VRAM bytes
 	// Determine where in memory we should get the data from, and get it
-	if (flags < 4)	// D/TEXT AND D/LGR
+	if ((flags & 0b111) < 4)	// D/TEXT AND D/LGR
 	{
 		uint32_t startMem = _A2VIDEO_TEXT1_START;
-		if ((flags < 3) && isPage2)		// check for page 2 (DLGR doesn't have it)
+		if (((flags & 0b111) < 3) && isPage2)		// check for page 2 (DLGR doesn't have it)
 			startMem = _A2VIDEO_TEXT2_START;
 		byteStartPtr[0] = *(SDHRManager::GetInstance()->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[y / 8] + xx);
 		byteStartPtr[1] = *(SDHRManager::GetInstance()->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[y / 8] + xx);
