@@ -253,10 +253,10 @@ For each pixel, determine which memory byte it is part of,
 		case 6u:	// DHGR MONO
 		{
 			// Use the .g (AUX) if the dot is one of the first 7, otherwise .r (MAIN)
-			uint byteVal = ((targetTexel.r & 0x7Fu) << 7) + (targetTexel.g & 0x7Fu);
 			// Find out if the related bit is on, and set the color to white or black
-			fragColor = vec4(1.0f) * float((byteVal & (1u << (uFragPos.x % 14u))) >> (uFragPos.x % 14u));
-			fragColor.a = 1.0f;
+			fragColor = vec4(1.0f) * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (uFragPos.x % 14u)), 0u, 1u));
+			return;
+			break;
 		}
 		default:
 		{
