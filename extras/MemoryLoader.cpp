@@ -9,17 +9,16 @@
 
 #include <fstream>
 #include <iostream>
-#include "../SDHRManager.h"
+#include "../MemoryManager.h"
 #include "ImGuiFileDialog.h"
 
-#include "../A2VideoManager.h"
-
-void MemoryLoad(uint32_t position, bool bAuxBank) {
+bool MemoryLoad(uint32_t position, bool bAuxBank) {
+	bool res = false;
 	uint8_t* pMem;
 	if (bAuxBank)
-		pMem = SDHRManager::GetInstance()->GetApple2MemAuxPtr() + position;
+		pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + position;
 	else
-		pMem = SDHRManager::GetInstance()->GetApple2MemPtr() + position;
+		pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + position;
 	if (ImGui::Button("Load File in Memory"))
 	{
 		ImGui::SetNextWindowSize(ImVec2(800, 400));
@@ -44,7 +43,7 @@ void MemoryLoad(uint32_t position, bool bAuxBank) {
 					if (fileSize > 0 && (position + fileSize) <= (_A2_MEMORY_SHADOW_END)) {
 						file.seekg(0, std::ios::beg); // Go back to the start of the file
 						file.read(reinterpret_cast<char*>(pMem), fileSize);
-						A2VideoManager::GetInstance()->ToggleA2Video(true);
+						res = true;
 					} else {
 						// Handle the error: file is too big or other issues
 						std::cerr << "Error: File is too large or other issue." << std::endl;
@@ -61,5 +60,6 @@ void MemoryLoad(uint32_t position, bool bAuxBank) {
 		}
 		ImGuiFileDialog::Instance()->Close();
 	}
+	return res;
 }
 

@@ -1,4 +1,5 @@
 #include "SDHRNetworking.h"
+#include "MemoryManager.h"
 #include "A2VideoManager.h"
 #include "SDHRManager.h"
 #include "CycleCounter.h"
@@ -118,6 +119,7 @@ void process_single_event(SDHREvent& e)
 		return;
 	}
 
+	auto memMgr = MemoryManager::GetInstance();
 	auto sdhrMgr = SDHRManager::GetInstance();
 	auto a2VideoMgr = A2VideoManager::GetInstance();
 	
@@ -171,11 +173,11 @@ void process_single_event(SDHREvent& e)
 		
 		if (bIsAux)
 		{
-			sdhrMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
+			memMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
 			a2VideoMgr->NotifyA2MemoryDidChange(e.addr + 0x10000);
 		}
 		else {
-			sdhrMgr->GetApple2MemPtr()[e.addr] = e.data;
+			memMgr->GetApple2MemPtr()[e.addr] = e.data;
 			a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
 		}
 		return;

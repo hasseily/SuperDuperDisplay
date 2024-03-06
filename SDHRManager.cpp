@@ -11,6 +11,7 @@
 #endif
 
 #include "OpenGLHelper.h"
+#include "MemoryManager.h"
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 SDHRManager* SDHRManager::s_instance;
@@ -263,13 +264,6 @@ void SDHRManager::Initialize()
 	command_buffer.clear();
 	command_buffer.reserve(32 * 1024 * 1024);
 
-	// Initialize the Apple 2 memory duplicate
-	// Whenever memory is written from the Apple2
-	// in any of the 2 banks between $200 and $BFFF it will
-	// be sent through the socket and this buffer will be updated
-	// memory of both banks is concatenated into one buffer
-	memset(a2mem, 0, _A2_MEMORY_SHADOW_END*2);
-
 	// tell the next Render() call to run initialization routines
 	// Assign to the GPU the default pink image to all 16 image assets
 	// because the shaders expect 16 textures
@@ -287,6 +281,7 @@ void SDHRManager::Initialize()
 
 void SDHRManager::ResetSdhr()
 {
+	// TODO: Unload image assets from GPU
 	command_buffer.clear();
 	for (size_t i = 0; i < (sizeof(windows) / sizeof(SDHRWindow)); i++)
 	{
@@ -296,13 +291,13 @@ void SDHRManager::ResetSdhr()
 
 SDHRManager::~SDHRManager()
 {
+	// TODO: Unload image assets from GPU
 	for (uint16_t i = 0; i < 256; ++i) {
 		if (tileset_records[i].tile_data) {
 			free(tileset_records[i].tile_data);
 		}
 	}
-	delete[] a2mem;
-	free(uploaded_data_region);
+	delete[] uploaded_data_region;
 }
 
 void SDHRManager::AddPacketDataToBuffer(uint8_t data)
@@ -330,23 +325,10 @@ bool SDHRManager::CheckCommandLength(uint8_t* p, uint8_t* e, size_t sz) {
 	return true;
 }
 
-// Return a pointer to the shadowed apple 2 memory
-uint8_t* SDHRManager::GetApple2MemPtr()
-{
-	return a2mem;
-}
-
-// Return a pointer to the shadowed apple 2 aux memory
-uint8_t* SDHRManager::GetApple2MemAuxPtr()
-{
-	return a2mem+ _A2_MEMORY_SHADOW_END;
-}
-
 uint8_t* SDHRManager::GetUploadRegionPtr()
 { 
 	return uploaded_data_region;
 };
-
 
 // Render all window meshes and whatever else SDHR related
 void SDHRManager::Render()
@@ -514,7 +496,8 @@ bool SDHRManager::ProcessCommands(void)
 				<< " Destination Block: " << (uint32_t)cmd->dest_block
 				<< std::endl;
 			*/
-			memcpy(uploaded_data_region + dest_offset, a2mem + ((uint16_t)cmd->source_addr), data_size);
+			memcpy(uploaded_data_region + dest_offset, 
+				MemoryManager::GetInstance()->GetApple2MemPtr() + ((uint16_t)cmd->source_addr), data_size);
 #ifdef DEBUG
 			std::cout << "SDHR_CMD_UPLOAD_DATA: Success: " << std::hex << data_size << std::endl;
 #endif

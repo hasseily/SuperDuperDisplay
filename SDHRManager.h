@@ -118,8 +118,7 @@ public:
 	void AddPacketDataToBuffer(uint8_t data);
 	void ClearBuffer();
 	bool ProcessCommands(void);
-	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 main memory pointer
-	uint8_t* GetApple2MemAuxPtr();	// Gets the Apple 2 aux memory pointer
+
 	uint8_t* GetUploadRegionPtr();
 
 	void Render();	// render everything SDHR related
@@ -158,7 +157,6 @@ private:
 	static SDHRManager* s_instance;
 	SDHRManager()
 	{
-		a2mem = new uint8_t[_A2_MEMORY_SHADOW_END*2];	// anything below _A2_MEMORY_SHADOW_BEGIN is unused
 		uploaded_data_region = new uint8_t[_SDHR_UPLOAD_REGION_SIZE];
 
 		if (uploaded_data_region == NULL)
@@ -191,7 +189,6 @@ private:
 //////////////////////////////////////////////////////////////////////////
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
 											// routines like clearing out the image assets
-	uint8_t* a2mem;		// The current state of the Apple 2 memory ($0200-$BFFF in main, followed by the same in aux)
 
 	bool bSDHREnabled = false;	// is SDHR enabled?
 

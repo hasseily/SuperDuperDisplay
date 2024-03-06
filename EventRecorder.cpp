@@ -1,6 +1,6 @@
 #include "EventRecorder.h"
 #include "common.h"
-#include "SDHRManager.h"
+#include "MemoryManager.h"
 #include "CycleCounter.h"
 #include "A2VideoManager.h"
 #include "imgui.h"
@@ -42,9 +42,9 @@ void EventRecorder::MakeRAMSnapshot(size_t cycle)
 	auto _memsize = _A2_MEMORY_SHADOW_END - _A2_MEMORY_SHADOW_BEGIN;
 	ByteBuffer buffer(RECORDER_TOTALMEMSIZE);
 	// Get the MAIN chunk
-	buffer.copyFrom(SDHRManager::GetInstance()->GetApple2MemPtr(), _A2_MEMORY_SHADOW_BEGIN, _memsize);
+	buffer.copyFrom(MemoryManager::GetInstance()->GetApple2MemPtr(), _A2_MEMORY_SHADOW_BEGIN, _memsize);
 	// Get the AUX chunk
-	buffer.copyFrom(SDHRManager::GetInstance()->GetApple2MemAuxPtr(), 0x10000 + _A2_MEMORY_SHADOW_BEGIN, _memsize);
+	buffer.copyFrom(MemoryManager::GetInstance()->GetApple2MemAuxPtr(), 0x10000 + _A2_MEMORY_SHADOW_BEGIN, _memsize);
 
 	v_memSnapshots.push_back(std::move(buffer));
 }
@@ -55,9 +55,9 @@ void EventRecorder::ApplyRAMSnapshot(size_t snapshot_index)
 		std::cerr << "ERROR: Requested to apply nonexistent memory snapshot at index " << snapshot_index << std::endl;
 	auto _memsize = _A2_MEMORY_SHADOW_END - _A2_MEMORY_SHADOW_BEGIN;
 	// Set the MAIN chunk
-	v_memSnapshots.at(snapshot_index).copyTo(SDHRManager::GetInstance()->GetApple2MemPtr(), _A2_MEMORY_SHADOW_BEGIN, _memsize);
+	v_memSnapshots.at(snapshot_index).copyTo(MemoryManager::GetInstance()->GetApple2MemPtr(), _A2_MEMORY_SHADOW_BEGIN, _memsize);
 	// Set the AUX chunk
-	v_memSnapshots.at(snapshot_index).copyTo(SDHRManager::GetInstance()->GetApple2MemAuxPtr(), 0x10000 + _A2_MEMORY_SHADOW_BEGIN, _memsize);
+	v_memSnapshots.at(snapshot_index).copyTo(MemoryManager::GetInstance()->GetApple2MemAuxPtr(), 0x10000 + _A2_MEMORY_SHADOW_BEGIN, _memsize);
 }
 
 void EventRecorder::WriteRecordingFile(std::ofstream& file)

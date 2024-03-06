@@ -23,6 +23,7 @@
 #include "MosaicMesh.h"
 
 #include "SDHRNetworking.h"
+#include "MemoryManager.h"
 #include "SDHRManager.h"
 #include "A2VideoManager.h"
 #include "OpenGLHelper.h"
@@ -215,6 +216,7 @@ int main(int argc, char* argv[])
 	// Get the instances of all singletons before creating threads
 	// This ensures thread safety
 	// The OpenGLHelper instance is already acquired
+	auto memManager = MemoryManager::GetInstance();
 	auto sdhrManager = SDHRManager::GetInstance();
     auto a2VideoManager = A2VideoManager::GetInstance();
 	auto postProcessor = PostProcessor::GetInstance();
@@ -404,7 +406,8 @@ int main(int argc, char* argv[])
 				mem_load_position = std::clamp(mem_load_position, 0, 0xFFFF);
 				ImGui::SameLine();
 				ImGui::Checkbox("Aux Bank", &mem_load_aux_bank);
-				MemoryLoad(mem_load_position, mem_load_aux_bank);
+				if (MemoryLoad(mem_load_position, mem_load_aux_bank))
+					a2VideoManager->ToggleA2Video(true);
                 ImGui::Separator();
                 if (ImGui::Button("Reset")) {
                     a2VideoManager->ResetComputer();
@@ -500,7 +503,7 @@ int main(int argc, char* argv[])
         // Show the Apple //e memory
         if (mem_edit_a2e.Open)
         {
-            mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", sdhrManager->GetApple2MemPtr(), 2*_A2_MEMORY_SHADOW_END);
+            mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", memManager->GetApple2MemPtr(), 2*_A2_MEMORY_SHADOW_END);
         }
 
 		// Show the VRAM legacy window
@@ -518,7 +521,7 @@ int main(int argc, char* argv[])
 		// Show the upload data region memory
 		if (mem_edit_upload.Open)
 		{
-            mem_edit_upload.DrawWindow("Memory Editor: Upload memory", sdhrManager->GetApple2MemPtr(), 2*_A2_MEMORY_SHADOW_END);
+            mem_edit_upload.DrawWindow("Memory Editor: Upload memory", memManager->GetApple2MemPtr(), 2*_A2_MEMORY_SHADOW_END);
 		}
         
 		// Show the 16 textures loaded (which are always bound to GL_TEXTURE2 -> GL_TEXTURE18)

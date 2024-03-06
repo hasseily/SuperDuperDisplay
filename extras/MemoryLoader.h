@@ -5,6 +5,6 @@
 
 #include <cstdint>
 
-void MemoryLoad(uint32_t position, bool bAuxBank);
+bool MemoryLoad(uint32_t position, bool bAuxBank);
 
 #endif /* MEMORYLOADER_H */

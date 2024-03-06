@@ -13,7 +13,7 @@
 #endif
 
 #include "OpenGLHelper.h"
-#include "SDHRManager.h"
+#include "MemoryManager.h"
 #include "CycleCounter.h"
 #include "EventRecorder.h"
 #include "GRAddr2XY.h"
@@ -201,7 +201,7 @@ void A2VideoManager::ResetComputer()
     if (bIsRebooting == true)
         return;
     bIsRebooting = true;
-    SDHRManager::GetInstance()->Initialize();
+	MemoryManager::GetInstance()->Initialize();
 	this->Initialize();
     bIsRebooting = false;
 }
@@ -438,7 +438,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	{
 		bVBlankHasSHR = true;		// at least 1 byte in this vblank cycle is in SHR
 		uint8_t* lineStartPtr = a2shr_vram + (_COLORBYTESOFFSET + 160) * y;
-		auto memPtr = SDHRManager::GetInstance()->GetApple2MemAuxPtr();
+		auto memPtr = MemoryManager::GetInstance()->GetApple2MemAuxPtr();
 		if (xx == 0)
 		{
 			// it's the beginning of the line
@@ -542,14 +542,14 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 		uint32_t startMem = _A2VIDEO_TEXT1_START;
 		if (((flags & 0b111) < 3) && isPage2)		// check for page 2 (DLGR doesn't have it)
 			startMem = _A2VIDEO_TEXT2_START;
-		byteStartPtr[0] = *(SDHRManager::GetInstance()->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[y / 8] + xx);
-		byteStartPtr[1] = *(SDHRManager::GetInstance()->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[y / 8] + xx);
+		byteStartPtr[0] = *(MemoryManager::GetInstance()->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[y / 8] + xx);
+		byteStartPtr[1] = *(MemoryManager::GetInstance()->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[y / 8] + xx);
 	} else {		// D/HIRES
 		uint32_t startMem = _A2VIDEO_HGR1_START;
 		if (isPage2)
 			startMem = _A2VIDEO_HGR2_START;
-		byteStartPtr[0] = *(SDHRManager::GetInstance()->GetApple2MemPtr() + startMem + g_RAM_HGROffsets[y] + xx);
-		byteStartPtr[1] = *(SDHRManager::GetInstance()->GetApple2MemAuxPtr() + startMem + g_RAM_HGROffsets[y] + xx);
+		byteStartPtr[0] = *(MemoryManager::GetInstance()->GetApple2MemPtr() + startMem + g_RAM_HGROffsets[y] + xx);
+		byteStartPtr[1] = *(MemoryManager::GetInstance()->GetApple2MemAuxPtr() + startMem + g_RAM_HGROffsets[y] + xx);
 	}
 	byteStartPtr[2] = flags;
 	byteStartPtr[3] = colors;
