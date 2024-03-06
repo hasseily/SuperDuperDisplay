@@ -157,13 +157,3 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		std::cerr << "A2WindowBeam render error: " << glerr << std::endl;
 	}
 }
-
-void A2VideoManager::ActivateBeam()
-{
-	bBeamIsActive = true;
-}
-
-void A2VideoManager::DeactivateBeam()
-{
-	bBeamIsActive = false;
-}

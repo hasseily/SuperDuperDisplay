@@ -493,3 +493,13 @@ bool A2VideoManager::ShouldRender()
 	// Only render when VRAM needs updating, in VBLANK
 	return (bRequestVRAMUpdates || (!bBeamIsActive));
 }
+
+void A2VideoManager::ActivateBeam()
+{
+	bBeamIsActive = true;
+}
+
+void A2VideoManager::DeactivateBeam()
+{
+	bBeamIsActive = false;
+}
