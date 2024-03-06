@@ -33,8 +33,6 @@ public:
 	// Shift the VBL start. It effectively moves the current cycle.
 	void SetVBLStart(uint32_t _vblStart);
 	
-	bool isSHR = false;
-
 	// public singleton code
 	static CycleCounter* GetInstance()
 	{

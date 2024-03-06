@@ -130,11 +130,11 @@ void process_single_event(SDHREvent& e)
 	 */
 	if ((e.addr >= _A2_MEMORY_SHADOW_BEGIN) && (e.addr < _A2_MEMORY_SHADOW_END)) {
 		uint8_t _sw = 0;	// switches state
-		if (a2VideoMgr->IsSoftSwitch(A2SS_80STORE))
+		if (memMgr->IsSoftSwitch(A2SS_80STORE))
 			_sw |= 0b001;
-		if (a2VideoMgr->IsSoftSwitch(A2SS_RAMWRT))
+		if (memMgr->IsSoftSwitch(A2SS_RAMWRT))
 			_sw |= 0b010;
-		if (a2VideoMgr->IsSoftSwitch(A2SS_PAGE2))
+		if (memMgr->IsSoftSwitch(A2SS_PAGE2))
 			_sw |= 0b100;
 		bool bIsAux = false;
 		switch (_sw)
@@ -174,11 +174,11 @@ void process_single_event(SDHREvent& e)
 		if (bIsAux)
 		{
 			memMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
-			a2VideoMgr->NotifyA2MemoryDidChange(e.addr + 0x10000);
+			memMgr->NotifyA2MemoryDidChange(e.addr + 0x10000);
 		}
 		else {
 			memMgr->GetApple2MemPtr()[e.addr] = e.data;
-			a2VideoMgr->NotifyA2MemoryDidChange(e.addr);
+			memMgr->NotifyA2MemoryDidChange(e.addr);
 		}
 		return;
 	}
@@ -190,7 +190,7 @@ void process_single_event(SDHREvent& e)
 	if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
 		// Send soft switches to the A2VideoManager
 		if (e.addr >> 8 == 0xc0)
-			a2VideoMgr->ProcessSoftSwitch(e.addr, e.data, e.rw, e.is_iigs);
+			memMgr->ProcessSoftSwitch(e.addr, e.data, e.rw, e.is_iigs);
 		// ignore non-control
 		return;
 	}

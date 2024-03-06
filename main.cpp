@@ -306,6 +306,7 @@ int main(int argc, char* argv[])
 					auto state = SDL_GetKeyboardState(NULL);
 					if (state[SDL_SCANCODE_LCTRL]) {
 						done = true;
+						break;
 					}
 				}
 				else if (event.key.keysym.sym == SDLK_F1) {  // Toggle debug window with F1
@@ -424,65 +425,65 @@ int main(int argc, char* argv[])
 				ImGui::SameLine();
 				if (ImGui::Button("Run Vertical Refresh"))
 					a2VideoManager->ForceBeamFullScreenRender();
-                bool ssValue0 = a2VideoManager->IsSoftSwitch(A2SS_80STORE);
+                bool ssValue0 = memManager->IsSoftSwitch(A2SS_80STORE);
                 if (ImGui::Checkbox("A2SS_80STORE", &ssValue0)) {
-                    a2VideoManager->SetSoftSwitch(A2SS_80STORE, ssValue0);
+					memManager->SetSoftSwitch(A2SS_80STORE, ssValue0);
                 }
-                bool ssValue1 = a2VideoManager->IsSoftSwitch(A2SS_RAMRD);
+                bool ssValue1 = memManager->IsSoftSwitch(A2SS_RAMRD);
                 if (ImGui::Checkbox("A2SS_RAMRD", &ssValue1)) {
-                    a2VideoManager->SetSoftSwitch(A2SS_RAMRD, ssValue1);
+					memManager->SetSoftSwitch(A2SS_RAMRD, ssValue1);
                 }
-                bool ssValue2 = a2VideoManager->IsSoftSwitch(A2SS_RAMWRT);
+                bool ssValue2 = memManager->IsSoftSwitch(A2SS_RAMWRT);
                 if (ImGui::Checkbox("A2SS_RAMWRT", &ssValue2)) {
-                    a2VideoManager->SetSoftSwitch(A2SS_RAMWRT, ssValue2);
+					memManager->SetSoftSwitch(A2SS_RAMWRT, ssValue2);
                 }
-                bool ssValue3 = a2VideoManager->IsSoftSwitch(A2SS_80COL);
+                bool ssValue3 = memManager->IsSoftSwitch(A2SS_80COL);
                 if (ImGui::Checkbox("A2SS_80COL", &ssValue3)) {
-                    a2VideoManager->SetSoftSwitch(A2SS_80COL, ssValue3);
+					memManager->SetSoftSwitch(A2SS_80COL, ssValue3);
                 }
-                bool ssValue4 = a2VideoManager->IsSoftSwitch(A2SS_ALTCHARSET);
+                bool ssValue4 = memManager->IsSoftSwitch(A2SS_ALTCHARSET);
                 if (ImGui::Checkbox("A2SS_ALTCHARSET", &ssValue4)) {
-                    a2VideoManager->SetSoftSwitch(A2SS_ALTCHARSET, ssValue4);
+					memManager->SetSoftSwitch(A2SS_ALTCHARSET, ssValue4);
                 }
-                bool ssValue5 = a2VideoManager->IsSoftSwitch(A2SS_INTCXROM);
+                bool ssValue5 = memManager->IsSoftSwitch(A2SS_INTCXROM);
                 if (ImGui::Checkbox("A2SS_INTCXROM", &ssValue5)) {
-                    a2VideoManager->SetSoftSwitch(A2SS_INTCXROM, ssValue5);
+					memManager->SetSoftSwitch(A2SS_INTCXROM, ssValue5);
                 }
-                bool ssValue6 = a2VideoManager->IsSoftSwitch(A2SS_SLOTC3ROM);
+                bool ssValue6 = memManager->IsSoftSwitch(A2SS_SLOTC3ROM);
                 if (ImGui::Checkbox("A2SS_SLOTC3ROM", &ssValue6)) {
-                    a2VideoManager->SetSoftSwitch(A2SS_SLOTC3ROM, ssValue6);
+					memManager->SetSoftSwitch(A2SS_SLOTC3ROM, ssValue6);
                 }
-                bool ssValue7 = a2VideoManager->IsSoftSwitch(A2SS_TEXT);
+                bool ssValue7 = memManager->IsSoftSwitch(A2SS_TEXT);
                 if (ImGui::Checkbox("A2SS_TEXT", &ssValue7)) {
-                    a2VideoManager->SetSoftSwitch(A2SS_TEXT, ssValue7);
+					memManager->SetSoftSwitch(A2SS_TEXT, ssValue7);
                 }
-                bool ssValue8 = a2VideoManager->IsSoftSwitch(A2SS_MIXED);
+                bool ssValue8 = memManager->IsSoftSwitch(A2SS_MIXED);
                 if (ImGui::Checkbox("A2SS_MIXED", &ssValue8)) {
-                    a2VideoManager->SetSoftSwitch(A2SS_MIXED, ssValue8);
+					memManager->SetSoftSwitch(A2SS_MIXED, ssValue8);
                 }
-                bool ssValue9 = a2VideoManager->IsSoftSwitch(A2SS_PAGE2);
+                bool ssValue9 = memManager->IsSoftSwitch(A2SS_PAGE2);
                 if (ImGui::Checkbox("A2SS_PAGE2", &ssValue9)) {
-                    a2VideoManager->SetSoftSwitch(A2SS_PAGE2, ssValue9);
+					memManager->SetSoftSwitch(A2SS_PAGE2, ssValue9);
                 }
-                bool ssValue10 = a2VideoManager->IsSoftSwitch(A2SS_HIRES);
+                bool ssValue10 = memManager->IsSoftSwitch(A2SS_HIRES);
                 if (ImGui::Checkbox("A2SS_HIRES", &ssValue10)) {
-                    a2VideoManager->SetSoftSwitch(A2SS_HIRES, ssValue10);
+					memManager->SetSoftSwitch(A2SS_HIRES, ssValue10);
                 }
-                bool ssValue11 = a2VideoManager->IsSoftSwitch(A2SS_DHGR);
+                bool ssValue11 = memManager->IsSoftSwitch(A2SS_DHGR);
                 if (ImGui::Checkbox("A2SS_DHGR", &ssValue11)) {
-                    a2VideoManager->SetSoftSwitch(A2SS_DHGR, ssValue11);
+					memManager->SetSoftSwitch(A2SS_DHGR, ssValue11);
                 }
-				bool ssValue12 = a2VideoManager->IsSoftSwitch(A2SS_DHGRMONO);
+				bool ssValue12 = memManager->IsSoftSwitch(A2SS_DHGRMONO);
 				if (ImGui::Checkbox("A2SS_DHGRMONO", &ssValue12)) {
-					a2VideoManager->SetSoftSwitch(A2SS_DHGRMONO, ssValue12);
+					memManager->SetSoftSwitch(A2SS_DHGRMONO, ssValue12);
 				}
-				bool ssValue13 = a2VideoManager->IsSoftSwitch(A2SS_SHR);
+				bool ssValue13 = memManager->IsSoftSwitch(A2SS_SHR);
 				if (ImGui::Checkbox("A2SS_SHR", &ssValue13)) {
-					a2VideoManager->SetSoftSwitch(A2SS_SHR, ssValue13);
+					memManager->SetSoftSwitch(A2SS_SHR, ssValue13);
 				}
-				bool ssValue14 = a2VideoManager->IsSoftSwitch(A2SS_GREYSCALE);
+				bool ssValue14 = memManager->IsSoftSwitch(A2SS_GREYSCALE);
 				if (ImGui::Checkbox("A2SS_GREYSCALE", &ssValue14)) {
-					a2VideoManager->SetSoftSwitch(A2SS_GREYSCALE, ssValue14);
+					memManager->SetSoftSwitch(A2SS_GREYSCALE, ssValue14);
 				}
 				ImGui::PopItemWidth();
             }

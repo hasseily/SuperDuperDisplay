@@ -104,9 +104,6 @@ static uint16_t g_RAM_HGROffsets[] = {
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
-uint16_t A2VideoManager::a2SoftSwitches = 0;
-uint8_t A2VideoManager::switch_c022 = 0b11110000;	// white fg, black bg
-uint8_t A2VideoManager::switch_c034 = 0;
 
 constexpr uint32_t CYCLES_HBLANK = 25;			// always 25 cycles
 constexpr uint8_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
@@ -161,11 +158,10 @@ void A2VideoManager::Initialize()
 	bVBlankHasSHR = false;
 	bBeamIsActive = false;
 	
-	color_border = 0;
-	color_foreground = UINT32_MAX;
-	color_background = 0;
-
-	a2SoftSwitches = A2SS_TEXT; // default to TEXT1
+	auto memMgr = MemoryManager::GetInstance();
+	color_background = gPaletteRGB[12 + (memMgr->switch_c022 & 0x0F)];
+	color_foreground = gPaletteRGB[12 + ((memMgr->switch_c022 & 0xF0) >> 4)];
+	color_border = gPaletteRGB[12 + (memMgr->switch_c034 & 0x0F)];
 
 	// Set up the image assets (textures)
 	// Assign them their respective GPU texture id
@@ -206,26 +202,9 @@ void A2VideoManager::ResetComputer()
     bIsRebooting = false;
 }
 
-void A2VideoManager::SetSoftSwitch(A2SoftSwitch_e ss, bool state)
-{
-	if (state)
-		a2SoftSwitches |= ss;
-	else
-		a2SoftSwitches &= ~ss;
-}
-
 bool A2VideoManager::IsReady()
 {
 	return bIsReady;
-}
-
-void A2VideoManager::NotifyA2MemoryDidChange(uint16_t addr)
-{
-	// Note: We could do delta updates here for the video modes
-	// but for better reliability we do full updates of the video modes
-	// every frame in the render method
-	
-	// Do nothing, we assume that the active video mode should always refresh its memory
 }
 
 void A2VideoManager::ToggleA2Video(bool value)
@@ -238,167 +217,6 @@ void A2VideoManager::ToggleA2Video(bool value)
 			bShouldInitializeRender = true;
 	}
 	ForceBeamFullScreenRender();
-}
-
-void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool is_iigs)
-{
-    //std::cerr << "Processing soft switch " << std::hex << (uint32_t)addr << " RW: " << (uint32_t)rw << " 2gs: " << (uint32_t)is_iigs << std::endl;
-	switch (addr)
-	{
-	case 0xC000:	// 80STOREOFF
-        if (!rw)
-            a2SoftSwitches &= ~A2SS_80STORE;
-		break;
-	case 0xC001:	// 80STOREON
-        if (!rw)
-            a2SoftSwitches |= A2SS_80STORE;
-		break;
-	case 0xC002:	// RAMRDOFF
-        if (!rw)
-            a2SoftSwitches &= ~A2SS_RAMRD;
-		break;
-	case 0xC003:	// RAMRDON
-        if (!rw)
-            a2SoftSwitches |= A2SS_RAMRD;
-		break;
-	case 0xC004:	// RAMWRTOFF
-        if (!rw)
-            a2SoftSwitches &= ~A2SS_RAMWRT;
-		break;
-	case 0xC005:	// RAMWRTON
-        if (!rw)
-            a2SoftSwitches |= A2SS_RAMWRT;
-		break;
-	case 0xC006:	// INTCXROMOFF
-        if (!rw)
-            a2SoftSwitches &= ~A2SS_INTCXROM;
-		break;
-	case 0xC007:	// INTCXROMON
-        if (!rw)
-            a2SoftSwitches |= A2SS_INTCXROM;
-		break;
-	case 0xC00A:	// SLOTC3ROMOFF
-        if (!rw)
-            a2SoftSwitches &= ~A2SS_SLOTC3ROM;
-		break;
-	case 0xC00B:	// SLOTC3ROMOFF
-        if (!rw)
-            a2SoftSwitches |= A2SS_SLOTC3ROM;
-		break;
-	case 0xC00C:	// 80COLOFF
-        if (!rw)
-            a2SoftSwitches &= ~A2SS_80COL;
-		break;
-	case 0xC00D:	// 80COLON
-        if (!rw)
-            a2SoftSwitches |= A2SS_80COL;
-		break;
-	case 0xC00E:	// ALTCHARSETOFF
-        if (!rw)
-            a2SoftSwitches &= ~A2SS_ALTCHARSET;
-		break;
-	case 0xC00F:	// ALTCHARSETON
-        if (!rw)
-            a2SoftSwitches |= A2SS_ALTCHARSET;
-		break;
-	case 0xC050:	// TEXTOFF
-		a2SoftSwitches &= ~A2SS_TEXT;
-		break;
-	case 0xC051:	// TEXTON
-		a2SoftSwitches |= A2SS_TEXT;
-		break;
-	case 0xC052:	// MIXEDOFF
-		a2SoftSwitches &= ~A2SS_MIXED;
-		break;
-	case 0xC053:	// MIXEDON
-		a2SoftSwitches |= A2SS_MIXED;
-		break;
-	case 0xC054:	// PAGE2OFF
-		a2SoftSwitches &= ~A2SS_PAGE2;
-		break;
-	case 0xC055:	// PAGE2ON
-		a2SoftSwitches |= A2SS_PAGE2;
-		break;
-	case 0xC056:	// HIRESOFF
-		a2SoftSwitches &= ~A2SS_HIRES;
-		break;
-	case 0xC057:	// HIRESON
-		a2SoftSwitches |= A2SS_HIRES;
-		break;
-	case 0xC05E:	// DHIRESON
-		a2SoftSwitches |= A2SS_DHGR;
-		break;
-	case 0xC05F:	// DHIRESOFF
-		a2SoftSwitches &= ~A2SS_DHGR;
-		break;
-	case 0xC021:	// MONOCOLOR
-		// bits 0-6 are reserved
-		// bit 7 determines color or greyscale. Greyscale is 1
-		if (!rw)
-		{
-			SetSoftSwitch(A2SS_GREYSCALE, (bool)(val >> 7));
-		}
-		break;
-	// $C022   R / W     SCREENCOLOR[IIgs] text foreground and background colors(also VidHD)
-	case 0xC022:	// Set screen color
-//            std::cerr << "Processing soft switch " << std::hex << (uint32_t)addr <<
-//            " VAL: " << (uint32_t)val <<
-//            " RW: " << (uint32_t)rw << std::endl;
-        if (!rw)
-        {
-			switch_c022 = val;
-            color_background = gPaletteRGB[12 + (val & 0x0F)];
-            color_foreground = gPaletteRGB[12 + ((val & 0xF0) >> 4)];
-        }
-		break;
-	// $C034   R / W     BORDERCOLOR[IIgs] b3:0 are border color(also VidHD)
-	case 0xC034:	// Set border color on bits 3:0
-        if (!rw)
-		{
-			switch_c034 = val;
-			color_border = gPaletteRGB[12 + (val & 0x0F)];
-		}
-		break;
-    // $C029   R/W     NEWVIDEO        [IIgs] Select new video modes (also VidHD)
-    case 0xC029:    // NEWVIDEO (SHR)
-		if (rw)		// don't do anything on read
-			break;
-		// bits 1-4 are reserved
-		if (val == 0x21)
-		{
-			// Return to mode TEXT
-			a2SoftSwitches &= ~A2SS_SHR;
-			a2SoftSwitches |= A2SS_TEXT;
-			break;
-		}
-		if (val & 0x20)		// bit 5
-		{
-			// DHGR in Monochrome @ 560x192
-			a2SoftSwitches |= A2SS_DHGRMONO;
-		} else {
-			// DHGR in 16 Colors @ 140x192
-			a2SoftSwitches &= ~A2SS_DHGRMONO;
-		}
-		if (val & 0x40)	// bit 6
-		{
-			// Video buffer is contiguous 0x2000-0x9D00 in bank E1
-		} else {
-			// AUX memory behaves like Apple //e
-		}
-		if (val & 0x80)	// bit 7
-		{
-			// SHR video mode. Bit 6 is considered on
-			a2SoftSwitches |= A2SS_SHR;
-			CycleCounter::GetInstance()->isSHR = true;
-		} else {
-			// Classic Apple 2 video modes
-			a2SoftSwitches &= ~A2SS_SHR;
-			CycleCounter::GetInstance()->isSHR = false;
-		}
-        break;
-	default:
-		break;
-	}
 }
 
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
@@ -431,14 +249,21 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	if (_x < CYCLES_HBLANK)	// in HBLANK, nothing to do
 		return;
 	
+	auto memMgr = MemoryManager::GetInstance();
+
+	// Get the colors
+	color_background = gPaletteRGB[12 + (memMgr->switch_c022 & 0x0F)];
+	color_foreground = gPaletteRGB[12 + ((memMgr->switch_c022 & 0xF0) >> 4)];
+	color_border = gPaletteRGB[12 + (memMgr->switch_c034 & 0x0F)];
+
 	// Set xx to 0 when after HBLANK. HBLANK is always at the start of the line
 	// However, VBLANK is at the end of the screen so we can use y as is
 	uint32_t xx = _x - CYCLES_HBLANK;	// xx is always positive here
-	if (IsSoftSwitch(A2SS_SHR))
+	if (memMgr->IsSoftSwitch(A2SS_SHR))
 	{
 		bVBlankHasSHR = true;		// at least 1 byte in this vblank cycle is in SHR
 		uint8_t* lineStartPtr = a2shr_vram + (_COLORBYTESOFFSET + 160) * y;
-		auto memPtr = MemoryManager::GetInstance()->GetApple2MemAuxPtr();
+		auto memPtr = memMgr->GetApple2MemAuxPtr();
 		if (xx == 0)
 		{
 			// it's the beginning of the line
@@ -487,20 +312,20 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	uint8_t colors = 0;
 	
 	// now set the mode, and depending on the mode, grab the bytes
-	if (!IsSoftSwitch(A2SS_TEXT))
+	if (!memMgr->IsSoftSwitch(A2SS_TEXT))
 	{
-		if (IsSoftSwitch(A2SS_MIXED) && y > 159)	// check mixed mode
+		if (memMgr->IsSoftSwitch(A2SS_MIXED) && y > 159)	// check mixed mode
 		{
-			if (IsSoftSwitch(A2SS_80COL))
+			if (memMgr->IsSoftSwitch(A2SS_80COL))
 				flags = 1;	// DTEXT
 			else
 				flags = 0;	// TEXT
 		}
-		else if (IsSoftSwitch(A2SS_80COL) && IsSoftSwitch(A2SS_DHGR))	// double resolution
+		else if (memMgr->IsSoftSwitch(A2SS_80COL) && memMgr->IsSoftSwitch(A2SS_DHGR))	// double resolution
 		{
-			if (IsSoftSwitch(A2SS_HIRES))
+			if (memMgr->IsSoftSwitch(A2SS_HIRES))
 			{
-				if (IsSoftSwitch(A2SS_DHGRMONO))
+				if (memMgr->IsSoftSwitch(A2SS_DHGRMONO))
 					flags = 6;	// DHGRMONO
 				else
 					flags = 5;	// DHGR
@@ -508,7 +333,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 			else
 				flags = 3;	// DLGR
 		}
-		else if (IsSoftSwitch(A2SS_HIRES))	// standard hires
+		else if (memMgr->IsSoftSwitch(A2SS_HIRES))	// standard hires
 		{
 			flags = 4;	// HGR
 		}
@@ -516,7 +341,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 			flags = 2;	// LGR
 		}
 	} else { 	// Now check the text modes
-		if (IsSoftSwitch(A2SS_80COL))
+		if (memMgr->IsSoftSwitch(A2SS_80COL))
 			flags = 1;	// DTEXT
 		else
 		{
@@ -525,14 +350,14 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	}
 		
 	// Fill in the rest of the flags. We already use bits 0-2 for the modes
-	flags |= ((IsSoftSwitch(A2SS_ALTCHARSET) ? 1 : 0) << 3);	// bit 3 is alt charset
-	flags |= ((switch_c034 & 0b111) << 4);						// bits 4-7 are border color
-																// and the colors
-	colors = switch_c022;
+	flags |= ((memMgr->IsSoftSwitch(A2SS_ALTCHARSET) ? 1 : 0) << 3);	// bit 3 is alt charset
+	flags |= ((memMgr->switch_c034 & 0b111) << 4);						// bits 4-7 are border color
+																		// and the colors
+	colors = memMgr->switch_c022;
 	// Check for page 2
 	bool isPage2 = false;
 	// Careful: it's only page 2 if 80STORE is off
-	if (IsSoftSwitch(A2SS_PAGE2) && !IsSoftSwitch(A2SS_80STORE))
+	if (memMgr->IsSoftSwitch(A2SS_PAGE2) && !memMgr->IsSoftSwitch(A2SS_80STORE))
 		isPage2 = true;
 	
 	// Finally set the 4 VRAM bytes
@@ -542,14 +367,14 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 		uint32_t startMem = _A2VIDEO_TEXT1_START;
 		if (((flags & 0b111) < 3) && isPage2)		// check for page 2 (DLGR doesn't have it)
 			startMem = _A2VIDEO_TEXT2_START;
-		byteStartPtr[0] = *(MemoryManager::GetInstance()->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[y / 8] + xx);
-		byteStartPtr[1] = *(MemoryManager::GetInstance()->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[y / 8] + xx);
+		byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[y / 8] + xx);
+		byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[y / 8] + xx);
 	} else {		// D/HIRES
 		uint32_t startMem = _A2VIDEO_HGR1_START;
 		if (isPage2)
 			startMem = _A2VIDEO_HGR2_START;
-		byteStartPtr[0] = *(MemoryManager::GetInstance()->GetApple2MemPtr() + startMem + g_RAM_HGROffsets[y] + xx);
-		byteStartPtr[1] = *(MemoryManager::GetInstance()->GetApple2MemAuxPtr() + startMem + g_RAM_HGROffsets[y] + xx);
+		byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_HGROffsets[y] + xx);
+		byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_HGROffsets[y] + xx);
 	}
 	byteStartPtr[2] = flags;
 	byteStartPtr[3] = colors;
