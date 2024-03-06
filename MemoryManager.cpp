@@ -36,16 +36,6 @@ uint8_t* MemoryManager::GetApple2MemAuxPtr()
 	return a2mem + _A2_MEMORY_SHADOW_END;
 }
 
-void MemoryManager::NotifyA2MemoryDidChange()
-{
-
-}
-
-void MemoryManager::NotifyA2MemoryDidChange(uint16_t addr)
-{
-
-}
-
 void MemoryManager::SetSoftSwitch(A2SoftSwitch_e ss, bool state)
 {
 	if (state)

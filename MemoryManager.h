@@ -77,8 +77,10 @@ public:
 
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 main memory pointer
 	uint8_t* GetApple2MemAuxPtr();	// Gets the Apple 2 aux memory pointer
-	void NotifyA2MemoryDidChange();					// Apple 2's memory changed (for global updates)
-	void NotifyA2MemoryDidChange(uint16_t addr);	// Apple 2's memory changed at addr
+	// Use these methods to set individual bytes
+	// There are NO BOUNDS CHECKS on setting memory! Use at own risk!
+	inline void SetApple2Mem(uint32_t addr, uint8_t val) { a2mem[addr] = val; };
+	inline void SetApple2MemAux(uint16_t addr, uint8_t val) { a2mem[_A2_MEMORY_SHADOW_END + addr] = val; };
 
 	inline bool IsSoftSwitch(A2SoftSwitch_e ss) { return (a2SoftSwitches & ss); };
 	void SetSoftSwitch(A2SoftSwitch_e ss, bool state);

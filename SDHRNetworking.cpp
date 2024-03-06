@@ -173,12 +173,10 @@ void process_single_event(SDHREvent& e)
 		
 		if (bIsAux)
 		{
-			memMgr->GetApple2MemAuxPtr()[e.addr] = e.data;
-			memMgr->NotifyA2MemoryDidChange(e.addr + 0x10000);
+			memMgr->SetApple2MemAux(e.addr, e.data);
 		}
 		else {
-			memMgr->GetApple2MemPtr()[e.addr] = e.data;
-			memMgr->NotifyA2MemoryDidChange(e.addr);
+			memMgr->SetApple2Mem(e.addr, e.data);
 		}
 		return;
 	}
