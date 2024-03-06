@@ -108,7 +108,7 @@ A2VideoManager* A2VideoManager::s_instance;
 constexpr uint32_t CYCLES_HBLANK = 25;			// always 25 cycles
 constexpr uint8_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
 
-static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
+static OpenGLHelper* oglHelper;
 
 static Shader shader_beam_legacy = Shader();
 static Shader shader_beam_shr = Shader();
@@ -151,6 +151,7 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 
 void A2VideoManager::Initialize()
 {
+	oglHelper = OpenGLHelper::GetInstance();
 	bIsReady = false;
 	memset(a2legacy_vram, 0, _BEAM_VRAM_SIZE_LEGACY);
 	memset(a2shr_vram, 0, _BEAM_VRAM_SIZE_SHR);

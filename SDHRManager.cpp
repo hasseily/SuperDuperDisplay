@@ -16,7 +16,7 @@
 // below because "The declaration of a static data member in its class definition is not a definition"
 SDHRManager* SDHRManager::s_instance;
 
-static OpenGLHelper* oglHelper = OpenGLHelper::GetInstance();
+static OpenGLHelper* oglHelper;
 // The standard default shader for the windows and their mosaics
 static Shader defaultWindowShaderProgram = Shader();
 // Pixelization shader
@@ -249,6 +249,7 @@ int upload_inflate(const char* source, uint32_t size, std::ostream& dest) {
 
 void SDHRManager::Initialize()
 {
+	oglHelper = OpenGLHelper::GetInstance();
 	bSDHREnabled = false;
 	error_flag = false;
 	memset(error_str, 0, sizeof(error_str));
