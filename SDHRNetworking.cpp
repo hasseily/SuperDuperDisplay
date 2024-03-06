@@ -446,10 +446,12 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			std::cout << "Client disconnected" << std::endl;
 			continue;
 		}
-		if (retval == -1) {
+		if (retval < 1) {	// no data
 			continue;
 		}
-		
+
+		// From now on there's data!
+
 		if (!connected) {
 			connected = true;
 			A2VideoManager::GetInstance()->ActivateBeam();
