@@ -312,7 +312,7 @@ void SDHRManager::ClearBuffer()
 }
 
 void SDHRManager::CommandError(const char* err) {
-	strcpy_s(error_str, err);
+	strcpy(error_str, err);
 	error_flag = true;
 	std::cerr << "Command Error: " << error_str << std::endl;
 }
