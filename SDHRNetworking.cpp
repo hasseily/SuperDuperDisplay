@@ -329,8 +329,7 @@ int process_events_thread(bool* shouldTerminateProcessing)
 		++num_processed_packets;
 		if (num_processed_packets % 100000 == 0)
 		{
-			std::cerr << "Max sizes: " << packetInQueue.max_size() << " > " << packetFreeQueue.max_size() << std::endl;
-
+			// std::cerr << "Max sizes: " << packetInQueue.max_size() << " > " << packetFreeQueue.max_size() << std::endl;
 			duration_packet_processing_ns = totalDuration.count() / 100000;
 			totalDuration = std::chrono::nanoseconds::zero();
 		}
