@@ -26,7 +26,9 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_STATIC
+#pragma warning(push, 0) // disables all warnings
 #include "stb_image.h"
+#pragma warning(pop)
 
 typedef struct uixy { uint32_t x; uint32_t y; } uXY;
 typedef struct ixy { int32_t x; int32_t y; } iXY;

@@ -39,6 +39,7 @@ EventRecorder::~EventRecorder()
 
 void EventRecorder::MakeRAMSnapshot(size_t cycle)
 {
+	(void)cycle; // mark as unused
 	auto _memsize = _A2_MEMORY_SHADOW_END - _A2_MEMORY_SHADOW_BEGIN;
 	ByteBuffer buffer(RECORDER_TOTALMEMSIZE);
 	// Get the MAIN chunk

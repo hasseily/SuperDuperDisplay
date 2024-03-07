@@ -120,6 +120,7 @@ static Shader shader_beam_shr = Shader();
 // NOTE:	Both the below image asset methods use OpenGL 
 //			so they _must_ be called from the main thread
 void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const char* filename) {
+	(void)owner; // mark as unused
 	int width;
 	int height;
 	int channels;

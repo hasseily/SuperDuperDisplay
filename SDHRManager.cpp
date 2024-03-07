@@ -312,7 +312,7 @@ void SDHRManager::ClearBuffer()
 }
 
 void SDHRManager::CommandError(const char* err) {
-	strcpy(error_str, err);
+	strcpy_s(error_str, err);
 	error_flag = true;
 	std::cerr << "Command Error: " << error_str << std::endl;
 }
@@ -353,7 +353,7 @@ void SDHRManager::Render()
 
 		// We're going to set the active textures to _SDHR_START_TEXTURES, leaving textures GL_TEXTURE0 (output texture)
 		// and GL_TEXTURE1 (mosaic data buffer) alone
-		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
+		for (GLenum i = 0; i < _SDHR_MAX_TEXTURES; i++) {
 			glActiveTexture(_SDHR_START_TEXTURES + i);	// AssignByFilename() will bind to the active texture slot
 			// the default tex0 and tex4..16 are the same, but the others are unique for better testing
 			image_assets[i].AssignByFilename(this, "assets/Texture_Default.png");
@@ -370,7 +370,7 @@ void SDHRManager::Render()
 		// Check to see if we need to upload data to the GPU
 
 		// First loop through all image_assets to see if there's data to upload
-		for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++)
+		for (GLenum i = 0; i < _SDHR_MAX_TEXTURES; i++)
 		{
 			if (image_assets[i].data != nullptr)
 			{
@@ -379,7 +379,6 @@ void SDHRManager::Render()
 				glActiveTexture(GL_TEXTURE0);
 			}
 		}
-		GLenum glerr;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL error BEFORE window update: " << glerr << std::endl;
 		}
@@ -539,7 +538,7 @@ bool SDHRManager::ProcessCommands(void)
 				num_entries = 256;
 			}
 			uint32_t required_data_size = num_entries * 4;
-			if (cmd->block_count * 512 < required_data_size) {
+			if (cmd->block_count * 512u < required_data_size) {
 				CommandError("Insufficient data space for tileset");
 			}
 			DefineTileset(cmd->tileset_index, num_entries, cmd->xdim, cmd->ydim, cmd->asset_index, uploaded_data_region);
@@ -601,7 +600,7 @@ bool SDHRManager::ProcessCommands(void)
 			//  textureId of the image asset used in the tileset
 			uint8_t* sp = p + cmd_sz;
 			auto mesh = r->mesh;
-			for (uint32_t i = 0; i < cmd->data_length / 2; ++i) {
+			for (uint32_t i = 0; i < cmd->data_length / 2u; ++i) {
 				uint8_t tileset_index = sp[i * 2];
 				uint8_t tile_index = sp[i * 2 + 1];
 				const TilesetRecord tr = tileset_records[tileset_index];

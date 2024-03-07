@@ -46,6 +46,7 @@ void MemoryManager::SetSoftSwitch(A2SoftSwitch_e ss, bool state)
 
 void MemoryManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool is_iigs)
 {
+	(void)is_iigs;		// mark as unused -- Appletini brings iigs features to the //e
 	//std::cerr << "Processing soft switch " << std::hex << (uint32_t)addr << " RW: " << (uint32_t)rw << " 2gs: " << (uint32_t)is_iigs << std::endl;
 	switch (addr)
 	{

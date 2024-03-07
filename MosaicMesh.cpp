@@ -9,6 +9,7 @@ MosaicMesh::MosaicMesh(uint32_t tile_xcount, uint32_t tile_ycount, uint32_t tile
 	rows = tile_ycount;	// number of rows
 	width = tile_xcount * tile_xdim;
 	height = tile_ycount * tile_ydim;
+	ticks_since_first_render = 0;
 
 	this->mosaicTiles.reserve(cols * rows);	// total # of tiles in the mesh
 
@@ -54,7 +55,7 @@ MosaicMesh::MosaicMesh(uint32_t tile_xcount, uint32_t tile_ycount, uint32_t tile
 		}
 	};
 
-	for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++) {
+	for (GLint i = 0; i < _SDHR_MAX_TEXTURES; i++) {
 		texSamplers[i] = (_SDHR_START_TEXTURES - GL_TEXTURE0) + i;
 	}
 	bNeedsGPUUpdate = true;
@@ -96,8 +97,8 @@ void MosaicMesh::UpdateMosaicUV(uint32_t mosaic_index, uint32_t u, uint32_t v, u
 
 void MosaicMesh::SetWorldCoordinates(int32_t x, int32_t y)
 {
-	this->world_x = x;
-	this->world_y = y;
+	this->world_x = (float)x;
+	this->world_y = (float)y;
 	// Update the model->world transform matrix, to translate the model into the world space
 	this->mat_trans = glm::translate(glm::mat4(1.0f), glm::vec3(world_x, world_y, 0.0f));
 

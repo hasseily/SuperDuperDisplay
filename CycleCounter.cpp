@@ -44,6 +44,7 @@ void CycleCounter::Reset()
 
 void CycleCounter::IncrementCycles(int inc, bool isVBL)
 {
+	(void)isVBL; // mark as unused
 	m_cycle += inc;
 	m_cycle = (m_cycle % cycles_total);
 	/*

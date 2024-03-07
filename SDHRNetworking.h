@@ -27,7 +27,7 @@
 
 struct Packet {
 	uint8_t data[PKT_BUFSZ];
-	size_t size;
+	uint32_t size;
 	Packet() : size(1) {
 		memset(data, 0, 1);
 	}

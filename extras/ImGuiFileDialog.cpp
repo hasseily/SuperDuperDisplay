@@ -3915,6 +3915,7 @@ void IGFD::FileDialog::m_SelectableItem(int vidx, std::shared_ptr<FileInfos> vIn
 }
 
 void IGFD::FileDialog::m_DisplayFileInfosTooltip(const int32_t& vRowIdx, const int32_t& vColumnIdx, std::shared_ptr<FileInfos> vFileInfos) {
+	(void)vRowIdx; // mark as unused
 	if (ImGui::IsItemHovered()) {
 		if (vFileInfos != nullptr && vFileInfos->tooltipColumn == vColumnIdx) {
 			if (!vFileInfos->tooltipMessage.empty()) {

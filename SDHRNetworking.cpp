@@ -84,6 +84,7 @@ ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_a
 
 void insert_event(SDHREvent* e)
 {
+	(void)e;	// mark as unused
 	assert("ERROR: CANNOT INSERT EVENT");
 }
 

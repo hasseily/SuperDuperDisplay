@@ -7,7 +7,9 @@
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_memory_editor.h"
+#pragma warning(push, 0) // disables all warnings
 #include <SDL.h>
+#pragma warning(pop)
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
@@ -50,6 +52,10 @@ void GLAPIENTRY DebugCallbackKHR(GLenum source,
 								 GLsizei length,
 								 const GLchar* message,
 								 const void* userParam) {
+	(void)source;		// mark as unused
+	(void)id;			// mark as unused
+	(void)length;		// mark as unused
+	(void)userParam;	// mark as unused
 	std::cerr << "GL CALLBACK: " << (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "")
 	<< " type = " << type << ", severity = " << severity << ", message = " << message << std::endl;
 }
@@ -74,6 +80,8 @@ void callback_resolutionChange(int w, int h)
 // Main code
 int main(int argc, char* argv[])
 {
+	(void)argc;		// mark as unused
+	(void)argv;		// mark as unused
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
     // when double-clicking the app, change to its working directory
     char *dir = dirname(strdup(argv[0]));
@@ -352,7 +360,7 @@ int main(int argc, char* argv[])
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
         uint32_t bc = a2VideoManager->color_border;
-		glClearColor((bc & 0xFF) / 256.0f, (bc >> 8 & 0xFF) / 256.0, (bc >> 16 & 0xFF) / 256.0f, (bc >> 24 & 0xFF) / 256.0f);
+		glClearColor((bc & 0xFF) / 256.0f, (bc >> 8 & 0xFF) / 256.0f, (bc >> 16 & 0xFF) / 256.0f, (bc >> 24 & 0xFF) / 256.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// Start the Dear ImGui frame
@@ -555,7 +563,7 @@ int main(int argc, char* argv[])
         auto margin = ImVec2(0,0);
         if (sdhrManager->IsSdhrEnabled())
         {
-			margin.x = margin.y = sdhrManager->windowMargins;
+			margin.x = margin.y = (float)sdhrManager->windowMargins;
 			ImGui::GetBackgroundDrawList()->AddImage(
 				(void*)glhelper->get_output_texture_id(),
 				margin,
@@ -568,7 +576,7 @@ int main(int argc, char* argv[])
             // In case of the Apple 2 video modes, let's make sure the
             // rendered image is always in the proper ratio
             // Start with the requested margins
-			margin.x = margin.y = a2VideoManager->windowMargins;
+			margin.x = margin.y = (float)a2VideoManager->windowMargins;
             auto _ss = a2VideoManager->ScreenSize();
             float _rreq = (float)_w / _h;    // req ratio to use
             uint32_t _maxW = _w - (2 * floor(margin.x));
