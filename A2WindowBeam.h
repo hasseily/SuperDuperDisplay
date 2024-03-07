@@ -63,7 +63,7 @@ private:
     bool enabled;           		// if not enabled, doesn't get rendered
 	A2VideoModeBeam_e video_mode;	// Which video mode is used
 	Shader* shaderProgram;			// Shader used
-	uXY screen_count;				// width,height in pixels of visible screen area of window
+	uXY screen_count = {0,0};				// width,height in pixels of visible screen area of window
 
 	unsigned int VRAMTEX = UINT_MAX;		// VRAM buffer texture. Holds R as MAIN, G and AUX, B as flags
 

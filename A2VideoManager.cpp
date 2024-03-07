@@ -167,7 +167,7 @@ void A2VideoManager::Initialize()
 	// Set up the image assets (textures)
 	// Assign them their respective GPU texture id
 	*image_assets = {};
-	for (size_t i = 0; i < (sizeof(image_assets) / sizeof(ImageAsset)); i++)
+	for (uint8_t i = 0; i < (sizeof(image_assets) / sizeof(ImageAsset)); i++)
 	{
 		image_assets[i].tex_id = oglHelper->get_texture_id_at_slot(i);
 	}
@@ -233,7 +233,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 		return;
 	}
 
-	if (y >= 200)	// in VBLANK, nothing to do
+	auto memMgr = MemoryManager::GetInstance();
+	if (y >= (memMgr->IsSoftSwitch(A2SS_SHR) ? 200 : 192))	// in VBLANK, nothing to do
 		return;
 
 	// Anything here below means the VRAMs are getting modified
@@ -250,8 +251,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	if (_x < CYCLES_HBLANK)	// in HBLANK, nothing to do
 		return;
 	
-	auto memMgr = MemoryManager::GetInstance();
-
 	// Get the colors
 	color_background = gPaletteRGB[12 + (memMgr->switch_c022 & 0x0F)];
 	color_foreground = gPaletteRGB[12 + ((memMgr->switch_c022 & 0xF0) >> 4)];

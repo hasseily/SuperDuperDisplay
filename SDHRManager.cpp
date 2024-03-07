@@ -426,14 +426,16 @@ void SDHRManager::DefineTileset(uint8_t tileset_index, uint16_t num_entries, uin
 
 	uint8_t* offset_p = offsets;
 	TileTex* tex_p = r->tile_data;
-	for (uint32_t i = 0; i < num_entries; ++i) {
-		uint32_t xoffset = *((uint16_t*)offset_p);
-		offset_p += 2;
-		uint32_t yoffset = *((uint16_t*)offset_p);
-		offset_p += 2;
-		tex_p->upos = xoffset * xdim;
-		tex_p->vpos = yoffset * ydim;
-		++tex_p;
+	if (tex_p != nullptr) {
+		for (uint32_t i = 0; i < num_entries; ++i) {
+			uint32_t xoffset = *((uint16_t*)offset_p);
+			offset_p += 2;
+			uint32_t yoffset = *((uint16_t*)offset_p);
+			offset_p += 2;
+			tex_p->upos = xoffset * xdim;
+			tex_p->vpos = yoffset * ydim;
+			++tex_p;
+		}
 	}
 }
 

@@ -292,12 +292,12 @@ int main(int argc, char* argv[])
             case SDL_MOUSEMOTION:
                 if (event.motion.state & SDL_BUTTON_RMASK && !io.WantCaptureMouse) {
                     // Move the camera when the right mouse button is pressed while moving the mouse
-                    glhelper->camera.ProcessMouseMovement(event.motion.xrel, event.motion.yrel);
+                    glhelper->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
                 }
                 break;
             case SDL_MOUSEWHEEL:
 				if (!io.WantCaptureMouse) {
-					glhelper->camera.ProcessMouseScroll(event.wheel.y);
+					glhelper->camera.ProcessMouseScroll((float)event.wheel.y);
 				}
                 break;
             case SDL_KEYDOWN:
@@ -352,7 +352,7 @@ int main(int argc, char* argv[])
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
         uint32_t bc = a2VideoManager->color_border;
-		glClearColor((bc & 0xFF) / 256.0, (bc >> 8 & 0xFF) / 256.0, (bc >> 16 & 0xFF) / 256.0, (bc >> 24 & 0xFF) / 256.0);
+		glClearColor((bc & 0xFF) / 256.0f, (bc >> 8 & 0xFF) / 256.0, (bc >> 16 & 0xFF) / 256.0f, (bc >> 24 & 0xFF) / 256.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// Start the Dear ImGui frame
@@ -571,8 +571,8 @@ int main(int argc, char* argv[])
 			margin.x = margin.y = a2VideoManager->windowMargins;
             auto _ss = a2VideoManager->ScreenSize();
             float _rreq = (float)_w / _h;    // req ratio to use
-            int32_t _maxW = _w - (2 * margin.x);
-            int32_t _maxH = _h - (2 * margin.y);
+            uint32_t _maxW = _w - (2 * floor(margin.x));
+            uint32_t _maxH = _h - (2 * floor(margin.y));
             // Force integer scaling to have totally proper scanlines
             _maxW = _ss.x * (_maxW / (_ss.x));
 			_maxH = _ss.y * (_maxH / (_ss.y));
@@ -581,15 +581,15 @@ int main(int argc, char* argv[])
             if (_maxH < _ss.y)
                 _maxH = _ss.y;
             float _r = (float)_ss.x / _ss.y;
-            int32_t _newW, _newH;
+            uint32_t _newW, _newH;
             if (_r < _rreq)    // requested a wider screen
             {
-                _newW = _maxH * _r;
+                _newW = floor(_maxH * _r);
                 _newH = _maxH;
             }
             else {      // requested a narrower screen
                 _newW = _maxW;
-                _newH = _maxW / _r;
+                _newH = floor(_maxW / _r);
             }
 			margin.x = (_w - _newW) / 2;
 			margin.y = (_h - _newH) / 2;
@@ -634,7 +634,7 @@ int main(int argc, char* argv[])
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    //SDL_GL_DeleteContext(gl_context);
+    SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
     SDL_Quit();
 

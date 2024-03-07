@@ -151,7 +151,7 @@ void EventRecorder::StartReplay()
 	bIsInReplayMode = true;
 	ApplyRAMSnapshot(0);
 	thread_replay = std::thread(&EventRecorder::replay_events_thread, this,
-		&bShouldPauseReplay, &bShouldStopReplay, &currentReplayEvent);
+		&bShouldPauseReplay, &bShouldStopReplay);
 }
 
 void EventRecorder::PauseReplay(bool pause)
@@ -165,7 +165,7 @@ void EventRecorder::RewindReplay()
 	currentReplayEvent = 0;
 }
 
-int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldStopReplay, size_t* currentReplayEvent)
+int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldStopReplay)
 {
 	using namespace std::chrono;
 	auto targetDuration = duration<double, std::nano>(1977.7778337);	// Duration of an Apple 2 clock cycle (not stretched)
@@ -189,12 +189,12 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			// 1. to find the closest previous memory snapshot
 			// 2. run all events between the mem snapshot and the requested event
 			// These events can be run at max speed
-			auto snapshot_index = *currentReplayEvent / m_current_snapshot_cycles;
+			auto snapshot_index = currentReplayEvent / m_current_snapshot_cycles;
 			ApplyRAMSnapshot(snapshot_index);
 			clear_queue();
 			bool isVBL = false;
 			auto first_event_index = snapshot_index * m_current_snapshot_cycles;
-			for (auto i = first_event_index; i < *currentReplayEvent; i++)
+			for (auto i = first_event_index; i < currentReplayEvent; i++)
 			{
 				auto e = v_events.at(i);
 				isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == 0));
@@ -203,15 +203,15 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			}
 		}
 
-		if (*currentReplayEvent < v_events.size())
+		if (currentReplayEvent < v_events.size())
 		{
 			if (*shouldStopReplay)	// In case a stop was sent while sleeping
 				break;
-			auto e = v_events.at(*currentReplayEvent);
+			auto e = v_events.at(currentReplayEvent);
 			bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == 0));
 			CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
 			process_single_event(e);
-			*currentReplayEvent += 1;
+			currentReplayEvent += 1;
 			// wait 1 clock cycle before adding the next event
 			startTime = high_resolution_clock::now();
 			while (true)

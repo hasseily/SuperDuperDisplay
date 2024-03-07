@@ -116,7 +116,7 @@ GLuint OpenGLHelper::get_intermediate_texture_id()
 	return output_texture_ids[1];
 }
 
-GLuint OpenGLHelper::get_texture_id_at_slot(uint8_t slot)
+GLuint OpenGLHelper::get_texture_id_at_slot(int slot)
 {
 	if (slot >= v_texture_ids.size())
 	{

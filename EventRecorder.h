@@ -90,7 +90,7 @@ private:
 
 	// Replay thread control
 	std::thread thread_replay;
-	int replay_events_thread(bool* shouldPauseReplay, bool* shouldStopReplay, size_t* currentReplayEvent);
+	int replay_events_thread(bool* shouldPauseReplay, bool* shouldStopReplay);
 	bool bShouldPauseReplay = false;
 	bool bShouldStopReplay = false;
 	size_t currentReplayEvent;		// index of the event ready to replay in the vector

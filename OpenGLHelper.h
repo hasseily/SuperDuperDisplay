@@ -36,7 +36,7 @@ public:
 	void load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID);
 	GLuint get_intermediate_texture_id();								// texture id of the framebuffer to draw to
 	GLuint get_output_texture_id() { return output_texture_ids[1]; };	// output texture id of the final framebuffer
-	GLuint get_texture_id_at_slot(uint8_t slot);	// returns the opengl-generated texture id for this tex slot
+	GLuint get_texture_id_at_slot(int slot);	// returns the opengl-generated texture id for this tex slot
 	void create_framebuffers(uint32_t width, uint32_t height);	// also binds it
 	void bind_framebuffer();	// Binds the correct framebuffer, depending on the postprocessing needs
 	void unbind_framebuffer();
