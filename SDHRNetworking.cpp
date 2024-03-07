@@ -6,6 +6,7 @@
 #include "EventRecorder.h"
 #include <time.h>
 #include <fcntl.h>
+#include <chrono>
 
 
 #ifdef __NETWORKING_WINDOWS__
@@ -30,56 +31,32 @@ struct mmsghdr {
 #endif
 #endif
 
-static ConcurrentQueue<std::shared_ptr<Packet>> packetQueue;
 static EventRecorder* eventRecorder;
 static uint32_t prev_seqno;
 static bool bFirstDrop;
+static uint64_t num_processed_packets = 0;
+static uint64_t duration_packet_processing_ns = 0;
+static uint64_t duration_network_processing_ns = 0;
 
-ENET_RES socket_bind_and_listen(__SOCKET* server_fd, const sockaddr_in& server_addr)
+static ConcurrentQueue<std::shared_ptr<Packet>> packetInQueue;
+static ConcurrentQueue<std::shared_ptr<Packet>> packetFreeQueue;
+
+uint64_t get_number_packets_processed() { return num_processed_packets; };
+uint64_t get_duration_packet_processing_ns() { return duration_packet_processing_ns; };
+uint64_t get_duration_network_processing_ns() { return duration_network_processing_ns; };
+
+uint64_t get_packet_pool_count() { return packetFreeQueue.max_size(); };
+uint64_t get_max_incoming_packets() { return packetInQueue.max_size(); };
+
+void clear_queues()
 {
-	packetQueue.clear();
-
-#ifdef __NETWORKING_WINDOWS__
-	WSADATA wsaData;
-	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-		std::cerr << "WSAStartup failed" << std::endl;
-		return ENET_RES::ERR;
+	packetInQueue.clear();
+	packetFreeQueue.clear();
+	for (size_t allocSize = 0; allocSize < 10000; allocSize++)	// preallocate 10,000 packets
+	{
+		auto packet = std::make_shared<Packet>();
+		packetFreeQueue.push(std::move(packet));
 	}
-	if ((*server_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET) {
-		std::cerr << "Error creating socket" << std::endl;
-		WSACleanup();
-		return ENET_RES::ERR;
-	}
-	BOOL optval = true;
-	setsockopt(*server_fd, SOL_SOCKET, SO_REUSEADDR,
-		(const char*)&optval, sizeof(BOOL));
-	int rcvbuf = 1024 * 1024;
-	int result = setsockopt(*server_fd, SOL_SOCKET, SO_RCVBUF, (const char*)&rcvbuf, sizeof(int));
-	if (result == SOCKET_ERROR) {
-		printf("setsockopt for SO_RCVBUF failed with error: %u\n", WSAGetLastError());
-	}
-
-	if (bind(*server_fd, (SOCKADDR*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
-		std::cerr << "Error binding socket" << std::endl;
-		closesocket(*server_fd);
-		WSACleanup();
-		return ENET_RES::ERR;
-	}
-#else // not __NETWORKING_WINDOWS__
-	if ((*server_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
-		std::cerr << "Error creating socket" << std::endl;
-		return ENET_RES::ERR;
-	}
-	int optval = 1;
-	setsockopt(*server_fd, SOL_SOCKET, SO_REUSEADDR,
-		(const char*)&optval, sizeof(int));
-	if (::bind(*server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
-		std::cerr << "Error binding socket" << std::endl;
-		return ENET_RES::ERR;
-	}
-#endif
-
-	return ENET_RES::OK;
 }
 
 void insert_event(SDHREvent* e)
@@ -88,17 +65,12 @@ void insert_event(SDHREvent* e)
 	assert("ERROR: CANNOT INSERT EVENT");
 }
 
-void clear_queue()
-{
-	packetQueue.clear();
-}
-
 void terminate_processing_thread()
 {
 	// Force a dummy packet to process, so that shouldTerminateProcessing is triggered
 	// and the loop is closed cleanly.
 	auto packet = std::make_shared<Packet>();
-	packetQueue.push(std::move(packet));
+	packetInQueue.push(std::move(packet));
 }
 
 void process_single_event(SDHREvent& e)
@@ -335,11 +307,14 @@ void process_single_packet_header(SDHRPacketHeader* h,
 int process_events_thread(bool* shouldTerminateProcessing)
 {
 	std::cout << "Starting Processing Thread\n";
+	std::chrono::nanoseconds totalDuration(0);
+	auto start = std::chrono::high_resolution_clock::now();
+
 	while (!(*shouldTerminateProcessing)) {
 		// Get a packet from the queue
 		// Each packet should have a minimum of 64 events
-		auto p = packetQueue.pop();
-		
+		auto p = packetInQueue.pop();
+		start = std::chrono::high_resolution_clock::now();
 		if (p->size > 0)
 		{
 			SDHRPacketHeader* h = (SDHRPacketHeader*)p->data;
@@ -349,6 +324,16 @@ int process_events_thread(bool* shouldTerminateProcessing)
 		else {
 			std::cerr << "Empty packet!\n";
 		}
+		packetFreeQueue.push(std::move(p));
+		totalDuration += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start);
+		++num_processed_packets;
+		if (num_processed_packets % 100000 == 0)
+		{
+			std::cerr << "Max sizes: " << packetInQueue.max_size() << " > " << packetFreeQueue.max_size() << std::endl;
+
+			duration_packet_processing_ns = totalDuration.count() / 100000;
+			totalDuration = std::chrono::nanoseconds::zero();
+		}
 	}
 	std::cout << "Stopped Processing Thread\n";
 	return 0;
@@ -357,7 +342,12 @@ int process_events_thread(bool* shouldTerminateProcessing)
 int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 {
 	std::cout << "Starting Network Thread\n";
+	std::chrono::nanoseconds totalDuration(0);
+	auto start = std::chrono::high_resolution_clock::now();
+
 	eventRecorder = EventRecorder::GetInstance();
+
+	clear_queues();
 
 	prev_seqno = 0;
 	bFirstDrop = false;
@@ -410,7 +400,8 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	bool connected = false;
 	
 	int64_t last_recv_nsec = 0;
-	
+	int64_t num_packets_received = 0;
+
 	while (!(*shouldTerminateNetworking)) {
 #ifdef __NETWORKING_WINDOWS__
 		LARGE_INTEGER frequency;        // ticks per second
@@ -459,15 +450,22 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		last_recv_nsec = nsec;
 		
 		if (fds[0].revents & POLLIN) {
-			auto packet = std::make_shared<Packet>();
+			start = std::chrono::high_resolution_clock::now();
+			auto packet = packetFreeQueue.pop();	// there should _always_ be a free packet available
 			sockaddr_in src_addr;
 			socklen_t addrlen = sizeof(src_addr);
 			
 			packet->size = recvfrom(sockfd, reinterpret_cast<char*>(packet->data), PKT_BUFSZ, 0, (struct sockaddr *)&src_addr, &addrlen);
-			if (packet->size > 0) {
-				if (!eventRecorder->IsInReplayMode())
-					packetQueue.push(std::move(packet));
-				// std::cout << "Received packet size: " << packet->size << std::endl;
+			++num_packets_received;
+			if (!eventRecorder->IsInReplayMode())
+				packetInQueue.push(std::move(packet));
+			else
+				packetFreeQueue.push(std::move(packet));
+			totalDuration += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start);
+			if (num_packets_received % 100000 == 0)
+			{
+				duration_network_processing_ns = totalDuration.count() / 100000;
+				totalDuration = std::chrono::nanoseconds::zero();
 			}
 		}
 	}

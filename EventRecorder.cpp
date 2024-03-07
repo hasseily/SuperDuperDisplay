@@ -192,7 +192,6 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			// These events can be run at max speed
 			auto snapshot_index = currentReplayEvent / m_current_snapshot_cycles;
 			ApplyRAMSnapshot(snapshot_index);
-			clear_queue();
 			bool isVBL = false;
 			auto first_event_index = snapshot_index * m_current_snapshot_cycles;
 			for (auto i = first_event_index; i < currentReplayEvent; i++)

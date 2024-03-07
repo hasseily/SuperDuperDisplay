@@ -18,12 +18,15 @@ private:
 	std::mutex              d_mutex;
 	std::condition_variable d_condition;
 	std::deque<T>           d_queue;
+	uint32_t				d_max_size = 0;
 public:
 	void push(T const& value) {
 		{
 			std::unique_lock<std::mutex> lock(this->d_mutex);
 			this->d_queue.push_front(value);
 		}
+		if (this->d_queue.size() > this->d_max_size)
+			this->d_max_size = this->d_queue.size();
 		this->d_condition.notify_one();
 	}
 	T pop() {
@@ -39,9 +42,13 @@ public:
 	void clear() {
 		std::unique_lock<std::mutex> lock(this->d_mutex);
 		this->d_queue.clear();
+		this->d_max_size = 0;
 	}
 	int size() {
 		return this->d_queue.size();
+	}
+	int max_size() {
+		return this->d_max_size;
 	}
 };
 
