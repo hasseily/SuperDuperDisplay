@@ -385,10 +385,10 @@ int main(int argc, char* argv[])
 				ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
 				ImGui::Text("Screen Size:%03d x %03d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);
 				ImGui::Separator();
-				ImGui::Text("Packet Pool Count: %d", get_packet_pool_count());
-				ImGui::Text("Max Incoming Packet Queue: %d", get_max_incoming_packets());
-				ImGui::Text("Network Processing Time: %d ns", get_duration_network_processing_ns());
-				ImGui::Text("Packets Processing Time: %d ns", get_duration_packet_processing_ns());
+				ImGui::Text("Packet Pool Count: %lu", get_packet_pool_count());
+				ImGui::Text("Max Incoming Packet Queue: %lu", get_max_incoming_packets());
+				ImGui::Text("Network Processing Time: %lu ns", get_duration_network_processing_ns());
+				ImGui::Text("Packets Processing Time: %lu ns", get_duration_packet_processing_ns());
 				vbl_region_is_PAL = (cycleCounter->GetVideoRegion() == VideoRegion_e::PAL);
 				if (ImGui::Checkbox("PAL Mode", &vbl_region_is_PAL))
 				{
