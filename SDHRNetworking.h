@@ -74,10 +74,10 @@ int process_events_thread(bool* shouldTerminateProcessing);
 void process_single_event(SDHREvent& e);
 void terminate_processing_thread();
 
-void clear_queue();
+void clear_queues();
 
-uint64_t get_number_packets_processed();
-uint64_t get_duration_packet_processing_ns();
-uint64_t get_duration_network_processing_ns();
-uint64_t get_packet_pool_count();
-uint64_t get_max_incoming_packets();
+const uint64_t get_number_packets_processed();
+const uint64_t get_duration_packet_processing_ns();
+const uint64_t get_duration_network_processing_ns();
+const size_t get_packet_pool_count();
+const size_t get_max_incoming_packets();

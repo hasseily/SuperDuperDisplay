@@ -1,3 +1,4 @@
+#include "ConcurrentQueue.h"
 #include "SDHRNetworking.h"
 #include "MemoryManager.h"
 #include "A2VideoManager.h"
@@ -41,12 +42,11 @@ static uint64_t duration_network_processing_ns = 0;
 static ConcurrentQueue<std::shared_ptr<Packet>> packetInQueue;
 static ConcurrentQueue<std::shared_ptr<Packet>> packetFreeQueue;
 
-uint64_t get_number_packets_processed() { return num_processed_packets; };
-uint64_t get_duration_packet_processing_ns() { return duration_packet_processing_ns; };
-uint64_t get_duration_network_processing_ns() { return duration_network_processing_ns; };
-
-uint64_t get_packet_pool_count() { return packetFreeQueue.max_size(); };
-uint64_t get_max_incoming_packets() { return packetInQueue.max_size(); };
+const uint64_t get_number_packets_processed() { return num_processed_packets; };
+const uint64_t get_duration_packet_processing_ns() { return duration_packet_processing_ns; };
+const uint64_t get_duration_network_processing_ns() { return duration_network_processing_ns; };
+const size_t get_packet_pool_count() { return packetFreeQueue.max_size(); };
+const size_t get_max_incoming_packets() { return packetInQueue.max_size(); };
 
 void clear_queues()
 {

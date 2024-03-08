@@ -256,10 +256,12 @@ void SDHRManager::Initialize()
 	*image_assets = {};
 	*tileset_records = {};
 
-	for (size_t i = 0; i < (sizeof(windows)/sizeof(SDHRWindow)); i++)
+	for (int i = 0; i < (sizeof(windows)/sizeof(SDHRWindow)); i++)
 	{
 		// Set the z index of each window and keep track of them
-		windows[i].Set_index(i);
+		if (i > UINT8_MAX)
+			assert("ERROR: Window index out of bounds!");
+		windows[i].Set_index((uint8_t)i);
 	}
 
 	command_buffer.clear();
@@ -268,7 +270,7 @@ void SDHRManager::Initialize()
 	// tell the next Render() call to run initialization routines
 	// Assign to the GPU the default pink image to all 16 image assets
 	// because the shaders expect 16 textures
-	for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++)
+	for (GLint i = 0; i < _SDHR_MAX_TEXTURES; i++)
 	{
 		image_assets[i].tex_id = oglHelper->get_texture_id_at_slot(i);
 	}

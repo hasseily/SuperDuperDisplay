@@ -134,7 +134,8 @@ int main(int argc, char* argv[])
         | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED
         | SDL_WINDOW_SHOWN);
 #elif defined(IMGUI_IMPL_OPENGL_ES2)
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN);
+    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
+		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN);
 #else
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
         | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED
@@ -275,8 +276,7 @@ int main(int argc, char* argv[])
     io.IniFilename = nullptr;
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
-	uint32_t loop_total = 0;
-	uint32_t loop_render = 0;
+
     while (!done)
 #endif
     {
