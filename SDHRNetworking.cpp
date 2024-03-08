@@ -159,7 +159,6 @@ void process_single_event(SDHREvent& e)
 	 *********************************
 	 */
 	if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
-		// Send soft switches to the A2VideoManager
 		if (e.addr >> 8 == 0xc0)
 			memMgr->ProcessSoftSwitch(e.addr, e.data, e.rw, e.is_iigs);
 		// ignore non-control

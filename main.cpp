@@ -42,6 +42,7 @@
 static uint32_t fbWidth = 0;
 static uint32_t fbHeight = 0;
 static bool g_swapInterval = true;  // VSYNC
+static bool g_adaptiveVsync = true;	
 static SDL_Window* window;
 
 // OpenGL Debug callback function
@@ -75,6 +76,20 @@ void callback_resolutionChange(int w, int h)
     displayMode.w = w + 2 * margins;
     displayMode.h = h + 2 * margins;
     SDL_SetWindowDisplayMode(window, &displayMode);
+}
+
+void set_vsync(bool _on)
+{
+	// If vsync requested, try to make it adaptive vsync first
+	if (_on)
+	{
+		g_adaptiveVsync = (SDL_GL_SetSwapInterval(-1) == 0);	// adaptive
+		if (!g_adaptiveVsync) {
+			g_swapInterval = (SDL_GL_SetSwapInterval(1) == 0);	// VSYNC
+		}
+	}
+	else
+		g_swapInterval = (SDL_GL_SetSwapInterval(0) != 0);		// no VSYNC
 }
 
 // Main code
@@ -210,11 +225,10 @@ int main(int argc, char* argv[])
 	static bool bShouldTerminateProcessing = false;
     bool show_demo_window = false;
     bool show_metrics_window = false;
-	bool show_sdhrinfo_window = false;
+	bool show_F1_window = true;
 	bool show_texture_window = false;
 	bool show_postprocessing_window = false;
 	bool show_recorder_window = false;
-    bool did_press_quit = false;
 	int _slotnum = 0;
 	bool mem_load_aux_bank = false;
 	int mem_load_position = 0;
@@ -250,8 +264,11 @@ int main(int argc, char* argv[])
 
     glhelper->set_callback_changed_resolution(&callback_resolutionChange);
 
+	set_vsync(g_swapInterval);
+
     // Main loop
     bool done = false;
+	
 #ifdef __EMSCRIPTEN__
     // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
     // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
@@ -272,11 +289,9 @@ int main(int argc, char* argv[])
 		}
 
 		// Beam renderer does not use VSYNC. It synchronizes to the Apple 2's VBL.
-		loop_total++;
-		if (!a2VideoManager->ShouldRender())
-			continue;
-		loop_render++;
-		SDL_GL_SetSwapInterval(g_swapInterval);
+//		if (!(a2VideoManager->ShouldRender() || sdhrManager->IsSdhrEnabled()))
+//			continue;
+
         dt_LAST = dt_NOW;
         dt_NOW = SDL_GetPerformanceCounter();
 		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
@@ -321,7 +336,7 @@ int main(int argc, char* argv[])
 					}
 				}
 				else if (event.key.keysym.sym == SDLK_F1) {  // Toggle debug window with F1
-					show_sdhrinfo_window = !show_sdhrinfo_window;
+					show_F1_window = !show_F1_window;
 				}
 				// Camera movement!
 				if (!io.WantCaptureKeyboard) {
@@ -374,19 +389,14 @@ int main(int argc, char* argv[])
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
 
-		if (show_sdhrinfo_window)
+		if (show_F1_window)
 		{
-			ImGui::Begin("Super Duper Display Debug", &show_sdhrinfo_window);
+			ImGui::Begin("Super Duper Display", &show_F1_window);
 			if (!ImGui::IsWindowCollapsed())
 			{
-				auto _c = glhelper->camera;
-                auto _pos = _c.Position;
 				ImGui::PushItemWidth(110);
                 ImGui::Text("Press F1 at any time to toggle this window");
                 ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-				ImGui::Text("Loops render / total: %.5f%%", 100.0f * (float)loop_render / (float)loop_total);
-				ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
-				ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
 				ImGui::Text("Screen Size:%03d x %03d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);
 				ImGui::Separator();
 				ImGui::Text("Packet Pool Count: %lu", get_packet_pool_count());
@@ -407,99 +417,117 @@ int main(int argc, char* argv[])
 					cycleCounter->SetVBLStart(vbl_slider_val);
 				}
 				ImGui::Separator();
-//				ImGui::Checkbox("Demo Window", &show_demo_window);
 				ImGui::Checkbox("PostProcessing Window", &show_postprocessing_window);
-				ImGui::Checkbox("VSYNC On", &g_swapInterval);
-				ImGui::Checkbox("Event Recorder Window", &show_recorder_window);
-				ImGui::Checkbox("Textures Window", &show_texture_window);
-				ImGui::Checkbox("Metrics Window", &show_metrics_window);
-				ImGui::Checkbox("Apple //e Memory Window", &mem_edit_a2e.Open);
-				ImGui::Checkbox("VRAM Legacy Memory Window", &mem_edit_vram_legacy.Open);
-				ImGui::Checkbox("VRAM SHR Memory Window", &mem_edit_vram_shr.Open);
-				ImGui::Checkbox("Upload Region Memory Window", &mem_edit_upload.Open);
-				ImGui::Text("Load Memory Start: ");
-				ImGui::SameLine();
-				ImGui::InputInt("##mem_load", &mem_load_position, 1, 1024, ImGuiInputTextFlags_CharsHexadecimal);
-				mem_load_position = std::clamp(mem_load_position, 0, 0xFFFF);
-				ImGui::SameLine();
-				ImGui::Checkbox("Aux Bank", &mem_load_aux_bank);
-				if (MemoryLoad(mem_load_position, mem_load_aux_bank))
-					a2VideoManager->ToggleA2Video(true);
-                ImGui::Separator();
-                if (ImGui::Button("Reset")) {
-                    a2VideoManager->ResetComputer();
-                }
-				did_press_quit = ImGui::Button("Quit App (Ctrl-c)");
-				if (did_press_quit)
-					done = true;
+				if (ImGui::Checkbox("VSYNC", &g_swapInterval))
+					set_vsync(g_swapInterval);
+				if (g_swapInterval)
+				{
+					ImGui::SameLine();
+					ImGui::Text("On");
+					if (g_adaptiveVsync)
+					{
+						ImGui::SameLine();
+						ImGui::Text("(Adaptive)");
+					}
+				}
 				ImGui::Separator();
-				ImGui::Text("[ SDHR ]");
-				ImGui::Checkbox("Untextured Geometry", &glhelper->bDebugNoTextures);         // Show textures toggle
-				ImGui::Checkbox("Perspective Projection", &glhelper->bUsePerspective);       // Change projection type
-                ImGui::Separator();
-				ImGui::Text("[ Soft Switches ]  ");
-				ImGui::SameLine();
-				if (ImGui::Button("Run Vertical Refresh"))
-					a2VideoManager->ForceBeamFullScreenRender();
-                bool ssValue0 = memManager->IsSoftSwitch(A2SS_80STORE);
-                if (ImGui::Checkbox("A2SS_80STORE", &ssValue0)) {
-					memManager->SetSoftSwitch(A2SS_80STORE, ssValue0);
-                }
-                bool ssValue1 = memManager->IsSoftSwitch(A2SS_RAMRD);
-                if (ImGui::Checkbox("A2SS_RAMRD", &ssValue1)) {
-					memManager->SetSoftSwitch(A2SS_RAMRD, ssValue1);
-                }
-                bool ssValue2 = memManager->IsSoftSwitch(A2SS_RAMWRT);
-                if (ImGui::Checkbox("A2SS_RAMWRT", &ssValue2)) {
-					memManager->SetSoftSwitch(A2SS_RAMWRT, ssValue2);
-                }
-                bool ssValue3 = memManager->IsSoftSwitch(A2SS_80COL);
-                if (ImGui::Checkbox("A2SS_80COL", &ssValue3)) {
-					memManager->SetSoftSwitch(A2SS_80COL, ssValue3);
-                }
-                bool ssValue4 = memManager->IsSoftSwitch(A2SS_ALTCHARSET);
-                if (ImGui::Checkbox("A2SS_ALTCHARSET", &ssValue4)) {
-					memManager->SetSoftSwitch(A2SS_ALTCHARSET, ssValue4);
-                }
-                bool ssValue5 = memManager->IsSoftSwitch(A2SS_INTCXROM);
-                if (ImGui::Checkbox("A2SS_INTCXROM", &ssValue5)) {
-					memManager->SetSoftSwitch(A2SS_INTCXROM, ssValue5);
-                }
-                bool ssValue6 = memManager->IsSoftSwitch(A2SS_SLOTC3ROM);
-                if (ImGui::Checkbox("A2SS_SLOTC3ROM", &ssValue6)) {
-					memManager->SetSoftSwitch(A2SS_SLOTC3ROM, ssValue6);
-                }
-                bool ssValue7 = memManager->IsSoftSwitch(A2SS_TEXT);
-                if (ImGui::Checkbox("A2SS_TEXT", &ssValue7)) {
-					memManager->SetSoftSwitch(A2SS_TEXT, ssValue7);
-                }
-                bool ssValue8 = memManager->IsSoftSwitch(A2SS_MIXED);
-                if (ImGui::Checkbox("A2SS_MIXED", &ssValue8)) {
-					memManager->SetSoftSwitch(A2SS_MIXED, ssValue8);
-                }
-                bool ssValue9 = memManager->IsSoftSwitch(A2SS_PAGE2);
-                if (ImGui::Checkbox("A2SS_PAGE2", &ssValue9)) {
-					memManager->SetSoftSwitch(A2SS_PAGE2, ssValue9);
-                }
-                bool ssValue10 = memManager->IsSoftSwitch(A2SS_HIRES);
-                if (ImGui::Checkbox("A2SS_HIRES", &ssValue10)) {
-					memManager->SetSoftSwitch(A2SS_HIRES, ssValue10);
-                }
-                bool ssValue11 = memManager->IsSoftSwitch(A2SS_DHGR);
-                if (ImGui::Checkbox("A2SS_DHGR", &ssValue11)) {
-					memManager->SetSoftSwitch(A2SS_DHGR, ssValue11);
-                }
-				bool ssValue12 = memManager->IsSoftSwitch(A2SS_DHGRMONO);
-				if (ImGui::Checkbox("A2SS_DHGRMONO", &ssValue12)) {
-					memManager->SetSoftSwitch(A2SS_DHGRMONO, ssValue12);
+				if (ImGui::Button("Reset")) {
+					a2VideoManager->ResetComputer();
 				}
-				bool ssValue13 = memManager->IsSoftSwitch(A2SS_SHR);
-				if (ImGui::Checkbox("A2SS_SHR", &ssValue13)) {
-					memManager->SetSoftSwitch(A2SS_SHR, ssValue13);
+				if (ImGui::Button("Quit App (Ctrl-c)"))
+					done = true;
+				if (ImGui::CollapsingHeader("Windows"))
+				{
+					ImGui::Checkbox("Event Recorder Window", &show_recorder_window);
+					ImGui::Checkbox("Textures Window", &show_texture_window);
+					ImGui::Checkbox("Apple //e Memory Window", &mem_edit_a2e.Open);
+					ImGui::Checkbox("VRAM Legacy Memory Window", &mem_edit_vram_legacy.Open);
+					ImGui::Checkbox("VRAM SHR Memory Window", &mem_edit_vram_shr.Open);
+					ImGui::Checkbox("SDHR Upload Region Memory Window", &mem_edit_upload.Open);
+					ImGui::Checkbox("ImGui Metrics Window", &show_metrics_window);
+					// ImGui::Checkbox("ImGui Demo Window", &show_demo_window);
 				}
-				bool ssValue14 = memManager->IsSoftSwitch(A2SS_GREYSCALE);
-				if (ImGui::Checkbox("A2SS_GREYSCALE", &ssValue14)) {
-					memManager->SetSoftSwitch(A2SS_GREYSCALE, ssValue14);
+				if (ImGui::CollapsingHeader("Apple 2 Video"))
+				{
+					if (ImGui::Button("Run Vertical Refresh"))
+						a2VideoManager->ForceBeamFullScreenRender();
+					ImGui::Text("Load Memory Start: ");
+					ImGui::SameLine();
+					ImGui::InputInt("##mem_load", &mem_load_position, 1, 1024, ImGuiInputTextFlags_CharsHexadecimal);
+					mem_load_position = std::clamp(mem_load_position, 0, 0xFFFF);
+					ImGui::SameLine();
+					ImGui::Checkbox("Aux Bank", &mem_load_aux_bank);
+					if (MemoryLoad(mem_load_position, mem_load_aux_bank))
+						a2VideoManager->ToggleA2Video(true);
+					bool ssValue0 = memManager->IsSoftSwitch(A2SS_80STORE);
+					if (ImGui::Checkbox("A2SS_80STORE", &ssValue0)) {
+						memManager->SetSoftSwitch(A2SS_80STORE, ssValue0);
+					}
+					bool ssValue1 = memManager->IsSoftSwitch(A2SS_RAMRD);
+					if (ImGui::Checkbox("A2SS_RAMRD", &ssValue1)) {
+						memManager->SetSoftSwitch(A2SS_RAMRD, ssValue1);
+					}
+					bool ssValue2 = memManager->IsSoftSwitch(A2SS_RAMWRT);
+					if (ImGui::Checkbox("A2SS_RAMWRT", &ssValue2)) {
+						memManager->SetSoftSwitch(A2SS_RAMWRT, ssValue2);
+					}
+					bool ssValue3 = memManager->IsSoftSwitch(A2SS_80COL);
+					if (ImGui::Checkbox("A2SS_80COL", &ssValue3)) {
+						memManager->SetSoftSwitch(A2SS_80COL, ssValue3);
+					}
+					bool ssValue4 = memManager->IsSoftSwitch(A2SS_ALTCHARSET);
+					if (ImGui::Checkbox("A2SS_ALTCHARSET", &ssValue4)) {
+						memManager->SetSoftSwitch(A2SS_ALTCHARSET, ssValue4);
+					}
+					bool ssValue5 = memManager->IsSoftSwitch(A2SS_INTCXROM);
+					if (ImGui::Checkbox("A2SS_INTCXROM", &ssValue5)) {
+						memManager->SetSoftSwitch(A2SS_INTCXROM, ssValue5);
+					}
+					bool ssValue6 = memManager->IsSoftSwitch(A2SS_SLOTC3ROM);
+					if (ImGui::Checkbox("A2SS_SLOTC3ROM", &ssValue6)) {
+						memManager->SetSoftSwitch(A2SS_SLOTC3ROM, ssValue6);
+					}
+					bool ssValue7 = memManager->IsSoftSwitch(A2SS_TEXT);
+					if (ImGui::Checkbox("A2SS_TEXT", &ssValue7)) {
+						memManager->SetSoftSwitch(A2SS_TEXT, ssValue7);
+					}
+					bool ssValue8 = memManager->IsSoftSwitch(A2SS_MIXED);
+					if (ImGui::Checkbox("A2SS_MIXED", &ssValue8)) {
+						memManager->SetSoftSwitch(A2SS_MIXED, ssValue8);
+					}
+					bool ssValue9 = memManager->IsSoftSwitch(A2SS_PAGE2);
+					if (ImGui::Checkbox("A2SS_PAGE2", &ssValue9)) {
+						memManager->SetSoftSwitch(A2SS_PAGE2, ssValue9);
+					}
+					bool ssValue10 = memManager->IsSoftSwitch(A2SS_HIRES);
+					if (ImGui::Checkbox("A2SS_HIRES", &ssValue10)) {
+						memManager->SetSoftSwitch(A2SS_HIRES, ssValue10);
+					}
+					bool ssValue11 = memManager->IsSoftSwitch(A2SS_DHGR);
+					if (ImGui::Checkbox("A2SS_DHGR", &ssValue11)) {
+						memManager->SetSoftSwitch(A2SS_DHGR, ssValue11);
+					}
+					bool ssValue12 = memManager->IsSoftSwitch(A2SS_DHGRMONO);
+					if (ImGui::Checkbox("A2SS_DHGRMONO", &ssValue12)) {
+						memManager->SetSoftSwitch(A2SS_DHGRMONO, ssValue12);
+					}
+					bool ssValue13 = memManager->IsSoftSwitch(A2SS_SHR);
+					if (ImGui::Checkbox("A2SS_SHR", &ssValue13)) {
+						memManager->SetSoftSwitch(A2SS_SHR, ssValue13);
+					}
+					bool ssValue14 = memManager->IsSoftSwitch(A2SS_GREYSCALE);
+					if (ImGui::Checkbox("A2SS_GREYSCALE", &ssValue14)) {
+						memManager->SetSoftSwitch(A2SS_GREYSCALE, ssValue14);
+					}
+				}
+				if (ImGui::CollapsingHeader("SDHR"))
+				{
+					auto _c = glhelper->camera;
+					auto _pos = _c.Position;
+					ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
+					ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
+					ImGui::Checkbox("Untextured Geometry", &glhelper->bDebugNoTextures);         // Show textures toggle
+					ImGui::Checkbox("Perspective Projection", &glhelper->bUsePerspective);       // Change projection type
 				}
 				ImGui::PopItemWidth();
             }
