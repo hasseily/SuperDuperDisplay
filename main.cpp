@@ -258,21 +258,24 @@ int main(int argc, char* argv[])
     io.IniFilename = nullptr;
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
+	uint32_t loop_total = 0;
+	uint32_t loop_render = 0;
     while (!done)
 #endif
     {
 		// Check if we should reboot
 		if (a2VideoManager->bShouldReboot)
 		{
-			std::cerr << "reset detected" << std::endl;
+			std::cerr << "Reset detected" << std::endl;
 			a2VideoManager->bShouldReboot = false;
 			a2VideoManager->ResetComputer();
 		}
-		eventRecorder->Update();
 
 		// Beam renderer does not use VSYNC. It synchronizes to the Apple 2's VBL.
+		loop_total++;
 		if (!a2VideoManager->ShouldRender())
 			continue;
+		loop_render++;
 		SDL_GL_SetSwapInterval(g_swapInterval);
         dt_LAST = dt_NOW;
         dt_NOW = SDL_GetPerformanceCounter();
@@ -381,6 +384,7 @@ int main(int argc, char* argv[])
 				ImGui::PushItemWidth(110);
                 ImGui::Text("Press F1 at any time to toggle this window");
                 ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+				ImGui::Text("Loops render / total: %.5f%%", 100.0f * (float)loop_render / (float)loop_total);
 				ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
 				ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
 				ImGui::Text("Screen Size:%03d x %03d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);

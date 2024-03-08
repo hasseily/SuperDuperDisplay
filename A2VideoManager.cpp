@@ -152,13 +152,15 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 
 void A2VideoManager::Initialize()
 {
+	// Here do not reinitialize bBeamIsActive. It could still be active from earlier.
+	// The initialization process can be triggered from a ctrl-reset on the Apple 2.
+
 	oglHelper = OpenGLHelper::GetInstance();
 	bIsReady = false;
 	memset(a2legacy_vram, 0, _BEAM_VRAM_SIZE_LEGACY);
 	memset(a2shr_vram, 0, _BEAM_VRAM_SIZE_SHR);
 	bVBlankHasLegacy = true;
 	bVBlankHasSHR = false;
-	bBeamIsActive = false;
 	
 	auto memMgr = MemoryManager::GetInstance();
 	color_background = gPaletteRGB[12 + (memMgr->switch_c022 & 0x0F)];
@@ -184,7 +186,6 @@ void A2VideoManager::Initialize()
 	// tell the next Render() call to run initialization routines
 	bShouldInitializeRender = true;
 	
-	CycleCounter::GetInstance()->Reset();
 	bIsReady = true;
 }
 

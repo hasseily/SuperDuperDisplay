@@ -133,10 +133,9 @@ void EventRecorder::ReadEvent(std::ifstream& file) {
 
 void EventRecorder::StopReplay()
 {
-	if (bIsInReplayMode)
+	if (m_state == EventRecorderStates_e::PLAYING)
 	{
 		bShouldStopReplay = true;
-		bIsInReplayMode = false;
 		if (thread_replay.joinable())
 			thread_replay.join();
 	}
@@ -149,7 +148,7 @@ void EventRecorder::StartReplay()
 	RewindReplay();
 	bShouldPauseReplay = false;
 	bShouldStopReplay = false;
-	bIsInReplayMode = true;
+	SetState(EventRecorderStates_e::PLAYING);
 	ApplyRAMSnapshot(0);
 	thread_replay = std::thread(&EventRecorder::replay_events_thread, this,
 		&bShouldPauseReplay, &bShouldStopReplay);
@@ -173,16 +172,15 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 	auto startTime = high_resolution_clock::now();
 	auto elapsed = high_resolution_clock::now() - startTime;
 
-	A2VideoManager::GetInstance()->ActivateBeam();
 	while (!*shouldStopReplay)
 	{
 		if (*shouldPauseReplay)
 		{
-			m_state = EventRecorderState_PAUSED;
+			SetState(EventRecorderStates_e::PAUSED);
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 			continue;
 		}
-		m_state = EventRecorderState_RUNNING;
+		SetState(EventRecorderStates_e::PLAYING);
 		// Check if the user requested to move to a different area in the recording
 		if (bUserMovedEventSlider)
 		{
@@ -224,8 +222,7 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			break;
 		}
 	}
-	m_state = EventRecorderState_STOPPED;
-	A2VideoManager::GetInstance()->DeactivateBeam();
+	SetState(EventRecorderStates_e::STOPPED);
 	return 0;
 }
 
@@ -237,16 +234,14 @@ void EventRecorder::StartRecording()
 {
 	ClearRecording();
 	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
-	bIsRecording = true;
-	m_state = EventRecorderState_RECORDING;
+	SetState(EventRecorderStates_e::RECORDING);
 }
 
 void EventRecorder::StopRecording()
 {
-	bIsRecording = false;
 	bHasRecording = true;
 	SaveRecording();
-	m_state = EventRecorderState_STOPPED;
+	SetState(EventRecorderStates_e::STOPPED);
 }
 
 void EventRecorder::ClearRecording()
@@ -269,6 +264,7 @@ void EventRecorder::SaveRecording()
 
 void EventRecorder::LoadRecording()
 {
+	SetState(EventRecorderStates_e::STOPPED);
 	IGFD::FileDialogConfig config;
 	config.path = "./recordings/";
 	ImGui::SetNextWindowSize(ImVec2(800, 400));
@@ -281,7 +277,7 @@ void EventRecorder::LoadRecording()
 
 void EventRecorder::RecordEvent(SDHREvent* sdhr_event)
 {
-	if (!bIsRecording)
+	if (m_state != EventRecorderStates_e::RECORDING)
 		return;
 	if ((currentReplayEvent % RECORDER_MEM_SNAPSHOT_CYCLES) == 0)
 		MakeRAMSnapshot(currentReplayEvent);
@@ -298,7 +294,7 @@ void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
 		ImGui::Begin("Event Recorder", p_open);
 		ImGui::PushItemWidth(200);
 
-		if (bIsRecording)
+		if (m_state == EventRecorderStates_e::RECORDING)
 			ImGui::Text("RECORDING IN PROGRESS...");
 		else {
 			if (bHasRecording)
@@ -307,7 +303,7 @@ void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
 				ImGui::Text("No recording loaded");
 		}
 
-		if (bIsRecording == true)
+		if (m_state == EventRecorderStates_e::RECORDING)
 		{
 			if (ImGui::Button("Stop Recording"))
 				this->StopRecording();
@@ -317,7 +313,14 @@ void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
 				this->StartRecording();
 		}
 
-		ImGui::Checkbox("Replay Mode", &bIsInReplayMode);
+		static bool bIsInReplayMode = (this->IsInReplayMode());
+		if (ImGui::Checkbox("Replay Mode", &bIsInReplayMode))
+		{
+			if (bIsInReplayMode)
+				SetState(EventRecorderStates_e::STOPPED);
+			else
+				SetState(EventRecorderStates_e::DISABLED);
+		}
 		bUserMovedEventSlider = ImGui::SliderInt("Event Timeline", reinterpret_cast<int*>(&currentReplayEvent), 0, (int)v_events.size());
 		if (thread_replay.joinable())
 		{
@@ -329,7 +332,7 @@ void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
 				this->StartReplay();
 		}
 		ImGui::SameLine();
-		if (m_state == EventRecorderState_PAUSED)
+		if (m_state == EventRecorderStates_e::PAUSED)
 		{
 			if (ImGui::Button("Unpause##Recording"))
 				this->PauseReplay(false);
@@ -439,27 +442,28 @@ void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
 	}
 }
 
-void EventRecorder::Update()
+void EventRecorder::SetState(EventRecorderStates_e _state)
 {
-	if (currentReplayEvent >= v_events.size())
-		bShouldStopReplay = true;
-	if (bShouldStopReplay)
-		StopReplay();
-	
+	if (_state == m_state)
+		return;
+	m_state = _state;
 	switch (m_state) {
-		case EventRecorderState_STOPPED:
-			A2VideoManager::GetInstance()->DeactivateBeam();
-			break;
-		case EventRecorderState_PAUSED:
-			A2VideoManager::GetInstance()->DeactivateBeam();
-			break;
-		case EventRecorderState_RUNNING:
+		case EventRecorderStates_e::DISABLED:
 			A2VideoManager::GetInstance()->ActivateBeam();
 			break;
-		case EventRecorderState_RECORDING:
+		case EventRecorderStates_e::STOPPED:
+			A2VideoManager::GetInstance()->DeactivateBeam();
+			break;
+		case EventRecorderStates_e::PAUSED:
+			A2VideoManager::GetInstance()->DeactivateBeam();
+			break;
+		case EventRecorderStates_e::PLAYING:
 			A2VideoManager::GetInstance()->ActivateBeam();
 			break;
-		default:
+		case EventRecorderStates_e::RECORDING:
+			A2VideoManager::GetInstance()->ActivateBeam();
+			break;
+		case EventRecorderStates_e::TOTAL_COUNT:
 			break;
 	}
 }
