@@ -5,7 +5,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <mutex>
 
 #include "common.h"
 #include "A2WindowBeam.h"
@@ -54,6 +53,15 @@ public:
 		GLuint tex_id = 0;	// Texture ID on the GPU that holds the image data
 	};
 
+	// We'll create 2 BeamRenderVRAMs objects, for double buffering
+	struct BeamRenderVRAMs {
+		uint64_t frame_idx = 0;
+		bool use_legacy = true;
+		bool use_shr = false;
+		uint8_t vram_legacy[_BEAM_VRAM_SIZE_LEGACY];
+		uint8_t vram_shr[_BEAM_VRAM_SIZE_SHR];
+	};
+
 	//////////////////////////////////////////////////////////////////////////
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
@@ -63,6 +71,9 @@ public:
 
 	// Margins when rendering in a window (pixels)
 	int windowMargins = 10;
+
+	uint64_t current_frame_idx = 0;
+	uint64_t rendered_frame_idx = UINT64_MAX;
 
 	uint32_t color_border = 0;
 	uint32_t color_foreground = UINT32_MAX;
@@ -79,14 +90,12 @@ public:
 
 	// Methods for the single multipurpose beam racing shader
 	void BeamIsAtPosition(uint32_t x, uint32_t y);
-	void RequestVRAMUpdates(bool cycleHasLegacy, bool cycleHasSHR);
 	void ForceBeamFullScreenRender();
 	
-	uint8_t* GetLegacyVRAMPtr() { return a2legacy_vram; };
-	uint8_t* GetSHRVRAMPtr() { return a2shr_vram; };
+	uint8_t* GetLegacyVRAMPtr() { return vrams_read->vram_legacy; };
+	uint8_t* GetSHRVRAMPtr() { return vrams_read->vram_shr; };
 	void ActivateBeam();	// The apple 2 is rendering!
 	void DeactivateBeam();	// We don't have a connection to the Apple 2!
-	bool ShouldRender();
 	void Render();	// render whatever mode is active (enabled windows)
 
 	// public singleton code
@@ -104,12 +113,7 @@ private:
 	static A2VideoManager* s_instance;
 	A2VideoManager()
 	{
-		a2legacy_vram = new uint8_t[_BEAM_VRAM_SIZE_LEGACY];
-		if (a2legacy_vram == NULL)
-			std::cerr << "FATAL ERROR: COULD NOT ALLOCATE a2legacy_vram MEMORY" << std::endl;
-		a2shr_vram = new uint8_t[_BEAM_VRAM_SIZE_SHR];
-		if (a2shr_vram == NULL)
-			std::cerr << "FATAL ERROR: COULD NOT ALLOCATE a2shr_vram MEMORY" << std::endl;
+		vrams_array = new BeamRenderVRAMs[2];
 		Initialize();
 	}
 
@@ -122,18 +126,12 @@ private:
     bool bIsRebooting = false;              // Rebooting semaphore
 
 	// beam render state variables
-	mutable std::mutex a2video_mutex;
-	bool bRequestVRAMUpdates = true;		// Requests beam rendering from the main thread
-	bool bVBlankHasLegacy = true;			// Does this vblank cycle have some legacy dots?
-	bool bVBlankHasSHR = false;				// Does this vblank cycle have some shr dots?
-	bool bBeamRenderLegacy = true;			// Should we render legacy of the previous vblank cycle?
-	bool bBeamRenderSHR = false;			// Should we render shr of the previous vblank cycle?
 	bool bBeamIsActive = false;				// Is the beam active?
-	
-	// vram for beam renderers
-	uint8_t* a2legacy_vram;
-	uint8_t* a2shr_vram;
 
+	// Double-buffered vrams
+	BeamRenderVRAMs* vrams_array;	// 2 buffers of legacy+shr vrams
+	BeamRenderVRAMs* vrams_write;	// the write buffer
+	BeamRenderVRAMs* vrams_read;	// the read buffer
 };
 #endif // A2VIDEOMANAGER_H
 

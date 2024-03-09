@@ -157,10 +157,17 @@ void A2VideoManager::Initialize()
 
 	oglHelper = OpenGLHelper::GetInstance();
 	bIsReady = false;
-	memset(a2legacy_vram, 0, _BEAM_VRAM_SIZE_LEGACY);
-	memset(a2shr_vram, 0, _BEAM_VRAM_SIZE_SHR);
-	bVBlankHasLegacy = true;
-	bVBlankHasSHR = false;
+	current_frame_idx = 0;
+	for (int i = 0; i < 2; i++)
+	{
+		vrams_array[i].frame_idx = 0;
+		vrams_array[i].use_legacy = true;
+		vrams_array[i].use_shr = false;
+		memset(vrams_array[i].vram_legacy, _BEAM_VRAM_SIZE_LEGACY, 0);
+		memset(vrams_array[i].vram_shr, _BEAM_VRAM_SIZE_SHR, 0);
+	}
+	vrams_write = &vrams_array[current_frame_idx % 2];
+	vrams_read = &vrams_array[1 - (current_frame_idx % 2)];
 	
 	auto memMgr = MemoryManager::GetInstance();
 	color_background = gPaletteRGB[12 + (memMgr->switch_c022 & 0x0F)];
@@ -191,8 +198,7 @@ void A2VideoManager::Initialize()
 
 A2VideoManager::~A2VideoManager()
 {
-	delete[] a2legacy_vram;
-	delete[] a2shr_vram;
+	delete[] vrams_array;
 }
 
 void A2VideoManager::ResetComputer()
@@ -224,31 +230,36 @@ void A2VideoManager::ToggleA2Video(bool value)
 
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 {
+	auto memMgr = MemoryManager::GetInstance();
+	// Start of VBLANK
 	// Theoretically at y==192 (start of VBLANK) we can render for legacy
-	// but SHR goes to 200 so let's wait until 200 anyway. We're in VBLANK still.
-	if (_x == CYCLES_HBLANK && y == 200)	// Start of VBLANK
+	// but SHR goes to 200 so let's wait until 200 anyway and guarantee we have a fixed
+	// y scanline at which we flip the double buffering
+	if ((_x == CYCLES_HBLANK) && (y == (memMgr->IsSoftSwitch(A2SS_SHR) ? 200u : 192u)))
 	{
-		RequestVRAMUpdates(bVBlankHasLegacy, bVBlankHasSHR);
+		// start the next frame
+		// set the frame index for the buffer we'll move to reading
+		vrams_write->frame_idx = current_frame_idx;
+		++current_frame_idx;
+		// Flip the double buffers
+		vrams_write = &vrams_array[current_frame_idx % 2];
+		vrams_read = &vrams_array[1 - (current_frame_idx % 2)];
+
 		// reset the legacy and shr flags at each vblank
-		bVBlankHasLegacy = false;
-		bVBlankHasSHR = false;
+		vrams_write->use_legacy = false;
+		vrams_write->use_shr = false;
 		return;
 	}
 
-	auto memMgr = MemoryManager::GetInstance();
-	if (y >= (memMgr->IsSoftSwitch(A2SS_SHR) ? 200 : 192))	// in VBLANK, nothing to do
+	if (y >= (memMgr->IsSoftSwitch(A2SS_SHR) ? 200u : 192u))	// in VBLANK, nothing to do
 		return;
 
-	// Anything here below means the VRAMs are getting modified
-	// No rendering should be done while the VRAMs are being modified
-	
-	std::lock_guard<std::mutex> lock(a2video_mutex);
 	if (_x == 0)
 	{
 		// Always at the start of the row, set the SHR SCB to 0x10
 		// Because we check bit 4 of the SCB to know if that line is drawn as SHR
 		// The 2gs will always set bit 4 to 0 when sending it over
-		a2shr_vram[(_COLORBYTESOFFSET + 160) * y] = 0x10;
+		vrams_write->vram_shr[(_COLORBYTESOFFSET + 160) * y] = 0x10;
 	}
 	if (_x < CYCLES_HBLANK)	// in HBLANK, nothing to do
 		return;
@@ -263,8 +274,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	uint32_t xx = _x - CYCLES_HBLANK;	// xx is always positive here
 	if (memMgr->IsSoftSwitch(A2SS_SHR))
 	{
-		bVBlankHasSHR = true;		// at least 1 byte in this vblank cycle is in SHR
-		uint8_t* lineStartPtr = a2shr_vram + (_COLORBYTESOFFSET + 160) * y;
+		vrams_write->use_shr = true;		// at least 1 byte in this vblank cycle is in SHR
+		uint8_t* lineStartPtr = vrams_write->vram_shr + (_COLORBYTESOFFSET + 160) * y;
 		auto memPtr = memMgr->GetApple2MemAuxPtr();
 		if (xx == 0)
 		{
@@ -301,8 +312,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	}
 	
 	// The byte isn't SHR, it's legacy
-	bVBlankHasLegacy = true;	// at least 1 byte in this vblank cycle is not SHR
-	auto byteStartPtr = a2legacy_vram + ((40 * y) + xx) * 4;	// 4 bytes in VRAM for each byte on screen
+	vrams_write->use_legacy = true;	// at least 1 byte in this vblank cycle is not SHR
+	auto byteStartPtr = vrams_write->vram_legacy + ((40 * y) + xx) * 4;	// 4 bytes in VRAM for each byte on screen
 	// the flags byte is:
 	// bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO)
 	// bit 3: ALT charset for TEXT
@@ -383,13 +394,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 
 }
 
-void A2VideoManager::RequestVRAMUpdates(bool cycleHasLegacy, bool cycleHasSHR)
-{
-	bBeamRenderLegacy = cycleHasLegacy;
-	bBeamRenderSHR = cycleHasSHR;
-	bRequestVRAMUpdates = true;
-}
-
 void A2VideoManager::ForceBeamFullScreenRender()
 {
 	// Forces a full screen render for the beam renderer
@@ -421,7 +425,8 @@ void A2VideoManager::Render()
 	if (!bA2VideoEnabled)
 		return;
 
-	if (!(bShouldInitializeRender || bRequestVRAMUpdates))
+	// Exit if we've already rendered the buffer
+	if (rendered_frame_idx == vrams_read->frame_idx)
 		return;
 	
 	GLenum glerr;
@@ -471,29 +476,17 @@ void A2VideoManager::Render()
 		ForceBeamFullScreenRender();
 	}
 
-
-	// At line 200 the cycle counter flags to update the VRAM in the GPU
-	if (bRequestVRAMUpdates)
-	{
-		std::lock_guard<std::mutex> lock(a2video_mutex);
-		windowsbeam[A2VIDEOBEAM_LEGACY].SetEnabled(bBeamRenderLegacy);
-		windowsbeam[A2VIDEOBEAM_SHR].SetEnabled(bBeamRenderSHR);
-	}
-	windowsbeam[A2VIDEOBEAM_LEGACY].Render(bRequestVRAMUpdates);
-	windowsbeam[A2VIDEOBEAM_SHR].Render(bRequestVRAMUpdates);
-	bRequestVRAMUpdates = false;
-
+	windowsbeam[A2VIDEOBEAM_LEGACY].SetEnabled(vrams_read->use_legacy);
+	windowsbeam[A2VIDEOBEAM_SHR].SetEnabled(vrams_read->use_shr);
+	windowsbeam[A2VIDEOBEAM_LEGACY].Render(true);
+	windowsbeam[A2VIDEOBEAM_SHR].Render(true);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
 	}
 	oglh->finalize_render();
-}
-
-bool A2VideoManager::ShouldRender()
-{
-	// Only render when VRAM needs updating, in VBLANK
-	return (bRequestVRAMUpdates || (!bBeamIsActive));
+	// all done, the texture for this Apple 2 beam cycle frame is rendered
+	rendered_frame_idx = vrams_read->frame_idx;
 }
 
 void A2VideoManager::ActivateBeam()
