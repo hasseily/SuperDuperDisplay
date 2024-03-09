@@ -421,7 +421,7 @@ void A2VideoManager::Render()
 	if (!bA2VideoEnabled)
 		return;
 
-	if ((!bShouldInitializeRender) && (!bRequestVRAMUpdates))
+	if (!(bShouldInitializeRender || bRequestVRAMUpdates))
 		return;
 	
 	GLenum glerr;
@@ -471,11 +471,11 @@ void A2VideoManager::Render()
 		ForceBeamFullScreenRender();
 	}
 
-	std::lock_guard<std::mutex> lock(a2video_mutex);
 
 	// At line 200 the cycle counter flags to update the VRAM in the GPU
 	if (bRequestVRAMUpdates)
 	{
+		std::lock_guard<std::mutex> lock(a2video_mutex);
 		windowsbeam[A2VIDEOBEAM_LEGACY].SetEnabled(bBeamRenderLegacy);
 		windowsbeam[A2VIDEOBEAM_SHR].SetEnabled(bBeamRenderSHR);
 	}
