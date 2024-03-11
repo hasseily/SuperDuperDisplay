@@ -212,6 +212,13 @@ vec2 Warp(vec2 pos) {
 }
 
 void main() {
+
+// Apply simple horizontal scanline if required and exit
+if (SCANLINE_TYPE == 1.0) {
+	FragColor = texture(Texture,TexCoords) * mod(gl_FragCoord.y, 2.0);
+	return;
+}
+
 // Hue matrix inside main() to avoid GLES error
 	mat3 hue = mat3 (
 		1.0, -RG, -RB,
@@ -328,13 +335,8 @@ void main() {
 		if (corn.y <= corn.x || corn.x < 0.0001 )
 			res = vec3(0.0);
 
-// Apply final simple horizontal scanline if required
-	
-	if (SCANLINE_TYPE == 1.0) {
-		FragColor = vec4(res * mod(floor(gl_FragCoord.y), 2.0), 1.0);
-	} else {
-		FragColor = vec4(res, 1.0);
-	}
+
+	FragColor = vec4(res, 1.0);
 }
 
 #endif

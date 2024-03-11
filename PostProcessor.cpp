@@ -339,12 +339,12 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 		}
 
 		
-		/* // enable to reload the shader
+		 // enable to reload the shader
 		if (ImGui::Button("Reload Shader"))
 		{
 			v_ppshaders.at(0).build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");
 		}
-		*/
+		
 		/*	// Enable to choose the shader
 		if (ImGui::Button("Slot 1 Shader"))
 		{
@@ -377,55 +377,56 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 		{
 			ImGui::SliderFloat("Scanline Weight", &p_scanline_weight, 0.001f, 0.5f, "%.2f");
 			ImGui::Checkbox("Interlacing On/Off", &p_interlace);
-		}
-		ImGui::Separator();
 
-		// Mask Settings
-		ImGui::Text("[ MASK SETTINGS ]");
-		ImGui::RadioButton("None##Mask", &p_m_type, 0); ImGui::SameLine();
-		ImGui::RadioButton("CGWG##Mask", &p_m_type, 1); ImGui::SameLine();
-		ImGui::RadioButton("RGB##Mask", &p_m_type, 2);
-		ImGui::SliderFloat("Mask Size", &p_msize, 1.0f, 2.0f, "%.1f");
-		ImGui::Checkbox("Slot Mask On/Off", &p_slot);
-		ImGui::SliderFloat("Slot Mask Width", &p_slotw, 2.0f, 3.0f, "%.1f");
-		ImGui::SliderFloat("Subpixels BGR/RGB", &p_bgr, 0.0f, 1.0f, "%.1f");
-		ImGui::SliderFloat("Mask Brightness Dark", &p_maskl, 0.0f, 1.0f, "%.2f");
-		ImGui::SliderFloat("Mask Brightness Bright", &p_maskh, 0.0f, 1.0f, "%.2f");
-		ImGui::Separator();
+			ImGui::Separator();
 
-		// Geometry Settings
-		ImGui::Text("[ GEOMETRY SETTINGS ]");
-		ImGui::Checkbox("Bezel On/Off", &p_bzl);
-		ImGui::SliderFloat("Zoom Image X", &p_zoomx, -1.0f, 1.0f, "%.3f");
-		ImGui::SliderFloat("Zoom Image Y", &p_zoomy, -1.0f, 1.0f, "%.3f");
-		ImGui::SliderFloat("Image Center X", &p_centerx, -3.0f, 3.0f, "%.2f");
-		ImGui::SliderFloat("Image Center Y", &p_centery, -3.0f, 3.0f, "%.2f");
-		ImGui::SliderFloat("Curvature Horizontal", &p_warpx, 0.00f, 0.25f, "%.2f");
-		ImGui::SliderFloat("Curvature Vertical", &p_warpy, 0.00f, 0.25f, "%.2f");
-		ImGui::Checkbox("Corners Cut", &p_corner);
-		ImGui::Checkbox("Vignette On/Off", &p_vig);
-		ImGui::Separator();
+			// Mask Settings
+			ImGui::Text("[ MASK SETTINGS ]");
+			ImGui::RadioButton("None##Mask", &p_m_type, 0); ImGui::SameLine();
+			ImGui::RadioButton("CGWG##Mask", &p_m_type, 1); ImGui::SameLine();
+			ImGui::RadioButton("RGB##Mask", &p_m_type, 2);
+			ImGui::SliderFloat("Mask Size", &p_msize, 1.0f, 2.0f, "%.1f");
+			ImGui::Checkbox("Slot Mask On/Off", &p_slot);
+			ImGui::SliderFloat("Slot Mask Width", &p_slotw, 2.0f, 3.0f, "%.1f");
+			ImGui::SliderFloat("Subpixels BGR/RGB", &p_bgr, 0.0f, 1.0f, "%.1f");
+			ImGui::SliderFloat("Mask Brightness Dark", &p_maskl, 0.0f, 1.0f, "%.2f");
+			ImGui::SliderFloat("Mask Brightness Bright", &p_maskh, 0.0f, 1.0f, "%.2f");
+			ImGui::Separator();
 
-		// Color Settings
-		ImGui::Text("[ COLOR SETTINGS ]");
-		ImGui::SliderFloat("Scan/Mask Brightness Dependence", &p_br_dep, 0.0f, 0.5f, "%.3f");
-		ImGui::SliderInt("Color Space: sRGB,PAL,NTSC-U,NTSC-J", &p_c_space, 0, 3, "%1d");
-		ImGui::SliderFloat("Saturation", &p_saturation, 0.0f, 2.0f, "%.2f");
-		ImGui::SliderFloat("Brightness", &p_brightness, 0.0f, 4.0f, "%.2f");
-		ImGui::SliderFloat("Black Level", &p_black, -0.20f, 0.20f, "%.2f");
-		ImGui::SliderFloat("Green <-to-> Red Hue", &p_rg, -0.25f, 0.25f, "%.2f");
-		ImGui::SliderFloat("Blue <-to-> Red Hue", &p_rb, -0.25f, 0.25f, "%.2f");
-		ImGui::SliderFloat("Blue <-to-> Green Hue", &p_gb, -0.25f, 0.25f, "%.2f");
-		ImGui::Checkbox("External Gamma In (Glow etc)", &p_ext_gamma);
-		ImGui::Separator();
+			// Geometry Settings
+			ImGui::Text("[ GEOMETRY SETTINGS ]");
+			ImGui::Checkbox("Bezel On/Off", &p_bzl);
+			ImGui::SliderFloat("Zoom Image X", &p_zoomx, -1.0f, 1.0f, "%.3f");
+			ImGui::SliderFloat("Zoom Image Y", &p_zoomy, -1.0f, 1.0f, "%.3f");
+			ImGui::SliderFloat("Image Center X", &p_centerx, -3.0f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Image Center Y", &p_centery, -3.0f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Curvature Horizontal", &p_warpx, 0.00f, 0.25f, "%.2f");
+			ImGui::SliderFloat("Curvature Vertical", &p_warpy, 0.00f, 0.25f, "%.2f");
+			ImGui::Checkbox("Corners Cut", &p_corner);
+			ImGui::Checkbox("Vignette On/Off", &p_vig);
+			ImGui::Separator();
 
-		// Convergence Settings
-		ImGui::Text("[ CONVERGENCE SETTINGS ]");
-		ImGui::SliderFloat("Convergence Overall Strength", &p_c_str, 0.0f, 0.5f, "%.2f");
-		ImGui::SliderFloat("Convergence Red X-Axis", &p_conv_r, -3.0f, 3.0f, "%.2f");
-		ImGui::SliderFloat("Convergence Green X-axis", &p_conv_g, -3.0f, 3.0f, "%.2f");
-		ImGui::SliderFloat("Convergence Blue X-Axis", &p_conv_b, -3.0f, 3.0f, "%.2f");
-		ImGui::Checkbox("Potato Boost(Simple Gamma, adjust Mask)", &p_potato);
+			// Color Settings
+			ImGui::Text("[ COLOR SETTINGS ]");
+			ImGui::SliderFloat("Scan/Mask Brightness Dependence", &p_br_dep, 0.0f, 0.5f, "%.3f");
+			ImGui::SliderInt("Color Space: sRGB,PAL,NTSC-U,NTSC-J", &p_c_space, 0, 3, "%1d");
+			ImGui::SliderFloat("Saturation", &p_saturation, 0.0f, 2.0f, "%.2f");
+			ImGui::SliderFloat("Brightness", &p_brightness, 0.0f, 4.0f, "%.2f");
+			ImGui::SliderFloat("Black Level", &p_black, -0.20f, 0.20f, "%.2f");
+			ImGui::SliderFloat("Green <-to-> Red Hue", &p_rg, -0.25f, 0.25f, "%.2f");
+			ImGui::SliderFloat("Blue <-to-> Red Hue", &p_rb, -0.25f, 0.25f, "%.2f");
+			ImGui::SliderFloat("Blue <-to-> Green Hue", &p_gb, -0.25f, 0.25f, "%.2f");
+			ImGui::Checkbox("External Gamma In (Glow etc)", &p_ext_gamma);
+			ImGui::Separator();
+
+			// Convergence Settings
+			ImGui::Text("[ CONVERGENCE SETTINGS ]");
+			ImGui::SliderFloat("Convergence Overall Strength", &p_c_str, 0.0f, 0.5f, "%.2f");
+			ImGui::SliderFloat("Convergence Red X-Axis", &p_conv_r, -3.0f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Convergence Green X-axis", &p_conv_g, -3.0f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Convergence Blue X-Axis", &p_conv_b, -3.0f, 3.0f, "%.2f");
+			ImGui::Checkbox("Potato Boost(Simple Gamma, adjust Mask)", &p_potato);
+		}	// p_scanline_type == 2
 
 		ImGui::PopItemWidth();
 		ImGui::End();
