@@ -596,14 +596,15 @@ int main(int argc, char* argv[])
         // Add the rendered image, using borders
         int _w, _h;
         SDL_GL_GetDrawableSize(window, &_w, &_h);
-        auto margin = ImVec2(0,0);
+		int marginx = 0;
+		int marginy = 0;
         if (sdhrManager->IsSdhrEnabled())
         {
-			margin.x = margin.y = (float)sdhrManager->windowMargins;
+			marginx = marginy = (float)sdhrManager->windowMargins;
 			ImGui::GetBackgroundDrawList()->AddImage(
 				(void*)glhelper->get_output_texture_id(),
-				margin,
-				ImVec2(_w - margin.x, _h - margin.y),
+				ImVec2(marginx, marginy),
+				ImVec2(_w - marginx, _h - marginy),
 				ImVec2(0, 0),
 				ImVec2(1, 1)
 			);
@@ -611,44 +612,39 @@ int main(int argc, char* argv[])
         else {
             // In case of the Apple 2 video modes, let's make sure the
             // rendered image is always in the proper ratio
+			// Use ints all the way until AddImage() or ImGui will not scale it perfectly
             // Start with the requested margins
-			margin.x = margin.y = (float)a2VideoManager->windowMargins;
+			marginx = marginy = a2VideoManager->windowMargins;
             auto _ss = a2VideoManager->ScreenSize();
-            float _rreq = (float)_w / _h;    // req ratio to use
-            uint32_t _maxW = _w - (2 * floor(margin.x));
-            uint32_t _maxH = _h - (2 * floor(margin.y));
-            // Force integer scaling to have totally proper scanlines
-            _maxW = _ss.x * (_maxW / (_ss.x));
-			_maxH = _ss.y * (_maxH / (_ss.y));
-            if (_maxW < _ss.x)
-                _maxW = _ss.x;
-            if (_maxH < _ss.y)
-                _maxH = _ss.y;
-            float _r = (float)_ss.x / _ss.y;
-            uint32_t _newW, _newH;
-            if (_r < _rreq)    // requested a wider screen
-            {
-                _newW = floor(_maxH * _r);
-                _newH = _maxH;
-            }
-            else {      // requested a narrower screen
-                _newW = _maxW;
-                _newH = floor(_maxW / _r);
-            }
-			margin.x = (_w - _newW) / 2;
-			margin.y = (_h - _newH) / 2;
-            ImGui::GetBackgroundDrawList()->AddRectFilled(
-                margin,
-                ImVec2(margin.x + _newW, margin.y + _newH),
-                a2VideoManager->color_background
-            );
+			
+			// Calculate the drawable area considering the margins
+			int drawableWidth = _w - 2 * marginx;
+			int drawableHeight = _h - 2 * marginy;
+			
+			// Determine the maximum integer scale factor that fits the image within the drawable area
+			int scaleFactor = 1;
+			while ((scaleFactor + 1) * _ss.x <= drawableWidth && (scaleFactor + 1) * _ss.y <= drawableHeight) {
+				scaleFactor++;
+			}
+			int scaledx = _ss.x * scaleFactor;
+			int scaledy = _ss.y * scaleFactor;
+			
+			// Calculate the starting position (x, y) to center the scaled image
+			int originx = marginx + (drawableWidth - scaledx) / 2;
+			int originy = marginy + (drawableHeight - scaledy) / 2;
+
+			ImGui::GetBackgroundDrawList()->AddRectFilled(
+				ImVec2(marginx, marginy),
+				ImVec2(marginx + drawableWidth, marginy + drawableHeight),
+				a2VideoManager->color_background
+				);
 			ImGui::GetBackgroundDrawList()->AddImage(
 				(void*)glhelper->get_output_texture_id(),
-				margin,
-				ImVec2(_w - margin.x, _h - margin.y),
+				ImVec2(originx, originy),
+				ImVec2(originx + scaledx, originy + scaledy),
 				ImVec2(0, 0),
 				ImVec2(1, 1)
-			);
+				);
         }
 
 		// Rendering
