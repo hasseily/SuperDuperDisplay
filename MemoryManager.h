@@ -5,7 +5,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <mutex>
 
 #include "common.h"
 
