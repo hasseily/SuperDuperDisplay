@@ -92,8 +92,10 @@ public:
 	void BeamIsAtPosition(uint32_t x, uint32_t y);
 	void ForceBeamFullScreenRender();
 	
-	uint8_t* GetLegacyVRAMPtr() { return vrams_read->vram_legacy; };
-	uint8_t* GetSHRVRAMPtr() { return vrams_read->vram_shr; };
+	const uint8_t* GetLegacyVRAMReadPtr() { return vrams_read->vram_legacy; };
+	const uint8_t* GetSHRVRAMReadPtr() { return vrams_read->vram_shr; };
+	uint8_t* GetLegacyVRAMWritePtr() { return vrams_write->vram_legacy; };
+	uint8_t* GetSHRVRAMWritePtr() { return vrams_write->vram_shr; };
 	void ActivateBeam();	// The apple 2 is rendering!
 	void DeactivateBeam();	// We don't have a connection to the Apple 2!
 	void Render();	// render whatever mode is active (enabled windows)

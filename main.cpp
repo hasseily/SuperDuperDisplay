@@ -554,13 +554,13 @@ int main(int argc, char* argv[])
 		// Show the VRAM legacy window
 		if (mem_edit_vram_legacy.Open)
 		{
-			mem_edit_vram_legacy.DrawWindow("Memory Editor: Beam VRAM Legacy", a2VideoManager->GetLegacyVRAMPtr(), _BEAM_VRAM_SIZE_LEGACY);
+			mem_edit_vram_legacy.DrawWindow("Memory Editor: Beam VRAM Legacy", a2VideoManager->GetLegacyVRAMWritePtr(), _BEAM_VRAM_SIZE_LEGACY);
 		}
 		
 		// Show the VRAM SHR window
 		if (mem_edit_vram_shr.Open)
 		{
-			mem_edit_vram_shr.DrawWindow("Memory Editor: Beam VRAM SHR", a2VideoManager->GetSHRVRAMPtr(), _BEAM_VRAM_SIZE_SHR);
+			mem_edit_vram_shr.DrawWindow("Memory Editor: Beam VRAM SHR", a2VideoManager->GetSHRVRAMWritePtr(), _BEAM_VRAM_SIZE_SHR);
 		}
 		
 		// Show the upload data region memory
