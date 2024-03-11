@@ -35,6 +35,7 @@ struct mmsghdr {
 static EventRecorder* eventRecorder;
 static uint32_t prev_seqno;
 static bool bFirstDrop;
+static bool bIsConnected = false;
 static uint64_t num_processed_packets = 0;
 static uint64_t duration_packet_processing_ns = 0;
 static uint64_t duration_network_processing_ns = 0;
@@ -47,6 +48,11 @@ const uint64_t get_duration_packet_processing_ns() { return duration_packet_proc
 const uint64_t get_duration_network_processing_ns() { return duration_network_processing_ns; };
 const size_t get_packet_pool_count() { return packetFreeQueue.max_size(); };
 const size_t get_max_incoming_packets() { return packetInQueue.max_size(); };
+
+const bool client_is_connected()
+{
+	return bIsConnected;
+}
 
 void clear_queues()
 {
@@ -395,7 +401,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	fds[0].events = POLLIN; // Check for data to read
 	
 	std::cout << "Waiting for packets..." << std::endl;
-	bool connected = false;
+	bIsConnected = false;
 	
 	int64_t last_recv_nsec = 0;
 	int64_t num_packets_received = 0;
@@ -426,8 +432,8 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			std::cerr << "Error in recvmmsg" << std::endl;
 			return 1;
 		}
-		if (connected && nsec > last_recv_nsec + 1'000'000'000'0ll) {
-			connected = false;
+		if (bIsConnected && nsec > last_recv_nsec + 1'000'000'000'0ll) {
+			bIsConnected = false;
 			prev_seqno = 0;
 			bFirstDrop = true;
 			A2VideoManager::GetInstance()->DeactivateBeam();
@@ -440,8 +446,8 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 
 		// From now on there's data!
 
-		if (!connected) {
-			connected = true;
+		if (!bIsConnected) {
+			bIsConnected = true;
 			A2VideoManager::GetInstance()->ActivateBeam();
 			std::cout << "Client connected" << std::endl;
 		}

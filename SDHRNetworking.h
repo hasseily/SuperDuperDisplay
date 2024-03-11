@@ -81,3 +81,4 @@ const uint64_t get_duration_packet_processing_ns();
 const uint64_t get_duration_network_processing_ns();
 const size_t get_packet_pool_count();
 const size_t get_max_incoming_packets();
+const bool client_is_connected();
