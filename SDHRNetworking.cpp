@@ -108,55 +108,7 @@ void process_single_event(SDHREvent& e)
 	 *********************************
 	 */
 	if ((e.addr >= _A2_MEMORY_SHADOW_BEGIN) && (e.addr < _A2_MEMORY_SHADOW_END)) {
-		uint8_t _sw = 0;	// switches state
-		if (memMgr->IsSoftSwitch(A2SS_80STORE))
-			_sw |= 0b001;
-		if (memMgr->IsSoftSwitch(A2SS_RAMWRT))
-			_sw |= 0b010;
-		if (memMgr->IsSoftSwitch(A2SS_PAGE2))
-			_sw |= 0b100;
-		bool bIsAux = false;
-		switch (_sw)
-		{
-			case 0b010:
-				// Only writes 0000-01FF to MAIN
-				bIsAux = true;
-				break;
-			case 0b011:
-				// anything not page 1 (including 0000-01FFF goes to AUX
-				if ((e.addr >= 0x400 && e.addr < 0x800)
-					|| (e.addr >= 0x2000 && e.addr < 0x4000))
-					bIsAux = false;
-				else
-					bIsAux = true;
-				break;
-			case 0b101:
-				// Page 1 is in AUX
-				if ((e.addr >= 0x400 && e.addr < 0x800)
-					|| (e.addr >= 0x2000 && e.addr < 0x4000))
-					bIsAux = true;
-				break;
-			case 0b110:
-				// All writes to AUX except for 0000-01FF
-				bIsAux = true;
-				break;
-			case 0b111:
-				// All writes to AUX except for 0000-01FF
-				bIsAux = true;
-				break;
-			default:
-				break;
-		}
-		if (e.is_iigs && e.m2b0)
-			bIsAux = true;
-		
-		if (bIsAux)
-		{
-			memMgr->SetApple2MemAux(e.addr, e.data);
-		}
-		else {
-			memMgr->SetApple2Mem(e.addr, e.data);
-		}
+		memMgr->WriteToMemory(e.addr, e.data, e.m2b0, e.is_iigs);
 		return;
 	}
 	/*

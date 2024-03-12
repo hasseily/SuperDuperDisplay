@@ -203,3 +203,61 @@ void MemoryManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool 
 		break;
 	}
 }
+
+void MemoryManager::WriteToMemory(uint16_t addr, uint8_t val, bool m2b0, bool is_iigs) {
+	uint8_t _sw = 0;	// switches state
+	if (IsSoftSwitch(A2SS_80STORE))
+		_sw |= 0b001;
+	if (IsSoftSwitch(A2SS_RAMWRT))
+		_sw |= 0b010;
+	if (IsSoftSwitch(A2SS_PAGE2))
+		_sw |= 0b100;
+	bool bIsAux = false;
+	switch (_sw)
+	{
+		case 0b010:
+			// Only writes 0000-01FF to MAIN
+			bIsAux = true;
+			break;
+		case 0b011:
+			// anything not page 1 (including 0000-01FFF goes to AUX
+			if ((addr >= 0x400 && addr < 0x800)
+				|| (addr >= 0x2000 && addr < 0x4000))
+				bIsAux = false;
+			else
+				bIsAux = true;
+			break;
+		case 0b101:
+			// Page 1 is in AUX
+			if ((addr >= 0x400 && addr < 0x800)
+				|| (addr >= 0x2000 && addr < 0x4000))
+				bIsAux = true;
+			break;
+		case 0b110:
+			// All writes to AUX except for 0000-01FF
+			bIsAux = true;
+			break;
+		case 0b111:
+			// All writes to AUX except for 0000-01FF
+			bIsAux = true;
+			break;
+		default:
+			break;
+	}
+	if (is_iigs && m2b0)
+	{
+		// check if SHR is being accessed
+		// SHR is only accessible when the SHR flag is on
+		if (!IsSoftSwitch(A2SS_SHR) && (addr >= 0x2000 && addr < 0xA000))
+			return;
+		bIsAux = true;
+	}
+	
+	if (bIsAux)
+	{
+		SetApple2MemAux(addr, val);
+	}
+	else {
+		SetApple2Mem(addr, val);
+	}
+}
