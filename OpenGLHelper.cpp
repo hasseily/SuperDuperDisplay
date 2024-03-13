@@ -281,20 +281,6 @@ void OpenGLHelper::setup_render()
 
 void OpenGLHelper::finalize_render()
 {
-	// If we're doing postprocessing, take fb0 and postprocess it onto fb1
-	if (PostProcessor::GetInstance()->enabled) {
-		GLenum glerr;
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO[1]);
-		glClearColor(0.f, 0.f, 0.f, 0.f);
-		glClear(GL_COLOR_BUFFER_BIT);
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL setup_render error: " << glerr << std::endl;
-		}
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, output_texture_ids[0]); // Use texture from fb0
-		PostProcessor::GetInstance()->Render();
-	}
-
 	// cleanup
 	glUseProgram(0);
 	unbind_framebuffer();

@@ -29,7 +29,7 @@ public:
 	}
 	~PostProcessor();
 
-	void Render();
+	void Render(int viewportWidth, int viewportHeight);
 	void DisplayImGuiPPWindow(bool* p_open);
 
 	// public properties

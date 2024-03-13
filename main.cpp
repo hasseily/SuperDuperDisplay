@@ -381,7 +381,9 @@ int main(int argc, char* argv[])
 		glClearColor((bc & 0xFF) / 256.0f, (bc >> 8 & 0xFF) / 256.0f, (bc >> 16 & 0xFF) / 256.0f, (bc >> 24 & 0xFF) / 256.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		postProcessor->Render();
+		int _vw, _vh;
+		SDL_GL_GetDrawableSize(window, &_vw, &_vh);
+		postProcessor->Render(_vw, _vh);
 
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
@@ -400,9 +402,7 @@ int main(int argc, char* argv[])
 				ImGui::PushItemWidth(110);
                 ImGui::Text("Press F1 at any time to toggle this window");
                 ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-				int _ww, _wh;
-				SDL_GL_GetDrawableSize(window, &_ww, &_wh);
-				ImGui::Text("Drawable Size: %d x %d", _ww, _wh);
+				ImGui::Text("Drawable Size: %d x %d", _vw, _vh);
 				ImGui::Text("A2 Screen Size: %d x %d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);
 				ImGui::Separator();
 				ImGui::Text("Packet Pool Count: %lu", get_packet_pool_count());

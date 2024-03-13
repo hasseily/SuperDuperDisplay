@@ -181,7 +181,7 @@ void PostProcessor::LoadState(int profile_id) {
 }
 
 
-void PostProcessor::Render()
+void PostProcessor::Render(int viewportWidth, int viewportHeight)
 {
 	/*
 		libretro shaders have the following uniforms that have to be set:
@@ -218,19 +218,14 @@ void PostProcessor::Render()
 	shaderProgram.setVec2("TextureSize", glm::vec2(1920, 1080));
 	shaderProgram.setVec2("OutputSize", glm::vec2(w, h));
 	
-	int viewportWidth = 1800;
-	int viewportHeight = 1097;
-	int textureWidth = 560;
-	int textureHeight = 384;
-	
-	float tx = (viewportWidth - textureWidth) / 2.0f;
-	float ty = (viewportHeight - textureHeight) / 2.0f;
+	float tx = (viewportWidth - w) / 2.0f;
+	float ty = (viewportHeight - h) / 2.0f;
 	// Translation to center the texture
 	glm::vec3 translation(tx, ty, 0.0f);
 	// Identity matrix for model, since we only translate
 	glm::mat4 model = glm::translate(glm::mat4(1.0f), translation);
 	// Orthographic projection covering the viewport
-	glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(viewportWidth), static_cast<float>(viewportHeight), 0.0f, -1.0f, 1.0f);
+	glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(viewportWidth), 0.0f, static_cast<float>(viewportHeight), -1.0f, 1.0f);
 	// Set the MVPMatrix
 	shaderProgram.setMat4("MVPMatrix", projection * model);
 
@@ -297,6 +292,9 @@ void PostProcessor::Render()
 	}
 
 	// Render the fullscreen quad
+	glClearColor(0.f, 0.f, 0.f, 0.f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, OpenGLHelper::GetInstance()->get_intermediate_texture_id());
 	glBindVertexArray(quadVAO);
 	glViewport(0, 0, viewportWidth, viewportHeight);
