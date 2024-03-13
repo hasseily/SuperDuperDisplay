@@ -381,10 +381,13 @@ int main(int argc, char* argv[])
 		glClearColor((bc & 0xFF) / 256.0f, (bc >> 8 & 0xFF) / 256.0f, (bc >> 16 & 0xFF) / 256.0f, (bc >> 24 & 0xFF) / 256.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		postProcessor->Render();
+
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
+
 		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
@@ -397,7 +400,10 @@ int main(int argc, char* argv[])
 				ImGui::PushItemWidth(110);
                 ImGui::Text("Press F1 at any time to toggle this window");
                 ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-				ImGui::Text("Screen Size:%03d x %03d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);
+				int _ww, _wh;
+				SDL_GL_GetDrawableSize(window, &_ww, &_wh);
+				ImGui::Text("Drawable Size: %d x %d", _ww, _wh);
+				ImGui::Text("A2 Screen Size: %d x %d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);
 				ImGui::Separator();
 				ImGui::Text("Packet Pool Count: %lu", get_packet_pool_count());
 				ImGui::Text("Max Incoming Packet Queue: %lu", get_max_incoming_packets());
@@ -573,8 +579,8 @@ int main(int argc, char* argv[])
         if (show_texture_window)
 		{
 			ImGui::Begin("Texture Viewer", &show_texture_window);
-            ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES + 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
 			ImVec2 avail_size = ImGui::GetContentRegionAvail();
+            ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES + 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
 			if (_slotnum < _SDHR_MAX_TEXTURES)
 			{
 				ImGui::Text("Texture ID: %d", (int)glhelper->get_texture_id_at_slot(_slotnum));
@@ -633,6 +639,7 @@ int main(int argc, char* argv[])
 			int originx = marginx + (drawableWidth - scaledx) / 2;
 			int originy = marginy + (drawableHeight - scaledy) / 2;
 
+			/*
 			ImGui::GetBackgroundDrawList()->AddRectFilled(
 				ImVec2(marginx, marginy),
 				ImVec2(marginx + drawableWidth, marginy + drawableHeight),
@@ -645,6 +652,7 @@ int main(int argc, char* argv[])
 				ImVec2(0, 0),
 				ImVec2(1, 1)
 				);
+			 */
         }
 
 		// Rendering

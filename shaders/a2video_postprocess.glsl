@@ -40,15 +40,17 @@ uniform COMPAT_PRECISION int FrameCount;
 uniform COMPAT_PRECISION vec2 OutputSize;
 uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
+uniform mat4 MVPMatrix;
 
 void main()
 {
-	gl_Position = vec4(aPos, 0.0, 1.0);
+	gl_Position = MVPMatrix * vec4(aPos, 0.0, 1.0);
+	gl_Position.z = 0.0;
+	gl_Position.w = 1.0;
 	TexCoords = TexCoord;
 	scale = TextureSize.xy/InputSize.xy;
 	ps = 1.0/TextureSize.xy;
 }
-
 
 ///////////////////////////////////////// FRAGMENT SHADER /////////////////////////////////////////
 #elif defined(FRAGMENT)
@@ -213,11 +215,11 @@ vec2 Warp(vec2 pos) {
 
 void main() {
 
-// Apply simple horizontal scanline if required and exit
-if (SCANLINE_TYPE == 1.0) {
-	FragColor = texture(Texture,TexCoords) * mod(gl_FragCoord.y, 2.0);
-	return;
-}
+	// Apply simple horizontal scanline if required and exit
+	if (SCANLINE_TYPE == 1.0) {
+		FragColor = texture(Texture,TexCoords) * mod(gl_FragCoord.y, 2.0);
+		return;
+	}
 
 // Hue matrix inside main() to avoid GLES error
 	mat3 hue = mat3 (

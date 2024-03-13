@@ -8,6 +8,9 @@
 #include <fstream>
 #include <sstream>
 
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+
 // below because "The declaration of a static data member in its class definition is not a definition"
 PostProcessor* PostProcessor::s_instance;
 
@@ -18,13 +21,13 @@ static GLuint quadVAO = UINT_MAX;
 static GLuint quadVBO = UINT_MAX;
 static GLfloat quadVertices[] = {
 	// Positions	// Texture Coords
-	-1.f, 1.0f,  	0.0f, 1.0f,
-	1.0f, -1.f,  	1.0f, 0.0f,
-	1.0f, 1.0f,  	1.0f, 1.0f,
+	-280.f, -192.f,  	0.0f, 0.0f,
+	280.0f, 192.0f,  	1.0f, 1.0f,
+	280.0f, -192.f,  	1.0f, 0.0f,
 	
-	-1.f, 1.0f,  	0.0f, 1.0f,
-	-1.f, -1.f,  	0.0f, 0.0f,
-	1.0f, -1.f,  	1.0f, 0.0f
+	-280.f, -192.f,  	0.0f, 0.0f,
+	-280.f, 192.0f,  	0.0f, 1.0f,
+	280.0f, 192.0f,  	1.0f, 1.0f
 };
 
 static int frame_count = 0;	// Frame count for interlacing
@@ -212,10 +215,25 @@ void PostProcessor::Render()
 	shaderProgram.setInt("BezelTexture", _SDHR_START_TEXTURES + 7 - GL_TEXTURE0);
 	shaderProgram.setInt("FrameCount", frame_count);
 	shaderProgram.setVec2("InputSize", glm::vec2(w, h));
-	shaderProgram.setVec2("TextureSize", glm::vec2(w, h));
+	shaderProgram.setVec2("TextureSize", glm::vec2(1920, 1080));
 	shaderProgram.setVec2("OutputSize", glm::vec2(w, h));
-	shaderProgram.setMat4("MVPMatrix", glm::mat4(1));
 	
+	int viewportWidth = 1800;
+	int viewportHeight = 1097;
+	int textureWidth = 560;
+	int textureHeight = 384;
+	
+	float tx = (viewportWidth - textureWidth) / 2.0f;
+	float ty = (viewportHeight - textureHeight) / 2.0f;
+	// Translation to center the texture
+	glm::vec3 translation(tx, ty, 0.0f);
+	// Identity matrix for model, since we only translate
+	glm::mat4 model = glm::translate(glm::mat4(1.0f), translation);
+	// Orthographic projection covering the viewport
+	glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(viewportWidth), static_cast<float>(viewportHeight), 0.0f, -1.0f, 1.0f);
+	// Set the MVPMatrix
+	shaderProgram.setMat4("MVPMatrix", projection * model);
+
 	// Update uniforms
 	shaderProgram.setFloat("SCANLINE_TYPE", (float)p_scanline_type);
 	shaderProgram.setFloat("SCANLINE_WEIGHT", p_scanline_weight);
@@ -279,7 +297,9 @@ void PostProcessor::Render()
 	}
 
 	// Render the fullscreen quad
+	glBindTexture(GL_TEXTURE_2D, OpenGLHelper::GetInstance()->get_intermediate_texture_id());
 	glBindVertexArray(quadVAO);
+	glViewport(0, 0, viewportWidth, viewportHeight);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
