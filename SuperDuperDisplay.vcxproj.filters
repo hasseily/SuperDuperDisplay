@@ -241,6 +241,9 @@
     <None Include="shaders\a2video_beam_legacy.frag">
       <Filter>shaders</Filter>
     </None>
+    <None Include="shaders\a2video_beam_shr.frag">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="assets\Apple2eFont7x16 - Alternate.png">

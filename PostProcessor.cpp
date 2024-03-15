@@ -1,4 +1,5 @@
 #include "PostProcessor.h"
+#include "common.h"
 #include "OpenGLHelper.h"
 #include "imgui.h"
 #include "imgui_internal.h"		// for PushItemFlag
@@ -16,19 +17,33 @@ PostProcessor* PostProcessor::s_instance;
 
 static OpenGLHelper* oglHelper;
 
-// Buffers and vertices for a fullscreen quad
+// Buffers and vertices
+// The PostProcessor will take the legacy and shr output textures and merge them together,
+// optionally adding the sine wobble if both are present in the same frame
+// Its output size needs to be at least 40 pixels wider than SHR, i.e. 680 pixels to accommodate
+// the wobble. 20 pixels on each side.
+// It will also optionally add simple scanlines, or apply a more advanced CRT shader with many parameters.
+// It will draw directly into the main SDL2 window, centering itself based on the provided
+// viewport size in the render function. It will also resize itself to maximize the available space,
+// but only in integer scale
+
+constexpr int wobble_max_width = 20;
+constexpr int pp_width = _A2VIDEO_SHR_WIDTH + 2 * wobble_max_width;
+constexpr float pp_half_width = static_cast<float>(pp_width / 2);
+constexpr int pp_height = _A2VIDEO_SHR_HEIGHT;
+constexpr float pp_half_height = static_cast<float>(pp_height / 2);
 static GLuint quadVAO = UINT_MAX;
 static GLuint quadVBO = UINT_MAX;
 static GLfloat quadVertices[] = {
-	// Positions	// Texture Coords
-	-280.f, -192.f,  	0.0f, 0.0f,
-	280.0f, 192.0f,  	1.0f, 1.0f,
-	280.0f, -192.f,  	1.0f, 0.0f,
-	
-	-280.f, -192.f,  	0.0f, 0.0f,
-	-280.f, 192.0f,  	0.0f, 1.0f,
-	280.0f, 192.0f,  	1.0f, 1.0f
-};
+		// Positions						// Texture Coords
+		-pp_half_width, pp_half_height,  	0.0f, 1.0f,
+		pp_half_width, -pp_half_height,  	1.0f, 0.0f,
+		pp_half_width, pp_half_height,  	1.0f, 1.0f,
+
+		-pp_half_width, pp_half_height,  	0.0f, 1.0f,
+		-pp_half_width, -pp_half_height,  	0.0f, 0.0f,
+		pp_half_width, -pp_half_height,  	1.0f, 0.0f
+	};
 
 static int frame_count = 0;	// Frame count for interlacing
 static int v_presets = 0;	// Preset chosen
@@ -201,31 +216,47 @@ void PostProcessor::Render(int viewportWidth, int viewportHeight)
 		return;
 	if (oglHelper == nullptr)
 		oglHelper = OpenGLHelper::GetInstance();
+	uint32_t w, h;
+	oglHelper->get_framebuffer_size(&w, &h);
+
 	GLenum glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 0: " << glerr << std::endl;
 	}
-	v_ppshaders.at(0).use();
+	auto shaderProgram = v_ppshaders.at(0);
+	shaderProgram.use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 1: " << glerr << std::endl;
 	}
-	uint32_t w,h;
-	oglHelper->get_framebuffer_size(&w, &h);
-	auto shaderProgram = v_ppshaders.at(0);
+	shaderProgram.setInt("Texture", oglHelper->get_intermediate_texture_id());
 	shaderProgram.setInt("BezelTexture", _SDHR_START_TEXTURES + 7 - GL_TEXTURE0);
 	shaderProgram.setInt("FrameCount", frame_count);
 	shaderProgram.setVec2("InputSize", glm::vec2(w, h));
 	shaderProgram.setVec2("TextureSize", glm::vec2(1920, 1080));
 	shaderProgram.setVec2("OutputSize", glm::vec2(w, h));
-	
-	float tx = (viewportWidth - w) / 2.0f;
-	float ty = (viewportHeight - h) / 2.0f;
-	// Translation to center the texture
+
+	// How much can we scale the output quad?
+	// Always scale up in integers numbers
+	float _scale = static_cast<float>(viewportWidth) / static_cast<float>(pp_width);
+	_scale = std::min(_scale, static_cast<float>(viewportHeight) / static_cast<float>(pp_height));
+	if (_scale > 1.0f)
+		_scale = std::floorf(_scale);
+	glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(_scale, _scale, 1.0f));
+
+	// Translation to center the output quad
+	// The quad's origin is its center
+	float tx = viewportWidth / 2.0f;
+	float ty = viewportHeight / 2.0f;
 	glm::vec3 translation(tx, ty, 0.0f);
-	// Identity matrix for model, since we only translate
-	glm::mat4 model = glm::translate(glm::mat4(1.0f), translation);
+
+	// Final model matrix
+	glm::mat4 model = glm::translate(glm::mat4(1.0f), translation) * scale;
+
 	// Orthographic projection covering the viewport
-	glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(viewportWidth), 0.0f, static_cast<float>(viewportHeight), -1.0f, 1.0f);
+	glm::mat4 projection = glm::ortho(
+		0.0f, static_cast<float>(viewportWidth),	// left, right
+		0.0f, static_cast<float>(viewportHeight),	// bottom, top
+		-1.0f, 1.0f);								// near, far
 	// Set the MVPMatrix
 	shaderProgram.setMat4("MVPMatrix", projection * model);
 
@@ -292,10 +323,12 @@ void PostProcessor::Render(int viewportWidth, int viewportHeight)
 	}
 
 	// Render the fullscreen quad
+	// Target the main SDL2 window
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClearColor(0.f, 0.f, 0.f, 0.f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, OpenGLHelper::GetInstance()->get_intermediate_texture_id());
 	glBindVertexArray(quadVAO);
 	glViewport(0, 0, viewportWidth, viewportHeight);
 	glDrawArrays(GL_TRIANGLES, 0, 6);

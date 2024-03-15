@@ -35,6 +35,7 @@ in vec2 TexCoord;
 out vec2 TexCoords; // Pass texture coordinates to fragment shader
 out vec2 scale;
 out vec2 ps;
+out vec2 v_pos;
 
 uniform COMPAT_PRECISION int FrameCount;
 uniform COMPAT_PRECISION vec2 OutputSize;
@@ -45,11 +46,10 @@ uniform mat4 MVPMatrix;
 void main()
 {
 	gl_Position = MVPMatrix * vec4(aPos, 0.0, 1.0);
-	gl_Position.z = 0.0;
-	gl_Position.w = 1.0;
 	TexCoords = TexCoord;
 	scale = TextureSize.xy/InputSize.xy;
 	ps = 1.0/TextureSize.xy;
+	v_pos = gl_Position.xy;
 }
 
 ///////////////////////////////////////// FRAGMENT SHADER /////////////////////////////////////////
@@ -64,6 +64,7 @@ uniform sampler2D BezelTexture;
 in vec2 TexCoords;
 in vec2 scale;
 in vec2 ps;
+in vec2 v_pos;
 out vec4 FragColor;
 
 #define SourceSize vec4(TextureSize, 1.0 / TextureSize) //either TextureSize or InputSize
@@ -218,6 +219,8 @@ void main() {
 	// Apply simple horizontal scanline if required and exit
 	if (SCANLINE_TYPE == 1.0) {
 		FragColor = texture(Texture,TexCoords) * mod(gl_FragCoord.y, 2.0);
+		if (abs(v_pos.x) > 0.4)
+			FragColor = vec4(1.0, 0.2, 0.6, 1.0);
 		return;
 	}
 
