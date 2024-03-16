@@ -27,7 +27,7 @@ PostProcessor* PostProcessor::s_instance;
 static GLuint quadVAO = UINT_MAX;
 static GLuint quadVBO = UINT_MAX;
 // The quad vertices will change based on the change in the requested screen size
-static glm::dvec4 quadViewportCoords = glm::dvec4(0,0,0,0);	// left, top, right, bottom
+static glm::vec4 quadViewportCoords = glm::vec4(0,0,0,0);	// left, top, right, bottom
 
 static int frame_count = 0;	// Frame count for interlacing
 static int v_presets = 0;	// Preset chosen
@@ -190,6 +190,11 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	SDL_GL_GetDrawableSize(window, &viewportWidth, &viewportHeight);
 
 	GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
+	// Don't let the viewport have odd values. It creates artifacts when scaling
+	if (viewportWidth % 2 == 1)
+		viewportWidth -= 1;
+	if (viewportHeight % 2 == 1)
+		viewportHeight -= 1;
 	glViewport(0, 0, viewportWidth, viewportHeight);
 	GLenum glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -218,12 +223,12 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	int quadWidth = static_cast<int>(_scale * texwidth);
 	int quadHeight = static_cast<int>(_scale * texheight);
 
-	quadViewportCoords.x = static_cast<double>(-quadWidth) / static_cast<double>(viewportWidth);		// left
-	quadViewportCoords.y = static_cast<double>(-quadHeight) / static_cast<double>(viewportHeight);	// top
-	quadViewportCoords.z = static_cast<double>(quadWidth) / static_cast<double>(viewportWidth);		// right
-	quadViewportCoords.w = static_cast<double>(quadHeight) / static_cast<double>(viewportHeight);		// bottom
+	quadViewportCoords.x = static_cast<float>(-quadWidth) / static_cast<float>(viewportWidth);		// left
+	quadViewportCoords.y = static_cast<float>(-quadHeight) / static_cast<float>(viewportHeight);	// top
+	quadViewportCoords.z = static_cast<float>(quadWidth) / static_cast<float>(viewportWidth);		// right
+	quadViewportCoords.w = static_cast<float>(quadHeight) / static_cast<float>(viewportHeight);		// bottom
 
-	GLdouble quadVertices[] = {
+	GLfloat quadVertices[] = {
 		// Positions												// Texture Coords
 		quadViewportCoords.x, quadViewportCoords.w,  	0.0f, 0.0f,
 		quadViewportCoords.z, quadViewportCoords.y,  	1.0f, 1.0f,
@@ -311,15 +316,15 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 
 		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
 
-			// Position attribute
+		// Position attribute
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_DOUBLE, GL_FALSE, 4 * sizeof(GLdouble), (GLvoid*)0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)0);
 
-			// Texture coordinate attribute
+		// Texture coordinate attribute
 		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_DOUBLE, GL_FALSE, 4 * sizeof(GLdouble), (GLvoid*)(2 * sizeof(GLdouble)));
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)(2 * sizeof(GLfloat)));
 
-			// Unbind the VAO
+		// Unbind the VAO
 		glBindVertexArray(0);
 	} else {
 		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
