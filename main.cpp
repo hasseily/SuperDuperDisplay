@@ -383,7 +383,7 @@ int main(int argc, char* argv[])
 
 		int _vw, _vh;
 		SDL_GL_GetDrawableSize(window, &_vw, &_vh);
-		postProcessor->Render(_vw, _vh);
+		postProcessor->Render(window, glhelper->get_output_texture_id(), _vw, _vh);
 
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();

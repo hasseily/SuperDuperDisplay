@@ -9,6 +9,8 @@
 #include <stdio.h>
 
 #include "glad/glad.h"
+#include <SDL.h>
+
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>
 #define GL2_PROTOTYPES 1
@@ -42,6 +44,8 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _A2_MEMORY_SHADOW_BEGIN 0x200
 #define _A2_MEMORY_SHADOW_END 0xC000
 
+#define _POSTPROCESSOR_INPUT_TEXTURE GL_TEXTURE15	// The GL texture slot the postprocessor will use as input
+
 // DEFINITIONS OF SDHR SPECS
 #define _SDHR_SERVER_PORT 8080
 #define _SDHR_UPLOAD_REGION_SIZE 256*256*256	// Upload data region size (should be 16MB)
@@ -52,13 +56,13 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _SDHR_MAX_UV_SCALE 100.f			// Maximum scale of Mosaic Tile UV
 
 // ORIGINAL APPLE 2 VIDEO MODES
+#define _A2VIDEO_OUTPUT_TEXTURE _POSTPROCESSOR_INPUT_TEXTURE
 #define _A2VIDEO_MIN_WIDTH 40*7*2
 #define _A2VIDEO_MIN_HEIGHT 24*8*2
 #define _A2VIDEO_MIN_MIXED_HEIGHT 20*8*2
 #define _A2VIDEO_SHR_WIDTH 640
 #define _A2VIDEO_SHR_HEIGHT 200*2
 #define _A2VIDEO_SHR_BYTES_PER_LINE 160
-#define _A2VIDEO_OUTPUT_TEXTURE GL_TEXTURE15	// The GL texture slot the A2 output is bound to
 
 #define _A2VIDEO_TEXT1_START 0x400
 #define _A2VIDEO_TEXT2_START 0x800

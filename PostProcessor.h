@@ -29,7 +29,7 @@ public:
 	}
 	~PostProcessor();
 
-	void Render(int viewportWidth, int viewportHeight);
+	void Render(SDL_Window* window, GLuint inputTextureId, const int width, const int height);
 	void DisplayImGuiPPWindow(bool* p_open);
 
 	// public properties

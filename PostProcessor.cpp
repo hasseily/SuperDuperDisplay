@@ -1,6 +1,5 @@
 #include "PostProcessor.h"
 #include "common.h"
-#include "OpenGLHelper.h"
 #include "imgui.h"
 #include "imgui_internal.h"		// for PushItemFlag
 #include "extras/ImGuiFileDialog.h"
@@ -14,8 +13,6 @@
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 PostProcessor* PostProcessor::s_instance;
-
-static OpenGLHelper* oglHelper;
 
 // Buffers and vertices
 // The PostProcessor will take the legacy and shr output textures and merge them together,
@@ -202,21 +199,22 @@ void PostProcessor::LoadState(int profile_id) {
 }
 
 
-void PostProcessor::Render(int viewportWidth, int viewportHeight)
+void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId, const int _w, const int _h)
 {
-	if (oglHelper == nullptr)
-		oglHelper = OpenGLHelper::GetInstance();
-	uint32_t w, h;
-	oglHelper->get_framebuffer_size(&w, &h);
+	int viewportWidth, viewportHeight;
+	SDL_GL_GetDrawableSize(window, &viewportWidth, &viewportHeight);
 
 	GLenum glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 0: " << glerr << std::endl;
 	}
 	
-	// This shouldn't be necessary as the output texture should always be bound already
-	//glActiveTexture(_A2VIDEO_OUTPUT_TEXTURE);
-	//glBindTexture(GL_TEXTURE_2D, oglHelper->get_output_texture_id());
+	// Bind the texture we're given to our _POSTPROCESSOR_INPUT_TEXTURE
+	glActiveTexture(_POSTPROCESSOR_INPUT_TEXTURE);
+	GLint last_bound_texture = 0;
+	glGetIntegeri_v(GL_TEXTURE_BINDING_2D, _POSTPROCESSOR_INPUT_TEXTURE, &last_bound_texture);
+	glBindTexture(GL_TEXTURE_2D, inputTextureId);
+	glActiveTexture(GL_TEXTURE0);	// Target the main SDL window
 
 	// How much can we scale the output quad?
 	// Always scale up in integers numbers
@@ -268,16 +266,16 @@ void PostProcessor::Render(int viewportWidth, int viewportHeight)
 	if (!enabled) {		// basic passthrough shader
 		shaderProgram = v_ppshaders.at(0);
 		shaderProgram.use();
-		shaderProgram.setInt("Texture", _A2VIDEO_OUTPUT_TEXTURE - GL_TEXTURE0);
+		shaderProgram.setInt("Texture", _POSTPROCESSOR_INPUT_TEXTURE - GL_TEXTURE0);
 	} else {
 		shaderProgram = v_ppshaders.at(1);
 		shaderProgram.use();
 		// Update uniforms
-		shaderProgram.setInt("A2Texture", _A2VIDEO_OUTPUT_TEXTURE - GL_TEXTURE0);
+		shaderProgram.setInt("A2Texture", _POSTPROCESSOR_INPUT_TEXTURE - GL_TEXTURE0);
 		shaderProgram.setInt("BezelTexture", _SDHR_START_TEXTURES + 7 - GL_TEXTURE0);
 		shaderProgram.setInt("FrameCount", frame_count);
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
-		shaderProgram.setVec2("InputSize", glm::vec2(w, h));
+		shaderProgram.setVec2("InputSize", glm::vec2(_w, _h));
 		shaderProgram.setVec2("TextureSize", glm::vec2(_A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT));
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadViewportCoords[2] - quadViewportCoords[0],
 													  quadViewportCoords[3] - quadViewportCoords[1]));
@@ -353,7 +351,6 @@ void PostProcessor::Render(int viewportWidth, int viewportHeight)
 
 	// Render the fullscreen quad
 	// Target the main SDL2 window
-	glActiveTexture(GL_TEXTURE0);
 	glClearColor(0.f, 0.f, 0.f, 0.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindVertexArray(quadVAO);
@@ -365,7 +362,10 @@ void PostProcessor::Render(int viewportWidth, int viewportHeight)
 		std::cerr << "OpenGL error PP 3: " << glerr << std::endl;
 	}
 	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
-
+	// revert the texture assignment
+	glActiveTexture(_POSTPROCESSOR_INPUT_TEXTURE);
+	glBindTexture(GL_TEXTURE_2D, last_bound_texture);
+	glActiveTexture(GL_TEXTURE0);
 	++frame_count;
 }
 
