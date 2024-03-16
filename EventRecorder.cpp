@@ -218,8 +218,6 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 				if (elapsed >= targetDuration)
 					break;
 			}
-		} else {
-			break;
 		}
 	}
 	SetState(EventRecorderStates_e::STOPPED);
