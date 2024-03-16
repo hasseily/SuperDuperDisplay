@@ -46,7 +46,6 @@ public:
 	// METHODS THAT CAN BE CALLED FROM ANY THREAD
 	bool request_framebuffer_resize(uint32_t width, uint32_t height);
 	void get_framebuffer_size(uint32_t* width, uint32_t* height);
-	void set_callback_changed_resolution(void(*func)(int w, int h)) { callbackResolutionChange = func; };
 	uint32_t get_frame_ticks();	// get the global tick value for the current frame
 
 	// The created texture ids (max is _SDHR_MAX_TEXTURES)
@@ -81,8 +80,6 @@ private:
 	{
 		Initialize();
 	}
-
-	void (*callbackResolutionChange)(int w, int h);
 
 	GLuint output_texture_id;
 	GLuint FBO = UINT_MAX;

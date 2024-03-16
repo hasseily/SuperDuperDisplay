@@ -61,23 +61,6 @@ void GLAPIENTRY DebugCallbackKHR(GLenum source,
 	<< " type = " << type << ", severity = " << severity << ", message = " << message << std::endl;
 }
 
-void callback_resolutionChange(int w, int h)
-{
-	auto glhelper = OpenGLHelper::GetInstance();
-	auto sdhrManager = SDHRManager::GetInstance();
-	auto a2videoManager = A2VideoManager::GetInstance();
-	// In case the window was program-resized, tell SDL to change the window size
-	glhelper->get_framebuffer_size(&fbWidth, &fbHeight);
-	auto margins = (sdhrManager->IsSdhrEnabled()
-		? sdhrManager->windowMargins
-		: a2videoManager->windowMargins);
-	SDL_DisplayMode displayMode;
-	SDL_GetWindowDisplayMode(window, &displayMode);
-    displayMode.w = w + 2 * margins;
-    displayMode.h = h + 2 * margins;
-    SDL_SetWindowDisplayMode(window, &displayMode);
-}
-
 void set_vsync(bool _on)
 {
 	// If vsync requested, try to make it adaptive vsync first
@@ -262,8 +245,6 @@ int main(int argc, char* argv[])
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
     uint64_t dt_LAST = 0;
 	float deltaTime = 0.f;
-
-    glhelper->set_callback_changed_resolution(&callback_resolutionChange);
 
 	set_vsync(g_swapInterval);
 

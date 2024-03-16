@@ -156,7 +156,6 @@ void OpenGLHelper::create_framebuffers(uint32_t width, uint32_t height)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	bDidChangeResolution = true;
-	callbackResolutionChange(fb_width, fb_height);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!\n";
@@ -200,8 +199,6 @@ void OpenGLHelper::rescale_framebuffers(uint32_t width, uint32_t height)
 	fb_width = width;
 	fb_height = height;
 	bDidChangeResolution = true;
-	if (callbackResolutionChange)
-		callbackResolutionChange(fb_width, fb_height);
 }
 
 void OpenGLHelper::setup_render()
