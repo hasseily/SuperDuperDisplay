@@ -10,6 +10,7 @@
 
 #include "PostProcessor.h"
 
+static GLint last_viewport[4];	// Previous viewport used, so we don't clobber it
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 OpenGLHelper* OpenGLHelper::s_instance;
@@ -28,8 +29,8 @@ void OpenGLHelper::Initialize()
 
 OpenGLHelper::~OpenGLHelper()
 {
-	glDeleteFramebuffers(2, FBO);
-	glDeleteTextures(2, output_texture_ids);
+	glDeleteFramebuffers(1, &FBO);
+	glDeleteTextures(1, &output_texture_id);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -109,13 +110,6 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 	}
 }
 
-GLuint OpenGLHelper::get_intermediate_texture_id()
-{
-	if (PostProcessor::GetInstance()->enabled)
-		return output_texture_ids[0];
-	return output_texture_ids[1];
-}
-
 GLuint OpenGLHelper::get_texture_id_at_slot(int slot)
 {
 	if (slot >= v_texture_ids.size())
@@ -137,31 +131,29 @@ GLuint OpenGLHelper::get_texture_id_at_slot(int slot)
 void OpenGLHelper::create_framebuffers(uint32_t width, uint32_t height)
 {
 	// regenerate the framebuffers if different size
-	if ((FBO[0] != UINT_MAX) && ((width != fb_width) || (height != fb_height)))
+	if ((FBO != UINT_MAX) && ((width != fb_width) || (height != fb_height)))
 	{
 		return rescale_framebuffers(width, height);
 	}
 
-	if (FBO[0] != UINT_MAX)
+	if (FBO != UINT_MAX)
 		return;
 
-	glGenFramebuffers(2, FBO);
-	glGenTextures(2, output_texture_ids);
-	glActiveTexture(GL_TEXTURE0);
-	for (int i = 0; i < 2; ++i) {
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO[i]);
-		glBindTexture(GL_TEXTURE_2D, output_texture_ids[i]);
-		glViewport(0, 0, fb_width, fb_height);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_ids[i], 0);
-	}
+	glGenFramebuffers(1, &FBO);
+	glGenTextures(1, &output_texture_id);
+	glActiveTexture(_A2VIDEO_OUTPUT_TEXTURE);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	glBindTexture(GL_TEXTURE_2D, output_texture_id);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);
 	
-	// Always bind the first output texture to GL_TEXTURE0
-	glBindTexture(GL_TEXTURE_2D, output_texture_ids[0]);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	bDidChangeResolution = true;
 	callbackResolutionChange(fb_width, fb_height);
@@ -172,17 +164,11 @@ void OpenGLHelper::create_framebuffers(uint32_t width, uint32_t height)
 
 void OpenGLHelper::bind_framebuffer()
 {
-	GLuint fb = FBO[1];	// final framebuffer
-	if (fb == UINT_MAX)
+	if (FBO == UINT_MAX)
 	{
 		create_framebuffers(_SCREEN_DEFAULT_WIDTH, _SCREEN_DEFAULT_HEIGHT);
-		fb = FBO[1];
 	}
-	if (PostProcessor::GetInstance()->enabled) {
-		fb = FBO[0];	// intermediate framebuffer before postprocessing
-	}
-
-	glBindFramebuffer(GL_FRAMEBUFFER, fb);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 	GLenum glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL bind_framebuffer error: " << glerr << std::endl;
@@ -201,7 +187,7 @@ void OpenGLHelper::rescale_framebuffers(uint32_t width, uint32_t height)
 	GLenum glerr;
 	glActiveTexture(GL_TEXTURE0);
 	for (int i = 0; i < 2; ++i) {
-		glBindTexture(GL_TEXTURE_2D, output_texture_ids[i]);
+		glBindTexture(GL_TEXTURE_2D, output_texture_id);
 		glViewport(0, 0, width, height);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -209,7 +195,7 @@ void OpenGLHelper::rescale_framebuffers(uint32_t width, uint32_t height)
 		}
 	}
 	// Always bind the first output texture to GL_TEXTURE0
-	glBindTexture(GL_TEXTURE_2D, output_texture_ids[0]);
+	glBindTexture(GL_TEXTURE_2D, output_texture_id);
 	fb_width = width;
 	fb_height = height;
 	bDidChangeResolution = true;
@@ -277,6 +263,9 @@ void OpenGLHelper::setup_render()
 	// And always update the projection when in perspective due to the zoom state
 	if (bUsePerspective)
 		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)fb_width / fb_height, 0, 256);
+	
+	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
+	glViewport(0, 0, fb_width, fb_height);
 }
 
 void OpenGLHelper::finalize_render()
@@ -284,6 +273,7 @@ void OpenGLHelper::finalize_render()
 	// cleanup
 	glUseProgram(0);
 	unbind_framebuffer();
+	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
 	bDidChangeResolution = false;
 }
 

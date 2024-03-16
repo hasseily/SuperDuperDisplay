@@ -163,8 +163,8 @@ void A2VideoManager::Initialize()
 		vrams_array[i].frame_idx = 0;
 		vrams_array[i].use_legacy = true;
 		vrams_array[i].use_shr = false;
-		memset(vrams_array[i].vram_legacy, _BEAM_VRAM_SIZE_LEGACY, 0);
-		memset(vrams_array[i].vram_shr, _BEAM_VRAM_SIZE_SHR, 0);
+		memset(vrams_array[i].vram_legacy, 0, _BEAM_VRAM_SIZE_LEGACY);
+		memset(vrams_array[i].vram_shr, 0, _BEAM_VRAM_SIZE_SHR);
 	}
 	vrams_write = &vrams_array[current_frame_idx % 2];
 	vrams_read = &vrams_array[1 - (current_frame_idx % 2)];
@@ -468,7 +468,6 @@ void A2VideoManager::Render()
 			std::cerr << "OpenGL AssignByFilename error: " 
 				<< 0 << " - " << glerr << std::endl;
 		}
-		glActiveTexture(GL_TEXTURE0);
 
 		// Make sure the beam renderer has gone through one pass of the VRAM updates
 		// Unless we want SDD to display a "splash screen", in which case this is where

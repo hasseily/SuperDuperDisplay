@@ -36,14 +36,19 @@ static GLuint quadVAO = UINT_MAX;
 static GLuint quadVBO = UINT_MAX;
 static GLfloat quadVertices[] = {
 		// Positions						// Texture Coords
-		-pp_half_width, pp_half_height,  	0.0f, 1.0f,
-		pp_half_width, -pp_half_height,  	1.0f, 0.0f,
-		pp_half_width, pp_half_height,  	1.0f, 1.0f,
+		-pp_half_width, pp_half_height,  	0.0f, 0.0f,
+		pp_half_width, -pp_half_height,  	1.0f, 1.0f,
+		pp_half_width, pp_half_height,  	1.0f, 0.0f,
 
-		-pp_half_width, pp_half_height,  	0.0f, 1.0f,
-		-pp_half_width, -pp_half_height,  	0.0f, 0.0f,
-		pp_half_width, -pp_half_height,  	1.0f, 0.0f
+		-pp_half_width, pp_half_height,  	0.0f, 0.0f,
+		-pp_half_width, -pp_half_height,  	0.0f, 1.0f,
+		pp_half_width, -pp_half_height,  	1.0f, 1.0f
 	};
+static glm::vec4 quadCorners[2] = {	// for calculating the actual position of the quad in the viewport
+	glm::vec4(-pp_half_width, -pp_half_height, 0.0f, 1.0f),
+	glm::vec4(pp_half_width, pp_half_height, 0.0f, 1.0f)
+};
+static glm::vec4 quadViewportCoords = glm::vec4(0,0,0,0);	// left, top, right, bottom
 
 static int frame_count = 0;	// Frame count for interlacing
 static int v_presets = 0;	// Preset chosen
@@ -90,7 +95,8 @@ float p_zoomy = 0.0f;
 
 void PostProcessor::Initialize()
 {
-	v_ppshaders.at(0).build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");
+	v_ppshaders.at(0).build("shaders/basic.vert", "shaders/basic.frag");
+	v_ppshaders.at(1).build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");
 }
 
 PostProcessor::~PostProcessor()
@@ -198,22 +204,6 @@ void PostProcessor::LoadState(int profile_id) {
 
 void PostProcessor::Render(int viewportWidth, int viewportHeight)
 {
-	/*
-		libretro shaders have the following uniforms that have to be set:
-		BOTH
-		uniform vec2 TextureSize;	// Size of the incoming framebuffer
-
-		VECTOR
-		uniform mat4 MVPMatrix;		// Transform matrix
-		uniform vec2 InputSize;		// Same as TextureSize (??)
-		uniform vec2 OutputSize;	// Outgoing framebuffer screen size
-
-		FRAGMENT
-		uniform sampler2D Texture;	// Incoming framebuffer
-	*
-	*/
-	if (!enabled)
-		return;
 	if (oglHelper == nullptr)
 		oglHelper = OpenGLHelper::GetInstance();
 	uint32_t w, h;
@@ -223,17 +213,10 @@ void PostProcessor::Render(int viewportWidth, int viewportHeight)
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 0: " << glerr << std::endl;
 	}
-	auto shaderProgram = v_ppshaders.at(0);
-	shaderProgram.use();
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error PP 1: " << glerr << std::endl;
-	}
-	shaderProgram.setInt("Texture", oglHelper->get_intermediate_texture_id());
-	shaderProgram.setInt("BezelTexture", _SDHR_START_TEXTURES + 7 - GL_TEXTURE0);
-	shaderProgram.setInt("FrameCount", frame_count);
-	shaderProgram.setVec2("InputSize", glm::vec2(w, h));
-	shaderProgram.setVec2("TextureSize", glm::vec2(1920, 1080));
-	shaderProgram.setVec2("OutputSize", glm::vec2(w, h));
+	
+	// This shouldn't be necessary as the output texture should always be bound already
+	//glActiveTexture(_A2VIDEO_OUTPUT_TEXTURE);
+	//glBindTexture(GL_TEXTURE_2D, oglHelper->get_output_texture_id());
 
 	// How much can we scale the output quad?
 	// Always scale up in integers numbers
@@ -257,44 +240,90 @@ void PostProcessor::Render(int viewportWidth, int viewportHeight)
 		0.0f, static_cast<float>(viewportWidth),	// left, right
 		0.0f, static_cast<float>(viewportHeight),	// bottom, top
 		-1.0f, 1.0f);								// near, far
+	
+	glm::mat4 MVPMatrix = projection * model;
+	
+	// Now calculate the quad's position in the viewport by applying to it the MVP matrix
+	// just like it will be done in the vertex shader
+	// Transform the corners through the MVP matrix and map to viewport coordinates
+	for (int i = 0; i < 2; ++i) {
+		// Transform to clip space
+		glm::vec4 clipSpace = MVPMatrix * quadCorners[i];
+		glm::vec3 ndc = glm::vec3(clipSpace) / clipSpace.w; // Should be redundant in orthographic projection
+		// Map from NDC to viewport coordinates. NDC [-1, 1] -> viewport [0, viewportWidth] or [0, viewportHeight]
+		if (i == 0) {
+			quadViewportCoords[0] = (ndc.x + 1.0f) * 0.5f * viewportWidth;	// left
+			quadViewportCoords[1] = (ndc.x + 1.0f) * 0.5f * viewportHeight;	// top
+		} else {
+			quadViewportCoords[2] = (ndc.x + 1.0f) * 0.5f * viewportWidth;	// right
+			quadViewportCoords[3] = (ndc.x + 1.0f) * 0.5f * viewportHeight;	// bottom
+		}
+		
+//		std::cout << "Viewport coordinates:" << ": (" << quadViewportCoords[0] << ", " << quadViewportCoords[1]
+//		<< "), (" << quadViewportCoords[2] << ", " << quadViewportCoords[3] << ")" << std::endl;
+	}
+	
+	// Choose the shader
+	Shader shaderProgram;
+	if (!enabled) {		// basic passthrough shader
+		shaderProgram = v_ppshaders.at(0);
+		shaderProgram.use();
+		shaderProgram.setInt("Texture", _A2VIDEO_OUTPUT_TEXTURE - GL_TEXTURE0);
+	} else {
+		shaderProgram = v_ppshaders.at(1);
+		shaderProgram.use();
+		// Update uniforms
+		shaderProgram.setInt("A2Texture", _A2VIDEO_OUTPUT_TEXTURE - GL_TEXTURE0);
+		shaderProgram.setInt("BezelTexture", _SDHR_START_TEXTURES + 7 - GL_TEXTURE0);
+		shaderProgram.setInt("FrameCount", frame_count);
+		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
+		shaderProgram.setVec2("InputSize", glm::vec2(w, h));
+		shaderProgram.setVec2("TextureSize", glm::vec2(_A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT));
+		shaderProgram.setVec2("OutputSize", glm::vec2(quadViewportCoords[2] - quadViewportCoords[0],
+													  quadViewportCoords[3] - quadViewportCoords[1]));
+		shaderProgram.setVec4("VideoRect", quadViewportCoords);
+		
+		shaderProgram.setFloat("SCANLINE_TYPE", (float)p_scanline_type);
+		shaderProgram.setFloat("SCANLINE_WEIGHT", p_scanline_weight);
+		shaderProgram.setFloat("INTERLACE", p_interlace ? 1.0f : 0.0f);
+		shaderProgram.setFloat("M_TYPE", (float)p_m_type);
+		shaderProgram.setFloat("MSIZE", p_msize);
+		shaderProgram.setFloat("SLOT", p_slot ? 1.0f : 0.0f);
+		shaderProgram.setFloat("SLOTW", p_slotw);
+		shaderProgram.setFloat("BGR", p_bgr);
+		shaderProgram.setFloat("Maskl", p_maskl);
+		shaderProgram.setFloat("Maskh", p_maskh);
+		shaderProgram.setFloat("bzl", p_bzl ? 1.0f : 0.0f);
+		shaderProgram.setFloat("zoomx", p_zoomx);
+		shaderProgram.setFloat("zoomy", p_zoomy);
+		shaderProgram.setFloat("centerx", p_centerx);
+		shaderProgram.setFloat("centery", p_centery);
+		shaderProgram.setFloat("WARPX", p_warpx);
+		shaderProgram.setFloat("WARPY", p_warpy);
+		shaderProgram.setFloat("corner", p_corner ? 1.0f : 0.0f);
+		shaderProgram.setFloat("vig", p_vig ? 1.0f : 0.0f);
+		shaderProgram.setFloat("BR_DEP", p_br_dep);
+		shaderProgram.setFloat("c_space", (float)p_c_space);
+		shaderProgram.setFloat("EXT_GAMMA", p_ext_gamma ? 1.0f : 0.0f);
+		shaderProgram.setFloat("SATURATION", p_saturation);
+		shaderProgram.setFloat("BRIGHTNESs", p_brightness);
+		shaderProgram.setFloat("BLACK", p_black);
+		shaderProgram.setFloat("RG", p_rg);
+		shaderProgram.setFloat("RB", p_rb);
+		shaderProgram.setFloat("GB", p_gb);
+		shaderProgram.setFloat("C_STR", p_c_str);
+		shaderProgram.setFloat("CONV_R", p_conv_r);
+		shaderProgram.setFloat("CONV_G", p_conv_g);
+		shaderProgram.setFloat("CONV_B", p_conv_b);
+		shaderProgram.setFloat("POTATO", p_potato ? 1.0f : 0.0f);
+	}
+	
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error PP 1: " << glerr << std::endl;
+	}
+	
 	// Set the MVPMatrix
-	shaderProgram.setMat4("MVPMatrix", projection * model);
-
-	// Update uniforms
-	shaderProgram.setFloat("SCANLINE_TYPE", (float)p_scanline_type);
-	shaderProgram.setFloat("SCANLINE_WEIGHT", p_scanline_weight);
-	shaderProgram.setFloat("INTERLACE", p_interlace ? 1.0f : 0.0f);
-	shaderProgram.setFloat("M_TYPE", (float)p_m_type);
-	shaderProgram.setFloat("MSIZE", p_msize);
-	shaderProgram.setFloat("SLOT", p_slot ? 1.0f : 0.0f);
-	shaderProgram.setFloat("SLOTW", p_slotw);
-	shaderProgram.setFloat("BGR", p_bgr);
-	shaderProgram.setFloat("Maskl", p_maskl);
-	shaderProgram.setFloat("Maskh", p_maskh);
-	shaderProgram.setFloat("bzl", p_bzl ? 1.0f : 0.0f);
-	shaderProgram.setFloat("zoomx", p_zoomx);
-	shaderProgram.setFloat("zoomy", p_zoomy);
-	shaderProgram.setFloat("centerx", p_centerx);
-	shaderProgram.setFloat("centery", p_centery);
-	shaderProgram.setFloat("WARPX", p_warpx);
-	shaderProgram.setFloat("WARPY", p_warpy);
-	shaderProgram.setFloat("corner", p_corner ? 1.0f : 0.0f);
-	shaderProgram.setFloat("vig", p_vig ? 1.0f : 0.0f);
-	shaderProgram.setFloat("BR_DEP", p_br_dep);
-	shaderProgram.setFloat("c_space", (float)p_c_space);
-	shaderProgram.setFloat("EXT_GAMMA", p_ext_gamma ? 1.0f : 0.0f);
-	shaderProgram.setFloat("SATURATION", p_saturation);
-	shaderProgram.setFloat("BRIGHTNESs", p_brightness);
-	shaderProgram.setFloat("BLACK", p_black);
-	shaderProgram.setFloat("RG", p_rg);
-	shaderProgram.setFloat("RB", p_rb);
-	shaderProgram.setFloat("GB", p_gb);
-	shaderProgram.setFloat("C_STR", p_c_str);
-	shaderProgram.setFloat("CONV_R", p_conv_r);
-	shaderProgram.setFloat("CONV_G", p_conv_g);
-	shaderProgram.setFloat("CONV_B", p_conv_b);
-	shaderProgram.setFloat("POTATO", p_potato ? 1.0f : 0.0f);
-
+	shaderProgram.setMat4("MVPMatrix", MVPMatrix);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 2: " << glerr << std::endl;
@@ -325,18 +354,18 @@ void PostProcessor::Render(int viewportWidth, int viewportHeight)
 	// Render the fullscreen quad
 	// Target the main SDL2 window
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClearColor(0.f, 0.f, 0.f, 0.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindVertexArray(quadVAO);
+	GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
 	glViewport(0, 0, viewportWidth, viewportHeight);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 3: " << glerr << std::endl;
 	}
-	
+	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
+
 	++frame_count;
 }
 

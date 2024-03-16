@@ -34,8 +34,7 @@ public:
 	void set_gl_version();	// must be called after SDL_Init()
 	const std::string* get_glsl_version();	// returns the glsl version string
 	void load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID);
-	GLuint get_intermediate_texture_id();								// texture id of the framebuffer to draw to
-	GLuint get_output_texture_id() { return output_texture_ids[1]; };	// output texture id of the final framebuffer
+	GLuint get_output_texture_id() { return output_texture_id; };	// output texture id of the final framebuffer
 	GLuint get_texture_id_at_slot(int slot);	// returns the opengl-generated texture id for this tex slot
 	void create_framebuffers(uint32_t width, uint32_t height);	// also binds it
 	void bind_framebuffer();	// Binds the correct framebuffer, depending on the postprocessing needs
@@ -85,10 +84,8 @@ private:
 
 	void (*callbackResolutionChange)(int w, int h);
 
-	GLuint output_texture_ids[2];
-//	GLuint VAO;	// for testing
-//	GLuint VBO;	// for testing
-	GLuint FBO[2] = { UINT_MAX, UINT_MAX };
+	GLuint output_texture_id;
+	GLuint FBO = UINT_MAX;
 
 	uint32_t fb_width = _SCREEN_DEFAULT_WIDTH;
 	uint32_t fb_height = _SCREEN_DEFAULT_HEIGHT;

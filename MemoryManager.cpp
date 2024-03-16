@@ -18,7 +18,7 @@ void MemoryManager::Initialize()
 	// in any of the 2 banks between $200 and _A2_MEMORY_SHADOW_END it will
 	// be sent through the socket and this buffer will be updated
 	// memory of both banks is concatenated into one buffer
-	memset(a2mem, 0xA0, _A2_MEMORY_SHADOW_END * 2);
+	memset(a2mem, 0x00, _A2_MEMORY_SHADOW_END * 2);
 	a2SoftSwitches = A2SS_TEXT; // default to TEXT1
 	switch_c022 = 0b11110000;	// white fg, black bg
 	switch_c034 = 0;

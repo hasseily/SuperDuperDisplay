@@ -58,6 +58,7 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _A2VIDEO_SHR_WIDTH 640
 #define _A2VIDEO_SHR_HEIGHT 200*2
 #define _A2VIDEO_SHR_BYTES_PER_LINE 160
+#define _A2VIDEO_OUTPUT_TEXTURE GL_TEXTURE15	// The GL texture slot the A2 output is bound to
 
 #define _A2VIDEO_TEXT1_START 0x400
 #define _A2VIDEO_TEXT2_START 0x800

@@ -59,7 +59,9 @@ uniform COMPAT_PRECISION int FrameCount;
 uniform COMPAT_PRECISION vec2 OutputSize;
 uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
-uniform sampler2D Texture;
+uniform COMPAT_PRECISION vec2 ViewportSize;
+uniform COMPAT_PRECISION vec4 VideoRect;
+uniform sampler2D A2Texture;
 uniform sampler2D BezelTexture;
 in vec2 TexCoords;
 in vec2 scale;
@@ -215,12 +217,15 @@ vec2 Warp(vec2 pos) {
 }
 
 void main() {
-
+	
+	if (SCANLINE_TYPE == 0.0) {
+		FragColor = texture(A2Texture,TexCoords);
+		return;
+	}
+	
 	// Apply simple horizontal scanline if required and exit
 	if (SCANLINE_TYPE == 1.0) {
-		FragColor = texture(Texture,TexCoords) * mod(gl_FragCoord.y, 2.0);
-		if (abs(v_pos.x) > 0.4)
-			FragColor = vec4(1.0, 0.2, 0.6, 1.0);
+		FragColor = texture(A2Texture,TexCoords) * mod(int((gl_FragCoord.y - VideoRect.x) / scale.y), 2);
 		return;
 	}
 
@@ -253,10 +258,10 @@ void main() {
 	pos.x = mix(pos.x, i.x*ps.x, 0.2);
 
 // Convergence
-	vec3 res0 = texture(Texture,pos).rgb;
-	float resr = texture(Texture,pos + dx*CONV_R).r;
-	float resg = texture(Texture,pos + dx*CONV_G).g;
-	float resb = texture(Texture,pos + dx*CONV_B).b;
+	vec3 res0 = texture(A2Texture,pos).rgb;
+	float resr = texture(A2Texture,pos + dx*CONV_R).r;
+	float resg = texture(A2Texture,pos + dx*CONV_G).g;
+	float resb = texture(A2Texture,pos + dx*CONV_B).b;
 
 	vec3 res = vec3(res0.r*(1.0-C_STR) + resr*C_STR,
 					res0.g*(1.0-C_STR) + resg*C_STR,

@@ -580,22 +580,25 @@ int main(int argc, char* argv[])
 		{
 			ImGui::Begin("Texture Viewer", &show_texture_window);
 			ImVec2 avail_size = ImGui::GetContentRegionAvail();
-            ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES + 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES, "slot %d", ImGuiSliderFlags_AlwaysClamp);
+			GLint _w, _h;
 			if (_slotnum < _SDHR_MAX_TEXTURES)
 			{
-				ImGui::Text("Texture ID: %d", (int)glhelper->get_texture_id_at_slot(_slotnum));
+				glBindTexture(GL_TEXTURE_2D, glhelper->get_texture_id_at_slot(_slotnum));
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
+				ImGui::Text("Texture ID: %d (%d x %d)", (int)glhelper->get_texture_id_at_slot(_slotnum), _w, _h);
 				ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
 			else if (_slotnum == _SDHR_MAX_TEXTURES)
 			{
-				ImGui::Text("Intermediate Texture ID: %d", (int)glhelper->get_intermediate_texture_id());
-				ImGui::Image((void*)glhelper->get_intermediate_texture_id(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
-			}
-			else if (_slotnum == (_SDHR_MAX_TEXTURES + 1))
-			{
-				ImGui::Text("Output Texture ID: %d", (int)glhelper->get_output_texture_id());
+				glBindTexture(GL_TEXTURE_2D, glhelper->get_output_texture_id());
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
+				ImGui::Text("Output Texture ID: %d (%d x %d)", (int)glhelper->get_output_texture_id(), _w, _h);
 				ImGui::Image((void*)glhelper->get_output_texture_id(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
+			glBindTexture(GL_TEXTURE_2D, 0);
 			ImGui::End();
 		}
 
