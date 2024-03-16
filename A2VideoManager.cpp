@@ -441,28 +441,28 @@ void A2VideoManager::Render()
 		bShouldInitializeRender = false;
 		
 		// image asset 0: The apple 2e US font
-		glActiveTexture(_SDHR_START_TEXTURES);
+		glActiveTexture(_SDHR_TEXTURE_UNITS_START);
 		image_assets[0].AssignByFilename(this, "assets/Apple2eFont14x16 - Regular.png");
 		// image asset 1: The alternate font
-		glActiveTexture(_SDHR_START_TEXTURES + 1);
+		glActiveTexture(_SDHR_TEXTURE_UNITS_START + 1);
 		image_assets[1].AssignByFilename(this, "assets/Apple2eFont14x16 - Alternate.png");
 		// image asset 2: The apple 2e US font 80COL
-		glActiveTexture(_SDHR_START_TEXTURES + 2);
+		glActiveTexture(_SDHR_TEXTURE_UNITS_START + 2);
 		image_assets[2].AssignByFilename(this, "assets/Apple2eFont7x16 - Regular.png");
 		// image asset 3: The alternate font 80COL
-		glActiveTexture(_SDHR_START_TEXTURES + 3);
+		glActiveTexture(_SDHR_TEXTURE_UNITS_START + 3);
 		image_assets[3].AssignByFilename(this, "assets/Apple2eFont7x16 - Alternate.png");
 		// image asset 4: LGR texture (overkill for color, useful for dithered b/w)
-		glActiveTexture(_SDHR_START_TEXTURES + 4);
+		glActiveTexture(_SDHR_TEXTURE_UNITS_START + 4);
 		image_assets[4].AssignByFilename(this, "assets/Texture_composite_lgr.png");
 		// image asset 5: HGR texture
-		glActiveTexture(_SDHR_START_TEXTURES + 5);
+		glActiveTexture(_SDHR_TEXTURE_UNITS_START + 5);
 		image_assets[5].AssignByFilename(this, "assets/Texture_composite_hgr.png");
 		// image asset 6: DHGR texture
-		glActiveTexture(_SDHR_START_TEXTURES + 6);
+		glActiveTexture(_SDHR_TEXTURE_UNITS_START + 6);
 		image_assets[6].AssignByFilename(this, "assets/Texture_composite_dhgr.png");
 		// image asset 7: The bezel for postprocessing
-		glActiveTexture(_SDHR_START_TEXTURES + 7);
+		glActiveTexture(_SDHR_TEXTURE_UNITS_START + 7);
 		image_assets[7].AssignByFilename(this, "assets/Bezel.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL AssignByFilename error: " 
