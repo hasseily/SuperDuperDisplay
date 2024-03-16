@@ -59,7 +59,7 @@ public:
 	unsigned int TBTEX = UINT_MAX;		// MosaicTile Buffer Texture
 
 	// Texture samplers of the 16 textures the meshe will use
-	// That's just 16 consecutive integers starting at _SDHR_START_TEXTURES
+	// That's just 16 consecutive integers starting at _SDHR_TEXTURE_UNITS_START
 	GLint texSamplers[_SDHR_MAX_TEXTURES];
 
 	MosaicMesh(uint32_t tile_xcount, uint32_t tile_ycount, uint32_t tile_xdim, uint32_t tile_ydim, uint8_t win_index);

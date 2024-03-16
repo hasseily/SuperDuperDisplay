@@ -17,6 +17,9 @@
 #include "shader.h"
 #include <array>
 
+// Link the OGLHelper's output texture to the input of the postprocessor
+#define _PP_INPUT_TEXTURE_UNIT _OGLHELPER_OUTPUT_TEXTURE_UNIT
+
 class PostProcessor
 {
 public:

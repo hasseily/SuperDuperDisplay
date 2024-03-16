@@ -74,7 +74,7 @@ void SDHRWindow::Update()
 };
 
 // NOTE: This (and any methods with OpenGL calls) must be called from the main thread
-// NOTE: It assumes the textures have been already bound to _SDHR_START_TEXTURES forward
+// NOTE: It assumes the textures have been already bound to _SDHR_TEXTURE_UNITS_START forward
 void SDHRWindow::Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 {
 	if (enabled) {

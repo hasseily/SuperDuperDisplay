@@ -210,12 +210,17 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId, const int 
 	}
 	
 	// Bind the texture we're given to our _POSTPROCESSOR_INPUT_TEXTURE
-	glActiveTexture(_POSTPROCESSOR_INPUT_TEXTURE);
+	glerr = glGetError();
+	glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
+	glerr = glGetError();
 	GLint last_bound_texture = 0;
-	glGetIntegeri_v(GL_TEXTURE_BINDING_2D, _POSTPROCESSOR_INPUT_TEXTURE, &last_bound_texture);
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_bound_texture);
+	glerr = glGetError();
 	glBindTexture(GL_TEXTURE_2D, inputTextureId);
+	glerr = glGetError();
 	glActiveTexture(GL_TEXTURE0);	// Target the main SDL window
-
+	glerr = glGetError();
+	
 	// How much can we scale the output quad?
 	// Always scale up in integers numbers
 	float _scale = static_cast<float>(viewportWidth) / static_cast<float>(pp_width);
@@ -266,13 +271,13 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId, const int 
 	if (!enabled) {		// basic passthrough shader
 		shaderProgram = v_ppshaders.at(0);
 		shaderProgram.use();
-		shaderProgram.setInt("Texture", _POSTPROCESSOR_INPUT_TEXTURE - GL_TEXTURE0);
+		shaderProgram.setInt("Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
 	} else {
 		shaderProgram = v_ppshaders.at(1);
 		shaderProgram.use();
 		// Update uniforms
-		shaderProgram.setInt("A2Texture", _POSTPROCESSOR_INPUT_TEXTURE - GL_TEXTURE0);
-		shaderProgram.setInt("BezelTexture", _SDHR_START_TEXTURES + 7 - GL_TEXTURE0);
+		shaderProgram.setInt("A2Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
+		shaderProgram.setInt("BezelTexture", _SDHR_TEXTURE_UNITS_START + 7 - GL_TEXTURE0);
 		shaderProgram.setInt("FrameCount", frame_count);
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
 		shaderProgram.setVec2("InputSize", glm::vec2(_w, _h));
@@ -363,7 +368,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId, const int 
 	}
 	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
 	// revert the texture assignment
-	glActiveTexture(_POSTPROCESSOR_INPUT_TEXTURE);
+	glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
 	glBindTexture(GL_TEXTURE_2D, last_bound_texture);
 	glActiveTexture(GL_TEXTURE0);
 	++frame_count;

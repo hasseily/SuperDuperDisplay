@@ -56,7 +56,7 @@ MosaicMesh::MosaicMesh(uint32_t tile_xcount, uint32_t tile_ycount, uint32_t tile
 	};
 
 	for (GLint i = 0; i < _SDHR_MAX_TEXTURES; i++) {
-		texSamplers[i] = (_SDHR_START_TEXTURES - GL_TEXTURE0) + i;
+		texSamplers[i] = (_SDHR_TEXTURE_UNITS_START - GL_TEXTURE0) + i;
 	}
 	bNeedsGPUUpdate = true;
 }
@@ -192,7 +192,7 @@ void MosaicMesh::SetupDraw()
 // render the mesh
 // NOTE: This (and any methods with OpenGL calls) must be called from the main thread
 // NOTE: It assumes both that SetupDraw() has been called 
-//		 and that the textures have been already bound to _SDHR_START_TEXTURES forward
+//		 and that the textures have been already bound to _SDHR_TEXTURE_UNITS_START forward
 void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 {
 	GLenum glerr;
