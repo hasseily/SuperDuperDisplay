@@ -71,6 +71,8 @@ out vec4 FragColor;
 
 #define SourceSize vec4(TextureSize, 1.0 / TextureSize) //either TextureSize or InputSize
 
+uniform COMPAT_PRECISION float POSTPROCESSING_LEVEL;
+
 uniform COMPAT_PRECISION float M_TYPE;
 uniform COMPAT_PRECISION float BGR;
 uniform COMPAT_PRECISION float Maskl;
@@ -81,8 +83,8 @@ uniform COMPAT_PRECISION float C_STR;
 uniform COMPAT_PRECISION float CONV_R;
 uniform COMPAT_PRECISION float CONV_G;
 uniform COMPAT_PRECISION float CONV_B;
-uniform COMPAT_PRECISION float SCANLINE_WEIGHT;
 uniform COMPAT_PRECISION float SCANLINE_TYPE;
+uniform COMPAT_PRECISION float SCANLINE_WEIGHT;
 uniform COMPAT_PRECISION float INTERLACE;
 uniform COMPAT_PRECISION float WARPX;
 uniform COMPAT_PRECISION float WARPY;
@@ -218,13 +220,13 @@ vec2 Warp(vec2 pos) {
 
 void main() {
 	
-	if (SCANLINE_TYPE == 0.0) {
+	if (POSTPROCESSING_LEVEL == 0.0) {
 		FragColor = texture(A2Texture,TexCoords);
 		return;
 	}
 	
 	// Apply simple horizontal scanline if required and exit
-	if (SCANLINE_TYPE == 1.0) {
+	if (POSTPROCESSING_LEVEL == 1.0) {
 		FragColor = texture(A2Texture,TexCoords) * mod(int((gl_FragCoord.y - VideoRect.x) / scale.y), 2);
 		return;
 	}
@@ -345,8 +347,10 @@ void main() {
 		if (corn.y <= corn.x || corn.x < 0.0001 )
 			res = vec3(0.0);
 
-
 	FragColor = vec4(res, 1.0);
+	if (SCANLINE_TYPE == 1.0) {
+		FragColor.rgb = FragColor.rgb * mod(int((gl_FragCoord.y - VideoRect.x) / scale.y), 2);
+	}
 }
 
 #endif

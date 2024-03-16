@@ -51,6 +51,7 @@ static int frame_count = 0;	// Frame count for interlacing
 static int v_presets = 0;	// Preset chosen
 
 // Shader parameter variables
+int p_postprocessing_level = 0;
 bool p_bzl = false;
 bool p_corner = false;
 bool p_ext_gamma = false;
@@ -112,6 +113,7 @@ PostProcessor::~PostProcessor()
 
 void PostProcessor::SaveState(int profile_id) {
 	nlohmann::json jsonState = {
+		{"p_postprocessing_level", p_postprocessing_level},
 		{"p_bzl", p_bzl},
 		{"p_corner", p_corner},
 		{"p_ext_gamma", p_ext_gamma},
@@ -162,6 +164,7 @@ void PostProcessor::LoadState(int profile_id) {
 	if (file.is_open()) {
 		file >> jsonState;
 		
+		p_postprocessing_level = jsonState["p_postprocessing_level"];
 		p_bzl = jsonState["p_bzl"];
 		p_corner = jsonState["p_corner"];
 		p_ext_gamma = jsonState["p_ext_gamma"];
@@ -267,7 +270,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	
 	// Choose the shader
 	Shader shaderProgram;
-	if (!enabled) {		// basic passthrough shader
+	if (p_postprocessing_level == 0) {		// basic passthrough shader
 		shaderProgram = v_ppshaders.at(0);
 		shaderProgram.use();
 		shaderProgram.setInt("Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
@@ -285,6 +288,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 													  quadViewportCoords[3] - quadViewportCoords[1]));
 		shaderProgram.setVec4("VideoRect", quadViewportCoords);
 		
+		shaderProgram.setFloat("POSTPROCESSING_LEVEL", (float)p_postprocessing_level);
 		shaderProgram.setFloat("SCANLINE_TYPE", (float)p_scanline_type);
 		shaderProgram.setFloat("SCANLINE_WEIGHT", p_scanline_weight);
 		shaderProgram.setFloat("INTERLACE", p_interlace ? 1.0f : 0.0f);
@@ -378,8 +382,6 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 	if (p_open)
 	{
 		ImGui::Begin("Post Processing CRT Shader", p_open);
-		ImGui::Checkbox("Post Processing Enabled", &enabled);
-		
 		// Handle presets. Disable load/save if the chosen button is "Off"
 		ImGui::Text("[ PRESETS ]");
 		if (v_presets == 0)
@@ -423,11 +425,13 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 		}
 
 		
+		/*
 		 // enable to reload the shader
 		if (ImGui::Button("Reload Shader"))
 		{
 			v_ppshaders.at(0).build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");
 		}
+		*/
 		
 		/*	// Enable to choose the shader
 		if (ImGui::Button("Slot 1 Shader"))
@@ -450,20 +454,28 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 		}
 		*/
 		ImGui::PushItemWidth(200);
+
+		// PP Type
 		ImGui::Separator();
-		
-		// Scanline and Interlacing
-		ImGui::Text("[ SCANLINE SETTINGS ]");
-		ImGui::RadioButton("None##Scanline", &p_scanline_type, 0); ImGui::SameLine();
-		ImGui::RadioButton("Simple##Scanline", &p_scanline_type, 1); ImGui::SameLine();
-		ImGui::RadioButton("CRT##Scanline", &p_scanline_type, 2);
-		if (p_scanline_type == 2)
-		{
-			ImGui::SliderFloat("Scanline Weight", &p_scanline_weight, 0.001f, 0.5f, "%.2f");
-			ImGui::Checkbox("Interlacing On/Off", &p_interlace);
+		ImGui::Text("[ POSTPROCESSING LEVEL ]");
+		ImGui::RadioButton("None##PPLEVEL", &p_postprocessing_level, 0); ImGui::SameLine();
+		ImGui::RadioButton("Scanline only##PPLEVEL", &p_postprocessing_level, 1); ImGui::SameLine();
+		ImGui::RadioButton("Full CRT##PPLEVEL", &p_postprocessing_level, 2);
 
+		if (p_postprocessing_level > 1) {
 			ImGui::Separator();
-
+			// Scanline and Interlacing
+			ImGui::Text("[ SCANLINE TYPE ]");
+			ImGui::RadioButton("None##SCANLINETYPE", &p_scanline_type, 0); ImGui::SameLine();
+			ImGui::RadioButton("Simple##SCANLINETYPE", &p_scanline_type, 1); ImGui::SameLine();
+			ImGui::RadioButton("Complex##SCANLINETYPE", &p_scanline_type, 2);
+			if (p_scanline_type == 2) {
+				ImGui::SliderFloat("Scanline Weight", &p_scanline_weight, 0.001f, 0.5f, "%.2f");
+				ImGui::Checkbox("Interlacing On/Off", &p_interlace);
+			}
+			
+			ImGui::Separator();
+			
 			// Mask Settings
 			ImGui::Text("[ MASK SETTINGS ]");
 			ImGui::RadioButton("None##Mask", &p_m_type, 0); ImGui::SameLine();
@@ -476,7 +488,7 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 			ImGui::SliderFloat("Mask Brightness Dark", &p_maskl, 0.0f, 1.0f, "%.2f");
 			ImGui::SliderFloat("Mask Brightness Bright", &p_maskh, 0.0f, 1.0f, "%.2f");
 			ImGui::Separator();
-
+			
 			// Geometry Settings
 			ImGui::Text("[ GEOMETRY SETTINGS ]");
 			ImGui::Checkbox("Bezel On/Off", &p_bzl);
@@ -489,7 +501,7 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 			ImGui::Checkbox("Corners Cut", &p_corner);
 			ImGui::Checkbox("Vignette On/Off", &p_vig);
 			ImGui::Separator();
-
+			
 			// Color Settings
 			ImGui::Text("[ COLOR SETTINGS ]");
 			ImGui::SliderFloat("Scan/Mask Brightness Dependence", &p_br_dep, 0.0f, 0.5f, "%.3f");
@@ -502,7 +514,7 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 			ImGui::SliderFloat("Blue <-to-> Green Hue", &p_gb, -0.25f, 0.25f, "%.2f");
 			ImGui::Checkbox("External Gamma In (Glow etc)", &p_ext_gamma);
 			ImGui::Separator();
-
+			
 			// Convergence Settings
 			ImGui::Text("[ CONVERGENCE SETTINGS ]");
 			ImGui::SliderFloat("Convergence Overall Strength", &p_c_str, 0.0f, 0.5f, "%.2f");
@@ -510,7 +522,7 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 			ImGui::SliderFloat("Convergence Green X-axis", &p_conv_g, -3.0f, 3.0f, "%.2f");
 			ImGui::SliderFloat("Convergence Blue X-Axis", &p_conv_b, -3.0f, 3.0f, "%.2f");
 			ImGui::Checkbox("Potato Boost(Simple Gamma, adjust Mask)", &p_potato);
-		}	// p_scanline_type == 2
+		}
 
 		ImGui::PopItemWidth();
 		ImGui::End();

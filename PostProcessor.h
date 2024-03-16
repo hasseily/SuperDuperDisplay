@@ -36,7 +36,6 @@ public:
 	void DisplayImGuiPPWindow(bool* p_open);
 
 	// public properties
-	bool enabled = true;
 	std::array<Shader, 5>v_ppshaders;
 private:
 	//////////////////////////////////////////////////////////////////////////
