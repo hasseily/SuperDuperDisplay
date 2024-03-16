@@ -199,7 +199,7 @@ void PostProcessor::LoadState(int profile_id) {
 }
 
 
-void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId, const int _w, const int _h)
+void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 {
 	int viewportWidth, viewportHeight;
 	SDL_GL_GetDrawableSize(window, &viewportWidth, &viewportHeight);
@@ -210,16 +210,15 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId, const int 
 	}
 	
 	// Bind the texture we're given to our _POSTPROCESSOR_INPUT_TEXTURE
-	glerr = glGetError();
+	// And get its actual size.
 	glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
-	glerr = glGetError();
 	GLint last_bound_texture = 0;
 	glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_bound_texture);
-	glerr = glGetError();
 	glBindTexture(GL_TEXTURE_2D, inputTextureId);
-	glerr = glGetError();
+	GLint texwidth, texheight;
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texwidth);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texheight);
 	glActiveTexture(GL_TEXTURE0);	// Target the main SDL window
-	glerr = glGetError();
 	
 	// How much can we scale the output quad?
 	// Always scale up in integers numbers
@@ -280,8 +279,8 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId, const int 
 		shaderProgram.setInt("BezelTexture", _SDHR_TEXTURE_UNITS_START + 7 - GL_TEXTURE0);
 		shaderProgram.setInt("FrameCount", frame_count);
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
-		shaderProgram.setVec2("InputSize", glm::vec2(_w, _h));
-		shaderProgram.setVec2("TextureSize", glm::vec2(_A2VIDEO_MIN_WIDTH, _A2VIDEO_MIN_HEIGHT));
+		shaderProgram.setVec2("InputSize", glm::vec2(texwidth, texheight));
+		shaderProgram.setVec2("TextureSize", glm::vec2(texwidth, texheight));
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadViewportCoords[2] - quadViewportCoords[0],
 													  quadViewportCoords[3] - quadViewportCoords[1]));
 		shaderProgram.setVec4("VideoRect", quadViewportCoords);
