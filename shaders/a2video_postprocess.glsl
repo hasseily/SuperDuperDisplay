@@ -41,13 +41,12 @@ uniform COMPAT_PRECISION int FrameCount;
 uniform COMPAT_PRECISION vec2 OutputSize;
 uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
-uniform mat4 MVPMatrix;
 
 void main()
 {
-	gl_Position = MVPMatrix * vec4(aPos, 0.0, 1.0);
+	gl_Position = vec4(aPos, 0.0, 1.0);
 	TexCoords = TexCoord;
-	scale = TextureSize.xy/InputSize.xy;
+	scale = OutputSize.xy/InputSize.xy;
 	ps = 1.0/TextureSize.xy;
 	v_pos = gl_Position.xy;
 }
@@ -227,7 +226,8 @@ void main() {
 	
 	// Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1.0) {
-		FragColor = texture(A2Texture,TexCoords) * mod(int((gl_FragCoord.y - VideoRect.x) / scale.y), 2);
+		FragColor = texture(A2Texture,TexCoords);
+		FragColor.rgb = FragColor.rgb * (2.0 - mod(gl_FragCoord.y / int(scale.y), 2));
 		return;
 	}
 
@@ -349,7 +349,7 @@ void main() {
 
 	FragColor = vec4(res, 1.0);
 	if (SCANLINE_TYPE == 1.0) {
-		FragColor.rgb = FragColor.rgb * mod(int((gl_FragCoord.y - VideoRect.x) / scale.y), 2);
+		FragColor.rgb = FragColor.rgb * (2.0 - mod(gl_FragCoord.y / int(scale.y), 2));
 	}
 }
 

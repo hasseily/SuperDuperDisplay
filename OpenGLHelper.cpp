@@ -184,6 +184,7 @@ void OpenGLHelper::rescale_framebuffers(uint32_t width, uint32_t height)
 {
 	if ((fb_width == width) && (fb_height == height))
 		return;
+	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
 	GLenum glerr;
 	glActiveTexture(GL_TEXTURE0);
 	for (int i = 0; i < 2; ++i) {
@@ -194,7 +195,7 @@ void OpenGLHelper::rescale_framebuffers(uint32_t width, uint32_t height)
 			std::cerr << "OpenGL rescale_framebuffer error: " << glerr << std::endl;
 		}
 	}
-	// Always bind the first output texture to GL_TEXTURE0
+	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
 	fb_width = width;
 	fb_height = height;

@@ -24,34 +24,16 @@ PostProcessor* PostProcessor::s_instance;
 // viewport size in the render function. It will also resize itself to maximize the available space,
 // but only in integer scale
 
-constexpr int wobble_max_width = 20;
-constexpr int pp_width = _A2VIDEO_SHR_WIDTH + 2 * wobble_max_width;
-constexpr float pp_half_width = static_cast<float>(pp_width / 2);
-constexpr int pp_height = _A2VIDEO_SHR_HEIGHT;
-constexpr float pp_half_height = static_cast<float>(pp_height / 2);
 static GLuint quadVAO = UINT_MAX;
 static GLuint quadVBO = UINT_MAX;
-static GLfloat quadVertices[] = {
-		// Positions						// Texture Coords
-		-pp_half_width, pp_half_height,  	0.0f, 0.0f,
-		pp_half_width, -pp_half_height,  	1.0f, 1.0f,
-		pp_half_width, pp_half_height,  	1.0f, 0.0f,
-
-		-pp_half_width, pp_half_height,  	0.0f, 0.0f,
-		-pp_half_width, -pp_half_height,  	0.0f, 1.0f,
-		pp_half_width, -pp_half_height,  	1.0f, 1.0f
-	};
-static glm::vec4 quadCorners[2] = {	// for calculating the actual position of the quad in the viewport
-	glm::vec4(-pp_half_width, -pp_half_height, 0.0f, 1.0f),
-	glm::vec4(pp_half_width, pp_half_height, 0.0f, 1.0f)
-};
-static glm::vec4 quadViewportCoords = glm::vec4(0,0,0,0);	// left, top, right, bottom
+// The quad vertices will change based on the change in the requested screen size
+static glm::dvec4 quadViewportCoords = glm::dvec4(0,0,0,0);	// left, top, right, bottom
 
 static int frame_count = 0;	// Frame count for interlacing
 static int v_presets = 0;	// Preset chosen
 
 // Shader parameter variables
-int p_postprocessing_level = 0;
+int p_postprocessing_level = 1;
 bool p_bzl = false;
 bool p_corner = false;
 bool p_ext_gamma = false;
@@ -79,7 +61,7 @@ float p_rb = 0.0f;
 float p_rg = 0.0f;
 float p_saturation = 1.0f;
 float p_scanline_weight = 0.3f;
-int p_scanline_type = 0;
+int p_scanline_type = 2;
 float p_slotw = 3.0f;
 float p_warpx = 0.0f;
 float p_warpy = 0.0f;
@@ -207,6 +189,8 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	int viewportWidth, viewportHeight;
 	SDL_GL_GetDrawableSize(window, &viewportWidth, &viewportHeight);
 
+	GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
+	glViewport(0, 0, viewportWidth, viewportHeight);
 	GLenum glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 0: " << glerr << std::endl;
@@ -225,48 +209,33 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	
 	// How much can we scale the output quad?
 	// Always scale up in integers numbers
-	float _scale = static_cast<float>(viewportWidth) / static_cast<float>(pp_width);
-	_scale = std::min(_scale, static_cast<float>(viewportHeight) / static_cast<float>(pp_height));
+	float _scale = static_cast<float>(viewportWidth) / static_cast<float>(texwidth);
+	_scale = std::min(_scale, static_cast<float>(viewportHeight) / static_cast<float>(texheight));
 	if (_scale > 1.0f)
 		_scale = std::floorf(_scale);
-	glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(_scale, _scale, 1.0f));
 
-	// Translation to center the output quad
-	// The quad's origin is its center
-	float tx = viewportWidth / 2.0f;
-	float ty = viewportHeight / 2.0f;
-	glm::vec3 translation(tx, ty, 0.0f);
+	// Determine the quad's origin
+	int quadWidth = static_cast<int>(_scale * texwidth);
+	int quadHeight = static_cast<int>(_scale * texheight);
 
-	// Final model matrix
-	glm::mat4 model = glm::translate(glm::mat4(1.0f), translation) * scale;
+	quadViewportCoords.x = static_cast<double>(-quadWidth) / static_cast<double>(viewportWidth);		// left
+	quadViewportCoords.y = static_cast<double>(-quadHeight) / static_cast<double>(viewportHeight);	// top
+	quadViewportCoords.z = static_cast<double>(quadWidth) / static_cast<double>(viewportWidth);		// right
+	quadViewportCoords.w = static_cast<double>(quadHeight) / static_cast<double>(viewportHeight);		// bottom
 
-	// Orthographic projection covering the viewport
-	glm::mat4 projection = glm::ortho(
-		0.0f, static_cast<float>(viewportWidth),	// left, right
-		0.0f, static_cast<float>(viewportHeight),	// bottom, top
-		-1.0f, 1.0f);								// near, far
-	
-	glm::mat4 MVPMatrix = projection * model;
-	
-	// Now calculate the quad's position in the viewport by applying to it the MVP matrix
-	// just like it will be done in the vertex shader
-	// Transform the corners through the MVP matrix and map to viewport coordinates
-	for (int i = 0; i < 2; ++i) {
-		// Transform to clip space
-		glm::vec4 clipSpace = MVPMatrix * quadCorners[i];
-		glm::vec3 ndc = glm::vec3(clipSpace) / clipSpace.w; // Should be redundant in orthographic projection
-		// Map from NDC to viewport coordinates. NDC [-1, 1] -> viewport [0, viewportWidth] or [0, viewportHeight]
-		if (i == 0) {
-			quadViewportCoords[0] = (ndc.x + 1.0f) * 0.5f * viewportWidth;	// left
-			quadViewportCoords[1] = (ndc.x + 1.0f) * 0.5f * viewportHeight;	// top
-		} else {
-			quadViewportCoords[2] = (ndc.x + 1.0f) * 0.5f * viewportWidth;	// right
-			quadViewportCoords[3] = (ndc.x + 1.0f) * 0.5f * viewportHeight;	// bottom
-		}
+	GLdouble quadVertices[] = {
+		// Positions												// Texture Coords
+		quadViewportCoords.x, quadViewportCoords.w,  	0.0f, 0.0f,
+		quadViewportCoords.z, quadViewportCoords.y,  	1.0f, 1.0f,
+		quadViewportCoords.z, quadViewportCoords.w,  	1.0f, 0.0f,
 		
+		quadViewportCoords.x, quadViewportCoords.w,  	0.0f, 0.0f,
+		quadViewportCoords.x, quadViewportCoords.y,  	0.0f, 1.0f,
+		quadViewportCoords.z, quadViewportCoords.y,  	1.0f, 1.0f
+	};
+	
 //		std::cout << "Viewport coordinates:" << ": (" << quadViewportCoords[0] << ", " << quadViewportCoords[1]
 //		<< "), (" << quadViewportCoords[2] << ", " << quadViewportCoords[3] << ")" << std::endl;
-	}
 	
 	// Choose the shader
 	Shader shaderProgram;
@@ -284,8 +253,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
 		shaderProgram.setVec2("InputSize", glm::vec2(texwidth, texheight));
 		shaderProgram.setVec2("TextureSize", glm::vec2(texwidth, texheight));
-		shaderProgram.setVec2("OutputSize", glm::vec2(quadViewportCoords[2] - quadViewportCoords[0],
-													  quadViewportCoords[3] - quadViewportCoords[1]));
+		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
 		shaderProgram.setVec4("VideoRect", quadViewportCoords);
 		
 		shaderProgram.setFloat("POSTPROCESSING_LEVEL", (float)p_postprocessing_level);
@@ -328,8 +296,6 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 		std::cerr << "OpenGL error PP 1: " << glerr << std::endl;
 	}
 	
-	// Set the MVPMatrix
-	shaderProgram.setMat4("MVPMatrix", MVPMatrix);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 2: " << glerr << std::endl;
@@ -347,14 +313,16 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 
 			// Position attribute
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)0);
+		glVertexAttribPointer(0, 2, GL_DOUBLE, GL_FALSE, 4 * sizeof(GLdouble), (GLvoid*)0);
 
 			// Texture coordinate attribute
 		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)(2 * sizeof(GLfloat)));
+		glVertexAttribPointer(1, 2, GL_DOUBLE, GL_FALSE, 4 * sizeof(GLdouble), (GLvoid*)(2 * sizeof(GLdouble)));
 
 			// Unbind the VAO
 		glBindVertexArray(0);
+	} else {
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
 	}
 
 	// Render the fullscreen quad
@@ -362,8 +330,6 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	glClearColor(0.f, 0.f, 0.f, 0.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBindVertexArray(quadVAO);
-	GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
-	glViewport(0, 0, viewportWidth, viewportHeight);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
