@@ -69,9 +69,6 @@ public:
 	ImageAsset image_assets[8];
 	A2WindowBeam windowsbeam[A2VIDEOBEAM_TOTAL_COUNT];	// beam racing GPU render
 
-	// Margins when rendering in a window (pixels)
-	int windowMargins = 10;
-
 	uint64_t current_frame_idx = 0;
 	uint64_t rendered_frame_idx = UINT64_MAX;
 
