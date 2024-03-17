@@ -583,62 +583,6 @@ int main(int argc, char* argv[])
 			ImGui::End();
 		}
 
-        // Add the rendered image, using borders
-        int _w, _h;
-        SDL_GL_GetDrawableSize(window, &_w, &_h);
-		int marginx = 0;
-		int marginy = 0;
-        if (sdhrManager->IsSdhrEnabled())
-        {
-			marginx = marginy = (float)sdhrManager->windowMargins;
-			ImGui::GetBackgroundDrawList()->AddImage(
-				(void*)glhelper->get_output_texture_id(),
-				ImVec2(marginx, marginy),
-				ImVec2(_w - marginx, _h - marginy),
-				ImVec2(0, 0),
-				ImVec2(1, 1)
-			);
-        }
-        else {
-            // In case of the Apple 2 video modes, let's make sure the
-            // rendered image is always in the proper ratio
-			// Use ints all the way until AddImage() or ImGui will not scale it perfectly
-            // Start with the requested margins
-			marginx = marginy = a2VideoManager->windowMargins;
-            auto _ss = a2VideoManager->ScreenSize();
-			
-			// Calculate the drawable area considering the margins
-			int drawableWidth = _w - 2 * marginx;
-			int drawableHeight = _h - 2 * marginy;
-			
-			// Determine the maximum integer scale factor that fits the image within the drawable area
-			int scaleFactor = 1;
-			while ((scaleFactor + 1) * _ss.x <= drawableWidth && (scaleFactor + 1) * _ss.y <= drawableHeight) {
-				scaleFactor++;
-			}
-			int scaledx = _ss.x * scaleFactor;
-			int scaledy = _ss.y * scaleFactor;
-			
-			// Calculate the starting position (x, y) to center the scaled image
-			int originx = marginx + (drawableWidth - scaledx) / 2;
-			int originy = marginy + (drawableHeight - scaledy) / 2;
-
-			/*
-			ImGui::GetBackgroundDrawList()->AddRectFilled(
-				ImVec2(marginx, marginy),
-				ImVec2(marginx + drawableWidth, marginy + drawableHeight),
-				a2VideoManager->color_background
-				);
-			ImGui::GetBackgroundDrawList()->AddImage(
-				(void*)glhelper->get_output_texture_id(),
-				ImVec2(originx, originy),
-				ImVec2(originx + scaledx, originy + scaledy),
-				ImVec2(0, 0),
-				ImVec2(1, 1)
-				);
-			 */
-        }
-
 		// Rendering
 		ImGui::Render();
 
