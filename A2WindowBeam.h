@@ -30,10 +30,13 @@ public:
 	void SetEnabled(bool val) { 
 		enabled = val;
 	}
+	bool IsDefined() const { return defined; }
+
 	bool bNeedsGPUVertexUpdate = true;	// Update the GPU if the vertex data has changed
 
 	A2WindowBeam()
 		: enabled(false)
+		, defined(false)
 		, video_mode(A2VIDEOBEAM_LEGACY)
 		, shaderProgram(nullptr)
 	{
@@ -60,6 +63,7 @@ public:
 private:
 	void Reset();
 
+	bool defined;           		// if not defined, can't be used
     bool enabled;           		// if not enabled, doesn't get rendered
 	A2VideoModeBeam_e video_mode;	// Which video mode is used
 	Shader* shaderProgram;			// Shader used

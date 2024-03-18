@@ -24,35 +24,38 @@ A2WindowBeam::~A2WindowBeam()
 void A2WindowBeam::Define(A2VideoModeBeam_e _video_mode, Shader* _shaderProgram)
 {
 	this->Reset();
-	video_mode = _video_mode;
 	shaderProgram = _shaderProgram;
 
-	switch (video_mode) {
-	case A2VIDEOBEAM_LEGACY:
-		screen_count = uXY({ 560u , 384u });
-		break;
-	case A2VIDEOBEAM_SHR:
-		screen_count = uXY({ 640u , 400u });
-		break;
-	default:
-		screen_count = uXY({ 560u , 384u });
-		break;
+	if (!(defined && (_video_mode == video_mode)))
+	{
+		video_mode = _video_mode;
+		switch (video_mode) {
+		case A2VIDEOBEAM_LEGACY:
+			screen_count = uXY({ 560u , 384u });
+			break;
+		case A2VIDEOBEAM_SHR:
+			screen_count = uXY({ 640u , 400u });
+			break;
+		default:
+			screen_count = uXY({ 560u , 384u });
+			break;
 
+		}
+		vertices[0].PixelPos = glm::vec2(0, screen_count.y);	// top left
+		vertices[1].PixelPos = glm::vec2(screen_count.x, 0);	// bottom right
+		vertices[2].PixelPos = glm::vec2(screen_count.x, screen_count.y);	// top right
+		vertices[3].PixelPos = glm::vec2(0, screen_count.y);	// top left
+		vertices[4].PixelPos = glm::vec2(0, 0);	// bottom left
+		vertices[5].PixelPos = glm::vec2(screen_count.x, 0);	// bottom right
+
+		bNeedsGPUVertexUpdate = true;
+		defined = true;
 	}
-	vertices[0].PixelPos = glm::vec2(0				, screen_count.y);	// top left
-	vertices[1].PixelPos = glm::vec2(screen_count.x	, 0				);	// bottom right
-	vertices[2].PixelPos = glm::vec2(screen_count.x	, screen_count.y);	// top right
-	vertices[3].PixelPos = glm::vec2(0				, screen_count.y);	// top left
-	vertices[4].PixelPos = glm::vec2(0				, 0				);	// bottom left
-	vertices[5].PixelPos = glm::vec2(screen_count.x	, 0				);	// bottom right
-
-	bNeedsGPUVertexUpdate = true;
-
 }
 
 void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 {
-	if (!IsEnabled())
+	if (!(defined && enabled))
 		return;
 	if (shaderProgram == nullptr)
 		return;
