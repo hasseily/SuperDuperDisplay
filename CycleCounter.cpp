@@ -44,11 +44,10 @@ void CycleCounter::Reset()
 
 void CycleCounter::IncrementCycles(int inc, bool isVBL)
 {
-	(void)isVBL; // mark as unused
 	m_cycle += inc;
 	m_cycle = (m_cycle % cycles_total);
-	/*
-	* XXX: WE DON'T TRY TO UPDATE VBL OR REGION AUTOMATICALLY
+
+	// Update VBL and region automatically with 0xC019
 	if (isVBL)
 	{
 		if (m_cycle < CYCLES_SCREEN)
@@ -62,16 +61,21 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 				else
 					SetVideoRegion(VideoRegion_e::NTSC);
 			}
-			else {
-				m_prev_vbl_start = m_cycle;
-				m_cycle = CYCLES_SCREEN;
-				m_cycle_alignments++;
-				std::cout << "VBL Alignment " << m_cycle_alignments 
-					<< ": " << m_prev_vbl_start << " ---> " << m_cycle << std::endl;
+
+			m_prev_vbl_start = m_cycle;
+			while (m_cycle < CYCLES_SCREEN)	// move m_cycle to VBLANK start
+			{
+				bIsVBL = false;
+				bIsHBL = (GetByteXPos() < CYCLES_HBLANK);
+				A2VideoManager::GetInstance()->BeamIsAtPosition(GetByteXPos(), GetScanline());
+				++m_cycle;
 			}
+			m_cycle_alignments++;
+			std::cout << "VBL Alignment " << m_cycle_alignments
+				<< ": " << m_prev_vbl_start << " ---> " << m_cycle << std::endl;
 		}
 	}
-	*/
+
 	bIsVBL = (m_cycle >= CYCLES_SCREEN);
 	bIsHBL = (GetByteXPos() < CYCLES_HBLANK);
 	A2VideoManager::GetInstance()->BeamIsAtPosition(GetByteXPos(), GetScanline());
