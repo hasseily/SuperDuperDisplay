@@ -217,7 +217,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	float _scale = static_cast<float>(viewportWidth) / static_cast<float>(texwidth);
 	_scale = std::min(_scale, static_cast<float>(viewportHeight) / static_cast<float>(texheight));
 	if (_scale > 1.0f)
-		_scale = std::floorf(_scale);
+		_scale = std::floor(_scale);
 
 	// Determine the quad's origin
 	int quadWidth = static_cast<int>(_scale * texwidth);

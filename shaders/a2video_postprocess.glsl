@@ -227,7 +227,7 @@ void main() {
 	// Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1.0) {
 		FragColor = texture(A2Texture,TexCoords);
-		FragColor.rgb = FragColor.rgb * (2.0 - mod(gl_FragCoord.y / int(scale.y), 2));
+		FragColor.rgb = FragColor.rgb * (2.0 - mod(gl_FragCoord.y / scale.y, 2.0));
 		return;
 	}
 
@@ -349,7 +349,7 @@ void main() {
 
 	FragColor = vec4(res, 1.0);
 	if (SCANLINE_TYPE == 1.0) {
-		FragColor.rgb = FragColor.rgb * (2.0 - mod(gl_FragCoord.y / int(scale.y), 2));
+		FragColor.rgb = FragColor.rgb * (2.0 - mod(gl_FragCoord.y / scale.y, 2.0));
 	}
 }
 
