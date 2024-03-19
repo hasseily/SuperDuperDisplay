@@ -10,7 +10,6 @@
 #include <queue>
 
 #include "common.h"
-#include "OpenGLHelper.h"
 #include "SDHRWindow.h"
 
 enum DATASTATE_e
@@ -179,14 +178,23 @@ private:
 	void DefineTileset(uint8_t tileset_index, uint16_t num_entries, uint16_t xdim, uint16_t ydim,
 		uint8_t asset_index, uint8_t* offsets);
 
+	void create_framebuffer(uint32_t width, uint32_t height);
+	void bind_framebuffer();
+	void unbind_framebuffer();
+	void rescale_framebuffer(uint32_t width, uint32_t height);
+
+	// thread safe
+	bool request_framebuffer_resize(uint32_t width, uint32_t height);
+	void get_framebuffer_size(uint32_t* width, uint32_t* height);
 
 //////////////////////////////////////////////////////////////////////////
 // Internal data
 //////////////////////////////////////////////////////////////////////////
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
 											// routines like clearing out the image assets
-
-	bool bSDHREnabled = false;	// is SDHR enabled?
+	bool bSDHREnabled = false;				// is SDHR enabled?
+	bool bIsUsingPerspective = false;		// is it currently using perspective?
+	bool bDidChangeResolution = false;		// did the resolution change?
 
 	std::vector<uint8_t> command_buffer;
 	bool error_flag = false;

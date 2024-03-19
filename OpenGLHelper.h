@@ -10,13 +10,10 @@
 #include "camera.h"
 
 /*
-	This class has helper methods to manage textures and the main framebuffers.
-	There are 2 framebuffers:
-		- 0: The framebuffer that the video managers write to
-		- 1: The postprocessing framebuffer that takes as input framebuffer 0
+	This class has helper methods for versioning, managing textures...
+	It does not manage any framebuffers
 
-	You should not need to deal with framebuffer 1. It is automatically managed
-	and all postprocessing is managed by the PostProcessor singleton
+	TODO: REMOVE ALL COMMENTED OUT CODE ONCE IT'S REFACTORED OUT
 */
 class OpenGLHelper
 {
@@ -34,23 +31,24 @@ public:
 	void set_gl_version();	// must be called after SDL_Init()
 	const std::string* get_glsl_version();	// returns the glsl version string
 	void load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID);
-	GLuint get_output_texture_id() { return output_texture_id; };	// output texture id of the final framebuffer
 	GLuint get_texture_id_at_slot(int slot);	// returns the opengl-generated texture id for this tex slot
-	void create_framebuffers(uint32_t width, uint32_t height);	// also binds it
-	void bind_framebuffer();	// Binds the correct framebuffer, depending on the postprocessing needs
-	void unbind_framebuffer();
-	void rescale_framebuffers(uint32_t width, uint32_t height);
-	void setup_render();
-	void finalize_render();
+//	GLuint get_output_texture_id() { return output_texture_id; };	// output texture id of the final framebuffer
+//	void create_framebuffers(uint32_t width, uint32_t height);	// also binds it
+//	void bind_framebuffer();	// Binds the correct framebuffer, depending on the postprocessing needs
+//	void unbind_framebuffer();
+//	void rescale_framebuffers(uint32_t width, uint32_t height);
+//	void setup_render();
+//	void finalize_render();
 
 	// METHODS THAT CAN BE CALLED FROM ANY THREAD
-	bool request_framebuffer_resize(uint32_t width, uint32_t height);
-	void get_framebuffer_size(uint32_t* width, uint32_t* height);
-	uint32_t get_frame_ticks();	// get the global tick value for the current frame
+//	bool request_framebuffer_resize(uint32_t width, uint32_t height);
+//	void get_framebuffer_size(uint32_t* width, uint32_t* height);
+//	uint32_t get_frame_ticks();	// get the global tick value for the current frame
 
 	// The created texture ids (max is _SDHR_MAX_TEXTURES)
 	std::vector<GLuint>v_texture_ids;
 
+	// TODO: REFACTOR CAMERA TO SDHRMANAGER
 	// Camera for World -> View matrix transform
 	Camera camera = Camera(
 		_SCREEN_DEFAULT_WIDTH / 2.f, _SCREEN_DEFAULT_HEIGHT / 2.f,			// x,y
@@ -81,22 +79,20 @@ private:
 		Initialize();
 	}
 
-	GLuint output_texture_id;
-	GLuint FBO = UINT_MAX;
+//	GLuint output_texture_id;
+//	GLuint FBO = UINT_MAX;
 
-	uint32_t fb_width = _SCREEN_DEFAULT_WIDTH;
-	uint32_t fb_height = _SCREEN_DEFAULT_HEIGHT;
+//	uint32_t fb_width = _SCREEN_DEFAULT_WIDTH;
+//	uint32_t fb_height = _SCREEN_DEFAULT_HEIGHT;
 
-	uint32_t fb_width_requested = UINT32_MAX;
-	uint32_t fb_height_requested = UINT32_MAX;
+//	uint32_t fb_width_requested = UINT32_MAX;
+//	uint32_t fb_height_requested = UINT32_MAX;
 
-	uint32_t frame_ticks;
+//	uint32_t frame_ticks;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Internal attributes
 	//////////////////////////////////////////////////////////////////////////
-	bool bIsUsingPerspective = false;	// is it currently using perspective?
-	bool bDidChangeResolution = false;	// did the resolution change?
 	std::string glsl_version = "#version 100";
 };
 #endif // OPENGLHELPER_H

@@ -44,7 +44,8 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _A2_MEMORY_SHADOW_BEGIN 0x200
 #define _A2_MEMORY_SHADOW_END 0xC000
 
-#define _OGLHELPER_OUTPUT_TEXTURE_UNIT GL_TEXTURE15
+// This is the input texture unit that the postprocessor will use to generate the final output
+#define _POSTPROCESS_TEXTURE_UNIT GL_TEXTURE15
 
 // DEFINITIONS OF SDHR SPECS
 #define _SDHR_SERVER_PORT 8080
@@ -74,8 +75,6 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _A2VIDEO_SHR_SCB_START 0x9D00	// scanline control bytes: 1 per line, 200 total
 #define _A2VIDEO_SHR_PALETTE_START 0x9E00
 
-#define _SCREEN_DEFAULT_WIDTH  _A2VIDEO_MIN_WIDTH
-#define _SCREEN_DEFAULT_HEIGHT _A2VIDEO_MIN_HEIGHT
 
 // SHADERS
 #define _SHADER_A2_VERTEX_DEFAULT "shaders/a2video.vert"

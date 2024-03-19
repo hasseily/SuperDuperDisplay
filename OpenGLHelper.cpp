@@ -29,8 +29,10 @@ void OpenGLHelper::Initialize()
 
 OpenGLHelper::~OpenGLHelper()
 {
-	glDeleteFramebuffers(1, &FBO);
-	glDeleteTextures(1, &output_texture_id);
+	for each (auto texid in v_texture_ids)
+	{
+		glDeleteTextures(1, &texid);
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -141,7 +143,7 @@ void OpenGLHelper::create_framebuffers(uint32_t width, uint32_t height)
 
 	glGenFramebuffers(1, &FBO);
 	glGenTextures(1, &output_texture_id);
-	glActiveTexture(_OGLHELPER_OUTPUT_TEXTURE_UNIT);
+	glActiveTexture(_POSTPROCESS_TEXTURE_UNIT);
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);

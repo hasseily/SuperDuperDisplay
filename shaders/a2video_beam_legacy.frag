@@ -10,6 +10,7 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 /*
 Apple 2 video beam shader for legacy modes (not SHR).
+TODO: Fix based on new vram format
 
 This shader expects as input a VRAMTEX texture that has the following features:
 - Type GL_RGB8UI, which is 4 bytes for each texel
