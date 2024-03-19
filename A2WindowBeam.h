@@ -34,6 +34,12 @@ public:
 
 	bool bNeedsGPUVertexUpdate = true;	// Update the GPU if the vertex data has changed
 
+	// Those could be anywhere up to 6 or 7 cycles for horizontal borders
+	// and a lot more for vertical borders. We just decided on a size
+	// This is set from A2VideoManager
+	uint8_t border_width_cycles = 0;
+	uint8_t border_height_cycles = 0;
+
 	A2WindowBeam()
 		: enabled(false)
 		, defined(false)

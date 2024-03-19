@@ -107,11 +107,16 @@ A2VideoManager* A2VideoManager::s_instance;
 
 constexpr uint32_t CYCLES_HBLANK = 25;			// always 25 cycles
 constexpr uint8_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
+constexpr uint32_t SCANLINES_TOTAL_NTSC = 262;
+constexpr uint32_t SCANLINES_TOTAL_PAL = 312;
 
 static OpenGLHelper* oglHelper;
 
 static Shader shader_beam_legacy = Shader();
 static Shader shader_beam_shr = Shader();
+
+static 	VideoRegion_e current_region = VideoRegion_e::NTSC;
+static uint32_t region_scanlines = ( current_region == VideoRegion_e::NTSC ? SCANLINES_TOTAL_NTSC : SCANLINES_TOTAL_PAL);
 
 //////////////////////////////////////////////////////////////////////////
 // Image Asset Methods
@@ -189,6 +194,9 @@ void A2VideoManager::Initialize()
 	// Initialize windows
 	windowsbeam[A2VIDEOBEAM_LEGACY].Define(A2VIDEOBEAM_LEGACY, &shader_beam_legacy);
 	windowsbeam[A2VIDEOBEAM_SHR].Define(A2VIDEOBEAM_SHR, &shader_beam_shr);
+	
+	// TODO: 	SET THE OUTPUT TEXTURE FOR EACH OF THE 2 WINDOWSBEAM
+	//			SO WE CAN MERGE THE 2 AFTERWARDS
 
 	// tell the next Render() call to run initialization routines
 	bShouldInitializeRender = true;
@@ -231,11 +239,10 @@ void A2VideoManager::ToggleA2Video(bool value)
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 {
 	auto memMgr = MemoryManager::GetInstance();
-	// Start of VBLANK
-	// Theoretically at y==192 (start of VBLANK) we can render for legacy
-	// but SHR goes to 200 so let's wait until 200 anyway and guarantee we have a fixed
-	// y scanline at which we flip the double buffering
-	if ((_x == CYCLES_HBLANK) && (y == (memMgr->IsSoftSwitch(A2SS_SHR) ? 200u : 192u)))
+	//
+	uint32_t mode_scanlines = (memMgr->IsSoftSwitch(A2SS_SHR) ? 200u : 192u);
+	// Start of VBLANK at which we flip the double buffering
+	if ((_x == CYCLES_HBLANK) && (y == (mode_scanlines + _A2_BORDER_HEIGHT_CYCLES)))
 	{
 		// start the next frame
 		// set the frame index for the buffer we'll move to reading
@@ -248,10 +255,15 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 		// reset the legacy and shr flags at each vblank
 		vrams_write->use_legacy = false;
 		vrams_write->use_shr = false;
+		// Update the current region info
+		current_region = CycleCounter::GetInstance()->GetVideoRegion();
+		region_scanlines = ( current_region == VideoRegion_e::NTSC ? SCANLINES_TOTAL_NTSC : SCANLINES_TOTAL_PAL);
 		return;
 	}
 
-	if (y >= (memMgr->IsSoftSwitch(A2SS_SHR) ? 200u : 192u))	// in VBLANK, nothing to do
+	// in VBLANK (taking care of borders), nothing to do
+	if ((y >= (mode_scanlines + _A2_BORDER_HEIGHT_CYCLES)) &&
+		(y < (region_scanlines - _A2_BORDER_HEIGHT_CYCLES)))
 		return;
 
 	if (_x == 0)
@@ -268,6 +280,15 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	color_background = gPaletteRGB[12 + (memMgr->switch_c022 & 0x0F)];
 	color_foreground = gPaletteRGB[12 + ((memMgr->switch_c022 & 0xF0) >> 4)];
 	color_border = gPaletteRGB[12 + (memMgr->switch_c034 & 0x0F)];
+	
+	// in VBLANK but ready to handle the top border
+	if (y >= (region_scanlines - _A2_BORDER_HEIGHT_CYCLES))
+	{
+		if (memMgr->IsSoftSwitch(A2SS_SHR))
+		{
+			
+		}
+	}
 
 	// Set xx to 0 when after HBLANK. HBLANK is always at the start of the line
 	// However, VBLANK is at the end of the screen so we can use y as is

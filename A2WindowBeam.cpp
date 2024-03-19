@@ -25,21 +25,25 @@ void A2WindowBeam::Define(A2VideoModeBeam_e _video_mode, Shader* _shaderProgram)
 {
 	this->Reset();
 	shaderProgram = _shaderProgram;
+	
+	uint32_t cycles_h_with_border = 40 + (2 * border_width_cycles);
 
+	// Do not update again the screen counts and vertices if already defined once
+	// It can mess with the render
 	if (!(defined && (_video_mode == video_mode)))
 	{
 		video_mode = _video_mode;
+		// Legacy is 14 dots per cycle, SHR is 16 dots per cycle
 		switch (video_mode) {
-		case A2VIDEOBEAM_LEGACY:
-			screen_count = uXY({ 560u , 384u });
-			break;
-		case A2VIDEOBEAM_SHR:
-			screen_count = uXY({ 640u , 400u });
-			break;
-		default:
-			screen_count = uXY({ 560u , 384u });
-			break;
-
+			case A2VIDEOBEAM_LEGACY:
+				screen_count = uXY({ cycles_h_with_border * 14, 384u + (2 * border_height_cycles) });
+				break;
+			case A2VIDEOBEAM_SHR:
+				screen_count = uXY({ cycles_h_with_border * 16 , 400u + (2 * border_height_cycles) });
+				break;
+			default:	//e
+				screen_count = uXY({ cycles_h_with_border * 14, 384u + (2 * border_height_cycles) });
+				break;
 		}
 		vertices[0].PixelPos = glm::vec2(0, screen_count.y);	// top left
 		vertices[1].PixelPos = glm::vec2(screen_count.x, 0);	// bottom right
@@ -77,7 +81,7 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	if (bNeedsGPUVertexUpdate)
 	{
 		bNeedsGPUVertexUpdate = false;
-		
+
 		// load data into vertex buffers
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(A2BeamVertex), &vertices[0], GL_STATIC_DRAW);
@@ -98,21 +102,22 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	// Always update that buffer in the GPU
 	if (shouldUpdateDataInGPU)
 	{
+		uint32_t cycles_h_with_border = 40 + (2 * border_width_cycles);
 		glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
 		glBindTexture(GL_TEXTURE_2D, VRAMTEX);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 		switch (video_mode) {
 			case A2VIDEOBEAM_LEGACY:
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_h_with_border, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
 			case A2VIDEOBEAM_SHR:
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 1+32+160, 200, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 1+32+160 + (2 * border_width_cycles * 16), 200, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				break;
 			default:
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_h_with_border, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
 		}
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -145,7 +150,7 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	shaderProgram->setInt("VRAMTEX", _SDHR_TBO_TEXUNIT);
 	
 	// And set all the modes textures that the shader will use
-	// 4 font textures + lgr, hgr, dhgr
+	// 2 font textures + lgr, hgr, dhgr
 	shaderProgram->setInt("a2ModesTex0", _SDHR_TEXTURE_UNITS_START + 0 - GL_TEXTURE0);	// D/TEXT font regular
 	shaderProgram->setInt("a2ModesTex1", _SDHR_TEXTURE_UNITS_START + 1 - GL_TEXTURE0);	// D/TEXT font alternate
 	shaderProgram->setInt("a2ModesTex2", _SDHR_TEXTURE_UNITS_START + 4 - GL_TEXTURE0);	// D/LGR

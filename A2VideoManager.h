@@ -9,27 +9,34 @@
 #include "common.h"
 #include "A2WindowBeam.h"
 
+// Those could be anywhere up to 6 or 7 cycles for horizontal borders
+// and a lot more for vertical borders. We just decided on a size
+#define _A2_BORDER_WIDTH_CYCLES 5
+#define _A2_BORDER_HEIGHT_CYCLES 5
+
 // Legacy mode VRAM is 4 bytes (main, aux, flags, colors)
 // for each "byte" of screen use
 // colors are 4-bit each of fg and bg colors as in the Apple 2gs
 
-constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = 40 * 192 * 4;
+constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = (40 + (2 * _A2_BORDER_WIDTH_CYCLES)) * (192 + (2 * _A2_BORDER_HEIGHT_CYCLES)) * 4;
 
 // SHR mode VRAM is the standard bytes of screen use ($2000 to $9CFF)
 // plus, for each of the 200 lines, at the beginning of the line draw
 // (at end of HBLANK) the SCB (1 byte) and palette (32 bytes) of that line
 // SHR mode VRAM looks like this:
 
-// SCB        PALETTE              COLOR BYTES
-// [0 [(1 2) (3 4) ... (31 32)] [0 ......... 159]]	// line 0
-// [0 [(1 2) (3 4) ... (31 32)] [0 ......... 159]]	// line 1
+// SCB        PALETTE                    COLOR BYTES
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line 0
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line 1
 //                         .
 //                         .
 //                         .
 //                         .
-// [0 [(1 2) (3 4) ... (31 32)] [0 ......... 159]]	// line 199
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line 199
 
-constexpr uint32_t _BEAM_VRAM_SIZE_SHR = (1 + 32 + 160) * 200;
+// The BORDER bytes have the exact border color in their lower 4 bits
+
+constexpr uint32_t _BEAM_VRAM_SIZE_SHR = (1 + 32 + (2 * _A2_BORDER_WIDTH_CYCLES * 16) + 160) * (200 + (2 * _A2_BORDER_HEIGHT_CYCLES));
 
 class A2VideoManager
 {
@@ -76,14 +83,14 @@ public:
 	uint32_t color_foreground = UINT32_MAX;
 	uint32_t color_background = 0;
     bool bShouldReboot = false;             // When an Appletini reboot packet arrives
-
+	uXY ScreenSize();
+	
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
 	//////////////////////////////////////////////////////////////////////////
 
 	bool IsReady();		// true after full initialization
 	void ToggleA2Video(bool value);
-	uXY ScreenSize();
 
 	// Methods for the single multipurpose beam racing shader
 	void BeamIsAtPosition(uint32_t x, uint32_t y);
