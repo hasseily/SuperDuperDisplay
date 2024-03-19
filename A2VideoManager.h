@@ -102,7 +102,7 @@ public:
 	uint8_t* GetSHRVRAMWritePtr() { return vrams_write->vram_shr; };
 	void ActivateBeam();	// The apple 2 is rendering!
 	void DeactivateBeam();	// We don't have a connection to the Apple 2!
-	void Render();	// render whatever mode is active (enabled windows)
+	GLuint Render();	// render whatever mode is active (enabled windows)
 
 	// public singleton code
 	static A2VideoManager* GetInstance()

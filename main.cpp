@@ -250,6 +250,7 @@ int main(int argc, char* argv[])
 
     // Main loop
     bool done = false;
+	GLuint out_tex_id = 0;
 	
 #ifdef __EMSCRIPTEN__
     // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
@@ -353,16 +354,19 @@ int main(int argc, char* argv[])
         }   // while SDL_PollEvent
 		
         if (sdhrManager->IsSdhrEnabled())
-            sdhrManager->Render();
+			out_tex_id = sdhrManager->Render();
         else
-            a2VideoManager->Render();
+			out_tex_id = a2VideoManager->Render();
 
+		if (out_tex_id == UINT32_MAX)
+			std::cerr << "ERROR: TEXTURE OUTPUT INCORRECT" << std::endl;
+		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
         uint32_t bc = a2VideoManager->color_border;
 		glClearColor((bc & 0xFF) / 256.0f, (bc >> 8 & 0xFF) / 256.0f, (bc >> 16 & 0xFF) / 256.0f, (bc >> 24 & 0xFF) / 256.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		postProcessor->Render(window, glhelper->get_output_texture_id());
+		postProcessor->Render(window, out_tex_id);
 
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();

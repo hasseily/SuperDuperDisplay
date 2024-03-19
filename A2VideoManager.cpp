@@ -441,14 +441,14 @@ uXY A2VideoManager::ScreenSize()
 	return maxSize;
 }
 
-void A2VideoManager::Render()
+GLuint A2VideoManager::Render()
 {
 	if (!bA2VideoEnabled)
-		return;
+		return UINT32_MAX;
 
 	// Exit if we've already rendered the buffer
 	if (rendered_frame_idx == vrams_read->frame_idx)
-		return;
+		return output_texture_id;
 	
 	GLenum glerr;
 	auto oglh = OpenGLHelper::GetInstance();
@@ -507,6 +507,7 @@ void A2VideoManager::Render()
 	oglh->finalize_render();
 	// all done, the texture for this Apple 2 beam cycle frame is rendered
 	rendered_frame_idx = vrams_read->frame_idx;
+	return output_texture_id;
 }
 
 void A2VideoManager::ActivateBeam()

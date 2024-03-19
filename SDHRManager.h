@@ -116,7 +116,7 @@ public:
 
 	uint8_t* GetUploadRegionPtr();
 
-	void Render();	// render everything SDHR related
+	GLuint Render();	// render everything SDHR related
 
 	TileTex* GetTilesetRecordData(uint8_t tileset_index) { return tileset_records[tileset_index].tile_data; };
 	TileTex GetTilesetTileTex(uint8_t tileset_index, uint8_t tile_index) { return tileset_records[tileset_index].tile_data[tile_index]; };

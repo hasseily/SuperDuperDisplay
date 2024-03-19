@@ -809,7 +809,7 @@ void SDHRManager::bind_framebuffer()
 {
 	if (FBO == UINT_MAX)
 	{
-		create_framebuffers(_SDHR_DEFAULT_WIDTH, _SDHR_DEFAULT_HEIGHT);
+		create_framebuffer(_SDHR_DEFAULT_WIDTH, _SDHR_DEFAULT_HEIGHT);
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 	GLenum glerr;
@@ -846,7 +846,7 @@ void SDHRManager::rescale_framebuffer(uint32_t width, uint32_t height)
 	bDidChangeResolution = true;
 }
 
-void SDHRManager::Render()
+GLuint SDHRManager::Render()
 {
 	GLenum glerr;
 
@@ -862,7 +862,7 @@ void SDHRManager::Render()
 	{
 		if ((fb_width_requested != fb_width) || (fb_height_requested == fb_height))
 		{
-			rescale_framebuffers(fb_width_requested, fb_height_requested);
+			rescale_framebuffer(fb_width_requested, fb_height_requested);
 			fb_width_requested = UINT32_MAX;
 			fb_height_requested = UINT32_MAX;
 		}
@@ -913,7 +913,7 @@ void SDHRManager::Render()
 	defaultWindowShaderProgram.use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL SDHR glUseProgram error: " << glerr << std::endl;
-		return;
+		return UINT32_MAX;
 	}
 
 	// Initialization routine runs only once on init (or re-init)
@@ -978,6 +978,7 @@ void SDHRManager::Render()
 	unbind_framebuffer();
 	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
 	bDidChangeResolution = false;
+	return output_texture_id;
 }
 
 // METHODS THAT CAN BE CALLED FROM ANY THREAD
