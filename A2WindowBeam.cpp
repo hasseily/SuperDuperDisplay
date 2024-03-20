@@ -72,6 +72,12 @@ void A2WindowBeam::UpdateVertexArray()
 	bNeedsGPUVertexUpdate = true;
 }
 
+
+GLuint A2WindowBeam::GetOutputTextureId()
+{
+	return output_texture_id;
+}
+
 void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 {
 	if (shaderProgram == nullptr)
@@ -85,10 +91,33 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 
 	if (VAO == UINT_MAX)
 	{
-		// TODO: CREATE A FBO AND OUTPUT TEXTURE
-		// TODO: EXPOSE THE OUTPUT TEXTURE ID TO A2VIDEOMANAGER
 		glGenVertexArrays(1, &VAO);
 		glGenBuffers(1, &VBO);
+	}
+
+	if (FBO == UINT_MAX)
+	{
+		glGenFramebuffers(1, &FBO);
+		glGenTextures(1, &output_texture_id);
+		glActiveTexture(_TEXUNIT_POSTPROCESS);
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+		glBindTexture(GL_TEXTURE_2D, output_texture_id);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_count.x, screen_count.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	glClearColor(0.f, 0.f, 0.f, 0.f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL render A2VideoManager error: " << glerr << std::endl;
 	}
 
 	glBindVertexArray(VAO);
@@ -161,9 +190,6 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		glActiveTexture(GL_TEXTURE0);
 	}
 
-	// reset the binding
-	glBindVertexArray(0);
-
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2WindowBeam::Update error: " << glerr << std::endl;
 	}
@@ -173,8 +199,6 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
 		return;
 	}
-
-	glBindVertexArray(VAO);
 
 	shaderProgram->setInt("ticks", SDL_GetTicks());
 

@@ -12,45 +12,10 @@
 
 #include "OpenGLHelper.h"
 #include "MemoryManager.h"
-#include "camera.h"
 
-#define _SDHR_DEFAULT_WIDTH  800
-#define _SDHR_DEFAULT_HEIGHT 600
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 SDHRManager* SDHRManager::s_instance;
-
-GLint last_viewport[4];		// Previous viewport used, so we don't clobber it
-GLuint output_texture_id;	// the output texture
-GLuint FBO = UINT_MAX;		// the framebuffer object
- 
-// The standard default shader for the windows and their mosaics
-Shader defaultWindowShaderProgram = Shader();
-// Pixelization shader
-Shader pixelizationShaderProgram = Shader();
-
-// Camera for World -> View matrix transform
-Camera camera = Camera(
-	_SDHR_DEFAULT_WIDTH / 2.f, _SDHR_DEFAULT_HEIGHT / 2.f,			// x,y
-	UINT8_MAX,									// z
-	0.f, 1.f, 0.f,								// upVector xyz
-	-90.f,										// yaw
-	0.f											// pitch
-);
-// Projection matrix (left, right, bottom, top, near, far)
-glm::mat4 mat_proj = glm::ortho<float>(
-	-(float)_SDHR_DEFAULT_WIDTH / 2, (float)_SDHR_DEFAULT_WIDTH / 2,
-	-(float)_SDHR_DEFAULT_HEIGHT / 2, (float)_SDHR_DEFAULT_HEIGHT / 2,
-	0, 256);
-
-uint32_t fb_width = _SDHR_DEFAULT_WIDTH;
-uint32_t fb_height = _SDHR_DEFAULT_HEIGHT;
-uint32_t fb_width_requested = UINT32_MAX;
-uint32_t fb_height_requested = UINT32_MAX;
-
-// Debugging attributes
-bool bDebugNoTextures = false;
-bool bUsePerspective = false;		// see bIsUsingPerspective
 
 //////////////////////////////////////////////////////////////////////////
 // Commands structs
@@ -286,6 +251,15 @@ void SDHRManager::Initialize()
 	memset(error_str, 0, sizeof(error_str));
 	*image_assets = {};
 	*tileset_records = {};
+
+	// Camera for World -> View matrix transform
+	camera = Camera(
+		_SDHR_DEFAULT_WIDTH / 2.f, _SDHR_DEFAULT_HEIGHT / 2.f,			// x,y
+		UINT8_MAX,									// z
+		0.f, 1.f, 0.f,								// upVector xyz
+		-90.f,										// yaw
+		0.f											// pitch
+	);
 
 	for (int i = 0; i < (sizeof(windows)/sizeof(SDHRWindow)); i++)
 	{

@@ -167,16 +167,16 @@ void MosaicMesh::SetupDraw()
 {
 	if (bIsFirstDraw)
 	{
-		ticks_since_first_render = OpenGLHelper::GetInstance()->get_frame_ticks();
+		ticks_since_first_render = SDL_GetTicks();
 		bIsFirstDraw = false;
 	}
 
 	GLenum glerr;
 	auto oglHelper = OpenGLHelper::GetInstance();
 	shaderProgram->use();
-	shaderProgram->setInt("ticks", oglHelper->get_frame_ticks() - ticks_since_first_render);
+	shaderProgram->setInt("ticks", SDL_GetTicks() - ticks_since_first_render);
 	shaderProgram->setFloat("pixelSize", pixelSize);
-	shaderProgram->setBool("iDebugNoTextures", oglHelper->bDebugNoTextures);
+	shaderProgram->setBool("iDebugNoTextures", SDHRManager::GetInstance()->bDebugNoTextures);
 
 	// Assign the list of all the textures to the shader's "tilesTexture" uniform
 	auto texUniformId = glGetUniformLocation(shaderProgram->ID, "tilesTexture");

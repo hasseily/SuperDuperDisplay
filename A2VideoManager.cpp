@@ -14,7 +14,6 @@
 
 #include "OpenGLHelper.h"
 #include "MemoryManager.h"
-#include "CycleCounter.h"
 #include "EventRecorder.h"
 #include "GRAddr2XY.h"
 
@@ -105,27 +104,8 @@ static uint16_t g_RAM_HGROffsets[] = {
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
 
-constexpr uint32_t CYCLES_HBLANK = 25;			// always 25 cycles
-constexpr uint8_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
-constexpr uint32_t SCANLINES_TOTAL_NTSC = 262;
-constexpr uint32_t SCANLINES_TOTAL_PAL = 312;
-
 static OpenGLHelper* oglHelper;
 
-static Shader shader_beam_legacy = Shader();
-static Shader shader_beam_shr = Shader();
-static Shader shader_merge = Shader();
-
-static 	VideoRegion_e current_region = VideoRegion_e::NTSC;
-static uint32_t region_scanlines = ( current_region == VideoRegion_e::NTSC ? SCANLINES_TOTAL_NTSC : SCANLINES_TOTAL_PAL);
-
-GLint last_viewport[4];		// Previous viewport used, so we don't clobber it
-GLuint output_texture_id;	// the output texture that merges both legacy+shr
-GLuint FBO = UINT_MAX;		// the framebuffer object for the merge
-
-// The final framebuffer width is going to be shr + border
-uint32_t fb_width = 0;
-uint32_t fb_height = 0;
 
 //////////////////////////////////////////////////////////////////////////
 // Image Asset Methods
@@ -343,12 +323,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	
 	// The byte isn't SHR, it's legacy
 
-	if (_x > 65 || y > 191)
-	{
-		std::cerr << "ERROR: Overflow on beam position!" << std::endl;
-		return;
-	}
-
 	vrams_write->use_legacy = true;	// at least 1 byte in this vblank cycle is not SHR
 	auto byteStartPtr = vrams_write->vram_legacy + ((40 * y) + xx) * 4;	// 4 bytes in VRAM for each byte on screen
 	// the flags byte is:
@@ -471,28 +445,28 @@ GLuint A2VideoManager::Render()
 
 	// Exit if we've already rendered the buffer
 	if (rendered_frame_idx == vrams_read->frame_idx)
-		return output_texture_id;
+		return merged_texture_id;
 	
 	GLenum glerr;
-	if (FBO == UINT_MAX)
+	if (FBO_merged == UINT_MAX)
 	{
-		glGenFramebuffers(1, &FBO);
-		glGenTextures(1, &output_texture_id);
+		glGenFramebuffers(1, &FBO_merged);
+		glGenTextures(1, &merged_texture_id);
 		glActiveTexture(_TEXUNIT_POSTPROCESS);
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-		glBindTexture(GL_TEXTURE_2D, output_texture_id);
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
+		glBindTexture(GL_TEXTURE_2D, merged_texture_id);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, merged_texture_id, 0);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
 	glClearColor(0.f, 0.f, 0.f, 0.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -561,11 +535,13 @@ GLuint A2VideoManager::Render()
 	}
 	else if (vrams_read->use_shr) {
 		// Only SHR is active, just bind the correct output for the postprocessor
-		// TODO: TAKE windowsbeam[A2VIDEOBEAM_SHR] OUTPUT TEXTURE AND BIND IT TO GL_TEXTURE15
+		glActiveTexture(_TEXUNIT_POSTPROCESS);
+		glBindTexture(GL_TEXTURE_2D, windowsbeam[A2VIDEOBEAM_SHR]->GetOutputTextureId());
 	}
 	else {
 		// Only legacy is active, just bind the correct output for the postprocessor
-		// TODO: TAKE windowsbeam[A2VIDEOBEAM_LEGACY] OUTPUT TEXTURE AND BIND IT TO GL_TEXTURE15
+		glActiveTexture(_TEXUNIT_POSTPROCESS);
+		glBindTexture(GL_TEXTURE_2D, windowsbeam[A2VIDEOBEAM_LEGACY]->GetOutputTextureId());
 	}
 
 
@@ -576,7 +552,17 @@ GLuint A2VideoManager::Render()
 
 	// all done, the texture for this Apple 2 beam cycle frame is rendered
 	rendered_frame_idx = vrams_read->frame_idx;
-	return output_texture_id;
+	return merged_texture_id;
+}
+
+GLuint A2VideoManager::GetOutputTextureId()
+{
+	if (vrams_read->use_legacy && vrams_read->use_shr)
+		return merged_texture_id;
+	else if (vrams_read->use_shr)
+		return windowsbeam[A2VIDEOBEAM_SHR]->GetOutputTextureId();
+	else
+		return windowsbeam[A2VIDEOBEAM_LEGACY]->GetOutputTextureId();
 }
 
 void A2VideoManager::ActivateBeam()

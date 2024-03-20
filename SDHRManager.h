@@ -11,6 +11,10 @@
 
 #include "common.h"
 #include "SDHRWindow.h"
+#include "camera.h"
+
+#define _SDHR_DEFAULT_WIDTH  800
+#define _SDHR_DEFAULT_HEIGHT 600
 
 enum DATASTATE_e
 {
@@ -105,6 +109,7 @@ public:
 	ImageAsset image_assets[_SDHR_MAX_TEXTURES];
 	TilesetRecord tileset_records[_SDHR_MAX_WINDOWS];
 	SDHRWindow windows[_SDHR_MAX_WINDOWS];
+	Camera camera;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
@@ -120,6 +125,10 @@ public:
 
 	TileTex* GetTilesetRecordData(uint8_t tileset_index) { return tileset_records[tileset_index].tile_data; };
 	TileTex GetTilesetTileTex(uint8_t tileset_index, uint8_t tile_index) { return tileset_records[tileset_index].tile_data[tile_index]; };
+
+	// Debugging attributes
+	bool bDebugNoTextures = false;
+	bool bUsePerspective = false;		// see bIsUsingPerspective
 
 	void ToggleSdhr(bool value) {
 		bSDHREnabled = value;
@@ -211,5 +220,25 @@ private:
 		int upload_data_size;
 	};
 	std::queue<UploadImageData>fifo_upload_image_data;
+
+	GLint last_viewport[4];		// Previous viewport used, so we don't clobber it
+	GLuint output_texture_id;	// the output texture
+	GLuint FBO = UINT_MAX;		// the framebuffer object
+
+	// The standard default shader for the windows and their mosaics
+	Shader defaultWindowShaderProgram = Shader();
+	// Pixelization shader
+	Shader pixelizationShaderProgram = Shader();
+
+	// Projection matrix (left, right, bottom, top, near, far)
+	glm::mat4 mat_proj = glm::ortho<float>(
+		-(float)_SDHR_DEFAULT_WIDTH / 2, (float)_SDHR_DEFAULT_WIDTH / 2,
+		-(float)_SDHR_DEFAULT_HEIGHT / 2, (float)_SDHR_DEFAULT_HEIGHT / 2,
+		0, 256);
+
+	uint32_t fb_width = _SDHR_DEFAULT_WIDTH;
+	uint32_t fb_height = _SDHR_DEFAULT_HEIGHT;
+	uint32_t fb_width_requested = UINT32_MAX;
+	uint32_t fb_height_requested = UINT32_MAX;
 };
 #endif // SDHRMANAGER_H

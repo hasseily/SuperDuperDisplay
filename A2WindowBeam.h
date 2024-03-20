@@ -39,6 +39,7 @@ public:
 	const uint32_t GetWidth();
 	const uint32_t GetHeight();
 	void SetBorderCycles(uint32_t cycles_horizontal, uint32_t cycles_vertical);
+	GLuint GetOutputTextureId();
 	void Render(bool shouldUpdateDataInGPU);
 
 	Shader* GetShaderProgram() { return shaderProgram; };
@@ -57,8 +58,11 @@ private:
 	unsigned int VAO = UINT_MAX;			// Vertex Array Object (holds buffers that are vertex related)
 	unsigned int VBO = UINT_MAX;			// Vertex Buffer Object (holds vertices)
 
-	uint8_t border_width_cycles = 0;
-	uint8_t border_height_cycles = 0;
+	uint32_t border_width_cycles = 0;
+	uint32_t border_height_cycles = 0;
+
+	GLuint output_texture_id;	// the output texture for this object
+	GLuint FBO = UINT_MAX;		// the framebuffer for this object
 
 	void UpdateVertexArray();
 };

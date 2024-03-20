@@ -8,6 +8,7 @@
 
 #include "common.h"
 #include "A2WindowBeam.h"
+#include "CycleCounter.h"
 
 // Legacy mode VRAM is 4 bytes (main, aux, flags, colors)
 // for each "byte" of screen use
@@ -98,6 +99,7 @@ public:
 	const uint8_t* GetSHRVRAMReadPtr() { return vrams_read->vram_shr; };
 	uint8_t* GetLegacyVRAMWritePtr() { return vrams_write->vram_legacy; };
 	uint8_t* GetSHRVRAMWritePtr() { return vrams_write->vram_shr; };
+	GLuint GetOutputTextureId();	// merged output
 	void ActivateBeam();	// The apple 2 is rendering!
 	void DeactivateBeam();	// We don't have a connection to the Apple 2!
 	GLuint Render();	// render whatever mode is active (enabled windows)
@@ -136,6 +138,21 @@ private:
 	BeamRenderVRAMs* vrams_array;	// 2 buffers of legacy+shr vrams
 	BeamRenderVRAMs* vrams_write;	// the write buffer
 	BeamRenderVRAMs* vrams_read;	// the read buffer
+
+	Shader shader_beam_legacy = Shader();
+	Shader shader_beam_shr = Shader();
+	Shader shader_merge = Shader();
+
+	VideoRegion_e current_region = VideoRegion_e::NTSC;
+	uint32_t region_scanlines = (current_region == VideoRegion_e::NTSC ? SCANLINES_TOTAL_NTSC : SCANLINES_TOTAL_PAL);
+
+	GLint last_viewport[4];		// Previous viewport used, so we don't clobber it
+	GLuint merged_texture_id;	// the output texture that merges both legacy+shr
+	GLuint FBO_merged = UINT_MAX;		// the framebuffer object for the merge
+
+	// The final framebuffer width is going to be shr + border
+	uint32_t fb_width = 0;
+	uint32_t fb_height = 0;
 };
 #endif // A2VIDEOMANAGER_H
 

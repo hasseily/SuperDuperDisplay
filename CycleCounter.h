@@ -6,6 +6,16 @@
 #include <stdint.h>
 #include <stddef.h>
 
+constexpr uint8_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
+constexpr uint32_t SCANLINES_TOTAL_NTSC = 262;
+constexpr uint32_t SCANLINES_TOTAL_PAL = 312;
+constexpr uint32_t CYCLES_HBLANK = 25;			// always 25 cycles
+constexpr uint32_t COUNT_SCANLINES = 192;		// EVEN IN SHR with 200 visible lines, the VBL triggers at line 192.
+constexpr uint32_t CYCLES_SCANLINES = 40;		// each scanline is 40 bytes, 1 cycle per byte
+constexpr uint32_t CYCLES_SCREEN = (CYCLES_SCANLINES + CYCLES_HBLANK) * COUNT_SCANLINES;
+constexpr uint32_t CYCLES_TOTAL_NTSC = 17030;
+constexpr uint32_t CYCLES_TOTAL_PAL = 20280;
+
 enum class VideoRegion_e
 {
 	Unknown = 0,

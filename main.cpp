@@ -300,12 +300,12 @@ int main(int argc, char* argv[])
             case SDL_MOUSEMOTION:
                 if (event.motion.state & SDL_BUTTON_RMASK && !io.WantCaptureMouse) {
                     // Move the camera when the right mouse button is pressed while moving the mouse
-                    glhelper->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
+                    sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
                 }
                 break;
             case SDL_MOUSEWHEEL:
 				if (!io.WantCaptureMouse) {
-					glhelper->camera.ProcessMouseScroll((float)event.wheel.y);
+					sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
 				}
                 break;
             case SDL_KEYDOWN:
@@ -325,22 +325,22 @@ int main(int argc, char* argv[])
 					switch (event.key.keysym.sym)
 					{
 					case SDLK_w:
-						glhelper->camera.ProcessKeyboard(FORWARD, deltaTime);
+						sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
 						break;
 					case SDLK_s:
-						glhelper->camera.ProcessKeyboard(BACKWARD, deltaTime);
+						sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
 						break;
 					case SDLK_a:
-						glhelper->camera.ProcessKeyboard(LEFT, deltaTime);
+						sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
 						break;
 					case SDLK_d:
-						glhelper->camera.ProcessKeyboard(RIGHT, deltaTime);
+						sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
 						break;
 					case SDLK_q:
-						glhelper->camera.ProcessKeyboard(CLIMB, deltaTime);
+						sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
 						break;
 					case SDLK_z:
-						glhelper->camera.ProcessKeyboard(DESCEND, deltaTime);
+						sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
 						break;
 					default:
 						break;
@@ -513,12 +513,12 @@ int main(int argc, char* argv[])
 				}
 				if (ImGui::CollapsingHeader("SDHR"))
 				{
-					auto _c = glhelper->camera;
+					auto _c = sdhrManager->camera;
 					auto _pos = _c.Position;
 					ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
 					ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
-					ImGui::Checkbox("Untextured Geometry", &glhelper->bDebugNoTextures);         // Show textures toggle
-					ImGui::Checkbox("Perspective Projection", &glhelper->bUsePerspective);       // Change projection type
+					ImGui::Checkbox("Untextured Geometry", &sdhrManager->bDebugNoTextures);         // Show textures toggle
+					ImGui::Checkbox("Perspective Projection", &sdhrManager->bUsePerspective);       // Change projection type
 				}
 				ImGui::PopItemWidth();
             }
@@ -577,11 +577,11 @@ int main(int argc, char* argv[])
 			}
 			else if (_slotnum == _SDHR_MAX_TEXTURES)
 			{
-				glBindTexture(GL_TEXTURE_2D, glhelper->get_output_texture_id());
+				glBindTexture(GL_TEXTURE_2D, a2VideoManager->GetOutputTextureId());
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
-				ImGui::Text("Output Texture ID: %d (%d x %d)", (int)glhelper->get_output_texture_id(), _w, _h);
-				ImGui::Image((void*)glhelper->get_output_texture_id(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+				ImGui::Text("Output Texture ID: %d (%d x %d)", (int)a2VideoManager->GetOutputTextureId(), _w, _h);
+				ImGui::Image((void*)a2VideoManager->GetOutputTextureId(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
 			glBindTexture(GL_TEXTURE_2D, 0);
 			ImGui::End();
