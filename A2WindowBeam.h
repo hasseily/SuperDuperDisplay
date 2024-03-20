@@ -10,6 +10,10 @@
 #define _A2_TEXT40_CHAR_WIDTH _A2_TEXT80_CHAR_WIDTH*2
 #define _A2_TEXT40_CHAR_HEIGHT _A2_TEXT80_CHAR_HEIGHT
 
+// Those could be anywhere up to 6 or 7 cycles for horizontal borders
+// and a lot more for vertical borders. We just decided on a size
+#define _A2_BORDER_WIDTH_CYCLES 5
+#define _A2_BORDER_HEIGHT_CYCLES 5
 
 enum A2VideoModeBeam_e
 {
@@ -26,40 +30,15 @@ struct A2BeamVertex {
 class A2WindowBeam
 {
 public:
-	bool IsEnabled() const { return enabled; }
-	void SetEnabled(bool val) { 
-		enabled = val;
-	}
-	bool IsDefined() const { return defined; }
 
 	bool bNeedsGPUVertexUpdate = true;	// Update the GPU if the vertex data has changed
+	A2WindowBeam(A2VideoModeBeam_e _video_mode, Shader* _shaderProgram);
 
-	// Those could be anywhere up to 6 or 7 cycles for horizontal borders
-	// and a lot more for vertical borders. We just decided on a size
-	// This is set from A2VideoManager
-	uint8_t border_width_cycles = 0;
-	uint8_t border_height_cycles = 0;
 
-	A2WindowBeam()
-		: enabled(false)
-		, defined(false)
-		, video_mode(A2VIDEOBEAM_LEGACY)
-		, shaderProgram(nullptr)
-	{
-		// Assign the vertex array.
-		// The first 2 values are the relative XY, bound from -1 to 1.
-		// The A2WindowBeam always covers the whole screen, so from -1 to 1 on both axes
-		// The second pair of values is the actual pixel value on screen (560x384, etc...)
-		// Set them to 0, they'll be defined later from the video manager
-		vertices.push_back(A2BeamVertex({glm::vec2(-1,  1), glm::ivec2(0, 0)}));	// top left
-		vertices.push_back(A2BeamVertex({glm::vec2( 1, -1), glm::ivec2(0, 0)}));	// bottom right
-		vertices.push_back(A2BeamVertex({glm::vec2( 1,  1), glm::ivec2(0, 0)}));	// top right
-		vertices.push_back(A2BeamVertex({glm::vec2(-1,  1), glm::ivec2(0, 0)}));	// top left
-		vertices.push_back(A2BeamVertex({glm::vec2(-1, -1), glm::ivec2(0, 0)}));	// bottom left
-		vertices.push_back(A2BeamVertex({glm::vec2( 1, -1), glm::ivec2(0, 0)}));	// bottom right
-	};
 	~A2WindowBeam();
-	void Define(A2VideoModeBeam_e video_mode, Shader* _shaderProgram);
+	const uint32_t GetWidth();
+	const uint32_t GetHeight();
+	void SetBorderCycles(uint32_t cycles_horizontal, uint32_t cycles_vertical);
 	void Render(bool shouldUpdateDataInGPU);
 
 	Shader* GetShaderProgram() { return shaderProgram; };
@@ -67,12 +46,9 @@ public:
 	A2VideoModeBeam_e Get_video_mode() const { return video_mode; }
 
 private:
-	void Reset();
-
-	bool defined;           		// if not defined, can't be used
-    bool enabled;           		// if not enabled, doesn't get rendered
-	A2VideoModeBeam_e video_mode;	// Which video mode is used
-	Shader* shaderProgram;			// Shader used
+	bool vramTextureExists = false;						// true if the VRAM texture exists and only needs an update
+	A2VideoModeBeam_e video_mode = A2VIDEOBEAM_LEGACY;	// Which video mode is used
+	Shader* shaderProgram = nullptr;					// Shader used
 	uXY screen_count = {0,0};				// width,height in pixels of visible screen area of window
 
 	unsigned int VRAMTEX = UINT_MAX;		// VRAM buffer texture. Holds R as MAIN, G and AUX, B as flags
@@ -80,6 +56,11 @@ private:
 	std::vector<A2BeamVertex> vertices;		// Vertices with XYRelative and XYPixels
 	unsigned int VAO = UINT_MAX;			// Vertex Array Object (holds buffers that are vertex related)
 	unsigned int VBO = UINT_MAX;			// Vertex Buffer Object (holds vertices)
+
+	uint8_t border_width_cycles = 0;
+	uint8_t border_height_cycles = 0;
+
+	void UpdateVertexArray();
 };
 
 #endif // A2WINDOWBEAM_H

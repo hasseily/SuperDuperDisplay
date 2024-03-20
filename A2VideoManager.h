@@ -9,11 +9,6 @@
 #include "common.h"
 #include "A2WindowBeam.h"
 
-// Those could be anywhere up to 6 or 7 cycles for horizontal borders
-// and a lot more for vertical borders. We just decided on a size
-#define _A2_BORDER_WIDTH_CYCLES 5
-#define _A2_BORDER_HEIGHT_CYCLES 5
-
 // Legacy mode VRAM is 4 bytes (main, aux, flags, colors)
 // for each "byte" of screen use
 // colors are 4-bit each of fg and bg colors as in the Apple 2gs
@@ -67,6 +62,9 @@ public:
 		bool use_shr = false;
 		uint8_t vram_legacy[_BEAM_VRAM_SIZE_LEGACY];
 		uint8_t vram_shr[_BEAM_VRAM_SIZE_SHR];
+		BeamRenderVRAMs() :  vram_legacy{}, vram_shr{} // Zero-initialize
+		{
+		}
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -74,7 +72,7 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 
 	ImageAsset image_assets[8];
-	A2WindowBeam windowsbeam[A2VIDEOBEAM_TOTAL_COUNT];	// beam racing GPU render
+	std::unique_ptr<A2WindowBeam> windowsbeam[A2VIDEOBEAM_TOTAL_COUNT];	// beam racing GPU render
 
 	uint64_t current_frame_idx = 0;
 	uint64_t rendered_frame_idx = UINT64_MAX;

@@ -56,7 +56,7 @@ MosaicMesh::MosaicMesh(uint32_t tile_xcount, uint32_t tile_ycount, uint32_t tile
 	};
 
 	for (GLint i = 0; i < _SDHR_MAX_TEXTURES; i++) {
-		texSamplers[i] = (_SDHR_TEXTURE_UNITS_START - GL_TEXTURE0) + i;
+		texSamplers[i] = (_TEXUNIT_IMAGE_ASSETS_START - GL_TEXTURE0) + i;
 	}
 	bNeedsGPUUpdate = true;
 }
@@ -138,8 +138,8 @@ void MosaicMesh::updateMesh()
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tint));
 
-	// Associate the texture TBTEX in GL_TEXTURE0+TEXUNIT with the buffer
-	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
+	// Associate the texture TBTEX with _TEXUNIT_DATABUFFER
+	glActiveTexture(_TEXUNIT_DATABUFFER);
 	glBindTexture(GL_TEXTURE_2D, TBTEX);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, cols, rows, 0, GL_RGBA, GL_FLOAT, &this->mosaicTiles[0]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -192,7 +192,7 @@ void MosaicMesh::SetupDraw()
 // render the mesh
 // NOTE: This (and any methods with OpenGL calls) must be called from the main thread
 // NOTE: It assumes both that SetupDraw() has been called 
-//		 and that the textures have been already bound to _SDHR_TEXTURE_UNITS_START forward
+//		 and that the textures have been already bound to _TEXUNIT_IMAGE_ASSETS_START forward
 void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 {
 	GLenum glerr;
@@ -207,10 +207,10 @@ void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 	glm::mat4 mat_final = mat_proj * mat_camera * this->mat_trans;
 	shaderProgram->setMat4("transform", mat_final);
 
-	// point the uniform at the tiles data texture (GL_TEXTURE0 + _SDHR_TBO_TEXUNIT)
-	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
+	// point the uniform at the tiles data texture (_TEXUNIT_DATABUFFER)
+	glActiveTexture(_TEXUNIT_DATABUFFER);
 	glBindTexture(GL_TEXTURE_2D, TBTEX);
-	shaderProgram->setInt("TBTEX", _SDHR_TBO_TEXUNIT);
+	shaderProgram->setInt("TBTEX", _TEXUNIT_DATABUFFER - GL_TEXTURE0);
 	// back to the output buffer to draw our scene
 	glActiveTexture(GL_TEXTURE0);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());

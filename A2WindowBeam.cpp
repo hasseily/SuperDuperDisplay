@@ -4,9 +4,12 @@
 #include "A2VideoManager.h"
 #include "SDHRManager.h"
 
-void A2WindowBeam::Reset()
+A2WindowBeam::A2WindowBeam(A2VideoModeBeam_e _video_mode, Shader* _shaderProgram)
 {
-	SetEnabled(false);
+	video_mode = _video_mode;
+	shaderProgram = _shaderProgram;
+
+	SetBorderCycles(_A2_BORDER_WIDTH_CYCLES, _A2_BORDER_HEIGHT_CYCLES);
 }
 
 A2WindowBeam::~A2WindowBeam()
@@ -21,46 +24,56 @@ A2WindowBeam::~A2WindowBeam()
 	}
 }
 
-void A2WindowBeam::Define(A2VideoModeBeam_e _video_mode, Shader* _shaderProgram)
+const uint32_t A2WindowBeam::GetWidth()
 {
-	this->Reset();
-	shaderProgram = _shaderProgram;
-	
+	return screen_count.x;
+}
+
+const uint32_t A2WindowBeam::GetHeight()
+{
+	return screen_count.y;
+}
+
+void A2WindowBeam::SetBorderCycles(uint32_t cycles_horizontal, uint32_t cycles_vertical)
+{
+	border_width_cycles = cycles_horizontal;
+	border_height_cycles = cycles_vertical;
 	uint32_t cycles_h_with_border = 40 + (2 * border_width_cycles);
-
-	// Do not update again the screen counts and vertices if already defined once
-	// It can mess with the render
-	if (!(defined && (_video_mode == video_mode)))
-	{
-		video_mode = _video_mode;
-		// Legacy is 14 dots per cycle, SHR is 16 dots per cycle
-		switch (video_mode) {
-			case A2VIDEOBEAM_LEGACY:
-				screen_count = uXY({ cycles_h_with_border * 14, 384u + (2 * border_height_cycles) });
-				break;
-			case A2VIDEOBEAM_SHR:
-				screen_count = uXY({ cycles_h_with_border * 16 , 400u + (2 * border_height_cycles) });
-				break;
-			default:	//e
-				screen_count = uXY({ cycles_h_with_border * 14, 384u + (2 * border_height_cycles) });
-				break;
-		}
-		vertices[0].PixelPos = glm::vec2(0, screen_count.y);	// top left
-		vertices[1].PixelPos = glm::vec2(screen_count.x, 0);	// bottom right
-		vertices[2].PixelPos = glm::vec2(screen_count.x, screen_count.y);	// top right
-		vertices[3].PixelPos = glm::vec2(0, screen_count.y);	// top left
-		vertices[4].PixelPos = glm::vec2(0, 0);	// bottom left
-		vertices[5].PixelPos = glm::vec2(screen_count.x, 0);	// bottom right
-
-		bNeedsGPUVertexUpdate = true;
-		defined = true;
+	// Legacy is 14 dots per cycle, SHR is 16 dots per cycle
+	switch (video_mode) {
+	case A2VIDEOBEAM_LEGACY:
+		screen_count = uXY({ cycles_h_with_border * 14, 384u + (2 * border_height_cycles) });
+		break;
+	case A2VIDEOBEAM_SHR:
+		screen_count = uXY({ cycles_h_with_border * 16 , 400u + (2 * border_height_cycles) });
+		break;
+	default:	//e
+		screen_count = uXY({ cycles_h_with_border * 14, 384u + (2 * border_height_cycles) });
+		break;
 	}
+	UpdateVertexArray();
+}
+
+
+void A2WindowBeam::UpdateVertexArray()
+{
+	// Assign the vertex array.
+	// The first 2 values are the relative XY, bound from -1 to 1.
+	// The A2WindowBeam always covers the whole screen, so from -1 to 1 on both axes
+	// The second pair of values is the actual pixel value on screen
+	vertices.clear();
+	vertices.push_back(A2BeamVertex({ glm::vec2(-1,  1), glm::ivec2(0, screen_count.y) }));	// top left
+	vertices.push_back(A2BeamVertex({ glm::vec2(1, -1), glm::ivec2(screen_count.x, 0) }));	// bottom right
+	vertices.push_back(A2BeamVertex({ glm::vec2(1,  1), glm::ivec2(screen_count.x, screen_count.y) }));	// top right
+	vertices.push_back(A2BeamVertex({ glm::vec2(-1,  1), glm::ivec2(0, screen_count.y) }));	// top left
+	vertices.push_back(A2BeamVertex({ glm::vec2(-1, -1), glm::ivec2(0, 0) }));	// bottom left
+	vertices.push_back(A2BeamVertex({ glm::vec2(1, -1), glm::ivec2(screen_count.x, 0) }));	// bottom right
+
+	bNeedsGPUVertexUpdate = true;
 }
 
 void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 {
-	if (!(defined && enabled))
-		return;
 	if (shaderProgram == nullptr)
 		return;
 	if (vertices.size() == 0)
@@ -72,6 +85,8 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 
 	if (VAO == UINT_MAX)
 	{
+		// TODO: CREATE A FBO AND OUTPUT TEXTURE
+		// TODO: EXPOSE THE OUTPUT TEXTURE ID TO A2VIDEOMANAGER
 		glGenVertexArrays(1, &VAO);
 		glGenBuffers(1, &VBO);
 	}
@@ -97,34 +112,53 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(A2BeamVertex), (void*)offsetof(A2BeamVertex, PixelPos));
 	}
 
-	// Associate the texture VRAMTEX in GL_TEXTURE0+_SDHR_TBO_TEXUNIT with the buffer
+	// Associate the texture VRAMTEX in TEXUNIT_DATABUFFER with the buffer
 	// This is the apple 2's memory which is mapped to a "texture"
 	// Always update that buffer in the GPU
 	if (shouldUpdateDataInGPU)
 	{
 		uint32_t cycles_h_with_border = 40 + (2 * border_width_cycles);
-		glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
+		glActiveTexture(_TEXUNIT_DATABUFFER);
 		glBindTexture(GL_TEXTURE_2D, VRAMTEX);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-		switch (video_mode) {
+		if (vramTextureExists)	// it exists, do a glTexSubImage2D() update
+		{
+			switch (video_mode) {
+			case A2VIDEOBEAM_LEGACY:
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_h_with_border, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+				break;
+			case A2VIDEOBEAM_SHR:
+				// Adjust the unpack alignment for textures with arbitrary widths
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1 + 32 + 160 + (2 * border_width_cycles * 16), 200, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+				break;
+			default:
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_h_with_border, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+				break;
+			}
+		}
+		else {	// texture doesn't exist, create it with glTexImage2D()
+			switch (video_mode) {
 			case A2VIDEOBEAM_LEGACY:
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_h_with_border, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
 			case A2VIDEOBEAM_SHR:
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 1+32+160 + (2 * border_width_cycles * 16), 200, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 1 + 32 + 160 + (2 * border_width_cycles * 16), 200, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				break;
 			default:
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_h_with_border, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
+			}
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		}
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glBindTexture(GL_TEXTURE_2D, 0);
+		glActiveTexture(GL_TEXTURE0);
 	}
 
 	// reset the binding
@@ -145,17 +179,17 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	shaderProgram->setInt("ticks", SDL_GetTicks());
 
 	// point the uniform at the VRAM texture
-	glActiveTexture(GL_TEXTURE0 + _SDHR_TBO_TEXUNIT);
+	glActiveTexture(_TEXUNIT_DATABUFFER);
 	glBindTexture(GL_TEXTURE_2D, VRAMTEX);
-	shaderProgram->setInt("VRAMTEX", _SDHR_TBO_TEXUNIT);
+	shaderProgram->setInt("VRAMTEX", _TEXUNIT_DATABUFFER - GL_TEXTURE0);
 	
 	// And set all the modes textures that the shader will use
 	// 2 font textures + lgr, hgr, dhgr
-	shaderProgram->setInt("a2ModesTex0", _SDHR_TEXTURE_UNITS_START + 0 - GL_TEXTURE0);	// D/TEXT font regular
-	shaderProgram->setInt("a2ModesTex1", _SDHR_TEXTURE_UNITS_START + 1 - GL_TEXTURE0);	// D/TEXT font alternate
-	shaderProgram->setInt("a2ModesTex2", _SDHR_TEXTURE_UNITS_START + 4 - GL_TEXTURE0);	// D/LGR
-	shaderProgram->setInt("a2ModesTex3", _SDHR_TEXTURE_UNITS_START + 5 - GL_TEXTURE0);	// HGR
-	shaderProgram->setInt("a2ModesTex4", _SDHR_TEXTURE_UNITS_START + 6 - GL_TEXTURE0);	// DHGR
+	shaderProgram->setInt("a2ModesTex0", _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0);	// D/TEXT font regular
+	shaderProgram->setInt("a2ModesTex1", _TEXUNIT_IMAGE_ASSETS_START + 1 - GL_TEXTURE0);	// D/TEXT font alternate
+	shaderProgram->setInt("a2ModesTex2", _TEXUNIT_IMAGE_ASSETS_START + 4 - GL_TEXTURE0);	// D/LGR
+	shaderProgram->setInt("a2ModesTex3", _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0);	// HGR
+	shaderProgram->setInt("a2ModesTex4", _TEXUNIT_IMAGE_ASSETS_START + 6 - GL_TEXTURE0);	// DHGR
 
 	// back to the output buffer to draw our scene
 	glActiveTexture(GL_TEXTURE0);

@@ -785,7 +785,7 @@ void SDHRManager::create_framebuffer(uint32_t width, uint32_t height)
 
 	glGenFramebuffers(1, &FBO);
 	glGenTextures(1, &output_texture_id);
-	glActiveTexture(_POSTPROCESS_TEXTURE_UNIT);
+	glActiveTexture(_TEXUNIT_POSTPROCESS);
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
@@ -829,7 +829,7 @@ void SDHRManager::rescale_framebuffer(uint32_t width, uint32_t height)
 		return;
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
 	GLenum glerr;
-	glActiveTexture(_POSTPROCESS_TEXTURE_UNIT);
+	glActiveTexture(_TEXUNIT_POSTPROCESS);
 	for (int i = 0; i < 2; ++i) {
 		glBindTexture(GL_TEXTURE_2D, output_texture_id);
 		glViewport(0, 0, width, height);
@@ -854,7 +854,7 @@ GLuint SDHRManager::Render()
 	glClearColor(0.f, 0.f, 0.f, 0.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL setup_render error: " << glerr << std::endl;
+		std::cerr << "OpenGL setup SDHRManager render error: " << glerr << std::endl;
 	}
 
 	// Check if we need to resize
@@ -922,10 +922,10 @@ GLuint SDHRManager::Render()
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
 
-		// We're going to set the active textures to _SDHR_TEXTURE_UNITS_START, leaving textures GL_TEXTURE0 (output texture)
+		// We're going to set the active textures to _TEXUNIT_IMAGE_ASSETS_START, leaving textures GL_TEXTURE0 (output texture)
 		// and GL_TEXTURE1 (mosaic data buffer) alone
 		for (GLenum i = 0; i < _SDHR_MAX_TEXTURES; i++) {
-			glActiveTexture(_SDHR_TEXTURE_UNITS_START + i);	// AssignByFilename() will bind to the active texture slot
+			glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + i);	// AssignByFilename() will bind to the active texture slot
 			// the default tex0 and tex4..16 are the same, but the others are unique for better testing
 			image_assets[i].AssignByFilename(this, "assets/Texture_Default.png");
 			image_assets[i].LoadIntoGPU();
@@ -945,7 +945,7 @@ GLuint SDHRManager::Render()
 		{
 			if (image_assets[i].data != nullptr)
 			{
-				glActiveTexture(_SDHR_TEXTURE_UNITS_START + i);
+				glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + i);
 				image_assets[i].LoadIntoGPU();
 				glActiveTexture(GL_TEXTURE0);
 			}

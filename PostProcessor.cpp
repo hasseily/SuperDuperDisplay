@@ -253,7 +253,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 		shaderProgram.use();
 		// Update uniforms
 		shaderProgram.setInt("A2Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
-		shaderProgram.setInt("BezelTexture", _SDHR_TEXTURE_UNITS_START + 7 - GL_TEXTURE0);
+		shaderProgram.setInt("BezelTexture", _TEXUNIT_IMAGE_ASSETS_START + 7 - GL_TEXTURE0);
 		shaderProgram.setInt("FrameCount", frame_count);
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
 		shaderProgram.setVec2("InputSize", glm::vec2(texwidth, texheight));

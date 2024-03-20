@@ -44,21 +44,25 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _A2_MEMORY_SHADOW_BEGIN 0x200
 #define _A2_MEMORY_SHADOW_END 0xC000
 
-// This is the input texture unit that the postprocessor will use to generate the final output
-#define _POSTPROCESS_TEXTURE_UNIT GL_TEXTURE15
+// For all modes!
+// The data buffer is always in tex1.
+// Image assets can be put in tex2 to tex14
+// Post processing input texture is always in tex14
+#define _TEXUNIT_DATABUFFER GL_TEXTURE1			// Texunit of the data buffer (vram for legacy, TBO for SDHR)
+#define _TEXUNIT_IMAGE_ASSETS_START GL_TEXTURE2	// Start of the image assets
+#define _TEXUNIT_POSTPROCESS GL_TEXTURE15		// input texunit the PP will use to generate the final output
+
 
 // DEFINITIONS OF SDHR SPECS
 #define _SDHR_SERVER_PORT 8080
 #define _SDHR_UPLOAD_REGION_SIZE 256*256*256	// Upload data region size (should be 16MB)
 #define _SDHR_MAX_WINDOWS 256
-#define _SDHR_TBO_TEXUNIT 1						// Texture unit (GL_TEXTURE0 + unit) of the tilebufferobject
-#define _SDHR_MAX_TEXTURES 14					// Max # of image assets available
-#define _SDHR_TEXTURE_UNITS_START GL_TEXTURE2	// Start of the image assets
+#define _SDHR_MAX_TEXTURES (_TEXUNIT_POSTPROCESS - _TEXUNIT_IMAGE_ASSETS_START)	// Max # of image assets available
 #define _SDHR_MAX_UV_SCALE 100.f				// Maximum scale of Mosaic Tile UV
 
 // ORIGINAL APPLE 2 VIDEO MODES
-#define _A2VIDEO_MIN_WIDTH 40*7*2
-#define _A2VIDEO_MIN_HEIGHT 24*8*2
+#define _A2VIDEO_LEGACY_WIDTH 40*7*2
+#define _A2VIDEO_LEGACY_HEIGHT 24*8*2
 #define _A2VIDEO_MIN_MIXED_HEIGHT 20*8*2
 #define _A2VIDEO_SHR_WIDTH 640
 #define _A2VIDEO_SHR_HEIGHT 200*2

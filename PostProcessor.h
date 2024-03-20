@@ -18,7 +18,7 @@
 #include <array>
 
 // Link the output of the legacy, sdhr, ... renderers to the input of the postprocessor
-#define _PP_INPUT_TEXTURE_UNIT _POSTPROCESS_TEXTURE_UNIT
+#define _PP_INPUT_TEXTURE_UNIT _TEXUNIT_POSTPROCESS
 
 class PostProcessor
 {
