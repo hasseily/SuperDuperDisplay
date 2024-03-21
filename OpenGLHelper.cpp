@@ -24,7 +24,7 @@ void OpenGLHelper::Initialize()
 
 OpenGLHelper::~OpenGLHelper()
 {
-	for each (auto texid in v_texture_ids)
+	for (auto texid : v_texture_ids)
 	{
 		glDeleteTextures(1, &texid);
 	}
