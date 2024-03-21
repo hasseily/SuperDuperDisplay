@@ -11,7 +11,8 @@
 #ifdef _DEBUGTIMINGS
 #include <chrono>
 #endif
-
+#include <iostream>
+#include <iomanip>
 #include "OpenGLHelper.h"
 #include "MemoryManager.h"
 #include "EventRecorder.h"
@@ -155,8 +156,9 @@ void A2VideoManager::Initialize()
 	for (int i = 0; i < 2; i++)
 	{
 		vrams_array[i].frame_idx = 0;
+		// force initialization at start of both GL framebuffers
 		vrams_array[i].use_legacy = true;
-		vrams_array[i].use_shr = false;
+		vrams_array[i].use_shr = true;
 		memset(vrams_array[i].vram_legacy, 0, _BEAM_VRAM_SIZE_LEGACY);
 		memset(vrams_array[i].vram_shr, 0, _BEAM_VRAM_SIZE_SHR);
 	}
@@ -186,7 +188,7 @@ void A2VideoManager::Initialize()
 	windowsbeam[A2VIDEOBEAM_LEGACY]->SetBorder(_A2_BORDER_WIDTH_CYCLES, _A2_BORDER_HEIGHT_SCANLINES);
 	windowsbeam[A2VIDEOBEAM_SHR]->SetBorder(_A2_BORDER_WIDTH_CYCLES, _A2_BORDER_HEIGHT_SCANLINES);
 
-	// The final framebuffer will have a size equal to the SHR buffer (including borders)
+	// The merged framebuffer will have a size equal to the SHR buffer (including borders)
 	fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
 	fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
 
@@ -210,7 +212,7 @@ void A2VideoManager::ResetComputer()
         return;
     bIsRebooting = true;
 	MemoryManager::GetInstance()->Initialize();
-	this->Initialize();
+	this->ForceBeamFullScreenRender();
     bIsRebooting = false;
 }
 
@@ -223,8 +225,7 @@ void A2VideoManager::ToggleA2Video(bool value)
 {
 	bA2VideoEnabled = value;
 	if (bA2VideoEnabled)
-	bShouldInitializeRender = true;
-	ForceBeamFullScreenRender();
+		bShouldInitializeRender = true;
 }
 
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
@@ -242,7 +243,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 		// Flip the double buffers
 		vrams_write = &vrams_array[current_frame_idx % 2];
 		vrams_read = &vrams_array[1 - (current_frame_idx % 2)];
-
 		// reset the legacy and shr flags at each vblank
 		vrams_write->use_legacy = false;
 		vrams_write->use_shr = false;
@@ -269,15 +269,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	color_background = gPaletteRGB[12 + (memMgr->switch_c022 & 0x0F)];
 	color_foreground = gPaletteRGB[12 + ((memMgr->switch_c022 & 0xF0) >> 4)];
 	color_border = gPaletteRGB[12 + (memMgr->switch_c034 & 0x0F)];
-	
-	// in VBLANK but ready to handle the top border
-	if (y >= (region_scanlines - _A2_BORDER_HEIGHT_SCANLINES))
-	{
-		if (memMgr->IsSoftSwitch(A2SS_SHR))
-		{
-			
-		}
-	}
 
 	if (_x < CYCLES_HBLANK)	// in HBLANK, nothing to do
 		return;
@@ -412,9 +403,10 @@ void A2VideoManager::ForceBeamFullScreenRender()
 {
 	// Forces a full screen render for the beam renderer
 	// Move the beam over the whole screen
-	for (uint32_t y = 0; y < 201; y++)	// renders at 200 (VBL)
+	auto totalscanlines = (current_region == VideoRegion_e::NTSC ? SCANLINES_TOTAL_NTSC : SCANLINES_TOTAL_PAL);
+	for (uint32_t y = 0; y < totalscanlines; y++)
 	{
-		for (uint32_t x = 0; x < 65; x++)	// HBL is the first 25
+		for (uint32_t x = 0; x < 65; x++)
 		{
 			this->BeamIsAtPosition(x, y);
 		}
@@ -423,7 +415,7 @@ void A2VideoManager::ForceBeamFullScreenRender()
 
 uXY A2VideoManager::ScreenSize()
 {
-	return uXY({ fb_width, fb_height});
+	return uXY({ output_width, output_height});
 }
 
 GLuint A2VideoManager::Render()
@@ -445,10 +437,6 @@ GLuint A2VideoManager::Render()
 
 	if (!bA2VideoEnabled)
 		return UINT32_MAX;
-
-	// Exit if we've already rendered the buffer
-	if (rendered_frame_idx == vrams_read->frame_idx)
-		return output_texture_id;
 	
 	GLenum glerr;
 	if (FBO_merged == UINT_MAX)
@@ -470,14 +458,17 @@ GLuint A2VideoManager::Render()
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
+
+	// Exit if we've already rendered the buffer
+	if (rendered_frame_idx == vrams_read->frame_idx)
+		return output_texture_id;
+
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
 	glClearColor(0.f, 0.f, 0.f, 0.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL render A2VideoManager error: " << glerr << std::endl;
 	}
-	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
-	glViewport(0, 0, fb_width, fb_height);
 
 	// Initialization routine runs only once on init (or re-init)
 	// We do that here because we know the framebuffer is bound, and everything
@@ -520,15 +511,7 @@ GLuint A2VideoManager::Render()
 		ForceBeamFullScreenRender();
 	}
 
-	// Render what must be rendered, and always update the VRAMs
-	if (vrams_read->use_legacy)
-		windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
-	if (vrams_read->use_shr)
-		windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
-
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL draw error: " << glerr << std::endl;
-	}
+	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
 
 	// Now determine how we should merge both legacy and shr
 	if (vrams_read->use_legacy && vrams_read->use_shr)
@@ -536,22 +519,34 @@ GLuint A2VideoManager::Render()
 		// Both are active in this frame, we need to do the merge
 		// TODO: TAKE BOTH OUTPUT TEXTURES AND BIND THEM TO TEXTURES 13 and 14
 		// TODO: RENDER VIA A MERGE SHADER
+		output_width = fb_width;
+		output_height = fb_height;
+		glViewport(0, 0, output_width, output_height);
+		GLuint legacy_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
+		GLuint shr_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
 		output_texture_id = merged_texture_id;
+	}
+	else if (vrams_read->use_legacy) {
+		// Only legacy is active, just bind the correct output for the postprocessor
+		output_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
+		output_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
+		glViewport(0, 0, output_width, output_height);
+		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
+		glActiveTexture(_TEXUNIT_POSTPROCESS);
+		glBindTexture(GL_TEXTURE_2D, output_texture_id);
 	}
 	else if (vrams_read->use_shr) {
 		// Only SHR is active, just bind the correct output for the postprocessor
-		output_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->GetOutputTextureId();
+		output_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
+		output_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
+		glViewport(0, 0, output_width, output_height);
+		output_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
 		glActiveTexture(_TEXUNIT_POSTPROCESS);
 		glBindTexture(GL_TEXTURE_2D, output_texture_id);
 	}
-	else {
-		// Only legacy is active, just bind the correct output for the postprocessor
-		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->GetOutputTextureId();
-		glActiveTexture(_TEXUNIT_POSTPROCESS);
-		glBindTexture(GL_TEXTURE_2D, output_texture_id);
-	}
+
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL bind error: " << glerr << std::endl;
+		std::cerr << "OpenGL draw error: " << glerr << std::endl;
 	}
 
 	// cleanup
@@ -567,12 +562,7 @@ GLuint A2VideoManager::Render()
 
 GLuint A2VideoManager::GetOutputTextureId()
 {
-	if (vrams_read->use_legacy && vrams_read->use_shr)
-		return merged_texture_id;
-	else if (vrams_read->use_shr)
-		return windowsbeam[A2VIDEOBEAM_SHR]->GetOutputTextureId();
-	else
-		return windowsbeam[A2VIDEOBEAM_LEGACY]->GetOutputTextureId();
+	return output_texture_id;
 }
 
 void A2VideoManager::ActivateBeam()

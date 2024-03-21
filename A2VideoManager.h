@@ -151,9 +151,12 @@ private:
 	GLuint output_texture_id;	// the actual output texture (could be legacy/shr/merged)
 	GLuint FBO_merged = UINT_MAX;		// the framebuffer object for the merge
 
-	// The final framebuffer width is going to be shr + border
+	// The merged framebuffer width is going to be shr + border
 	uint32_t fb_width = 0;
 	uint32_t fb_height = 0;
+	// The actual final output width and height
+	uint32_t output_width = 0;
+	uint32_t output_height = 0;
 };
 #endif // A2VIDEOMANAGER_H
 

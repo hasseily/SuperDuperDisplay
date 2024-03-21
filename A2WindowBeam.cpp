@@ -43,7 +43,7 @@ void A2WindowBeam::SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vert
 		screen_count = uXY({ cycles_h_with_border * 14, 384 + (2 * border_height_scanlines) });
 		break;
 	case A2VIDEOBEAM_SHR:
-		screen_count = uXY({ cycles_h_with_border * 16 , 400 + (2 * border_height_scanlines) - 8 });
+		screen_count = uXY({ cycles_h_with_border * 16 , 400 + (2 * border_height_scanlines) });
 		break;
 	default:	//e
 		screen_count = uXY({ cycles_h_with_border * 14, 384 + (2 * border_height_scanlines) });
@@ -76,12 +76,14 @@ GLuint A2WindowBeam::GetOutputTextureId()
 	return output_texture_id;
 }
 
-void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
+GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 {
+	// std::cerr << "Rendering " << (int)video_mode << " - "
+	// 	<< shouldUpdateDataInGPU << " - " << bNeedsGPUVertexUpdate << std::endl;
 	if (shaderProgram == nullptr)
-		return;
+		return UINT32_MAX;
 	if (vertices.size() == 0)
-		return;
+		return UINT32_MAX;
 
 	GLenum glerr;
 	if (VRAMTEX == UINT_MAX)
@@ -117,6 +119,7 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL render A2VideoManager error: " << glerr << std::endl;
 	}
+	// std::cerr << "VRAMTEX " << VRAMTEX << " VAO " << VAO << " FBO " << FBO << std::endl;
 
 	glBindVertexArray(VAO);
 
@@ -184,6 +187,7 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			vramTextureExists = true;
 		}
 		glActiveTexture(GL_TEXTURE0);
 	}
@@ -195,7 +199,7 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	shaderProgram->use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
-		return;
+		return UINT32_MAX;
 	}
 
 	shaderProgram->setInt("ticks", SDL_GetTicks());
@@ -213,11 +217,12 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	shaderProgram->setInt("a2ModesTex3", _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0);	// HGR
 	shaderProgram->setInt("a2ModesTex4", _TEXUNIT_IMAGE_ASSETS_START + 6 - GL_TEXTURE0);	// DHGR
 
-	// back to the output buffer to draw our scene
-	glActiveTexture(GL_TEXTURE0);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE0);
 	glBindVertexArray(0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2WindowBeam render error: " << glerr << std::endl;
 	}
+	return output_texture_id;
 }

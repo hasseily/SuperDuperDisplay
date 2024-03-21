@@ -14,8 +14,8 @@
 // and a lot more for vertical borders. We just decided on a size
 // But SHR starts VBLANK just like legacy modes, at scanline 192. Hence
 // it has 8 less bottom border scanlines than legacy.
-#define _A2_BORDER_WIDTH_CYCLES 5
-#define _A2_BORDER_HEIGHT_SCANLINES 70
+#define _A2_BORDER_WIDTH_CYCLES 0
+#define _A2_BORDER_HEIGHT_SCANLINES 0
 
 enum A2VideoModeBeam_e
 {
@@ -33,16 +33,13 @@ class A2WindowBeam
 {
 public:
 
-	bool bNeedsGPUVertexUpdate = true;	// Update the GPU if the vertex data has changed
 	A2WindowBeam(A2VideoModeBeam_e _video_mode, Shader* _shaderProgram);
-
-
 	~A2WindowBeam();
 	const uint32_t GetWidth();
 	const uint32_t GetHeight();
 	void SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vertical);
 	GLuint GetOutputTextureId();
-	void Render(bool shouldUpdateDataInGPU);
+	GLuint Render(bool shouldUpdateDataInGPU);	// returns the output texture id
 
 	Shader* GetShaderProgram() { return shaderProgram; };
 	void SetShaderProgram(Shader* _shader) { shaderProgram = _shader; };
@@ -50,6 +47,7 @@ public:
 
 private:
 	bool vramTextureExists = false;						// true if the VRAM texture exists and only needs an update
+	bool bNeedsGPUVertexUpdate = true;					// Update the GPU if the vertex data has changed
 	A2VideoModeBeam_e video_mode = A2VIDEOBEAM_LEGACY;	// Which video mode is used
 	Shader* shaderProgram = nullptr;					// Shader used
 	uXY screen_count = {0,0};				// width,height in pixels of visible screen area of window
@@ -63,8 +61,8 @@ private:
 	uint32_t border_width_cycles = 0;
 	uint32_t border_height_scanlines = 0;
 
-	GLuint output_texture_id;	// the output texture for this object
-	GLuint FBO = UINT_MAX;		// the framebuffer for this object
+	GLuint output_texture_id = 0;	// the output texture for this object
+	GLuint FBO = UINT_MAX;			// the framebuffer for this object
 
 	void UpdateVertexArray();
 };
