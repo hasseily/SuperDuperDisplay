@@ -14,7 +14,7 @@
 // for each "byte" of screen use
 // colors are 4-bit each of fg and bg colors as in the Apple 2gs
 
-constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = (40 + (2 * _A2_BORDER_WIDTH_CYCLES)) * (192 + (2 * _A2_BORDER_HEIGHT_CYCLES)) * 4;
+constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = (40 + (2 * _A2_BORDER_WIDTH_CYCLES)) * (192 + (2 * _A2_BORDER_HEIGHT_SCANLINES)) * 4;
 
 // SHR mode VRAM is the standard bytes of screen use ($2000 to $9CFF)
 // plus, for each of the 200 lines, at the beginning of the line draw
@@ -32,7 +32,7 @@ constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = (40 + (2 * _A2_BORDER_WIDTH_CYCLES))
 
 // The BORDER bytes have the exact border color in their lower 4 bits
 
-constexpr uint32_t _BEAM_VRAM_SIZE_SHR = (1 + 32 + (2 * _A2_BORDER_WIDTH_CYCLES * 16) + 160) * (200 + (2 * _A2_BORDER_HEIGHT_CYCLES));
+constexpr uint32_t _BEAM_VRAM_SIZE_SHR = (1 + 32 + (2 * _A2_BORDER_WIDTH_CYCLES * 16) + 160) * (200 + (2 * _A2_BORDER_HEIGHT_SCANLINES));
 
 class A2VideoManager
 {
@@ -147,7 +147,8 @@ private:
 	uint32_t region_scanlines = (current_region == VideoRegion_e::NTSC ? SCANLINES_TOTAL_NTSC : SCANLINES_TOTAL_PAL);
 
 	GLint last_viewport[4];		// Previous viewport used, so we don't clobber it
-	GLuint merged_texture_id;	// the output texture that merges both legacy+shr
+	GLuint merged_texture_id;	// the merged texture that merges both legacy+shr
+	GLuint output_texture_id;	// the actual output texture (could be legacy/shr/merged)
 	GLuint FBO_merged = UINT_MAX;		// the framebuffer object for the merge
 
 	// The final framebuffer width is going to be shr + border

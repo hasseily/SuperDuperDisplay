@@ -183,6 +183,8 @@ void A2VideoManager::Initialize()
 	// Initialize windows
 	windowsbeam[A2VIDEOBEAM_LEGACY] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_LEGACY, &shader_beam_legacy);
 	windowsbeam[A2VIDEOBEAM_SHR] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_SHR, &shader_beam_shr);
+	windowsbeam[A2VIDEOBEAM_LEGACY]->SetBorder(_A2_BORDER_WIDTH_CYCLES, _A2_BORDER_HEIGHT_SCANLINES);
+	windowsbeam[A2VIDEOBEAM_SHR]->SetBorder(_A2_BORDER_WIDTH_CYCLES, _A2_BORDER_HEIGHT_SCANLINES);
 
 	// The final framebuffer will have a size equal to the SHR buffer (including borders)
 	fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
@@ -231,7 +233,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	//
 	uint32_t mode_scanlines = (memMgr->IsSoftSwitch(A2SS_SHR) ? 200u : 192u);
 	// Start of VBLANK at which we flip the double buffering
-	if ((_x == CYCLES_HBLANK) && (y == (mode_scanlines + _A2_BORDER_HEIGHT_CYCLES)))
+	if ((_x == CYCLES_HBLANK) && (y == (mode_scanlines + _A2_BORDER_HEIGHT_SCANLINES)))
 	{
 		// start the next frame
 		// set the frame index for the buffer we'll move to reading
@@ -251,8 +253,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	}
 
 	// in VBLANK (taking care of borders), nothing to do
-	if ((y >= (mode_scanlines + _A2_BORDER_HEIGHT_CYCLES)) &&
-		(y < (region_scanlines - _A2_BORDER_HEIGHT_CYCLES)))
+	if ((y >= (mode_scanlines + _A2_BORDER_HEIGHT_SCANLINES)) &&
+		(y < (region_scanlines - _A2_BORDER_HEIGHT_SCANLINES)))
 		return;
 
 	if (_x == 0)
@@ -262,8 +264,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 		// The 2gs will always set bit 4 to 0 when sending it over
 		vrams_write->vram_shr[(_COLORBYTESOFFSET + 160) * y] = 0x10;
 	}
-	if (_x < CYCLES_HBLANK)	// in HBLANK, nothing to do
-		return;
 	
 	// Get the colors
 	color_background = gPaletteRGB[12 + (memMgr->switch_c022 & 0x0F)];
@@ -271,13 +271,16 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	color_border = gPaletteRGB[12 + (memMgr->switch_c034 & 0x0F)];
 	
 	// in VBLANK but ready to handle the top border
-	if (y >= (region_scanlines - _A2_BORDER_HEIGHT_CYCLES))
+	if (y >= (region_scanlines - _A2_BORDER_HEIGHT_SCANLINES))
 	{
 		if (memMgr->IsSoftSwitch(A2SS_SHR))
 		{
 			
 		}
 	}
+
+	if (_x < CYCLES_HBLANK)	// in HBLANK, nothing to do
+		return;
 
 	// Set xx to 0 when after HBLANK. HBLANK is always at the start of the line
 	// However, VBLANK is at the end of the screen so we can use y as is
@@ -445,13 +448,14 @@ GLuint A2VideoManager::Render()
 
 	// Exit if we've already rendered the buffer
 	if (rendered_frame_idx == vrams_read->frame_idx)
-		return merged_texture_id;
+		return output_texture_id;
 	
 	GLenum glerr;
 	if (FBO_merged == UINT_MAX)
 	{
 		glGenFramebuffers(1, &FBO_merged);
 		glGenTextures(1, &merged_texture_id);
+		output_texture_id = merged_texture_id;
 		glActiveTexture(_TEXUNIT_POSTPROCESS);
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
 		glBindTexture(GL_TEXTURE_2D, merged_texture_id);
@@ -532,27 +536,33 @@ GLuint A2VideoManager::Render()
 		// Both are active in this frame, we need to do the merge
 		// TODO: TAKE BOTH OUTPUT TEXTURES AND BIND THEM TO TEXTURES 13 and 14
 		// TODO: RENDER VIA A MERGE SHADER
+		output_texture_id = merged_texture_id;
 	}
 	else if (vrams_read->use_shr) {
 		// Only SHR is active, just bind the correct output for the postprocessor
+		output_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->GetOutputTextureId();
 		glActiveTexture(_TEXUNIT_POSTPROCESS);
-		glBindTexture(GL_TEXTURE_2D, windowsbeam[A2VIDEOBEAM_SHR]->GetOutputTextureId());
+		glBindTexture(GL_TEXTURE_2D, output_texture_id);
 	}
 	else {
 		// Only legacy is active, just bind the correct output for the postprocessor
+		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->GetOutputTextureId();
 		glActiveTexture(_TEXUNIT_POSTPROCESS);
-		glBindTexture(GL_TEXTURE_2D, windowsbeam[A2VIDEOBEAM_LEGACY]->GetOutputTextureId());
+		glBindTexture(GL_TEXTURE_2D, output_texture_id);
+	}
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL bind error: " << glerr << std::endl;
 	}
 
-
 	// cleanup
+	glActiveTexture(GL_TEXTURE0);
 	glUseProgram(0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
 
 	// all done, the texture for this Apple 2 beam cycle frame is rendered
 	rendered_frame_idx = vrams_read->frame_idx;
-	return merged_texture_id;
+	return output_texture_id;
 }
 
 GLuint A2VideoManager::GetOutputTextureId()

@@ -8,8 +8,6 @@ A2WindowBeam::A2WindowBeam(A2VideoModeBeam_e _video_mode, Shader* _shaderProgram
 {
 	video_mode = _video_mode;
 	shaderProgram = _shaderProgram;
-
-	SetBorderCycles(_A2_BORDER_WIDTH_CYCLES, _A2_BORDER_HEIGHT_CYCLES);
 }
 
 A2WindowBeam::~A2WindowBeam()
@@ -34,21 +32,21 @@ const uint32_t A2WindowBeam::GetHeight()
 	return screen_count.y;
 }
 
-void A2WindowBeam::SetBorderCycles(uint32_t cycles_horizontal, uint32_t cycles_vertical)
+void A2WindowBeam::SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vertical)
 {
 	border_width_cycles = cycles_horizontal;
-	border_height_cycles = cycles_vertical;
+	border_height_scanlines = scanlines_vertical;
 	uint32_t cycles_h_with_border = 40 + (2 * border_width_cycles);
 	// Legacy is 14 dots per cycle, SHR is 16 dots per cycle
 	switch (video_mode) {
 	case A2VIDEOBEAM_LEGACY:
-		screen_count = uXY({ cycles_h_with_border * 14, 384u + (2 * border_height_cycles) });
+		screen_count = uXY({ cycles_h_with_border * 14, 384 + (2 * border_height_scanlines) });
 		break;
 	case A2VIDEOBEAM_SHR:
-		screen_count = uXY({ cycles_h_with_border * 16 , 400u + (2 * border_height_cycles) });
+		screen_count = uXY({ cycles_h_with_border * 16 , 400 + (2 * border_height_scanlines) - 8 });
 		break;
 	default:	//e
-		screen_count = uXY({ cycles_h_with_border * 14, 384u + (2 * border_height_cycles) });
+		screen_count = uXY({ cycles_h_with_border * 14, 384 + (2 * border_height_scanlines) });
 		break;
 	}
 	UpdateVertexArray();
@@ -154,32 +152,32 @@ void A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		{
 			switch (video_mode) {
 			case A2VIDEOBEAM_LEGACY:
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_h_with_border, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_h_with_border, 192 + (2 * border_height_scanlines), GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
 			case A2VIDEOBEAM_SHR:
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1 + 32 + 160 + (2 * border_width_cycles * 16), 200, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1 + 32 + 160 + (2 * border_width_cycles), 200 + (2 * border_height_scanlines), GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				break;
 			default:
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_h_with_border, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_h_with_border, 192 + (2 * border_height_scanlines), GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
 			}
 		}
 		else {	// texture doesn't exist, create it with glTexImage2D()
 			switch (video_mode) {
 			case A2VIDEOBEAM_LEGACY:
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_h_with_border, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_h_with_border, 192 + (2 * border_height_scanlines), 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
 			case A2VIDEOBEAM_SHR:
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 1 + 32 + 160 + (2 * border_width_cycles * 16), 200, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 1 + 32 + 160 + (2 * border_width_cycles), 200 + (2 * border_height_scanlines), 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				break;
 			default:
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_h_with_border, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_h_with_border, 192 + (2 * border_height_scanlines), 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
 			}
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

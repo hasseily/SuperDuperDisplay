@@ -218,6 +218,7 @@ int main(int argc, char* argv[])
 	int mem_load_position = 0;
 	bool vbl_region_is_PAL;
 	int vbl_slider_val;
+	float window_bgcolor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 
 	// Get the instances of all singletons before creating threads
 	// This ensures thread safety
@@ -362,8 +363,12 @@ int main(int argc, char* argv[])
 			std::cerr << "ERROR: TEXTURE OUTPUT INCORRECT" << std::endl;
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        uint32_t bc = a2VideoManager->color_border;
-		glClearColor((bc & 0xFF) / 256.0f, (bc >> 8 & 0xFF) / 256.0f, (bc >> 16 & 0xFF) / 256.0f, (bc >> 24 & 0xFF) / 256.0f);
+		
+		glClearColor(
+			window_bgcolor[0], 
+			window_bgcolor[1], 
+			window_bgcolor[2],
+			window_bgcolor[3]);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		postProcessor->Render(window, out_tex_id);
@@ -408,6 +413,9 @@ int main(int argc, char* argv[])
 					cycleCounter->SetVBLStart(vbl_slider_val);
 				}
 				ImGui::Separator();
+				if (ImGui::ColorEdit4("Window Color", window_bgcolor)) {
+					std::cerr << "color " << window_bgcolor[0] << std::endl;
+				}
 				ImGui::Checkbox("PostProcessing Window", &show_postprocessing_window);
 				if (ImGui::Checkbox("VSYNC", &g_swapInterval))
 					set_vsync(g_swapInterval);
@@ -565,7 +573,7 @@ int main(int argc, char* argv[])
 		{
 			ImGui::Begin("Texture Viewer", &show_texture_window);
 			ImVec2 avail_size = ImGui::GetContentRegionAvail();
-            ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES, "slot %d", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES+1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
 			GLint _w, _h;
 			if (_slotnum < _SDHR_MAX_TEXTURES)
 			{
@@ -582,6 +590,18 @@ int main(int argc, char* argv[])
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
 				ImGui::Text("Output Texture ID: %d (%d x %d)", (int)a2VideoManager->GetOutputTextureId(), _w, _h);
 				ImGui::Image((void*)a2VideoManager->GetOutputTextureId(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+			}
+			else if (_slotnum == _SDHR_MAX_TEXTURES+1)
+			{
+				glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
+				GLint target_tex_id = 0;
+				glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, target_tex_id);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
+				ImGui::Text("_PP_INPUT_TEXTURE_UNIT: %d (%d x %d)", target_tex_id, _w, _h);
+				ImGui::Image((void*)target_tex_id, avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
 			glBindTexture(GL_TEXTURE_2D, 0);
 			ImGui::End();

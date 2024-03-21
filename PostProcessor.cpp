@@ -211,7 +211,11 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texwidth);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texheight);
 	glActiveTexture(GL_TEXTURE0);	// Target the main SDL window
-	
+
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error PP 1: " << glerr << std::endl;
+	}
+
 	// How much can we scale the output quad?
 	// Always scale up in integers numbers
 	float _scale = static_cast<float>(viewportWidth) / static_cast<float>(texwidth);
@@ -296,11 +300,6 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 		shaderProgram.setFloat("CONV_B", p_conv_b);
 		shaderProgram.setFloat("POTATO", p_potato ? 1.0f : 0.0f);
 	}
-	
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error PP 1: " << glerr << std::endl;
-	}
-	
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 2: " << glerr << std::endl;
@@ -332,8 +331,6 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 
 	// Render the fullscreen quad
 	// Target the main SDL2 window
-	glClearColor(0.f, 0.f, 0.f, 0.f);
-	glClear(GL_COLOR_BUFFER_BIT);
 	glBindVertexArray(quadVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);

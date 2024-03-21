@@ -12,8 +12,10 @@
 
 // Those could be anywhere up to 6 or 7 cycles for horizontal borders
 // and a lot more for vertical borders. We just decided on a size
+// But SHR starts VBLANK just like legacy modes, at scanline 192. Hence
+// it has 8 less bottom border scanlines than legacy.
 #define _A2_BORDER_WIDTH_CYCLES 5
-#define _A2_BORDER_HEIGHT_CYCLES 5
+#define _A2_BORDER_HEIGHT_SCANLINES 70
 
 enum A2VideoModeBeam_e
 {
@@ -38,7 +40,7 @@ public:
 	~A2WindowBeam();
 	const uint32_t GetWidth();
 	const uint32_t GetHeight();
-	void SetBorderCycles(uint32_t cycles_horizontal, uint32_t cycles_vertical);
+	void SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vertical);
 	GLuint GetOutputTextureId();
 	void Render(bool shouldUpdateDataInGPU);
 
@@ -59,7 +61,7 @@ private:
 	unsigned int VBO = UINT_MAX;			// Vertex Buffer Object (holds vertices)
 
 	uint32_t border_width_cycles = 0;
-	uint32_t border_height_cycles = 0;
+	uint32_t border_height_scanlines = 0;
 
 	GLuint output_texture_id;	// the output texture for this object
 	GLuint FBO = UINT_MAX;		// the framebuffer for this object
