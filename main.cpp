@@ -260,6 +260,9 @@ int main(int argc, char* argv[])
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
 
+	// Run a refresh to show the first screen
+	a2VideoManager->ForceBeamFullScreenRender();
+
     while (!done)
 #endif
     {
