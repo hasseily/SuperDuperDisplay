@@ -24,50 +24,6 @@ PostProcessor* PostProcessor::s_instance;
 // viewport size in the render function. It will also resize itself to maximize the available space,
 // but only in integer scale
 
-static GLuint quadVAO = UINT_MAX;
-static GLuint quadVBO = UINT_MAX;
-// The quad vertices will change based on the change in the requested screen size
-static glm::vec4 quadViewportCoords = glm::vec4(0,0,0,0);	// left, top, right, bottom
-
-static int frame_count = 0;	// Frame count for interlacing
-static int v_presets = 0;	// Preset chosen
-
-// Shader parameter variables
-int p_postprocessing_level = 1;
-bool p_bzl = false;
-bool p_corner = false;
-bool p_ext_gamma = false;
-bool p_interlace = false;
-bool p_potato = false;
-bool p_slot = false;
-bool p_vig = false;
-float p_bgr = 0.0f;
-float p_black = 0.0f;
-float p_br_dep = 0.2f;
-float p_brightness = 1.0f;
-int p_c_space = 0;
-float p_c_str = 0.0f;
-float p_centerx = 0.0f;
-float p_centery = 0.0f;
-float p_conv_b = 0.0f;
-float p_conv_g = 0.0f;
-float p_conv_r = 0.0f;
-float p_gb = 0.0f;
-int p_m_type = 0;
-float p_maskh = 0.75f;
-float p_maskl = 0.3f;
-float p_msize = 1.0f;
-float p_rb = 0.0f;
-float p_rg = 0.0f;
-float p_saturation = 1.0f;
-float p_scanline_weight = 0.3f;
-int p_scanline_type = 2;
-float p_slotw = 3.0f;
-float p_warpx = 0.0f;
-float p_warpy = 0.0f;
-float p_zoomx = 0.0f;
-float p_zoomy = 0.0f;
-
 
 //////////////////////////////////////////////////////////////////////////
 // Basic singleton methods
@@ -75,8 +31,13 @@ float p_zoomy = 0.0f;
 
 void PostProcessor::Initialize()
 {
-	v_ppshaders.at(0).build("shaders/basic.vert", "shaders/basic.frag");
-	v_ppshaders.at(1).build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");
+	v_ppshaders.clear();
+	Shader shader_basic = Shader();
+	shader_basic.build("shaders/basic.vert", "shaders/basic.frag");
+	v_ppshaders.push_back(shader_basic);
+	Shader shader_pp = Shader();
+	shader_pp.build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");
+	v_ppshaders.push_back(shader_pp);
 }
 
 PostProcessor::~PostProcessor()
@@ -183,76 +144,15 @@ void PostProcessor::LoadState(int profile_id) {
 	}
 }
 
-
-void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
+void PostProcessor::SelectShader()
 {
-	int viewportWidth, viewportHeight;
-	SDL_GL_GetDrawableSize(window, &viewportWidth, &viewportHeight);
-
-	GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
-	// Don't let the viewport have odd values. It creates artifacts when scaling
-	if (viewportWidth % 2 == 1)
-		viewportWidth -= 1;
-	if (viewportHeight % 2 == 1)
-		viewportHeight -= 1;
-	glViewport(0, 0, viewportWidth, viewportHeight);
-	GLenum glerr;
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error PP 0: " << glerr << std::endl;
-	}
-	
-	// Bind the texture we're given to our _POSTPROCESSOR_INPUT_TEXTURE
-	// And get its actual size.
-	glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
-	GLint last_bound_texture = 0;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_bound_texture);
-	glBindTexture(GL_TEXTURE_2D, inputTextureId);
-	GLint texwidth, texheight;
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texwidth);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texheight);
-	glActiveTexture(GL_TEXTURE0);	// Target the main SDL window
-
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error PP 1: " << glerr << std::endl;
-	}
-
-	// How much can we scale the output quad?
-	// Always scale up in integers numbers
-	float _scale = static_cast<float>(viewportWidth) / static_cast<float>(texwidth);
-	_scale = std::min(_scale, static_cast<float>(viewportHeight) / static_cast<float>(texheight));
-	if (_scale > 1.0f)
-		_scale = std::floor(_scale);
-
-	// Determine the quad's origin
-	int quadWidth = static_cast<int>(_scale * texwidth);
-	int quadHeight = static_cast<int>(_scale * texheight);
-
-	quadViewportCoords.x = static_cast<float>(-quadWidth) / static_cast<float>(viewportWidth);		// left
-	quadViewportCoords.y = static_cast<float>(-quadHeight) / static_cast<float>(viewportHeight);	// top
-	quadViewportCoords.z = static_cast<float>(quadWidth) / static_cast<float>(viewportWidth);		// right
-	quadViewportCoords.w = static_cast<float>(quadHeight) / static_cast<float>(viewportHeight);		// bottom
-
-	GLfloat quadVertices[] = {
-		// Positions												// Texture Coords
-		quadViewportCoords.x, quadViewportCoords.w,  	0.0f, 0.0f,
-		quadViewportCoords.z, quadViewportCoords.y,  	1.0f, 1.0f,
-		quadViewportCoords.z, quadViewportCoords.w,  	1.0f, 0.0f,
-		
-		quadViewportCoords.x, quadViewportCoords.w,  	0.0f, 0.0f,
-		quadViewportCoords.x, quadViewportCoords.y,  	0.0f, 1.0f,
-		quadViewportCoords.z, quadViewportCoords.y,  	1.0f, 1.0f
-	};
-	
-//		std::cout << "Viewport coordinates:" << ": (" << quadViewportCoords[0] << ", " << quadViewportCoords[1]
-//		<< "), (" << quadViewportCoords[2] << ", " << quadViewportCoords[3] << ")" << std::endl;
-	
 	// Choose the shader
-	Shader shaderProgram;
 	if (p_postprocessing_level == 0) {		// basic passthrough shader
 		shaderProgram = v_ppshaders.at(0);
 		shaderProgram.use();
 		shaderProgram.setInt("Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
-	} else {
+	}
+	else {
 		shaderProgram = v_ppshaders.at(1);
 		shaderProgram.use();
 		// Update uniforms
@@ -264,7 +164,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 		shaderProgram.setVec2("TextureSize", glm::vec2(texwidth, texheight));
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
 		shaderProgram.setVec4("VideoRect", quadViewportCoords);
-		
+
 		shaderProgram.setFloat("POSTPROCESSING_LEVEL", (float)p_postprocessing_level);
 		shaderProgram.setFloat("SCANLINE_TYPE", (float)p_scanline_type);
 		shaderProgram.setFloat("SCANLINE_WEIGHT", p_scanline_weight);
@@ -299,6 +199,78 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 		shaderProgram.setFloat("CONV_G", p_conv_g);
 		shaderProgram.setFloat("CONV_B", p_conv_b);
 		shaderProgram.setFloat("POTATO", p_potato ? 1.0f : 0.0f);
+	}
+}
+
+void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
+{
+	SDL_GL_GetDrawableSize(window, &viewportWidth, &viewportHeight);
+
+	GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
+	// Don't let the viewport have odd values. It creates artifacts when scaling
+	if (viewportWidth % 2 == 1)
+		viewportWidth -= 1;
+	if (viewportHeight % 2 == 1)
+		viewportHeight -= 1;
+	glViewport(0, 0, viewportWidth, viewportHeight);
+	GLenum glerr;
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error PP 0: " << glerr << std::endl;
+	}
+	
+	// Bind the texture we're given to our _POSTPROCESSOR_INPUT_TEXTURE
+	// And get its actual size.
+	glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
+	GLint last_bound_texture = 0;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_bound_texture);
+	glBindTexture(GL_TEXTURE_2D, inputTextureId);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texwidth);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texheight);
+	glActiveTexture(GL_TEXTURE0);	// Target the main SDL window
+
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error PP 1: " << glerr << std::endl;
+	}
+
+	// How much can we scale the output quad?
+	// Always scale up in integers numbers
+	float _scale = static_cast<float>(viewportWidth) / static_cast<float>(texwidth);
+	_scale = std::min(_scale, static_cast<float>(viewportHeight) / static_cast<float>(texheight));
+	if (_scale > 1.0f)
+		_scale = std::floor(_scale);
+
+	// Determine the quad's origin
+	quadWidth = static_cast<int>(_scale * texwidth);
+	quadHeight = static_cast<int>(_scale * texheight);
+
+	quadViewportCoords.x = static_cast<float>(-quadWidth) / static_cast<float>(viewportWidth);		// left
+	quadViewportCoords.y = static_cast<float>(-quadHeight) / static_cast<float>(viewportHeight);	// top
+	quadViewportCoords.z = static_cast<float>(quadWidth) / static_cast<float>(viewportWidth);		// right
+	quadViewportCoords.w = static_cast<float>(quadHeight) / static_cast<float>(viewportHeight);		// bottom
+
+	GLfloat quadVertices[] = {
+		// Positions												// Texture Coords
+		quadViewportCoords.x, quadViewportCoords.w,  	0.0f, 0.0f,
+		quadViewportCoords.z, quadViewportCoords.y,  	1.0f, 1.0f,
+		quadViewportCoords.z, quadViewportCoords.w,  	1.0f, 0.0f,
+		
+		quadViewportCoords.x, quadViewportCoords.w,  	0.0f, 0.0f,
+		quadViewportCoords.x, quadViewportCoords.y,  	0.0f, 1.0f,
+		quadViewportCoords.z, quadViewportCoords.y,  	1.0f, 1.0f
+	};
+	
+//		std::cout << "Viewport coordinates:" << ": (" << quadViewportCoords[0] << ", " << quadViewportCoords[1]
+//		<< "), (" << quadViewportCoords[2] << ", " << quadViewportCoords[3] << ")" << std::endl;
+	
+	if (imguiWindowIsOpen || (!shaderProgram.isReady))
+	{
+		// only update the shader if the window is open
+		// as it may be very costly for rPi and slow CPUs
+		this->SelectShader();
+	}
+	else
+	{
+		shaderProgram.use();
 	}
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -347,6 +319,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 
 void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 {
+	imguiWindowIsOpen = p_open;
 	if (p_open)
 	{
 		ImGui::Begin("Post Processing CRT Shader", p_open);
