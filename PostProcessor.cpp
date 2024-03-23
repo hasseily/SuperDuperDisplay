@@ -160,7 +160,7 @@ void PostProcessor::SelectShader()
 		shaderProgram.setInt("BezelTexture", _TEXUNIT_IMAGE_ASSETS_START + 7 - GL_TEXTURE0);
 		shaderProgram.setInt("FrameCount", frame_count);
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
-		shaderProgram.setVec2("InputSize", glm::vec2(texwidth, texheight));
+		shaderProgram.setVec2("InputSize", glm::vec2(quadWidth, quadHeight));
 		shaderProgram.setVec2("TextureSize", glm::vec2(texwidth, texheight));
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
 		shaderProgram.setVec4("VideoRect", quadViewportCoords);
@@ -432,15 +432,15 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 			
 			// Geometry Settings
 			ImGui::Text("[ GEOMETRY SETTINGS ]");
-			ImGui::Checkbox("Bezel On/Off", &p_bzl);
 			ImGui::SliderFloat("Zoom Image X", &p_zoomx, -1.0f, 1.0f, "%.3f");
 			ImGui::SliderFloat("Zoom Image Y", &p_zoomy, -1.0f, 1.0f, "%.3f");
-			ImGui::SliderFloat("Image Center X", &p_centerx, -3.0f, 3.0f, "%.2f");
-			ImGui::SliderFloat("Image Center Y", &p_centery, -3.0f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Image Center X", &p_centerx, -9.0f, 9.0f, "%.2f");
+			ImGui::SliderFloat("Image Center Y", &p_centery, -9.0f, 9.0f, "%.2f");
 			ImGui::SliderFloat("Curvature Horizontal", &p_warpx, 0.00f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Curvature Vertical", &p_warpy, 0.00f, 0.25f, "%.2f");
 			ImGui::Checkbox("Corners Cut", &p_corner);
-			ImGui::Checkbox("Vignette On/Off", &p_vig);
+			ImGui::Checkbox("Bezel", &p_bzl);
+			ImGui::Checkbox("Vignette", &p_vig);
 			ImGui::Separator();
 			
 			// Color Settings

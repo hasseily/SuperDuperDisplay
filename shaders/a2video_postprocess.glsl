@@ -68,8 +68,6 @@ in vec2 ps;
 in vec2 v_pos;
 out vec4 FragColor;
 
-#define SourceSize vec4(TextureSize, 1.0 / TextureSize) //either TextureSize or InputSize
-
 uniform COMPAT_PRECISION float POSTPROCESSING_LEVEL;
 
 uniform COMPAT_PRECISION float M_TYPE;
@@ -247,14 +245,14 @@ void main() {
 	}	 
 	pos /= scale;
 
-	vec4 bez = texture(BezelTexture,TexCoords*SourceSize.xy/InputSize.xy*0.95+vec2(0.022,0.022));	
+	vec4 bez = texture(BezelTexture,TexCoords*0.95+vec2(0.022,0.022));	
 	bez.rgb = mix(bez.rgb, vec3(0.25),0.4);
 	vec2 bpos = pos;
 	vec2 dx = vec2(ps.x,0.0);
 	
 // Quillez
-	vec2 ogl2 = pos*SourceSize.xy;
-	vec2 i = floor(pos*SourceSize.xy) + 0.5;
+	vec2 ogl2 = pos*TextureSize.xy;
+	vec2 i = floor(pos*TextureSize.xy) + 0.5;
 	float f = ogl2.y - i.y;
 	pos.y = (i.y + 4.0*f*f*f)*ps.y; // smooth
 	pos.x = mix(pos.x, i.x*ps.x, 0.2);
@@ -297,7 +295,7 @@ void main() {
 	// For CRT-Geom scanlines
 	if (SCANLINE_TYPE == 2.0) {
 		// handle interlacing
-		float s = fract(bpos.y*SourceSize.y/2.001+0.5);
+		float s = fract(bpos.y*TextureSize.y/2.001+0.5);
 		if (INTERLACE == 1.0)
 			s = mod(float(FrameCount),2.0) < 1.0 ? s: s+0.5;
 	
