@@ -124,13 +124,17 @@ int main(int argc, char* argv[])
         | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED | SDL_WINDOW_ALLOW_HIGHDPI
         | SDL_WINDOW_SHOWN);
 #endif
-    window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, window_flags);
+	// Get the actual display size
+	SDL_DisplayMode displayMode;
+	if (SDL_GetDesktopDisplayMode(0, &displayMode) != 0) {
+		std::cerr << "SDL_GetDesktopDisplayMode Error: " << SDL_GetError() << std::endl;
+		SDL_Quit();
+		return 1;
+	}
+    window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
+		displayMode.w, displayMode.h, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
-
-    // Get the actual display size
-	SDL_DisplayMode displayMode;
-	SDL_GetCurrentDisplayMode(0, &displayMode);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
