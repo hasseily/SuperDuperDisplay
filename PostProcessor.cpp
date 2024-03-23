@@ -57,6 +57,7 @@ PostProcessor::~PostProcessor()
 void PostProcessor::SaveState(int profile_id) {
 	nlohmann::json jsonState = {
 		{"p_postprocessing_level", p_postprocessing_level},
+		{"bCRTFillWindow", bCRTFillWindow},
 		{"p_bzl", p_bzl},
 		{"p_corner", p_corner},
 		{"p_ext_gamma", p_ext_gamma},
@@ -108,6 +109,7 @@ void PostProcessor::LoadState(int profile_id) {
 		file >> jsonState;
 		
 		p_postprocessing_level = jsonState["p_postprocessing_level"];
+		bCRTFillWindow = jsonState["bCRTFillWindow"];
 		p_bzl = jsonState["p_bzl"];
 		p_corner = jsonState["p_corner"];
 		p_ext_gamma = jsonState["p_ext_gamma"];
@@ -243,10 +245,19 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	quadWidth = static_cast<int>(_scale * texwidth);
 	quadHeight = static_cast<int>(_scale * texheight);
 
-	quadViewportCoords.x = static_cast<float>(-quadWidth) / static_cast<float>(viewportWidth);		// left
-	quadViewportCoords.y = static_cast<float>(-quadHeight) / static_cast<float>(viewportHeight);	// top
-	quadViewportCoords.z = static_cast<float>(quadWidth) / static_cast<float>(viewportWidth);		// right
-	quadViewportCoords.w = static_cast<float>(quadHeight) / static_cast<float>(viewportHeight);		// bottom
+	if (bCRTFillWindow && p_postprocessing_level > 1)
+	{
+		quadViewportCoords.x = -1.0;		// left
+		quadViewportCoords.y = -1.0;	// top
+		quadViewportCoords.z = 1.0;		// right
+		quadViewportCoords.w = 1.0;		// bottom
+	}
+	else {
+		quadViewportCoords.x = static_cast<float>(-quadWidth) / static_cast<float>(viewportWidth);		// left
+		quadViewportCoords.y = static_cast<float>(-quadHeight) / static_cast<float>(viewportHeight);	// top
+		quadViewportCoords.z = static_cast<float>(quadWidth) / static_cast<float>(viewportWidth);		// right
+		quadViewportCoords.w = static_cast<float>(quadHeight) / static_cast<float>(viewportHeight);		// bottom
+	}
 
 	GLfloat quadVertices[] = {
 		// Positions												// Texture Coords
@@ -432,10 +443,18 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 			
 			// Geometry Settings
 			ImGui::Text("[ GEOMETRY SETTINGS ]");
+			if (ImGui::Checkbox("Fill Window", &bCRTFillWindow))
+			{
+				p_zoomx = 0;
+				p_zoomy = 0;
+				p_centerx = 0;
+				p_centery = 0;
+
+			}
 			ImGui::SliderFloat("Zoom Image X", &p_zoomx, -1.0f, 1.0f, "%.3f");
 			ImGui::SliderFloat("Zoom Image Y", &p_zoomy, -1.0f, 1.0f, "%.3f");
-			ImGui::SliderFloat("Image Center X", &p_centerx, -9.0f, 9.0f, "%.2f");
-			ImGui::SliderFloat("Image Center Y", &p_centery, -9.0f, 9.0f, "%.2f");
+			ImGui::SliderFloat("Image Center X", &p_centerx, -100.0f, 100.0f, "%.2f");
+			ImGui::SliderFloat("Image Center Y", &p_centery, -100.0f, 100.0f, "%.2f");
 			ImGui::SliderFloat("Curvature Horizontal", &p_warpx, 0.00f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Curvature Vertical", &p_warpy, 0.00f, 0.25f, "%.2f");
 			ImGui::Checkbox("Corners Cut", &p_corner);

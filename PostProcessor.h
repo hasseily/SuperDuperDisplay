@@ -55,6 +55,7 @@ private:
 
 	// The quad vertices will change based on the change in the requested screen size
 	glm::vec4 quadViewportCoords = glm::vec4(0, 0, 0, 0);	// left, top, right, bottom
+	bool bCRTFillWindow = false;
 
 	GLint viewportWidth, viewportHeight;
 	GLint quadWidth, quadHeight;
