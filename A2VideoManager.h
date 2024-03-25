@@ -15,7 +15,7 @@
 // But SHR starts VBLANK just like legacy modes, at scanline 192. Hence
 // it has 8 less bottom border scanlines than legacy.
 #define _A2_BORDER_WIDTH_CYCLES 5
-#define _A2_BORDER_HEIGHT_SCANLINES 12
+#define _A2_BORDER_HEIGHT_SCANLINES 16
 
 // Legacy mode VRAM is 4 bytes (main, aux, flags, colors)
 // for each "byte" of screen use

@@ -86,6 +86,12 @@ void main()
 
 	// Extract the lower 3 bits to determine which mode to use
 	uint a2mode = targetTexel.b & 7u;	// 7 = 0b111 to mask lower 3 bits
+
+	if (a2mode == 7u)
+	{
+		fragColor = tintcolors[(targetTexel.b & 0xF0u) >> 4];
+		return;
+	}
 	
 	switch (a2mode) {
 		case 0u:	// TEXT

@@ -363,7 +363,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	// The byte isn't SHR, it's legacy
 
 	vrams_write->use_legacy = true;	// at least 1 byte in this vblank cycle is not SHR
-	auto byteStartPtr = vrams_write->vram_legacy + ((_BEAM_VRAM_WIDTH_LEGACY * y) + xx) * 4;	// 4 bytes in VRAM for each byte on screen
 	// the flags byte is:
 	// bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO, BORDER)
 	// bit 3: ALT charset for TEXT
@@ -382,12 +381,13 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		// If border, set only the flag byte for the BORDER mode and border color
 		// The flag byte is offset by 2 to the first byte (byte 3). And mode BORDER=7
 		uint32_t _startByte;
-		if (_x < _A2_BORDER_WIDTH_CYCLES && y > 0)	// Right horizontal border (for previous frame)
-			_startByte = (_BEAM_VRAM_WIDTH_LEGACY * y - (_A2_BORDER_WIDTH_CYCLES - _x)) * 4;
-		else // Left horizontal border
-			_startByte = (_BEAM_VRAM_WIDTH_LEGACY * y + _x) * 4;
+		if (_x < _A2_BORDER_WIDTH_CYCLES)	// Right horizontal border (for previous frame)	
+			_startByte = (_BEAM_VRAM_WIDTH_LEGACY * (y + _A2_BORDER_HEIGHT_SCANLINES) - (_A2_BORDER_WIDTH_CYCLES - _x)) * 4;
+		else // Left horizontal border (CYCLES_HBLANK -_A2_BORDER_WIDTH_CYCLES) <= x < CYCLES_HBLANK
+			_startByte = (_BEAM_VRAM_WIDTH_LEGACY * (y + _A2_BORDER_HEIGHT_SCANLINES) + (_x - (CYCLES_HBLANK - _A2_BORDER_WIDTH_CYCLES))) * 4;
+		
 		// flags byte set to BORDER and border color
-		vrams_write->vram_legacy[_startByte + 2] = (memMgr->switch_c034 << 4) + 7;
+		vrams_write->vram_legacy[_startByte + 2] = ((memMgr->switch_c034+2) << 4) + 7;
 		return;
 	}
 
@@ -397,9 +397,11 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	{
 		uint32_t _startByte;
 		if (y >= (region_scanlines - _A2_BORDER_HEIGHT_SCANLINES))	// top border (for next frame)
-			_startByte = (_BEAM_VRAM_WIDTH_LEGACY * (_A2_BORDER_HEIGHT_SCANLINES - (region_scanlines - y)) + _x) * 4;
+			_startByte = (_BEAM_VRAM_WIDTH_LEGACY * (_A2_BORDER_HEIGHT_SCANLINES - (region_scanlines - y)) 
+				+ (_x - CYCLES_HBLANK + _A2_BORDER_WIDTH_CYCLES)) * 4;
 		else //	(y >= mode_scanlines) bottom border
-			_startByte = (_BEAM_VRAM_WIDTH_LEGACY * y + _x) * 4;
+			_startByte = (_BEAM_VRAM_WIDTH_LEGACY * (_A2_BORDER_HEIGHT_SCANLINES + y) 
+				+ (_x - CYCLES_HBLANK + _A2_BORDER_WIDTH_CYCLES)) * 4;
 		// flags byte set to BORDER and border color
 		vrams_write->vram_legacy[_startByte + 2] = (memMgr->switch_c034 << 4) + 7;
 		return;
@@ -455,6 +457,10 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		isPage2 = true;
 	
 	// Finally set the 4 VRAM bytes
+	uint8_t* byteStartPtr = vrams_write->vram_legacy +
+		((_BEAM_VRAM_WIDTH_LEGACY * (_A2_BORDER_HEIGHT_SCANLINES + y))
+			+ _A2_BORDER_WIDTH_CYCLES + xx) * 4;	// 4 bytes in VRAM for each byte on screen
+
 	// Determine where in memory we should get the data from, and get it
 	if ((flags & 0b111) < 4)	// D/TEXT AND D/LGR
 	{
