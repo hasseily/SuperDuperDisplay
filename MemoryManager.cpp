@@ -22,6 +22,7 @@ void MemoryManager::Initialize()
 	a2SoftSwitches = A2SS_TEXT; // default to TEXT1
 	switch_c022 = 0b11110000;	// white fg, black bg
 	switch_c034 = 0;
+	is2gs = false;
 }
 
 // Return a pointer to the shadowed apple 2 memory
@@ -205,6 +206,7 @@ void MemoryManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool 
 }
 
 void MemoryManager::WriteToMemory(uint16_t addr, uint8_t val, bool m2b0, bool is_iigs) {
+	is2gs = is_iigs;
 	uint8_t _sw = 0;	// switches state
 	if (IsSoftSwitch(A2SS_80STORE))
 		_sw |= 0b001;

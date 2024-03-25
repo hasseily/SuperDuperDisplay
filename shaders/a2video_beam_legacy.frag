@@ -21,12 +21,23 @@ This shader expects as input a VRAMTEX texture that has the following features:
 - 40 pixels wide, where MAIN and AUX are interleaved, starting with AUX
 - 192 lines high, which is the Apple 2 scanlines
 
+The flags byte (Color B) is:
+	bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO, BORDER)
+	bit 3: ALT charset for TEXT
+	bits 4-7: BORDER color (like in the 2gs)
+
+The colors byte (Color A) is:
+	bits 0-3: background color
+	bits 4-7: foreground color
+
 The shader goes through the following phases:
 - The fragment determines which VRAMTEX texel it's part of, including the x offset
 	to the start of the texel (there is only y offset for TEXT and LGR modes)
 - It grabs the texel and determines the video mode to use
 - It runs the video mode code on that byte and chooses the correct fragment
 
+NOTE:	The special BORDER graphics mode is set only on border bytes. It only considers
+		bits 4-7 as the border color, picked from the LGR color palette.
 */
 
 // Global uniforms
@@ -256,6 +267,22 @@ For each pixel, determine which memory byte it is part of,
 			// Use the .g (AUX) if the dot is one of the first 7, otherwise .r (MAIN)
 			// Find out if the related bit is on, and set the color to white or black
 			fragColor = vec4(1.0f) * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (uFragPos.x % 14u)), 0u, 1u));
+			return;
+			break;
+		}
+		case 7u:	// BORDER
+		{
+			// Special border mode to give to the //e the border features like the 2gs
+			// It just looks at the flags byte and grabs the border color in the upper 4 bits
+			// then applies the LGR color mapping to it
+			uint borderColor = targetTexel.b >> 4;
+			ivec2 textureSize2d = textureSize(a2ModesTex2,0);
+
+			// get the color from the LGR texture
+			uvec2 byteOrigin = uvec2(0u, borderColor * 16u);
+			fragColor = texture(a2ModesTex2,
+								(vec2(byteOrigin) + vec2(fragOffset) + vec2(0.5,0.5)) / vec2(textureSize2d));
+
 			return;
 			break;
 		}

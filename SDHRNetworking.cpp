@@ -87,7 +87,7 @@ void process_single_event(SDHREvent& e)
 	if (eventRecorder->IsRecording())
 		eventRecorder->RecordEvent(&e);
 	// Update the cycle counting and VBL hit
-	bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == 0));
+	bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == (e.is_iigs ? 1 : 0)));
 	CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
 	if (e.is_iigs && e.m2b0) {
 		// ignore updates from iigs_mode firmware with m2sel high

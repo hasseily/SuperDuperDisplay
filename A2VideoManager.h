@@ -10,11 +10,20 @@
 #include "A2WindowBeam.h"
 #include "CycleCounter.h"
 
+// Those could be anywhere up to 6 or 7 cycles for horizontal borders
+// and a lot more for vertical borders. We just decided on a size
+// But SHR starts VBLANK just like legacy modes, at scanline 192. Hence
+// it has 8 less bottom border scanlines than legacy.
+#define _A2_BORDER_WIDTH_CYCLES 5
+#define _A2_BORDER_HEIGHT_SCANLINES 12
+
 // Legacy mode VRAM is 4 bytes (main, aux, flags, colors)
 // for each "byte" of screen use
 // colors are 4-bit each of fg and bg colors as in the Apple 2gs
 
-constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = (40 + (2 * _A2_BORDER_WIDTH_CYCLES)) * (192 + (2 * _A2_BORDER_HEIGHT_SCANLINES)) * 4;
+constexpr uint32_t _BEAM_VRAM_WIDTH_LEGACY = (40 + (2 * _A2_BORDER_WIDTH_CYCLES));	// in 4 bytes!
+constexpr uint32_t _BEAM_VRAM_HEIGHT_LEGACY = 192 + (2 * _A2_BORDER_HEIGHT_SCANLINES);
+constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = _BEAM_VRAM_WIDTH_LEGACY * _BEAM_VRAM_HEIGHT_LEGACY * 4;	// in bytes
 
 // SHR mode VRAM is the standard bytes of screen use ($2000 to $9CFF)
 // plus, for each of the 200 lines, at the beginning of the line draw
@@ -32,7 +41,9 @@ constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = (40 + (2 * _A2_BORDER_WIDTH_CYCLES))
 
 // The BORDER bytes have the exact border color in their lower 4 bits
 
-constexpr uint32_t _BEAM_VRAM_SIZE_SHR = (1 + 32 + (2 * _A2_BORDER_WIDTH_CYCLES * 16) + 160) * (200 + (2 * _A2_BORDER_HEIGHT_SCANLINES));
+constexpr uint32_t _BEAM_VRAM_WIDTH_SHR = 1 + 32 + (2 * _A2_BORDER_WIDTH_CYCLES * 16) + 160;
+constexpr uint32_t _BEAM_VRAM_HEIGHT_SHR = 200 + (2 * _A2_BORDER_HEIGHT_SCANLINES);
+constexpr uint32_t _BEAM_VRAM_SIZE_SHR = _BEAM_VRAM_WIDTH_SHR * _BEAM_VRAM_HEIGHT_SHR;
 
 class A2VideoManager
 {

@@ -195,7 +195,7 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			for (auto i = first_event_index; i < currentReplayEvent; i++)
 			{
 				auto e = v_events.at(i);
-				isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == 0));
+				isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == (e.is_iigs ? 1 : 0)));
 				CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
 				process_single_event(e);
 			}
@@ -206,7 +206,7 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			if (*shouldStopReplay)	// In case a stop was sent while sleeping
 				break;
 			auto e = v_events.at(currentReplayEvent);
-			bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == 0));
+			bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == (e.is_iigs ? 1 : 0)));
 			CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
 			process_single_event(e);
 			currentReplayEvent += 1;

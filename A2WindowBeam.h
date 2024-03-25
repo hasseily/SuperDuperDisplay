@@ -10,13 +10,6 @@
 #define _A2_TEXT40_CHAR_WIDTH _A2_TEXT80_CHAR_WIDTH*2
 #define _A2_TEXT40_CHAR_HEIGHT _A2_TEXT80_CHAR_HEIGHT
 
-// Those could be anywhere up to 6 or 7 cycles for horizontal borders
-// and a lot more for vertical borders. We just decided on a size
-// But SHR starts VBLANK just like legacy modes, at scanline 192. Hence
-// it has 8 less bottom border scanlines than legacy.
-#define _A2_BORDER_WIDTH_CYCLES 0
-#define _A2_BORDER_HEIGHT_SCANLINES 0
-
 enum A2VideoModeBeam_e
 {
 	A2VIDEOBEAM_LEGACY,

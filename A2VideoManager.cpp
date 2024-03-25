@@ -102,6 +102,12 @@ static uint16_t g_RAM_HGROffsets[] = {
 // Gotta have a transparency global just in case
 // static uint32_t gRGBTransparent = 0;
 
+// Rects of cycles and scanlines where the image is actually drawn (and not borders)
+constexpr int _A2_LEGACY_IMG_RECT[4] = { 25, 64, 0, 191 };	// leftC, rightC, topS, bottomS
+constexpr int _A2_SHR_IMG_RECT[4] = { 25, 64, 0, 199 };		// leftC, rightC, topS, bottomS
+
+constexpr uint8_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
+
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
 
@@ -228,11 +234,20 @@ void A2VideoManager::ToggleA2Video(bool value)
 		bShouldInitializeRender = true;
 }
 
-void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
+void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 {
 	auto memMgr = MemoryManager::GetInstance();
-	//
-	uint32_t mode_scanlines = (memMgr->IsSoftSwitch(A2SS_SHR) ? 200u : 192u);
+	// The Apple 2gs drawing is shifted 6 scanlines down
+	// Let's realign it to match the 2e
+	uint32_t y = _y;
+	if (memMgr->is2gs)
+	{
+		if (_y < 6)
+			y = region_scanlines - _y;
+		else
+			y = _y - 6;
+	}
+	uint32_t mode_scanlines = (memMgr->IsSoftSwitch(A2SS_SHR) ? 200 : 192);
 	// Start of VBLANK at which we flip the double buffering
 	if ((_x == CYCLES_HBLANK) && (y == (mode_scanlines + _A2_BORDER_HEIGHT_SCANLINES)))
 	{
@@ -257,12 +272,17 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 		(y < (region_scanlines - _A2_BORDER_HEIGHT_SCANLINES)))
 		return;
 
+	// in HBLANK (taking care of borders), nothing to do
+	if ((_x >= _A2_BORDER_WIDTH_CYCLES) &&
+		(_x < (CYCLES_HBLANK - _A2_BORDER_WIDTH_CYCLES)))
+		return;
+
 	if (_x == 0)
 	{
 		// Always at the start of the row, set the SHR SCB to 0x10
 		// Because we check bit 4 of the SCB to know if that line is drawn as SHR
 		// The 2gs will always set bit 4 to 0 when sending it over
-		vrams_write->vram_shr[(_COLORBYTESOFFSET + 160) * y] = 0x10;
+		vrams_write->vram_shr[_BEAM_VRAM_WIDTH_SHR * y] = 0x10;
 	}
 	
 	// Get the colors
@@ -270,16 +290,41 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	color_foreground = gPaletteRGB[12 + ((memMgr->switch_c022 & 0xF0) >> 4)];
 	color_border = gPaletteRGB[12 + (memMgr->switch_c034 & 0x0F)];
 
-	if (_x < CYCLES_HBLANK)	// in HBLANK, nothing to do
-		return;
-
 	// Set xx to 0 when after HBLANK. HBLANK is always at the start of the line
 	// However, VBLANK is at the end of the screen so we can use y as is
 	uint32_t xx = _x - CYCLES_HBLANK;	// xx is always positive here
 	if (memMgr->IsSoftSwitch(A2SS_SHR))
 	{
 		vrams_write->use_shr = true;		// at least 1 byte in this vblank cycle is in SHR
-		uint8_t* lineStartPtr = vrams_write->vram_shr + (_COLORBYTESOFFSET + 160) * y;
+
+		// DO HORIZONTAL BORDERS
+		// we've already removed all uninteresting HBLANK cycles
+		if (_x < CYCLES_HBLANK)
+		{
+			// If border, set 4 bytes to the border color (1 beam cycle is 4 bytes)
+			if (_x < _A2_BORDER_WIDTH_CYCLES && y > 0)	// Right horizontal border (for previous frame)
+				memset(vrams_write->vram_shr + (_BEAM_VRAM_WIDTH_SHR * y - (_A2_BORDER_WIDTH_CYCLES - _x)),
+					memMgr->switch_c034, 4);
+			else // Left horizontal border
+				memset(vrams_write->vram_shr + (_BEAM_VRAM_WIDTH_SHR * y + _COLORBYTESOFFSET + _x),
+					memMgr->switch_c034, 4);
+			return;
+		}
+
+		// DO VERTICAL BORDERS
+		// we've already removed all uninteresting VBLANK scanlines
+		if (y >= mode_scanlines)
+		{
+			if (y >= (region_scanlines - _A2_BORDER_HEIGHT_SCANLINES))	// top border (for next frame)
+				memset(vrams_write->vram_shr + _BEAM_VRAM_WIDTH_SHR * (_A2_BORDER_HEIGHT_SCANLINES - (region_scanlines - y)) + _x,
+					memMgr->switch_c034, 4);
+			else //	(y >= mode_scanlines) bottom border
+				memset(vrams_write->vram_shr + (_BEAM_VRAM_WIDTH_SHR * y) + _x,
+					memMgr->switch_c034, 4);
+			return;
+		}
+
+		uint8_t* lineStartPtr = vrams_write->vram_shr + _BEAM_VRAM_WIDTH_SHR * y;
 		auto memPtr = memMgr->GetApple2MemAuxPtr();
 		if (xx == 0)
 		{
@@ -292,7 +337,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 				   32);					// palette length is 32 bytes
 		}
 		// Get the color info for the 4 bytes where the beam is
-		auto xfb = xx * 4;	// the x first byte, given that every beam x renders 4 bytes
+		auto xfb = xx * 4;	// the x first byte, given that every beam cycle renders 4 bytes
 		auto scb = lineStartPtr[0];
 		for (uint8_t i = 0; i < 4; i++)
 		{
@@ -320,7 +365,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	vrams_write->use_legacy = true;	// at least 1 byte in this vblank cycle is not SHR
 	auto byteStartPtr = vrams_write->vram_legacy + ((40 * y) + xx) * 4;	// 4 bytes in VRAM for each byte on screen
 	// the flags byte is:
-	// bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO)
+	// bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO, BORDER)
 	// bit 3: ALT charset for TEXT
 	// bits 4-7: border color (like in the 2gs)
 	uint8_t flags = 0;
@@ -329,6 +374,37 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t y)
 	// bits 4-7: foreground color
 	uint8_t colors = 0;
 	
+	// DO HORIZONTAL BORDERS
+	// we've already removed all uninteresting HBLANK cycles
+	// Legacy borders only use the 3rd byte (border color)
+	if (_x < CYCLES_HBLANK)
+	{
+		// If border, set only the flag byte for the BORDER mode and border color
+		// The flag byte is offset by 2 to the first byte (byte 3). And mode BORDER=7
+		uint32_t _startByte;
+		if (_x < _A2_BORDER_WIDTH_CYCLES && y > 0)	// Right horizontal border (for previous frame)
+			_startByte = (_BEAM_VRAM_WIDTH_LEGACY * y - (_A2_BORDER_WIDTH_CYCLES - _x)) * 4;
+		else // Left horizontal border
+			_startByte = (_BEAM_VRAM_WIDTH_LEGACY * y + _x) * 4;
+		// flags byte set to BORDER and border color
+		vrams_write->vram_legacy[_startByte + 2] = (memMgr->switch_c034 << 4) + 7;
+		return;
+	}
+
+	// DO VERTICAL BORDERS
+	// we've already removed all uninteresting VBLANK scanlines
+	if (y >= mode_scanlines)
+	{
+		uint32_t _startByte;
+		if (y >= (region_scanlines - _A2_BORDER_HEIGHT_SCANLINES))	// top border (for next frame)
+			_startByte = (_BEAM_VRAM_WIDTH_LEGACY * (_A2_BORDER_HEIGHT_SCANLINES - (region_scanlines - y)) + _x) * 4;
+		else //	(y >= mode_scanlines) bottom border
+			_startByte = (_BEAM_VRAM_WIDTH_LEGACY * y + _x) * 4;
+		// flags byte set to BORDER and border color
+		vrams_write->vram_legacy[_startByte + 2] = (memMgr->switch_c034 << 4) + 7;
+		return;
+	}
+
 	// now set the mode, and depending on the mode, grab the bytes
 	if (!memMgr->IsSoftSwitch(A2SS_TEXT))
 	{

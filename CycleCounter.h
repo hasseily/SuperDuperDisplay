@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-constexpr uint8_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
 constexpr uint32_t SCANLINES_TOTAL_NTSC = 262;
 constexpr uint32_t SCANLINES_TOTAL_PAL = 312;
 constexpr uint32_t CYCLES_HBLANK = 25;			// always 25 cycles
