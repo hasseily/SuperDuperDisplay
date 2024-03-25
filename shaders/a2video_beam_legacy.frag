@@ -274,15 +274,18 @@ For each pixel, determine which memory byte it is part of,
 		{
 			// Special border mode to give to the //e the border features like the 2gs
 			// It just looks at the flags byte and grabs the border color in the upper 4 bits
-			// then applies the LGR color mapping to it
-			uint borderColor = targetTexel.b >> 4;
-			ivec2 textureSize2d = textureSize(a2ModesTex2,0);
+			fragColor = tintcolors[(targetTexel.b & 0xF0u) >> 4];
+			/*
+				// The other option is to use the LGR texture colors
+				uint borderColor = targetTexel.b >> 4;
+				tintcolors[(targetTexel.a & 0xF0u) >> 4]
+				ivec2 textureSize2d = textureSize(a2ModesTex2,0);
 
-			// get the color from the LGR texture
-			uvec2 byteOrigin = uvec2(0u, borderColor * 16u);
-			fragColor = texture(a2ModesTex2,
-								(vec2(byteOrigin) + vec2(fragOffset) + vec2(0.5,0.5)) / vec2(textureSize2d));
-
+				// get the color from the LGR texture
+				uvec2 byteOrigin = uvec2(0u, borderColor * 16u);
+				fragColor = texture(a2ModesTex2,
+									(vec2(byteOrigin) + vec2(fragOffset) + vec2(0.5,0.5)) / vec2(textureSize2d));
+			*/
 			return;
 			break;
 		}

@@ -363,7 +363,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	// The byte isn't SHR, it's legacy
 
 	vrams_write->use_legacy = true;	// at least 1 byte in this vblank cycle is not SHR
-	auto byteStartPtr = vrams_write->vram_legacy + ((40 * y) + xx) * 4;	// 4 bytes in VRAM for each byte on screen
+	auto byteStartPtr = vrams_write->vram_legacy + ((_BEAM_VRAM_WIDTH_LEGACY * y) + xx) * 4;	// 4 bytes in VRAM for each byte on screen
 	// the flags byte is:
 	// bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO, BORDER)
 	// bit 3: ALT charset for TEXT
