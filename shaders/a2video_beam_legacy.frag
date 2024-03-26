@@ -42,6 +42,8 @@ NOTE:	The special BORDER graphics mode is set only on border bytes. It only cons
 
 // Global uniforms
 uniform int ticks;						// ms since start
+uniform int hborder;					// horizontal border in cycles
+uniform int vborder;					// vertical border in scanlines
 uniform usampler2D VRAMTEX;				// Video RAM texture
 uniform sampler2D a2ModesTex0;			// font 14x16 normal
 uniform sampler2D a2ModesTex1;			// font 14x16 alternate
@@ -210,11 +212,11 @@ For each pixel, determine which memory byte it is part of,
 			uint byteValPrev = 0u;
 			uint byteValNext = 0u;
 			int xCol = int(uFragPos.x) / 14;
-			if (xCol > 0)	// Not at start of row, byteValPrev is valid
+			if (xCol > hborder)	// Not at start of row, byteValPrev is valid
 			{
 				byteValPrev = texelFetch(VRAMTEX, ivec2(xCol - 1, uFragPos.y / 2u), 0).r;
 			}
-			if (xCol < 39)	// Not at end of row, byteValNext is valid
+			if (xCol < (39 - hborder))	// Not at end of row, byteValNext is valid
 			{
 				byteValNext = texelFetch(VRAMTEX, ivec2(xCol + 1, uFragPos.y / 2u), 0).r;
 			}

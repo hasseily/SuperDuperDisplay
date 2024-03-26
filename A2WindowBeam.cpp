@@ -38,15 +38,16 @@ void A2WindowBeam::SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vert
 	border_height_scanlines = scanlines_vertical;
 	uint32_t cycles_h_with_border = 40 + (2 * border_width_cycles);
 	// Legacy is 14 dots per cycle, SHR is 16 dots per cycle
+	// Multiply border size by 4 and not 2 because height is doubled
 	switch (video_mode) {
 	case A2VIDEOBEAM_LEGACY:
-		screen_count = uXY({ cycles_h_with_border * 14, 384 + (2 * border_height_scanlines) });
+		screen_count = uXY({ cycles_h_with_border * 14, 384 + (4 * border_height_scanlines) });
 		break;
 	case A2VIDEOBEAM_SHR:
-		screen_count = uXY({ cycles_h_with_border * 16 , 400 + (2 * border_height_scanlines) });
+		screen_count = uXY({ cycles_h_with_border * 16 , 400 + (4 * border_height_scanlines) });
 		break;
 	default:	//e
-		screen_count = uXY({ cycles_h_with_border * 14, 384 + (2 * border_height_scanlines) });
+		screen_count = uXY({ cycles_h_with_border * 14, 384 + (4 * border_height_scanlines) });
 		break;
 	}
 	UpdateVertexArray();
@@ -140,6 +141,11 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		// (vec4 values z and w)
 		glEnableVertexAttribArray(1);
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(A2BeamVertex), (void*)offsetof(A2BeamVertex, PixelPos));
+		
+		// And set the borders
+		shaderProgram->use();
+		shaderProgram->setInt("hborder", (int)border_width_cycles);
+		shaderProgram->setInt("vborder", (int)border_height_scanlines);
 	}
 
 	// Associate the texture VRAMTEX in TEXUNIT_DATABUFFER with the buffer
