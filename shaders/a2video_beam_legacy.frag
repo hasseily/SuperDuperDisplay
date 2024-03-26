@@ -94,7 +94,7 @@ void main()
 		fragColor = tintcolors[(targetTexel.b & 0xF0u) >> 4];
 		return;
 	}
-	
+
 	switch (a2mode) {
 		case 0u:	// TEXT
 		case 1u:	// DTEXT
@@ -212,17 +212,17 @@ For each pixel, determine which memory byte it is part of,
 			uint byteValPrev = 0u;
 			uint byteValNext = 0u;
 			int xCol = int(uFragPos.x) / 14;
-			if (xCol > hborder)	// Not at start of row, byteValPrev is valid
+			if ((xCol - hborder) > 0)	// Not at start of row, byteValPrev is valid
 			{
 				byteValPrev = texelFetch(VRAMTEX, ivec2(xCol - 1, uFragPos.y / 2u), 0).r;
 			}
-			if (xCol < (39 - hborder))	// Not at end of row, byteValNext is valid
+			if ((xCol - hborder) < 39)	// Not at end of row, byteValNext is valid
 			{
 				byteValNext = texelFetch(VRAMTEX, ivec2(xCol + 1, uFragPos.y / 2u), 0).r;
 			}
 
 			// calculate the column offset in the color texture
-			int texXOffset = (int((byteValPrev & 0xE0u) << 2) | int((byteValNext & 0x03u) << 5)) + (xCol & 1) * 16;
+			int texXOffset = (int((byteValPrev & 0xE0u) << 2) | int((byteValNext & 0x03u) << 5)) + ((xCol - hborder) & 1) * 16;
 
 			// Now get the texture color. We know the X offset as well as the fragment's offset on top of that.
 			// The y value is just the byte's value
@@ -250,18 +250,18 @@ For each pixel, determine which memory byte it is part of,
 			uint byteVal3 = targetTexel.r;	// MAIN
 			uint byteVal4 = 0u;				// AUX
 			int xCol = int(uFragPos.x) / 14;
-			if (xCol > 0)	// Not at start of row, byteVal1 is valid
+			if ((xCol - hborder) > 0)	// Not at start of row, byteVal1 is valid
 			{
 				byteVal1 = texelFetch(VRAMTEX, ivec2(xCol - 1, uFragPos.y / 2u), 0).r;
 			}
-			if (xCol < 39)	// Not at end of row, byteVal4 is valid
+			if ((xCol - hborder) < 39)	// Not at end of row, byteVal4 is valid
 			{
 				byteVal4 = texelFetch(VRAMTEX, ivec2(xCol + 1, uFragPos.y / 2u), 0).g;
 			}
 			// Calculate the column offset in the color texture
 			int wordVal = (int(byteVal1) & 0x70) | ((int(byteVal2) & 0x7F) << 7) |
 				((int(byteVal3) & 0x7F) << 14) | ((int(byteVal4) & 0x07) << 21);
-			int vColor = (xCol*14 + int(fragOffset.x)) & 3;
+			int vColor = ((xCol - hborder)*14 + int(fragOffset.x)) & 3;
 			int vValue = (wordVal >> (4 + int(fragOffset.x) - vColor));
 			int xVal = 10 * ((vValue >> 8) & 0xFF) + vColor;
 			int yVal = vValue & 0xFF;

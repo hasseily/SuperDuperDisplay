@@ -322,7 +322,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			|| (x < _A2_BORDER_WIDTH_CYCLES) 						// Left horizontal border
 			|| (x >= _A2_BORDER_WIDTH_CYCLES + CYCLES_SCANLINES))	// Right horizontal border
 		{
-			memset(vrams_write->vram_shr + (_BEAM_VRAM_WIDTH_SHR * y + _COLORBYTESOFFSET + x), memMgr->switch_c034+1, 4);
+			memset(vrams_write->vram_shr + (_BEAM_VRAM_WIDTH_SHR * y + _COLORBYTESOFFSET + x), memMgr->switch_c034, 4);
 			return;
 		}
 
@@ -385,7 +385,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		|| (x >= _A2_BORDER_WIDTH_CYCLES + CYCLES_SCANLINES))	// Right horizontal border
 	{
 		_startByte = ((_BEAM_VRAM_WIDTH_LEGACY * y) + x) * 4;
-		vrams_write->vram_legacy[_startByte + 2] = ((memMgr->switch_c034+4) << 4) + 7;
+		vrams_write->vram_legacy[_startByte + 2] = (memMgr->switch_c034 << 4) + 7;
 		return;
 	}
 

@@ -457,7 +457,8 @@ int main(int argc, char* argv[])
 				{
 					if (ImGui::Button("Run Vertical Refresh"))
 						a2VideoManager->ForceBeamFullScreenRender();
-					ImGui::SliderInt("SS 034", &memManager->switch_c034, 0, 15);
+					if (ImGui::SliderInt("Border Color (0xC034)", &memManager->switch_c034, 0, 15))
+						a2VideoManager->ForceBeamFullScreenRender();
 					ImGui::Text("Load Memory Start: ");
 					ImGui::SameLine();
 					ImGui::InputInt("##mem_load", &mem_load_position, 1, 1024, ImGuiInputTextFlags_CharsHexadecimal);
