@@ -45,7 +45,9 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 
 // Global uniforms assigned in A2VideoManager
-uniform int ticks;               // ms since start
+uniform int ticks;              // ms since start
+uniform int hborder;			// horizontal border in cycles
+uniform int vborder;			// vertical border in scanlines
 uniform usampler2D VRAMTEX;		// Video RAM texture
 
 in vec2 vFragPos;       // The fragment position in pixels
@@ -65,6 +67,25 @@ const uint palette640[16] = uint[16](
 									 8u,9u,10u,11u
 								   );
 
+const vec4 bordercolors[16] = vec4[16] (
+    vec4(0.00, 0.00, 0.00, 1.0), // BLACK
+    vec4(0.67, 0.07, 0.30, 1.0), // DEEP_RED
+    vec4(0.00, 0.03, 0.51, 1.0), // DARK_BLUE
+    vec4(0.67, 0.10, 0.82, 1.0), // MAGENTA
+    vec4(0.00, 0.51, 0.18, 1.0), // DARK_GREEN
+    vec4(0.62, 0.59, 0.49, 1.0), // DARK_GRAY
+    vec4(0.00, 0.54, 0.71, 1.0), // BLUE
+    vec4(0.62, 0.62, 1.00, 1.0), // LIGHT_BLUE
+    vec4(0.48, 0.37, 0.00, 1.0), // BROWN
+    vec4(1.00, 0.45, 0.28, 1.0), // ORANGE
+    vec4(0.47, 0.41, 0.49, 1.0), // LIGHT_GRAY
+    vec4(1.00, 0.48, 0.81, 1.0), // PINK
+    vec4(0.43, 0.90, 0.17, 1.0), // GREEN
+    vec4(1.00, 0.96, 0.48, 1.0), // YELLOW
+    vec4(0.42, 0.93, 0.70, 1.0), // AQUA
+    vec4(1.00, 1.00, 1.00, 1.0)  // WHITE
+);
+
 vec4 ConvertIIgs2RGB(uint gscolor)
 {
 	float _red = float((gscolor & 0x0F00u) >> 8);		// 0000 1111 0000 0000
@@ -81,8 +102,17 @@ vec4 ConvertIIgs2RGB(uint gscolor)
 
 void main()
 {
-	// first grab the the scb
 	uint scanline = uint(vFragPos.y) / 2u;
+
+	// first do the borders
+	if (vFragPos.y < vborder*2 || vFragPos.y >= vborder*2+400 || 
+		vFragPos.x < hborder*16 || vFragPos.x >= 640+(hborder*16))
+	{
+		fragColor = bordercolors[texelFetch(VRAMTEX, ivec2(33u + uint(float(vFragPos.x) / 4.0), scanline), 0).r & 0x0F];
+		return;
+	}
+
+	// grab the the scb
 	uint scb = texelFetch(VRAMTEX, ivec2(0, scanline), 0).r;
 	
 	// Parse the useful scb information
@@ -93,7 +123,6 @@ void main()
 		fragColor = vec4(0.0,0.0,0.0,0.0);
 		return;
 	}
-	
 	
 	// Determine the byte and the pixel for this byte
 	uint xpos = uint(vFragPos.x);
