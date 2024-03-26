@@ -40,9 +40,10 @@ constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = _BEAM_VRAM_WIDTH_LEGACY * _BEAM_VRAM
 // [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line 199
 
 // The BORDER bytes have the exact border color in their lower 4 bits
-
-constexpr uint32_t _BEAM_VRAM_WIDTH_SHR = 1 + 32 + (2 * _A2_BORDER_WIDTH_CYCLES * 16) + 160;
-constexpr uint32_t _BEAM_VRAM_HEIGHT_SHR = 200 + (2 * _A2_BORDER_HEIGHT_SCANLINES);
+// Each SHR cycle is 4 bytes, and each byte is 4 pixels (2x2 when in 320 mode)
+// And the height is doubled
+constexpr uint32_t _BEAM_VRAM_WIDTH_SHR = 1 + 32 + (2 * _A2_BORDER_WIDTH_CYCLES * 4) + 160;
+constexpr uint32_t _BEAM_VRAM_HEIGHT_SHR = 200 + (2 * _A2_BORDER_HEIGHT_SCANLINES * 2);
 constexpr uint32_t _BEAM_VRAM_SIZE_SHR = _BEAM_VRAM_WIDTH_SHR * _BEAM_VRAM_HEIGHT_SHR;
 
 class A2VideoManager
