@@ -246,7 +246,7 @@ void main() {
 	pos /= scale;
 
 	vec4 bez = texture(BezelTexture,TexCoords*0.95+vec2(0.022,0.022));	
-	bez.rgb = mix(bez.rgb, vec3(0.25),0.4);
+	bez.rgb = mix(bez.rgb, vec3(0.50),0.4);
 	vec2 bpos = pos;
 	vec2 dx = vec2(ps.x,0.0);
 	
@@ -333,13 +333,9 @@ void main() {
 // Apply bezel code, adapted from New-Pixie
 	if (bzl >0.0)
 		res.rgb = mix(	
-						res.rgb,
-						mix(
-							max(res.rgb, 0.0),
-							pow( abs(bez.rgb), vec3( 1.4 ) ),
-							bez.w * bez.w
-							),
-						vec3( 1.0 )
+						max(res.rgb, 0.0),
+						pow( abs(bez.rgb), vec3( 1.4 ) ),
+						bez.w * bez.w
 						);
 	if (corner == 1.0) 
 		if (corn.y <= corn.x || corn.x < 0.0001 )
