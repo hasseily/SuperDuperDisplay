@@ -305,7 +305,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		// The 2gs will always set bit 4 to 0 when sending it over
 		vrams_write->vram_shr[_BEAM_VRAM_WIDTH_SHR * (y+1)] = 0x10;
 	}
-	
 	// Get the colors
 	color_background = gPaletteRGB[12 + (memMgr->switch_c022 & 0x0F)];
 	color_foreground = gPaletteRGB[12 + ((memMgr->switch_c022 & 0xF0) >> 4)];
@@ -314,6 +313,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	if (memMgr->IsSoftSwitch(A2SS_SHR))
 	{
 		vrams_write->use_shr = true;		// at least 1 byte in this vblank cycle is in SHR
+		auto contentOffset = _COLORBYTESOFFSET + (_A2_BORDER_WIDTH_CYCLES * 4);
 
 		// DO BORDERS
 		// we've already removed all uninteresting HBLANK cycles or VBLANK scanlines
@@ -322,7 +322,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			|| (x < _A2_BORDER_WIDTH_CYCLES) 						// Left horizontal border
 			|| (x >= _A2_BORDER_WIDTH_CYCLES + CYCLES_SCANLINES))	// Right horizontal border
 		{
-			memset(vrams_write->vram_shr + (_BEAM_VRAM_WIDTH_SHR * y + _COLORBYTESOFFSET + x), memMgr->switch_c034, 4);
+			// write all 4 bytes at once
+			memset(vrams_write->vram_shr + (_BEAM_VRAM_WIDTH_SHR * y + _COLORBYTESOFFSET + (x*4)), memMgr->switch_c034, 4);
 			return;
 		}
 
@@ -332,7 +333,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		{
 			// it's the beginning of the line
 			// Get the SCB
-			lineStartPtr[0] = *(memPtr + _A2VIDEO_SHR_SCB_START + y);
+			lineStartPtr[0] = *(memPtr + _A2VIDEO_SHR_SCB_START + y - _A2_BORDER_HEIGHT_SCANLINES);
 			// Get the palette
 			memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
 				   memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
@@ -343,20 +344,21 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		auto scb = lineStartPtr[0];
 		for (uint8_t i = 0; i < 4; i++)
 		{
-			lineStartPtr[_COLORBYTESOFFSET + xfb + i] = *(memPtr + _A2VIDEO_SHR_START + (y - _A2_BORDER_HEIGHT_SCANLINES) * _A2VIDEO_SHR_BYTES_PER_LINE + xfb + i);
+			lineStartPtr[contentOffset + xfb + i] =
+				*(memPtr + _A2VIDEO_SHR_START + (y - _A2_BORDER_HEIGHT_SCANLINES) * _A2VIDEO_SHR_BYTES_PER_LINE + xfb + i);
 			// Pre-calculate colorfill, so that the shader doesn't have to do it
 			// It's completely wasted on the shader. Here it's much more efficient
 			if (!(scb & 0x80u) && (scb & 0x20u))	// 320 mode and colorfill
 			{
-				auto byteColor = lineStartPtr[_COLORBYTESOFFSET + xfb + i];
+				auto byteColor = lineStartPtr[contentOffset + xfb + i];
 				// if the first color of the byte is 0, give it the last color of the previous byte
 				// assuming this is not the first byte of the line
 				if (((byteColor & 0xF0) == 0) && ((xfb + i) != 0))
-					byteColor |= (lineStartPtr[_COLORBYTESOFFSET + xfb + i - 1] & 0b1111) << 4;
+					byteColor |= (lineStartPtr[contentOffset + xfb + i - 1] & 0b1111) << 4;
 				// if the second color of the byte is 0, give it the first color of the byte
 				if ((byteColor & 0x0F) == 0)
 					byteColor |= (byteColor >> 4);
-				lineStartPtr[_COLORBYTESOFFSET + xfb + i] = byteColor;
+				lineStartPtr[contentOffset + xfb + i] = byteColor;
 			}
 		}
 		return;
