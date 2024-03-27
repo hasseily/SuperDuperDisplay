@@ -97,6 +97,7 @@ private:
 	float p_slotw = 3.0f;
 	float p_warpx = 0.0f;
 	float p_warpy = 0.0f;
+	float p_barrel_distortion = 0.0f;
 	float p_zoomx = 0.0f;
 	float p_zoomy = 0.0f;
 

@@ -85,6 +85,7 @@ uniform COMPAT_PRECISION float SCANLINE_WEIGHT;
 uniform COMPAT_PRECISION float INTERLACE;
 uniform COMPAT_PRECISION float WARPX;
 uniform COMPAT_PRECISION float WARPY;
+uniform COMPAT_PRECISION float BARRELDISTORTION;
 uniform COMPAT_PRECISION float SLOT;
 uniform COMPAT_PRECISION float SLOTW;
 uniform COMPAT_PRECISION float c_space;
@@ -215,6 +216,12 @@ vec2 Warp(vec2 pos) {
 	return pos;
 }
 
+vec2 BarrelDistortion(vec2 coord) {
+	vec2 cc = coord - 0.5;
+	float dist = dot(cc, cc);
+	return coord + cc * dist * BARRELDISTORTION;
+}
+
 void main() {
 	
 	if (POSTPROCESSING_LEVEL == 0.0) {
@@ -237,6 +244,10 @@ void main() {
 		);
 // zoom in and center screen for bezel
 	vec2 pos = Warp((TexCoords*vec2(1.0-zoomx,1.0-zoomy)-vec2(centerx,centery)/100.0)*scale);
+
+// If people brefer the BarrelDistortion algo
+	pos = BarrelDistortion(pos);
+
 	vec2 corn;
 	
 	if (corner == 1.0){
@@ -256,6 +267,7 @@ void main() {
 	float f = ogl2.y - i.y;
 	pos.y = (i.y + 4.0*f*f*f)*ps.y; // smooth
 	pos.x = mix(pos.x, i.x*ps.x, 0.2);
+
 
 // Convergence
 	vec3 res0 = texture(A2Texture,pos).rgb;

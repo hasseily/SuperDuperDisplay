@@ -89,6 +89,7 @@ void PostProcessor::SaveState(int profile_id) {
 		{"p_slotw", p_slotw},
 		{"p_warpx", p_warpx},
 		{"p_warpy", p_warpy},
+		{"p_barrel_distortion", p_barrel_distortion},
 		{"p_zoomx", p_zoomx},
 		{"p_zoomy", p_zoomy}
 	};
@@ -141,6 +142,7 @@ void PostProcessor::LoadState(int profile_id) {
 		p_slotw = jsonState["p_slotw"];
 		p_warpx = jsonState["p_warpx"];
 		p_warpy = jsonState["p_warpy"];
+		p_barrel_distortion = jsonState["p_barrel_distortion"];
 		p_zoomx = jsonState["p_zoomx"];
 		p_zoomy = jsonState["p_zoomy"];
 	}
@@ -185,6 +187,7 @@ void PostProcessor::SelectShader()
 		shaderProgram.setFloat("centery", p_centery);
 		shaderProgram.setFloat("WARPX", p_warpx);
 		shaderProgram.setFloat("WARPY", p_warpy);
+		shaderProgram.setFloat("BARRELDISTORTION", p_barrel_distortion);
 		shaderProgram.setFloat("corner", p_corner ? 1.0f : 0.0f);
 		shaderProgram.setFloat("vig", p_vig ? 1.0f : 0.0f);
 		shaderProgram.setFloat("BR_DEP", p_br_dep);
@@ -457,6 +460,7 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 			ImGui::SliderFloat("Image Center Y", &p_centery, -100.0f, 100.0f, "%.2f");
 			ImGui::SliderFloat("Curvature Horizontal", &p_warpx, 0.00f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Curvature Vertical", &p_warpy, 0.00f, 0.25f, "%.2f");
+			ImGui::SliderFloat("Barrel Distortion", &p_barrel_distortion, -2.00f, 2.00f, "%.2f");
 			ImGui::Checkbox("Corners Cut", &p_corner);
 			ImGui::Checkbox("Bezel", &p_bzl);
 			ImGui::Checkbox("Vignette", &p_vig);
