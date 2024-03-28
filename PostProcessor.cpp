@@ -261,6 +261,9 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 		quadViewportCoords.z = static_cast<float>(quadWidth) / static_cast<float>(viewportWidth);		// right
 		quadViewportCoords.w = static_cast<float>(quadHeight) / static_cast<float>(viewportHeight);		// bottom
 	}
+	std::cerr << quadWidth << " Qx " << quadHeight << std::endl;
+	std::cerr << viewportWidth << " Vx " << viewportHeight << std::endl;
+	std::cerr << quadViewportCoords.z << " QVx " << quadViewportCoords.w << std::endl;
 
 	GLfloat quadVertices[] = {
 		// Positions												// Texture Coords
@@ -296,24 +299,25 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	{
 		glGenVertexArrays(1, &quadVAO);
 		glGenBuffers(1, &quadVBO);
-		glBindVertexArray(quadVAO);
-		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-
-		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-
-		// Position attribute
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)0);
-
-		// Texture coordinate attribute
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)(2 * sizeof(GLfloat)));
-
-		// Unbind the VAO
-		glBindVertexArray(0);
-	} else {
-		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
 	}
+	
+	// Now always send in the vertices because it all may have been resized upstream
+	glBindVertexArray(quadVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+
+	// Position attribute
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)0);
+
+	// Texture coordinate attribute
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)(2 * sizeof(GLfloat)));
+
+	// Unbind the VAO
+	glBindVertexArray(0);
+
 
 	// Render the fullscreen quad
 	// Target the main SDL2 window

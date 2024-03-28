@@ -108,7 +108,7 @@ void main()
 	if (vFragPos.y < vborder*2 || vFragPos.y >= vborder*2+400 || 
 		vFragPos.x < hborder*16 || vFragPos.x >= 640+(hborder*16))
 	{
-		fragColor = bordercolors[texelFetch(VRAMTEX, ivec2(33u + uint(float(vFragPos.x) / 4.0), scanline), 0).r & 0x0F];
+		fragColor = bordercolors[texelFetch(VRAMTEX, ivec2(33u + uint(float(vFragPos.x+1) / 4.0), scanline), 0).r & 0x0Fu];
 		return;
 	}
 
