@@ -156,9 +156,9 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(A2BeamVertex), (void*)offsetof(A2BeamVertex, PixelPos));
 		
 		// And set the borders
-		shaderProgram->use();
-		shaderProgram->setInt("hborder", (int)border_width_cycles);
-		shaderProgram->setInt("vborder", (int)border_height_scanlines);
+		shader.use();
+		shader.setInt("hborder", (int)border_width_cycles);
+		shader.setInt("vborder", (int)border_height_scanlines);
 	}
 
 	// Associate the texture VRAMTEX in TEXUNIT_DATABUFFER with the buffer
