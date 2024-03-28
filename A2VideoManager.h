@@ -10,6 +10,15 @@
 #include "A2WindowBeam.h"
 #include "CycleCounter.h"
 
+enum class A2Mode_e
+{
+	NONE,
+	LEGACY,
+	SHR,
+	MIXED,
+	A2MODE_TOTAL_COUNT
+};
+
 // Those could be anywhere up to 6 or 7 cycles for horizontal borders
 // and a lot more for vertical borders. We just decided on a size
 // But SHR starts VBLANK just like legacy modes, at scanline 192. Hence
@@ -70,8 +79,8 @@ public:
 	// We'll create 2 BeamRenderVRAMs objects, for double buffering
 	struct BeamRenderVRAMs {
 		uint64_t frame_idx = 0;
-		bool use_legacy = true;
-		bool use_shr = false;
+		bool bWasRendered = false;
+		A2Mode_e mode = A2Mode_e::LEGACY;
 		uint8_t vram_legacy[_BEAM_VRAM_SIZE_LEGACY];
 		uint8_t vram_shr[_BEAM_VRAM_SIZE_SHR];
 		BeamRenderVRAMs() :  vram_legacy{}, vram_shr{} // Zero-initialize
@@ -144,14 +153,12 @@ private:
 
 	// beam render state variables
 	bool bBeamIsActive = false;				// Is the beam active?
-
+	
 	// Double-buffered vrams
 	BeamRenderVRAMs* vrams_array;	// 2 buffers of legacy+shr vrams
 	BeamRenderVRAMs* vrams_write;	// the write buffer
 	BeamRenderVRAMs* vrams_read;	// the read buffer
 
-	Shader shader_beam_legacy = Shader();
-	Shader shader_beam_shr = Shader();
 	Shader shader_merge = Shader();
 
 	VideoRegion_e current_region = VideoRegion_e::NTSC;

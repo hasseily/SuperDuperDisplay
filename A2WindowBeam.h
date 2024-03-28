@@ -26,7 +26,7 @@ class A2WindowBeam
 {
 public:
 
-	A2WindowBeam(A2VideoModeBeam_e _video_mode, Shader* _shaderProgram);
+	A2WindowBeam(A2VideoModeBeam_e _video_mode, const char* shaderVertexPath, const char* shaderFragmentPath);
 	~A2WindowBeam();
 	const uint32_t GetWidth();
 	const uint32_t GetHeight();
@@ -34,15 +34,15 @@ public:
 	GLuint GetOutputTextureId();
 	GLuint Render(bool shouldUpdateDataInGPU);	// returns the output texture id
 
-	Shader* GetShaderProgram() { return shaderProgram; };
-	void SetShaderProgram(Shader* _shader) { shaderProgram = _shader; };
+	Shader* GetShader() { return &shader; };
+	void SetShaderPrograms(const char* shaderVertexPath, const char* shaderFragmentPath);
 	A2VideoModeBeam_e Get_video_mode() const { return video_mode; }
 
 private:
 	bool vramTextureExists = false;						// true if the VRAM texture exists and only needs an update
 	bool bNeedsGPUVertexUpdate = true;					// Update the GPU if the vertex data has changed
 	A2VideoModeBeam_e video_mode = A2VIDEOBEAM_LEGACY;	// Which video mode is used
-	Shader* shaderProgram = nullptr;					// Shader used
+	Shader shader = Shader();							// Shader used
 	uXY screen_count = {0,0};				// width,height in pixels of visible screen area of window
 
 	unsigned int VRAMTEX = UINT_MAX;		// VRAM buffer texture. Holds R as MAIN, G and AUX, B as flags

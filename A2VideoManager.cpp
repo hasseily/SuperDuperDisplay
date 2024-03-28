@@ -162,9 +162,7 @@ void A2VideoManager::Initialize()
 	for (int i = 0; i < 2; i++)
 	{
 		vrams_array[i].frame_idx = 0;
-		// force initialization at start of both GL framebuffers
-		vrams_array[i].use_legacy = true;
-		vrams_array[i].use_shr = true;
+		vrams_array[i].mode = A2Mode_e::SHR;
 		memset(vrams_array[i].vram_legacy, 0, _BEAM_VRAM_SIZE_LEGACY);
 		memset(vrams_array[i].vram_shr, 0, _BEAM_VRAM_SIZE_SHR);
 	}
@@ -184,13 +182,9 @@ void A2VideoManager::Initialize()
 		image_assets[i].tex_id = oglHelper->get_texture_id_at_slot(i);
 	}
 
-	// Generate shaders
-	shader_beam_legacy.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
-	shader_beam_shr.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_SHR_FRAGMENT);
-
 	// Initialize windows
-	windowsbeam[A2VIDEOBEAM_LEGACY] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_LEGACY, &shader_beam_legacy);
-	windowsbeam[A2VIDEOBEAM_SHR] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_SHR, &shader_beam_shr);
+	windowsbeam[A2VIDEOBEAM_LEGACY] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_LEGACY, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
+	windowsbeam[A2VIDEOBEAM_SHR] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_SHR, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_SHR_FRAGMENT);
 	windowsbeam[A2VIDEOBEAM_LEGACY]->SetBorder(_A2_BORDER_WIDTH_CYCLES, _A2_BORDER_HEIGHT_SCANLINES);
 	windowsbeam[A2VIDEOBEAM_SHR]->SetBorder(_A2_BORDER_WIDTH_CYCLES, _A2_BORDER_HEIGHT_SCANLINES);
 
@@ -278,11 +272,15 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		vrams_write->frame_idx = current_frame_idx;
 		++current_frame_idx;
 		// Flip the double buffers
-		vrams_write = &vrams_array[current_frame_idx % 2];
-		vrams_read = &vrams_array[1 - (current_frame_idx % 2)];
-		// reset the legacy and shr flags at each vblank
-		vrams_write->use_legacy = false;
-		vrams_write->use_shr = false;
+		if (vrams_read->bWasRendered)
+		{
+			vrams_read->bWasRendered = false;
+			auto _vtmp = vrams_write;
+			vrams_write = vrams_read;
+			vrams_read = _vtmp;
+		}
+		// reset the mode at each vblank
+		vrams_write->mode = A2Mode_e::NONE;
 		// Update the current region info
 		current_region = CycleCounter::GetInstance()->GetVideoRegion();
 		region_scanlines = ( current_region == VideoRegion_e::NTSC ? SCANLINES_TOTAL_NTSC : SCANLINES_TOTAL_PAL);
@@ -312,7 +310,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 
 	if (memMgr->IsSoftSwitch(A2SS_SHR))
 	{
-		vrams_write->use_shr = true;		// at least 1 byte in this vblank cycle is in SHR
+		// at least 1 byte in this vblank cycle is in SHR
+		vrams_write->mode = (vrams_write->mode == A2Mode_e::LEGACY ? A2Mode_e::MIXED : A2Mode_e::SHR);
 		auto contentOffset = _COLORBYTESOFFSET + (_A2_BORDER_WIDTH_CYCLES * 4);
 
 		// DO BORDERS
@@ -365,8 +364,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	}
 
 	// The byte isn't SHR, it's legacy
-
-	vrams_write->use_legacy = true;	// at least 1 byte in this vblank cycle is not SHR
+	// at least 1 byte in this vblank cycle is LEGACY
+	vrams_write->mode = (vrams_write->mode == A2Mode_e::SHR ? A2Mode_e::MIXED : A2Mode_e::LEGACY);
 	// the flags byte is:
 	// bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO, BORDER)
 	// bit 3: ALT charset for TEXT
@@ -508,7 +507,6 @@ GLuint A2VideoManager::Render()
 	{
 		glGenFramebuffers(1, &FBO_merged);
 		glGenTextures(1, &merged_texture_id);
-		output_texture_id = merged_texture_id;
 		glActiveTexture(_TEXUNIT_POSTPROCESS);
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
 		glBindTexture(GL_TEXTURE_2D, merged_texture_id);
@@ -528,12 +526,6 @@ GLuint A2VideoManager::Render()
 	if (rendered_frame_idx == vrams_read->frame_idx)
 		return output_texture_id;
 
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
-	glClearColor(0.f, 0.f, 0.f, 0.f);
-	glClear(GL_COLOR_BUFFER_BIT);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL render A2VideoManager error: " << glerr << std::endl;
-	}
 
 	// Initialization routine runs only once on init (or re-init)
 	// We do that here because we know the framebuffer is bound, and everything
@@ -541,6 +533,11 @@ GLuint A2VideoManager::Render()
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
 		
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
+		glClearColor(0.f, 0.f, 0.f, 0.f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
 		// image asset 0: The apple 2e US font
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START);
 		image_assets[0].AssignByFilename(this, "assets/Apple2eFont14x16 - Regular.png");
@@ -574,12 +571,14 @@ GLuint A2VideoManager::Render()
 		// Unless we want SDD to display a "splash screen", in which case this is where
 		// we'd do it.
 		ForceBeamFullScreenRender();
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL render A2VideoManager error: " << glerr << std::endl;
+		}
 	}
 
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
-
 	// Now determine how we should merge both legacy and shr
-	if (vrams_read->use_legacy && vrams_read->use_shr)
+	if (vrams_read->mode == A2Mode_e::MIXED)
 	{
 		// Both are active in this frame, we need to do the merge
 		// TODO: TAKE BOTH OUTPUT TEXTURES AND BIND THEM TO TEXTURES 13 and 14
@@ -591,25 +590,25 @@ GLuint A2VideoManager::Render()
 		GLuint shr_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
 		output_texture_id = merged_texture_id;
 	}
-	else if (vrams_read->use_legacy) {
+	else if (vrams_read->mode == A2Mode_e::LEGACY) {
 		// Only legacy is active, just bind the correct output for the postprocessor
 		output_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
 		output_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
 		glViewport(0, 0, output_width, output_height);
 		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
-		glActiveTexture(_TEXUNIT_POSTPROCESS);
-		glBindTexture(GL_TEXTURE_2D, output_texture_id);
+		// std::cerr << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
 	}
-	else if (vrams_read->use_shr) {
+	else if (vrams_read->mode == A2Mode_e::SHR) {
 		// Only SHR is active, just bind the correct output for the postprocessor
 		output_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
 		output_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
 		glViewport(0, 0, output_width, output_height);
 		output_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
-		glActiveTexture(_TEXUNIT_POSTPROCESS);
-		glBindTexture(GL_TEXTURE_2D, output_texture_id);
+		// std::cerr << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
 	}
-
+	glActiveTexture(_TEXUNIT_POSTPROCESS);
+	glBindTexture(GL_TEXTURE_2D, output_texture_id);
+	
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL draw error: " << glerr << std::endl;
 	}
@@ -622,6 +621,7 @@ GLuint A2VideoManager::Render()
 
 	// all done, the texture for this Apple 2 beam cycle frame is rendered
 	rendered_frame_idx = vrams_read->frame_idx;
+	vrams_read->bWasRendered = true;
 	return output_texture_id;
 }
 

@@ -4,10 +4,11 @@
 #include "A2VideoManager.h"
 #include "SDHRManager.h"
 
-A2WindowBeam::A2WindowBeam(A2VideoModeBeam_e _video_mode, Shader* _shaderProgram)
+A2WindowBeam::A2WindowBeam(A2VideoModeBeam_e _video_mode, const char* shaderVertexPath, const char* shaderFragmentPath)
 {
 	video_mode = _video_mode;
-	shaderProgram = _shaderProgram;
+	shader = Shader();
+	shader.build(shaderVertexPath, shaderFragmentPath);
 }
 
 A2WindowBeam::~A2WindowBeam()
@@ -21,6 +22,12 @@ A2WindowBeam::~A2WindowBeam()
 		glDeleteBuffers(1, &VBO);
 	}
 }
+
+void A2WindowBeam::SetShaderPrograms(const char* shaderVertexPath, const char* shaderFragmentPath)
+{
+	this->shader.build(shaderVertexPath, shaderFragmentPath);
+}
+
 
 const uint32_t A2WindowBeam::GetWidth()
 {
@@ -81,7 +88,7 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 {
 	// std::cerr << "Rendering " << (int)video_mode << " - "
 	// 	<< shouldUpdateDataInGPU << " - " << bNeedsGPUVertexUpdate << std::endl;
-	if (shaderProgram == nullptr)
+	if (!shader.isReady)
 		return UINT32_MAX;
 	if (vertices.size() == 0)
 		return UINT32_MAX;
@@ -122,6 +129,12 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	}
 	// std::cerr << "VRAMTEX " << VRAMTEX << " VAO " << VAO << " FBO " << FBO << std::endl;
 
+	shader.use();
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
+		return UINT32_MAX;
+	}
+	
 	glBindVertexArray(VAO);
 
 	if (bNeedsGPUVertexUpdate)
@@ -202,31 +215,24 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		std::cerr << "A2WindowBeam::Update error: " << glerr << std::endl;
 	}
 
-	shaderProgram->use();
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
-		return UINT32_MAX;
-	}
-
-	shaderProgram->setInt("ticks", SDL_GetTicks());
+	shader.setInt("ticks", SDL_GetTicks());
 
 	// point the uniform at the VRAM texture
 	glActiveTexture(_TEXUNIT_DATABUFFER);
 	glBindTexture(GL_TEXTURE_2D, VRAMTEX);
-	shaderProgram->setInt("VRAMTEX", _TEXUNIT_DATABUFFER - GL_TEXTURE0);
+	shader.setInt("VRAMTEX", _TEXUNIT_DATABUFFER - GL_TEXTURE0);
 	
 	// And set all the modes textures that the shader will use
 	// 2 font textures + lgr, hgr, dhgr
-	shaderProgram->setInt("a2ModesTex0", _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0);	// D/TEXT font regular
-	shaderProgram->setInt("a2ModesTex1", _TEXUNIT_IMAGE_ASSETS_START + 1 - GL_TEXTURE0);	// D/TEXT font alternate
-	shaderProgram->setInt("a2ModesTex2", _TEXUNIT_IMAGE_ASSETS_START + 4 - GL_TEXTURE0);	// D/LGR
-	shaderProgram->setInt("a2ModesTex3", _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0);	// HGR
-	shaderProgram->setInt("a2ModesTex4", _TEXUNIT_IMAGE_ASSETS_START + 6 - GL_TEXTURE0);	// DHGR
-
+	shader.setInt("a2ModesTex0", _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0);	// D/TEXT font regular
+	shader.setInt("a2ModesTex1", _TEXUNIT_IMAGE_ASSETS_START + 1 - GL_TEXTURE0);	// D/TEXT font alternate
+	shader.setInt("a2ModesTex2", _TEXUNIT_IMAGE_ASSETS_START + 4 - GL_TEXTURE0);	// D/LGR
+	shader.setInt("a2ModesTex3", _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0);	// HGR
+	shader.setInt("a2ModesTex4", _TEXUNIT_IMAGE_ASSETS_START + 6 - GL_TEXTURE0);	// DHGR
+	
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glActiveTexture(GL_TEXTURE0);
-	glBindVertexArray(0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2WindowBeam render error: " << glerr << std::endl;
 	}
