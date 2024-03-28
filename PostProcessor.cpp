@@ -164,8 +164,8 @@ void PostProcessor::SelectShader()
 		shaderProgram.setInt("BezelTexture", _TEXUNIT_IMAGE_ASSETS_START + 7 - GL_TEXTURE0);
 		shaderProgram.setInt("FrameCount", frame_count);
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
-		shaderProgram.setVec2("InputSize", glm::vec2(texwidth, texheight));
-		shaderProgram.setVec2("TextureSize", glm::vec2(texwidth, texheight));
+		shaderProgram.setVec2("InputSize", glm::vec2(texWidth, texHeight));
+		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
 		shaderProgram.setVec4("VideoRect", quadViewportCoords);
 
@@ -229,8 +229,10 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	GLint last_bound_texture = 0;
 	glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_bound_texture);
 	glBindTexture(GL_TEXTURE_2D, inputTextureId);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texwidth);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texheight);
+	prev_texWidth = texWidth;
+	prev_texHeight = texHeight;
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
 	glActiveTexture(GL_TEXTURE0);	// Target the main SDL window
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -239,14 +241,14 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 
 	// How much can we scale the output quad?
 	// Always scale up in integers numbers
-	float _scale = static_cast<float>(viewportWidth) / static_cast<float>(texwidth);
-	_scale = std::min(_scale, static_cast<float>(viewportHeight) / static_cast<float>(texheight));
+	float _scale = static_cast<float>(viewportWidth) / static_cast<float>(texWidth);
+	_scale = std::min(_scale, static_cast<float>(viewportHeight) / static_cast<float>(texHeight));
 	if (_scale > 1.0f)
 		_scale = std::floor(_scale);
 
 	// Determine the quad's origin
-	quadWidth = static_cast<int>(_scale * texwidth);
-	quadHeight = static_cast<int>(_scale * texheight);
+	quadWidth = static_cast<int>(_scale * texWidth);
+	quadHeight = static_cast<int>(_scale * texHeight);
 
 	if (bCRTFillWindow && p_postprocessing_level > 1)
 	{
@@ -276,9 +278,11 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 //		std::cout << "Viewport coordinates:" << ": (" << quadViewportCoords[0] << ", " << quadViewportCoords[1]
 //		<< "), (" << quadViewportCoords[2] << ", " << quadViewportCoords[3] << ")" << std::endl;
 	
-	if (imguiWindowIsOpen || (!shaderProgram.isReady))
+	if (imguiWindowIsOpen || (!shaderProgram.isReady)
+		|| (last_bound_texture != inputTextureId) 
+		|| (prev_texWidth != texWidth) || (prev_texHeight != texHeight))
 	{
-		// only update the shader if the window is open
+		// only update the shader parameters in certain cases
 		// as it may be very costly for rPi and slow CPUs
 		this->SelectShader();
 	}

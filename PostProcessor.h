@@ -57,9 +57,10 @@ private:
 	glm::vec4 quadViewportCoords = glm::vec4(0, 0, 0, 0);	// left, top, right, bottom
 	bool bCRTFillWindow = false;
 
-	GLint viewportWidth, viewportHeight;
-	GLint quadWidth, quadHeight;
-	GLint texwidth, texheight;
+	GLint viewportWidth = 0, viewportHeight = 0;
+	GLint quadWidth = 0, quadHeight = 0;
+	GLint texWidth = 0, texHeight = 0;
+	GLint prev_texWidth = INT_MAX, prev_texHeight = INT_MAX;
 
 	int frame_count = 0;	// Frame count for interlacing
 	int v_presets = 0;	// Preset chosen
