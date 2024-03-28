@@ -164,7 +164,7 @@ void PostProcessor::SelectShader()
 		shaderProgram.setInt("BezelTexture", _TEXUNIT_IMAGE_ASSETS_START + 7 - GL_TEXTURE0);
 		shaderProgram.setInt("FrameCount", frame_count);
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
-		shaderProgram.setVec2("InputSize", glm::vec2(quadWidth, quadHeight));
+		shaderProgram.setVec2("InputSize", glm::vec2(texwidth, texheight));
 		shaderProgram.setVec2("TextureSize", glm::vec2(texwidth, texheight));
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
 		shaderProgram.setVec4("VideoRect", quadViewportCoords);
@@ -261,9 +261,6 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 		quadViewportCoords.z = static_cast<float>(quadWidth) / static_cast<float>(viewportWidth);		// right
 		quadViewportCoords.w = static_cast<float>(quadHeight) / static_cast<float>(viewportHeight);		// bottom
 	}
-	std::cerr << quadWidth << " Qx " << quadHeight << std::endl;
-	std::cerr << viewportWidth << " Vx " << viewportHeight << std::endl;
-	std::cerr << quadViewportCoords.z << " QVx " << quadViewportCoords.w << std::endl;
 
 	GLfloat quadVertices[] = {
 		// Positions												// Texture Coords
