@@ -250,9 +250,10 @@ void main() {
 	pos = BarrelDistortion(pos);
 
 	vec2 corn;
+	float corner_vignette;
 	if (corner == 1.0){
-		corn = min(pos, 1.0-pos);	// This is used to mask the rounded
-		corn.x = 0.00015/corn.x;	 // corners later on
+		corn = pos * TextureSize/OutputSize;
+		corner_vignette = corn.x * corn.y * (1.-corn.x) * (1.-corn.y);
 	}	 
 
 	vec4 bez = texture(BezelTexture,TexCoords*0.95+vec2(0.022,0.022));	
@@ -348,9 +349,9 @@ void main() {
 						pow( abs(bez.rgb), vec3( 1.4 ) ),
 						bez.w * bez.w
 						);
-	if (corner == 1.0) 
-		if (corn.y <= corn.x || corn.x < 0.0001 )
-			res = vec3(0.0);
+	if (corner == 1.0) {
+		res = res * smoothstep(0, pow(0.2, 4), corner_vignette);
+	}
 
 	FragColor = vec4(res, 1.0);
 	if (SCANLINE_TYPE == 1.0) {
