@@ -89,7 +89,7 @@ void process_single_event(SDHREvent& e)
 	// Update the cycle counting and VBL hit
 	bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == (e.is_iigs ? 1 : 0)));
 	CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
-	if (e.is_iigs && e.m2b0) {
+	if (e.is_iigs && e.m2sel) {
 		// ignore updates from iigs_mode firmware with m2sel high
 		return;
 	}
@@ -247,12 +247,12 @@ void process_single_packet_header(SDHRPacketHeader* h,
 		uint8_t ctrl_bits = (*event >> 24) & 0xff;
 		uint16_t addr = (*event >> 8) & 0xffff;
 		uint8_t data = *event & 0xff;
-		// bool m2sel = (ctrl_bits & 0x02) == 0x02;
+		bool m2sel = (ctrl_bits & 0x02) == 0x02;
 		bool m2b0 = (ctrl_bits & 0x04) == 0x04;
 		bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
 		bool rw = (ctrl_bits & 0x01) == 0x01;
 		
-		SDHREvent ev(iigs_mode, m2b0, rw, addr, data);
+		SDHREvent ev(iigs_mode, m2b0, m2sel, rw, addr, data);
 		process_single_event(ev);
 	}
 }

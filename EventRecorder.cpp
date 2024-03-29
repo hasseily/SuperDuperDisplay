@@ -118,7 +118,7 @@ void EventRecorder::WriteEvent(const SDHREvent& event, std::ofstream& file) {
 }
 
 void EventRecorder::ReadEvent(std::ifstream& file) {
-	auto event = SDHREvent(false, false, 0, 0, 0);
+	auto event = SDHREvent(false, false, false, 0, 0, 0);
 	file.read(reinterpret_cast<char*>(&event.is_iigs), sizeof(event.is_iigs));
 	file.read(reinterpret_cast<char*>(&event.m2b0), sizeof(event.m2b0));
 	file.read(reinterpret_cast<char*>(&event.rw), sizeof(event.rw));
