@@ -105,10 +105,10 @@ void main()
 	uint scanline = uint(vFragPos.y) / 2u;
 
 	// first do the borders
-	if (vFragPos.y < vborder*2 || vFragPos.y >= vborder*2+400 || 
-		vFragPos.x < hborder*16 || vFragPos.x >= 640+(hborder*16))
+	if ((vFragPos.y < float(vborder*2)) || (vFragPos.y >= float(vborder*2+400)) || 
+		(vFragPos.x < float(hborder*16)) || (vFragPos.x >= float(640+hborder*16)))
 	{
-		fragColor = bordercolors[texelFetch(VRAMTEX, ivec2(33u + uint(float(vFragPos.x+1) / 4.0), scanline), 0).r & 0x0Fu];
+		fragColor = bordercolors[texelFetch(VRAMTEX, ivec2(33u + uint(float(vFragPos.x+1.0) / 4.0), scanline), 0).r & 0x0Fu];
 		return;
 	}
 
