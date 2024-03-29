@@ -40,6 +40,7 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 	m_cycle += inc;
 	m_cycle = (m_cycle % cycles_total);
 
+        isVBL = 0; // disable vbl resetting
 	// Update VBL and region automatically with 0xC019
 	if (isVBL)
 	{
