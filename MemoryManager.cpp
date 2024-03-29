@@ -200,6 +200,126 @@ void MemoryManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool 
 			a2SoftSwitches &= ~A2SS_SHR;
 		}
 		break;
+	case 0xC013:
+		if (rw) {
+			if (val & 0x80) {
+				a2SoftSwitches |= A2SS_RAMRD;
+			}
+			else {
+				a2SoftSwitches &= ~A2SS_RAMRD;
+			}
+		}
+		break;
+	case 0xC014:
+		if (rw) {
+			if (val & 0x80) {
+				a2SoftSwitches |= A2SS_RAMWRT;
+			}
+			else {
+				a2SoftSwitches &= ~A2SS_RAMWRT;
+			}
+		}
+		break;
+	case 0xC015:
+		if (rw) {
+			if (val & 0x80) {
+				a2SoftSwitches |= A2SS_INTCXROM;
+			}
+			else {
+				a2SoftSwitches &= ~A2SS_INTCXROM;
+			}
+		}
+		break;
+	case 0xC017:
+		if (rw) {
+			if (val & 0x80) {
+				a2SoftSwitches |= A2SS_SLOTC3ROM;
+			}
+			else {
+				a2SoftSwitches &= ~A2SS_SLOTC3ROM;
+			}
+		}
+		break;
+	case 0xC018:
+		if (rw) {
+			if (val & 0x80) {
+				a2SoftSwitches |= A2SS_80STORE;
+			}
+			else {
+				a2SoftSwitches &= ~A2SS_80STORE;
+			}
+		}
+		break;
+	case 0xC01A:
+		if (rw) {
+			if (val & 0x80) {
+				a2SoftSwitches |= A2SS_TEXT;
+			}
+			else {
+				a2SoftSwitches &= ~A2SS_TEXT;
+			}
+		}
+		break;
+	case 0xC01B:
+		if (rw) {
+			if (val & 0x80) {
+				a2SoftSwitches |= A2SS_MIXED;
+			}
+			else {
+				a2SoftSwitches &= ~A2SS_MIXED;
+			}
+		}
+		break;
+	case 0xC01C:
+		if (rw) {
+			if (val & 0x80) {
+				a2SoftSwitches |= A2SS_PAGE2;
+			}
+			else {
+				a2SoftSwitches &= ~A2SS_PAGE2;
+			}
+		}
+		break;
+	case 0xC01D:
+		if (rw) {
+			if (val & 0x80) {
+				a2SoftSwitches |= A2SS_HIRES;
+			}
+			else {
+				a2SoftSwitches &= ~A2SS_HIRES;
+			}
+		}
+		break;
+	case 0xC01E:
+		if (rw) {
+			if (val & 0x80) {
+				a2SoftSwitches |= A2SS_ALTCHARSET;
+			}
+			else {
+				a2SoftSwitches &= ~A2SS_ALTCHARSET;
+			}
+		}
+		break;
+	case 0xC01F:
+		if (rw) {
+			if (val & 0x80) {
+				a2SoftSwitches |= A2SS_80COL;
+			}
+			else {
+				a2SoftSwitches &= ~A2SS_80COL;
+			}
+		}
+		break;
+	case 0xC07F:
+		if (rw) {
+			if (val & 0x80) {
+				a2SoftSwitches |= A2SS_DHGR;
+			}
+			else {
+				a2SoftSwitches &= ~A2SS_DHGR;
+			}
+		}
+	 break;
 	default:
 		break;
 	}
