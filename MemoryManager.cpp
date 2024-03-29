@@ -164,8 +164,8 @@ void MemoryManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool 
 		break;
 		// $C029   R/W     NEWVIDEO        [IIgs] Select new video modes (also VidHD)
 	case 0xC029:    // NEWVIDEO (SHR)
-		if (rw)		// don't do anything on read
-			break;
+		// if (rw)		// don't do anything on read
+		//	break;
 		// bits 1-4 are reserved
 		if (val == 0x21)
 		{

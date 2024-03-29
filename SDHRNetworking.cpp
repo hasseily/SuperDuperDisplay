@@ -116,12 +116,12 @@ void process_single_event(SDHREvent& e)
 	 HANDLE SOFT SWITCHES EVENTS
 	 *********************************
 	 */
-	if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
+	//if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
 		if (e.addr >> 8 == 0xc0)
 			memMgr->ProcessSoftSwitch(e.addr, e.data, e.rw, e.is_iigs);
 		// ignore non-control
 		return;
-	}
+	//}
 	/*
 	 *********************************
 	 HANDLE SDHR (0xC0A0/1) EVENTS
@@ -199,6 +199,8 @@ void process_single_event(SDHREvent& e)
 	}
 }
 
+bool prev_reset = false;
+
 void process_single_packet_header(SDHRPacketHeader* h,
 								  uint32_t packet_size)
 {
@@ -226,9 +228,9 @@ void process_single_packet_header(SDHRPacketHeader* h,
 		case 1:    // echo
 				   // TODO
 			return;
-		case 2: // computer reset
-			A2VideoManager::GetInstance()->bShouldReboot = true;
-			return;
+//		case 2: // computer reset
+//			A2VideoManager::GetInstance()->bShouldReboot = true;
+//			return;
 		case 3: // datetime request
 				// TODO
 			return;
@@ -249,8 +251,15 @@ void process_single_packet_header(SDHRPacketHeader* h,
 		uint8_t data = *event & 0xff;
 		bool m2sel = (ctrl_bits & 0x02) == 0x02;
 		bool m2b0 = (ctrl_bits & 0x04) == 0x04;
+                bool reset = (ctrl_bits & 0x08) == 0x08;
 		bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
 		bool rw = (ctrl_bits & 0x01) == 0x01;
+                if (reset && !prev_reset) {
+                   // reset on rising edge of reset flag
+                   std::cerr << "reset detected" << std::endl;
+                   A2VideoManager::GetInstance()->bShouldReboot = true;
+                }
+                prev_reset = reset;
 		
 		SDHREvent ev(iigs_mode, m2b0, m2sel, rw, addr, data);
 		process_single_event(ev);
