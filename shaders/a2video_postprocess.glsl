@@ -350,7 +350,7 @@ void main() {
 						bez.w * bez.w
 						);
 	if (corner == 1.0) {
-		res = res * smoothstep(0, pow(0.2, 4), corner_vignette);
+		res = res * smoothstep(0.0, pow(0.2, 4.0), corner_vignette);
 	}
 
 	FragColor = vec4(res, 1.0);
