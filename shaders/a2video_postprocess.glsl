@@ -249,11 +249,9 @@ void main() {
 // If people brefer the BarrelDistortion algo
 	pos = BarrelDistortion(pos);
 
-	vec2 corn;
-	float corner_vignette;
+	float corn;
 	if (corner == 1.0){
-		corn = pos * TextureSize/OutputSize;
-		corner_vignette = corn.x * corn.y * (1.-corn.x) * (1.-corn.y);
+		corn = pos.x * pos.y * (1.-pos.x) * (1.-pos.y);
 	}	 
 
 	vec4 bez = texture(BezelTexture,TexCoords*0.95+vec2(0.022,0.022));	
@@ -342,6 +340,11 @@ void main() {
 	res -= vec3(BLACK);
 	res *= blck;
 
+	if (corner == 1.0) {
+		// res = res * smoothstep(0.0, 0.0010, corn);	// if we want it smooth
+		if (corn < 0.0010)								// if we want it cut
+			res = vec3(0.0, 0.0, 0.0);
+	}
 // Apply bezel code, adapted from New-Pixie
 	if (bzl >0.0)
 		res.rgb = mix(	
@@ -349,9 +352,6 @@ void main() {
 						pow( abs(bez.rgb), vec3( 1.4 ) ),
 						bez.w * bez.w
 						);
-	if (corner == 1.0) {
-		res = res * smoothstep(0.0, pow(0.2, 4.0), corner_vignette);
-	}
 
 	FragColor = vec4(res, 1.0);
 	if (SCANLINE_TYPE == 1.0) {
