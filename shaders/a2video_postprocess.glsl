@@ -46,7 +46,7 @@ void main()
 {
 	gl_Position = vec4(aPos, 0.0, 1.0);
 	TexCoords = TexCoord;
-	scale = OutputSize.xy/InputSize.xy;
+	scale = OutputSize.xy/TextureSize.xy;
 	ps = 1.0/TextureSize.xy;
 	v_pos = gl_Position.xy;
 }
@@ -229,35 +229,34 @@ void main() {
 		return;
 	}
 	
-	// Apply simple horizontal scanline if required and exit
+// Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1.0) {
 		FragColor = texture(A2Texture,TexCoords);
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
 		return;
 	}
 
-// Hue matrix inside main() to avoid GLES error
+	// Hue matrix inside main() to avoid GLES error
 	mat3 hue = mat3 (
 		1.0, -RG, -RB,
 		RG, 1.0, -GB,
 		RB, GB, 1.0
 		);
-// zoom in and center screen for bezel
-	vec2 pos = Warp((TexCoords*vec2(1.0-zoomx,1.0-zoomy)-vec2(centerx,centery)/100.0)*scale);
 
+// zoom in and center screen for bezel
+	vec2 pos = Warp(TexCoords*vec2(1.0-zoomx,1.0-zoomy)-vec2(centerx,centery)/100.0);
+	
 // If people brefer the BarrelDistortion algo
 	pos = BarrelDistortion(pos);
 
 	vec2 corn;
-	
 	if (corner == 1.0){
 		corn = min(pos, 1.0-pos);	// This is used to mask the rounded
 		corn.x = 0.00015/corn.x;	 // corners later on
 	}	 
-	pos /= scale;
 
 	vec4 bez = texture(BezelTexture,TexCoords*0.95+vec2(0.022,0.022));	
-	bez.rgb = mix(bez.rgb, vec3(0.50),0.4);
+	bez.rgb = mix(bez.rgb, vec3(0.40),0.4);
 	vec2 bpos = pos;
 	vec2 dx = vec2(ps.x,0.0);
 	
@@ -282,7 +281,7 @@ void main() {
 // Vignette
 	float x = 0.0;
 	if (vig == 1.0) {
-		x = TexCoords.x*scale.x-0.5;
+		x = TexCoords.x-0.5;
 		x = x*x;
 	}
 

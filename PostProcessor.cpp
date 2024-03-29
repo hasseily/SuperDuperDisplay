@@ -431,6 +431,7 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 			ImGui::RadioButton("Complex##SCANLINETYPE", &p_scanline_type, 2);
 			if (p_scanline_type == 2) {
 				ImGui::SliderFloat("Scanline Weight", &p_scanline_weight, 0.001f, 0.5f, "%.2f");
+				ImGui::Checkbox("Vignette", &p_vig);
 				ImGui::Checkbox("Interlacing On/Off", &p_interlace);
 			}
 			
@@ -468,7 +469,6 @@ void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
 			ImGui::SliderFloat("Barrel Distortion", &p_barrel_distortion, -2.00f, 2.00f, "%.2f");
 			ImGui::Checkbox("Corners Cut", &p_corner);
 			ImGui::Checkbox("Bezel", &p_bzl);
-			ImGui::Checkbox("Vignette", &p_vig);
 			ImGui::Separator();
 			
 			// Color Settings
