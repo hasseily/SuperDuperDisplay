@@ -102,12 +102,6 @@ static uint16_t g_RAM_HGROffsets[] = {
 // Gotta have a transparency global just in case
 // static uint32_t gRGBTransparent = 0;
 
-// Rects of cycles and scanlines where the image is actually drawn (and not borders)
-constexpr int _A2_LEGACY_IMG_RECT[4] = { 25, 64, 0, 191 };	// leftC, rightC, topS, bottomS
-constexpr int _A2_SHR_IMG_RECT[4] = { 25, 64, 0, 199 };		// leftC, rightC, topS, bottomS
-
-constexpr uint8_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
-
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
 
@@ -161,6 +155,7 @@ void A2VideoManager::Initialize()
 	current_frame_idx = 0;
 	for (int i = 0; i < 2; i++)
 	{
+		vrams_array[i].id = i;
 		vrams_array[i].frame_idx = 0;
 		vrams_array[i].mode = A2Mode_e::SHR;
 		memset(vrams_array[i].vram_legacy, 0, _BEAM_VRAM_SIZE_LEGACY);
@@ -170,9 +165,6 @@ void A2VideoManager::Initialize()
 	vrams_read = &vrams_array[1 - (current_frame_idx % 2)];
 	
 	auto memMgr = MemoryManager::GetInstance();
-	color_background = gPaletteRGB[12 + (memMgr->switch_c022 & 0x0F)];
-	color_foreground = gPaletteRGB[12 + ((memMgr->switch_c022 & 0xF0) >> 4)];
-	color_border = gPaletteRGB[12 + (memMgr->switch_c034 & 0x0F)];
 
 	// Set up the image assets (textures)
 	// Assign them their respective GPU texture id
@@ -185,12 +177,16 @@ void A2VideoManager::Initialize()
 	// Initialize windows
 	windowsbeam[A2VIDEOBEAM_LEGACY] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_LEGACY, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
 	windowsbeam[A2VIDEOBEAM_SHR] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_SHR, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_SHR_FRAGMENT);
-	windowsbeam[A2VIDEOBEAM_LEGACY]->SetBorder(_A2_BORDER_WIDTH_CYCLES, _A2_BORDER_HEIGHT_SCANLINES);
-	windowsbeam[A2VIDEOBEAM_SHR]->SetBorder(_A2_BORDER_WIDTH_CYCLES, _A2_BORDER_HEIGHT_SCANLINES);
+	windowsbeam[A2VIDEOBEAM_LEGACY]->SetBorder(_A2_BORDER_W_CYCLES, _A2_BORDER_H_SCANLINES);
+	windowsbeam[A2VIDEOBEAM_SHR]->SetBorder(_A2_BORDER_W_CYCLES, _A2_BORDER_H_SCANLINES);
 
 	// The merged framebuffer will have a size equal to the SHR buffer (including borders)
 	fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
 	fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
+
+	// We don't know the beam state
+	// Wait until beam is at position (0,0) to start
+	beamState = BeamState_e::UNKNOWN;
 
 	// TODO: 	SET THE OUTPUT TEXTURE FOR EACH OF THE 2 WINDOWSBEAM
 	//			SO WE CAN MERGE THE 2 AFTERWARDS
@@ -228,140 +224,213 @@ void A2VideoManager::ToggleA2Video(bool value)
 		bShouldInitializeRender = true;
 }
 
+void A2VideoManager::StartNextFrame()
+{
+	// start the next frame
+	// set the frame index for the buffer we'll move to reading
+	vrams_write->frame_idx = current_frame_idx;
+	++current_frame_idx;
+	// Flip the double buffers
+	if (vrams_read->bWasRendered)
+	{
+		vrams_read->bWasRendered = false;
+		auto _vtmp = vrams_write;
+		vrams_write = vrams_read;
+		vrams_read = _vtmp;
+	}
+	// reset the mode at each vblank
+	vrams_write->mode = A2Mode_e::NONE;
+	// Update the current region info
+	current_region = CycleCounter::GetInstance()->GetVideoRegion();
+	region_scanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
+}
+
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 {
+	/*
+		@: Frame flip and start of next frame
+		&: Start next frame scanlines
+	 ||H|        |H||----------------------------------------------------------------------------|
+	 ||B|        |B||                                                                      		 |
+	 ||o|        |o||                                                                      		 |
+	 ||r| HBLANK |r||                                    Content                                 |
+	 ||d|        |d||                     CYCLES_SC_CONTENT x mode_scanlines                  	 |
+	 ||e|        |e||                                                                      		 |
+	 ||r|        |r||                                                                      		 |
+	 |		        |----------------------         Vertical border       -----------------------|
+	 |		        |------------------------- (_A2_BORDER_H_SCANLINES) -------------------------|
+	 |@		        |............................. vertical blanking ............................|
+	 |		        |............................. vertical blanking ............................|
+	 |		        |............................. vertical blanking ............................|
+	 |		        |............................. vertical blanking ............................|
+	 |		        |............................. vertical blanking ............................|
+	 |		        |............................. vertical blanking ............................|
+	 |		        |............................. vertical blanking ............................|
+	 |&             |-----------------      Vertical border  (next frame)       -----------------|
+	 |		        |------------------------- (_A2_BORDER_H_SCANLINES) -------------------------|
+
+	 In order to achieve a "correct" top, left, right, bottom border around the content, with
+	 the origin being at the start of the top border, we translate each border area's x & w
+	 with the below #defines for each of Border L, R, T, B.
+	 */
+
+#define _TR_ANY_X ((_x + _A2_BORDER_W_CYCLES + CYCLES_SC_CONTENT) % CYCLES_SC_TOTAL)
+#define _TR_ANY_Y ((_y + _A2_BORDER_H_SCANLINES) % region_scanlines)
+
 	auto memMgr = MemoryManager::GetInstance();
 	uint32_t mode_scanlines = (memMgr->IsSoftSwitch(A2SS_SHR) ? 200 : 192);
-	uint32_t x, y;
-	// Translate the origin to make a lot more sense when calculating borders and drawing things.
-	/*
-	 The previous origin is marked as "@" here:
-	 ----------------------         Vertical border       -----------------------|        |
-	 ---------------------- (_A2_BORDER_HEIGHT_SCANLINES) -----------------------|        |
-	 |H|                                                                     @|H||        |
-	 |B|                                                                      |B||        |
-	 |o|                                                                      |o||        |
-	 |r|                                Content                               |r||        |
-	 |d|                   CYCLES_SCANLINES x mode_scanlines                  |d||        |
-	 |e|                                                                      |e||        |
-	 |r|                                                                      |r|| HBLANK |
-	 ----------------------         Vertical border       -----------------------|        |
-	 ---------------------- (_A2_BORDER_HEIGHT_SCANLINES) -----------------------|        |
-	 ............................. vertical blanking ............................|        |
-	 ............................. vertical blanking ............................|        |
-	 ............................. vertical blanking ............................|        |
-	 ............................. vertical blanking ............................|        |
-	 ............................. vertical blanking ............................|        |
-	 ............................. vertical blanking ............................|        |
-	 ............................. vertical blanking ............................|        |
-	 */
-	// Since they're uints, make sure they don't go negative
-	x = (_x + CYCLES_HBLANK - _A2_BORDER_WIDTH_CYCLES) % (CYCLES_HBLANK + CYCLES_SCANLINES);
-	y = (_y + region_scanlines - _A2_BORDER_HEIGHT_SCANLINES) % region_scanlines;
+
 	// The Apple 2gs drawing is shifted 6 scanlines down
 	// Let's realign it to match the 2e
 	if (memMgr->is2gs)
 	{
-		y = (y + region_scanlines - 6) % region_scanlines;
+		_y = (_y + region_scanlines - 6) % region_scanlines;
 	}
-	// Start of VBLANK at which we flip the double buffering
-	if ((x == 0) && (y == (mode_scanlines + (2*_A2_BORDER_HEIGHT_SCANLINES))))
+
+	// Do not bother with the beam state until we get a 0,0
+	// Then we can start doing work
+	if (_x == 0 && _y == 0)	// initialize
 	{
-		// start the next frame
-		// set the frame index for the buffer we'll move to reading
-		vrams_write->frame_idx = current_frame_idx;
-		++current_frame_idx;
-		// Flip the double buffers
-		if (vrams_read->bWasRendered)
+		beamState = BeamState_e::BORDER_RIGHT;
+	}
+
+	// Now determine the actual beam state
+	// And flip the frame when switching from BORDER_BOTTOM to NBVBLANK
+	switch (beamState)
+	{
+	case BeamState_e::UNKNOWN:
+		break;
+	case BeamState_e::NBHBLANK:
+		if (_x == (CYCLES_SC_HBL - _A2_BORDER_W_CYCLES))
+			beamState = BeamState_e::BORDER_LEFT;
+		break;
+	case BeamState_e::NBVBLANK:
+		if (_y == (region_scanlines - _A2_BORDER_H_SCANLINES))
+			beamState = BeamState_e::BORDER_TOP;
+		break;
+	case BeamState_e::BORDER_LEFT:
+		if (_x == CYCLES_SC_HBL)
+			beamState = BeamState_e::CONTENT;
+		break;
+	case BeamState_e::BORDER_RIGHT:
+		if (_x == _A2_BORDER_W_CYCLES)
+			beamState = BeamState_e::NBHBLANK;
+		break;
+	case BeamState_e::BORDER_TOP:
+		if (_y == 0)
+			beamState = BeamState_e::BORDER_RIGHT;
+		break;
+	case BeamState_e::BORDER_BOTTOM:
+		if (_y == (mode_scanlines + _A2_BORDER_H_SCANLINES))
 		{
-			vrams_read->bWasRendered = false;
-			auto _vtmp = vrams_write;
-			vrams_write = vrams_read;
-			vrams_read = _vtmp;
+			beamState = BeamState_e::NBVBLANK;
+			// Start of NBVBLANK at which we flip the double buffering
+			StartNextFrame();
 		}
-		// reset the mode at each vblank
-		vrams_write->mode = A2Mode_e::NONE;
-		// Update the current region info
-		current_region = CycleCounter::GetInstance()->GetVideoRegion();
-		region_scanlines = ( current_region == VideoRegion_e::NTSC ? SCANLINES_TOTAL_NTSC : SCANLINES_TOTAL_PAL);
-		return;
+		break;
+	case BeamState_e::CONTENT:
+		if (_x == 0)
+		{
+			if (_y == mode_scanlines)
+				beamState = BeamState_e::BORDER_BOTTOM;
+			else
+				beamState = BeamState_e::BORDER_RIGHT;
+		}
+		break;
+	default:
+		break;
 	}
 
-	// in VBLANK (taking care of borders), nothing to do
-	if (y >= mode_scanlines + (2*_A2_BORDER_HEIGHT_SCANLINES))
+	// Now we get rid of all the non-border BLANK areas to avoid an overflow on the vertical border areas.
+	// We never want to process vertical borders that are in non-border HBLANK
+	// Otherwise we'd need the vertical border states to know when they're in HBLANK as well,
+	// complicating the state machine.
+
+	if (_x >= _A2_BORDER_W_CYCLES && _x < (CYCLES_SC_HBL - _A2_BORDER_W_CYCLES))
+		return;
+	if (_y >= (mode_scanlines + _A2_BORDER_H_SCANLINES) && _y < (region_scanlines - _A2_BORDER_H_SCANLINES))
 		return;
 
-	// in HBLANK (taking care of borders), nothing to do
-	if (x >= CYCLES_SCANLINES + (2*_A2_BORDER_WIDTH_CYCLES))
-		return;
-
-	if (x == CYCLES_SCANLINES + _A2_BORDER_WIDTH_CYCLES)
+	// Always at the start of the row, set the SHR SCB to 0x10
+	// Because we check bit 4 of the SCB to know if that line is drawn as SHR
+	// The 2gs will always set bit 4 to 0 when sending it over
+	if (_x == 0)
 	{
-		// This is the real start of the next row
-		// Always at the start of the row, set the SHR SCB to 0x10
-		// Because we check bit 4 of the SCB to know if that line is drawn as SHR
-		// The 2gs will always set bit 4 to 0 when sending it over
-		vrams_write->vram_shr[_BEAM_VRAM_WIDTH_SHR * (y+1)] = 0x10;
+		vrams_write->vram_shr[_BEAM_VRAM_WIDTH_SHR * _TR_ANY_Y] = 0x10;
 	}
-	// Get the colors
-	color_background = gPaletteRGB[12 + (memMgr->switch_c022 & 0x0F)];
-	color_foreground = gPaletteRGB[12 + ((memMgr->switch_c022 & 0xF0) >> 4)];
-	color_border = gPaletteRGB[12 + (memMgr->switch_c034 & 0x0F)];
+
+	// Now generate the VRAMs themselves
 
 	if (memMgr->IsSoftSwitch(A2SS_SHR))
 	{
 		// at least 1 byte in this vblank cycle is in SHR
 		vrams_write->mode = (vrams_write->mode == A2Mode_e::LEGACY ? A2Mode_e::MIXED : A2Mode_e::SHR);
-		auto contentOffset = _COLORBYTESOFFSET + (_A2_BORDER_WIDTH_CYCLES * 4);
 
-		// DO BORDERS
-		// we've already removed all uninteresting HBLANK cycles or VBLANK scanlines
-		if ((y < _A2_BORDER_HEIGHT_SCANLINES)						// top border
-			|| (y >= _A2_BORDER_HEIGHT_SCANLINES + mode_scanlines)	// bottom border
-			|| (x < _A2_BORDER_WIDTH_CYCLES) 						// Left horizontal border
-			|| (x >= _A2_BORDER_WIDTH_CYCLES + CYCLES_SCANLINES))	// Right horizontal border
-		{
-			// write all 4 bytes at once
-			memset(vrams_write->vram_shr + (_BEAM_VRAM_WIDTH_SHR * y + _COLORBYTESOFFSET + (x*4)), memMgr->switch_c034, 4);
-			return;
-		}
-
-		uint8_t* lineStartPtr = vrams_write->vram_shr + _BEAM_VRAM_WIDTH_SHR * y;
 		auto memPtr = memMgr->GetApple2MemAuxPtr();
-		if (x == _A2_BORDER_WIDTH_CYCLES)
+		uint8_t* lineStartPtr = vrams_write->vram_shr + _BEAM_VRAM_WIDTH_SHR * _TR_ANY_Y;
+
+		switch (beamState)
 		{
-			// it's the beginning of the line
-			// Get the SCB
-			lineStartPtr[0] = *(memPtr + _A2VIDEO_SHR_SCB_START + y - _A2_BORDER_HEIGHT_SCANLINES);
-			// Get the palette
-			memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
-				   memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
-				   32);					// palette length is 32 bytes
-		}
-		// Get the color info for the 4 bytes where the beam is
-		auto xfb = (x - _A2_BORDER_WIDTH_CYCLES) * 4;	// the x first byte, given that every beam cycle renders 4 bytes
-		auto scb = lineStartPtr[0];
-		for (uint8_t i = 0; i < 4; i++)
+		case BeamState_e::UNKNOWN:
+			break;
+		case BeamState_e::NBHBLANK:
+			// do nothing
+			break;
+		case BeamState_e::NBVBLANK:
+			// do nothing
+			break;
+		case BeamState_e::BORDER_LEFT:
+			memset(lineStartPtr + _COLORBYTESOFFSET + _TR_ANY_X * 4, (uint8_t)memMgr->switch_c034, 4);
+			// get the SCB and palettes if we're starting a line
+			// and it's part of the content area. The top & bottom border areas don't care about SCB
+			if ((_TR_ANY_X == 0) && (_y < mode_scanlines))
+			{
+				lineStartPtr[0] = memPtr[_A2VIDEO_SHR_SCB_START + _y];
+				vrams_write->vram_shr[_BEAM_VRAM_WIDTH_SHR * _TR_ANY_Y] = memPtr[_A2VIDEO_SHR_SCB_START + _y];
+				// Get the palette
+				memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
+					memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
+					32);					// palette length is 32 bytes
+			}
+			break;
+		case BeamState_e::BORDER_RIGHT:
+		case BeamState_e::BORDER_TOP:
+		case BeamState_e::BORDER_BOTTOM:
+			memset(lineStartPtr + _COLORBYTESOFFSET + (_TR_ANY_X * 4), (uint8_t)memMgr->switch_c034, 4);
+			break;
+		case BeamState_e::CONTENT:
 		{
-			lineStartPtr[contentOffset + xfb + i] =
-				*(memPtr + _A2VIDEO_SHR_START + (y - _A2_BORDER_HEIGHT_SCANLINES) * _A2VIDEO_SHR_BYTES_PER_LINE + xfb + i);
-			// Pre-calculate colorfill, so that the shader doesn't have to do it
-			// It's completely wasted on the shader. Here it's much more efficient
+			// Get the color info for the 4 bytes where the beam is
+			auto contentOffset = _COLORBYTESOFFSET + (_A2_BORDER_W_CYCLES * 4);
+			auto xfb = (_x - CYCLES_SC_HBL) * 4;	// the x first byte, given that every beam cycle renders 4 bytes
+			auto scb = lineStartPtr[0];
+			memcpy(lineStartPtr + _COLORBYTESOFFSET + _TR_ANY_X * 4,
+				memPtr + _A2VIDEO_SHR_START + _y * _A2VIDEO_SHR_BYTES_PER_LINE + xfb, 4);
 			if (!(scb & 0x80u) && (scb & 0x20u))	// 320 mode and colorfill
 			{
-				auto byteColor = lineStartPtr[contentOffset + xfb + i];
-				// if the first color of the byte is 0, give it the last color of the previous byte
-				// assuming this is not the first byte of the line
-				if (((byteColor & 0xF0) == 0) && ((xfb + i) != 0))
-					byteColor |= (lineStartPtr[contentOffset + xfb + i - 1] & 0b1111) << 4;
-				// if the second color of the byte is 0, give it the first color of the byte
-				if ((byteColor & 0x0F) == 0)
-					byteColor |= (byteColor >> 4);
-				lineStartPtr[contentOffset + xfb + i] = byteColor;
+				// Pre-calculate colorfill, so that the shader doesn't have to do it
+				// It's completely wasted on the shader. Here it's much more efficient
+				for (uint32_t i = 0; i < 4; i++)
+				{
+					auto byteColor = lineStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i];
+					// if the first color of the byte is 0, give it the last color of the previous byte
+					// assuming this is not the first byte of the line
+					if (((byteColor & 0xF0) == 0) && ((xfb + i) != 0))
+						byteColor |= (lineStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i - 1] & 0b1111) << 4;
+					// if the second color of the byte is 0, give it the first color of the byte
+					if ((byteColor & 0x0F) == 0)
+						byteColor |= (byteColor >> 4);
+					lineStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i] = byteColor;
+				}
 			}
 		}
+			break;
+		default:
+			break;
+		}
 		return;
-	}
+	}	// if (memMgr->IsSoftSwitch(A2SS_SHR))
+
 
 	// The byte isn't SHR, it's legacy
 	// at least 1 byte in this vblank cycle is LEGACY
@@ -376,90 +445,110 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	// bits 4-7: foreground color
 	uint8_t colors = 0;
 	
-	uint32_t _startByte;
-	
-	// DO BORDERS
-	// we've already removed all uninteresting HBLANK cycles or VBLANK scanlines
-	if ((y < _A2_BORDER_HEIGHT_SCANLINES)						// top border
-		|| (y >= _A2_BORDER_HEIGHT_SCANLINES + mode_scanlines)	// bottom border
-		|| (x < _A2_BORDER_WIDTH_CYCLES) 						// Left horizontal border
-		|| (x >= _A2_BORDER_WIDTH_CYCLES + CYCLES_SCANLINES))	// Right horizontal border
+	switch (beamState)
 	{
-		_startByte = ((_BEAM_VRAM_WIDTH_LEGACY * y) + x) * 4;
-		vrams_write->vram_legacy[_startByte + 2] = (memMgr->switch_c034 << 4) + 7;
-		return;
-	}
-
-	// now set the mode, and depending on the mode, grab the bytes
-	if (!memMgr->IsSoftSwitch(A2SS_TEXT))
+	case BeamState_e::UNKNOWN:
+		break;
+	case BeamState_e::NBHBLANK:
+		// do nothing
+		break;
+	case BeamState_e::NBVBLANK:
+		// do nothing
+		break;
+	case BeamState_e::BORDER_LEFT:
+	case BeamState_e::BORDER_RIGHT:
+	case BeamState_e::BORDER_TOP:
+	case BeamState_e::BORDER_BOTTOM:
+		// Legacy mode VRAM is 4 bytes (main, aux, flags, fg&bg colors)
+		// Set byte 3 as border color in the top 4 bits, and mode BORDER in the lower 3 bits
+		vrams_write->vram_legacy[(_BEAM_VRAM_WIDTH_LEGACY * _TR_ANY_Y + _TR_ANY_X) * 4 + 2] =
+			(memMgr->switch_c034 << 4) + 0b111;
+		break;
+	case BeamState_e::CONTENT:
 	{
-		if (memMgr->IsSoftSwitch(A2SS_MIXED) && y > 159)	// check mixed mode
+		// Set the mode, and depending on the mode, grab the bytes
+		if (!memMgr->IsSoftSwitch(A2SS_TEXT))
 		{
+			if (memMgr->IsSoftSwitch(A2SS_MIXED) && _y > 159)	// check mixed mode
+			{
+				if (memMgr->IsSoftSwitch(A2SS_80COL))
+					flags = 1;	// DTEXT
+				else
+					flags = 0;	// TEXT
+			}
+			else if (memMgr->IsSoftSwitch(A2SS_80COL) && memMgr->IsSoftSwitch(A2SS_DHGR))	// double resolution
+			{
+				if (memMgr->IsSoftSwitch(A2SS_HIRES))
+				{
+					if (memMgr->IsSoftSwitch(A2SS_DHGRMONO))
+						flags = 6;	// DHGRMONO
+					else
+						flags = 5;	// DHGR
+				}
+				else
+					flags = 3;	// DLGR
+			}
+			else if (memMgr->IsSoftSwitch(A2SS_HIRES))	// standard hires
+			{
+				flags = 4;	// HGR
+			}
+			else {	// standard lores
+				flags = 2;	// LGR
+			}
+		}
+		else { 	// Now check the text modes
 			if (memMgr->IsSoftSwitch(A2SS_80COL))
 				flags = 1;	// DTEXT
 			else
-				flags = 0;	// TEXT
-		}
-		else if (memMgr->IsSoftSwitch(A2SS_80COL) && memMgr->IsSoftSwitch(A2SS_DHGR))	// double resolution
-		{
-			if (memMgr->IsSoftSwitch(A2SS_HIRES))
 			{
-				if (memMgr->IsSoftSwitch(A2SS_DHGRMONO))
-					flags = 6;	// DHGRMONO
-				else
-					flags = 5;	// DHGR
+				flags = 0;	// TEXT
 			}
-			else
-				flags = 3;	// DLGR
 		}
-		else if (memMgr->IsSoftSwitch(A2SS_HIRES))	// standard hires
-		{
-			flags = 4;	// HGR
-		}
-		else {	// standard lores
-			flags = 2;	// LGR
-		}
-	} else { 	// Now check the text modes
-		if (memMgr->IsSoftSwitch(A2SS_80COL))
-			flags = 1;	// DTEXT
-		else
-		{
-			flags = 0;	// TEXT
-		}
-	}
-		
-	// Fill in the rest of the flags. We already use bits 0-2 for the modes
-	flags |= ((memMgr->IsSoftSwitch(A2SS_ALTCHARSET) ? 1 : 0) << 3);	// bit 3 is alt charset
-	flags |= ((memMgr->switch_c034 & 0b111) << 4);						// bits 4-7 are border color
-																		// and the colors
-	colors = memMgr->switch_c022;
-	// Check for page 2
-	bool isPage2 = false;
-	// Careful: it's only page 2 if 80STORE is off
-	if (memMgr->IsSoftSwitch(A2SS_PAGE2) && !memMgr->IsSoftSwitch(A2SS_80STORE))
-		isPage2 = true;
-	
-	// Finally set the 4 VRAM bytes
-	// 4 bytes in VRAM for each beam byte
-	uint8_t* byteStartPtr = vrams_write->vram_legacy + ((_BEAM_VRAM_WIDTH_LEGACY * y) + x) * 4;
 
-	// Determine where in memory we should get the data from, and get it
-	if ((flags & 0b111) < 4)	// D/TEXT AND D/LGR
-	{
-		uint32_t startMem = _A2VIDEO_TEXT1_START;
-		if (((flags & 0b111) < 3) && isPage2)		// check for page 2 (DLGR doesn't have it)
-			startMem = _A2VIDEO_TEXT2_START;
-		byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[(y - _A2_BORDER_HEIGHT_SCANLINES) / 8] + (x - _A2_BORDER_WIDTH_CYCLES));
-		byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[(y - _A2_BORDER_HEIGHT_SCANLINES) / 8] + (x - _A2_BORDER_WIDTH_CYCLES));
-	} else {		// D/HIRES
-		uint32_t startMem = _A2VIDEO_HGR1_START;
-		if (isPage2)
-			startMem = _A2VIDEO_HGR2_START;
-		byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_HGROffsets[y - _A2_BORDER_HEIGHT_SCANLINES] + (x - _A2_BORDER_WIDTH_CYCLES));
-		byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_HGROffsets[y - _A2_BORDER_HEIGHT_SCANLINES] + (x - _A2_BORDER_WIDTH_CYCLES));
+		// Fill in the rest of the flags. We already use bits 0-2 for the modes
+		flags |= ((memMgr->IsSoftSwitch(A2SS_ALTCHARSET) ? 1 : 0) << 3);	// bit 3 is alt charset
+		flags |= (memMgr->switch_c034 << 4);								// bits 4-7 are border color
+		// and the colors
+		colors = memMgr->switch_c022;
+		// Check for page 2
+		bool isPage2 = false;
+		// Careful: it's only page 2 if 80STORE is off
+		if (memMgr->IsSoftSwitch(A2SS_PAGE2) && !memMgr->IsSoftSwitch(A2SS_80STORE))
+			isPage2 = true;
+
+		// Finally set the 4 VRAM bytes
+		// 4 bytes in VRAM for each beam byte
+		uint8_t* byteStartPtr = vrams_write->vram_legacy +
+			(_BEAM_VRAM_WIDTH_LEGACY * _TR_ANY_Y + _TR_ANY_X) * 4;
+
+		if (_y >= COUNT_SC_CONTENT)
+		{
+			std::cerr << "ERROR: Overflowing content area! y: " << _y << std::endl;
+			exit (1);
+		}
+		// Determine where in memory we should get the data from, and get it
+		if ((flags & 0b111) < 4)	// D/TEXT AND D/LGR
+		{
+			uint32_t startMem = _A2VIDEO_TEXT1_START;
+			if (((flags & 0b111) < 3) && isPage2)		// check for page 2 (DLGR doesn't have it)
+				startMem = _A2VIDEO_TEXT2_START;
+			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
+		}
+		else {		// D/HIRES
+			uint32_t startMem = _A2VIDEO_HGR1_START;
+			if (isPage2)
+				startMem = _A2VIDEO_HGR2_START;
+			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
+		}
+		byteStartPtr[2] = flags;
+		byteStartPtr[3] = colors;
 	}
-	byteStartPtr[2] = flags;
-	byteStartPtr[3] = colors;
+		break;
+	default:
+		break;
+	}
 
 }
 
@@ -467,14 +556,25 @@ void A2VideoManager::ForceBeamFullScreenRender()
 {
 	// Forces a full screen render for the beam renderer
 	// Move the beam over the whole screen
-	auto totalscanlines = (current_region == VideoRegion_e::NTSC ? SCANLINES_TOTAL_NTSC : SCANLINES_TOTAL_PAL);
-	for (uint32_t y = 0; y < totalscanlines; y++)
+	auto totalscanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
+	// Start anywhere in the non-border VBLANK area to get all the borders
+	int starty = SC_TOTAL_NTSC - _A2_BORDER_H_SCANLINES - 5;
+	beamState = BeamState_e::NBVBLANK;
+	for (uint32_t y = starty; y < totalscanlines; y++)
 	{
 		for (uint32_t x = 0; x < 65; x++)
 		{
 			this->BeamIsAtPosition(x, y);
 		}
 	}
+	for (uint32_t y = 0; y < starty; y++)
+	{
+		for (uint32_t x = 0; x < 65; x++)
+		{
+			this->BeamIsAtPosition(x, y);
+		}
+	}
+	this->Render();
 }
 
 uXY A2VideoManager::ScreenSize()

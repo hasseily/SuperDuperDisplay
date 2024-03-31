@@ -455,6 +455,7 @@ int main(int argc, char* argv[])
 				}
 				if (ImGui::CollapsingHeader("Apple 2 Video"))
 				{
+					ImGui::Text("Frame ID: %d", a2VideoManager->GetVRAMReadId());
 					if (ImGui::Button("Run Vertical Refresh"))
 						a2VideoManager->ForceBeamFullScreenRender();
 					if (ImGui::SliderInt("Border Color (0xC034)", &memManager->switch_c034, 0, 15))

@@ -22,7 +22,7 @@ uint32_t cycles_total;
 void CycleCounter::Initialize()
 {
 	// So we can render on startup, move the cycle counter to after HBlank
-	m_cycle = CYCLES_HBLANK;
+	m_cycle = CYCLES_SC_HBL;
 	bIsHBL = false;
 
 	m_region = VideoRegion_e::NTSC;
@@ -41,7 +41,8 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 	m_cycle = (m_cycle % cycles_total);
 
 	// Update VBL and region automatically with 0xC019
-	if (isVBL)
+	//if (isVBL)
+	if (false)
 	{
 		if (m_cycle < CYCLES_SCREEN)
 		{
@@ -59,7 +60,7 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 			while (m_cycle < CYCLES_SCREEN)	// move m_cycle to VBLANK start
 			{
 				bIsVBL = false;
-				bIsHBL = (GetByteXPos() < CYCLES_HBLANK);
+				bIsHBL = (GetByteXPos() < CYCLES_SC_HBL);
 				A2VideoManager::GetInstance()->BeamIsAtPosition(GetByteXPos(), GetScanline());
 				++m_cycle;
 			}
@@ -70,7 +71,7 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 	}
 
 	bIsVBL = (m_cycle >= CYCLES_SCREEN);
-	bIsHBL = (GetByteXPos() < CYCLES_HBLANK);
+	bIsHBL = (GetByteXPos() < CYCLES_SC_HBL);
 	A2VideoManager::GetInstance()->BeamIsAtPosition(GetByteXPos(), GetScanline());
 }
 
@@ -124,12 +125,12 @@ const bool CycleCounter::IsInBlank()
 
 const uint32_t CycleCounter::GetScanline()
 {
-	return m_cycle / (CYCLES_SCANLINES + CYCLES_HBLANK);
+	return m_cycle / (CYCLES_SC_CONTENT + CYCLES_SC_HBL);
 }
 
 const uint32_t CycleCounter::GetByteXPos()
 {
-	return m_cycle % (CYCLES_SCANLINES + CYCLES_HBLANK);
+	return m_cycle % (CYCLES_SC_CONTENT + CYCLES_SC_HBL);
 }
 
 const uint32_t CycleCounter::GetScreenCycles()

@@ -19,19 +19,31 @@ enum class A2Mode_e
 	A2MODE_TOTAL_COUNT
 };
 
+enum class BeamState_e
+{
+	UNKNOWN,
+	NBHBLANK,			// HBLANK not in border
+	NBVBLANK,			// VBLANK not in border
+	BORDER_LEFT,
+	BORDER_RIGHT,
+	BORDER_TOP,
+	BORDER_BOTTOM,
+	CONTENT
+};
+
 // Those could be anywhere up to 6 or 7 cycles for horizontal borders
 // and a lot more for vertical borders. We just decided on a size
 // But SHR starts VBLANK just like legacy modes, at scanline 192. Hence
 // it has 8 less bottom border scanlines than legacy.
-#define _A2_BORDER_WIDTH_CYCLES 5
-#define _A2_BORDER_HEIGHT_SCANLINES 8*2		// Multiples of 8
+#define _A2_BORDER_W_CYCLES 5
+#define _A2_BORDER_H_SCANLINES 8*2		// Multiples of 8
 
 // Legacy mode VRAM is 4 bytes (main, aux, flags, colors)
 // for each "byte" of screen use
 // colors are 4-bit each of fg and bg colors as in the Apple 2gs
 
-constexpr uint32_t _BEAM_VRAM_WIDTH_LEGACY = (40 + (2 * _A2_BORDER_WIDTH_CYCLES));	// in 4 bytes!
-constexpr uint32_t _BEAM_VRAM_HEIGHT_LEGACY = 192 + (2 * _A2_BORDER_HEIGHT_SCANLINES);
+constexpr uint32_t _BEAM_VRAM_WIDTH_LEGACY = (40 + (2 * _A2_BORDER_W_CYCLES));	// in 4 bytes!
+constexpr uint32_t _BEAM_VRAM_HEIGHT_LEGACY = 192 + (2 * _A2_BORDER_H_SCANLINES);
 constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = _BEAM_VRAM_WIDTH_LEGACY * _BEAM_VRAM_HEIGHT_LEGACY * 4;	// in bytes
 
 // SHR mode VRAM is the standard bytes of screen use ($2000 to $9CFF)
@@ -50,8 +62,9 @@ constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = _BEAM_VRAM_WIDTH_LEGACY * _BEAM_VRAM
 
 // The BORDER bytes have the exact border color in their lower 4 bits
 // Each SHR cycle is 4 bytes, and each byte is 4 pixels (2x2 when in 320 mode)
-constexpr uint32_t _BEAM_VRAM_WIDTH_SHR = 1 + 32 + (2 * _A2_BORDER_WIDTH_CYCLES * 4) + 160;
-constexpr uint32_t _BEAM_VRAM_HEIGHT_SHR = 200 + (2 * _A2_BORDER_HEIGHT_SCANLINES);
+constexpr uint32_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
+constexpr uint32_t _BEAM_VRAM_WIDTH_SHR = _COLORBYTESOFFSET + (2 * _A2_BORDER_W_CYCLES * 4) + 160;
+constexpr uint32_t _BEAM_VRAM_HEIGHT_SHR = 200 + (2 * _A2_BORDER_H_SCANLINES);
 constexpr uint32_t _BEAM_VRAM_SIZE_SHR = _BEAM_VRAM_WIDTH_SHR * _BEAM_VRAM_HEIGHT_SHR;
 
 class A2VideoManager
@@ -78,6 +91,7 @@ public:
 
 	// We'll create 2 BeamRenderVRAMs objects, for double buffering
 	struct BeamRenderVRAMs {
+		uint32_t id = 0;
 		uint64_t frame_idx = 0;
 		bool bWasRendered = false;
 		A2Mode_e mode = A2Mode_e::LEGACY;
@@ -98,9 +112,6 @@ public:
 	uint64_t current_frame_idx = 0;
 	uint64_t rendered_frame_idx = UINT64_MAX;
 
-	uint32_t color_border = 0;
-	uint32_t color_foreground = UINT32_MAX;
-	uint32_t color_background = 0;
     bool bShouldReboot = false;             // When an Appletini reboot packet arrives
 	uXY ScreenSize();
 	
@@ -112,9 +123,11 @@ public:
 	void ToggleA2Video(bool value);
 
 	// Methods for the single multipurpose beam racing shader
-	void BeamIsAtPosition(uint32_t x, uint32_t y);
+	void BeamIsAtPosition(uint32_t _x, uint32_t _y);
+
 	void ForceBeamFullScreenRender();
 	
+	const uint32_t GetVRAMReadId() { return vrams_read->id; };
 	const uint8_t* GetLegacyVRAMReadPtr() { return vrams_read->vram_legacy; };
 	const uint8_t* GetSHRVRAMReadPtr() { return vrams_read->vram_shr; };
 	uint8_t* GetLegacyVRAMWritePtr() { return vrams_write->vram_legacy; };
@@ -142,6 +155,7 @@ private:
 		vrams_array = new BeamRenderVRAMs[2];
 		Initialize();
 	}
+	void StartNextFrame();
 
 	//////////////////////////////////////////////////////////////////////////
 	// Internal data
@@ -153,7 +167,8 @@ private:
 
 	// beam render state variables
 	bool bBeamIsActive = false;				// Is the beam active?
-	
+	BeamState_e beamState = BeamState_e::UNKNOWN;
+
 	// Double-buffered vrams
 	BeamRenderVRAMs* vrams_array;	// 2 buffers of legacy+shr vrams
 	BeamRenderVRAMs* vrams_write;	// the write buffer
@@ -162,7 +177,7 @@ private:
 	Shader shader_merge = Shader();
 
 	VideoRegion_e current_region = VideoRegion_e::NTSC;
-	uint32_t region_scanlines = (current_region == VideoRegion_e::NTSC ? SCANLINES_TOTAL_NTSC : SCANLINES_TOTAL_PAL);
+	uint32_t region_scanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
 
 	GLint last_viewport[4];		// Previous viewport used, so we don't clobber it
 	GLuint merged_texture_id;	// the merged texture that merges both legacy+shr
