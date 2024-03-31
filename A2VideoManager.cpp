@@ -106,7 +106,7 @@ static uint16_t g_RAM_HGROffsets[] = {
 constexpr int _A2_LEGACY_IMG_RECT[4] = { 25, 64, 0, 191 };	// leftC, rightC, topS, bottomS
 constexpr int _A2_SHR_IMG_RECT[4] = { 25, 64, 0, 199 };		// leftC, rightC, topS, bottomS
 
-constexpr uint8_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
+constexpr uint32_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
@@ -161,6 +161,7 @@ void A2VideoManager::Initialize()
 	current_frame_idx = 0;
 	for (int i = 0; i < 2; i++)
 	{
+		vrams_array[i].id = i;
 		vrams_array[i].frame_idx = 0;
 		vrams_array[i].mode = A2Mode_e::SHR;
 		memset(vrams_array[i].vram_legacy, 0, _BEAM_VRAM_SIZE_LEGACY);
@@ -170,9 +171,6 @@ void A2VideoManager::Initialize()
 	vrams_read = &vrams_array[1 - (current_frame_idx % 2)];
 	
 	auto memMgr = MemoryManager::GetInstance();
-	color_background = gPaletteRGB[12 + (memMgr->switch_c022 & 0x0F)];
-	color_foreground = gPaletteRGB[12 + ((memMgr->switch_c022 & 0xF0) >> 4)];
-	color_border = gPaletteRGB[12 + (memMgr->switch_c034 & 0x0F)];
 
 	// Set up the image assets (textures)
 	// Assign them their respective GPU texture id
@@ -228,6 +226,27 @@ void A2VideoManager::ToggleA2Video(bool value)
 		bShouldInitializeRender = true;
 }
 
+void A2VideoManager::StartNextFrame()
+{
+	// start the next frame
+	// set the frame index for the buffer we'll move to reading
+	vrams_write->frame_idx = current_frame_idx;
+	++current_frame_idx;
+	// Flip the double buffers
+	if (vrams_read->bWasRendered)
+	{
+		vrams_read->bWasRendered = false;
+		auto _vtmp = vrams_write;
+		vrams_write = vrams_read;
+		vrams_read = _vtmp;
+	}
+	// reset the mode at each vblank
+	vrams_write->mode = A2Mode_e::NONE;
+	// Update the current region info
+	current_region = CycleCounter::GetInstance()->GetVideoRegion();
+	region_scanlines = (current_region == VideoRegion_e::NTSC ? SCANLINES_TOTAL_NTSC : SCANLINES_TOTAL_PAL);
+}
+
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 {
 	auto memMgr = MemoryManager::GetInstance();
@@ -258,6 +277,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	// Since they're uints, make sure they don't go negative
 	x = (_x + CYCLES_HBLANK - _A2_BORDER_WIDTH_CYCLES) % (CYCLES_HBLANK + CYCLES_SCANLINES);
 	y = (_y + region_scanlines - _A2_BORDER_HEIGHT_SCANLINES) % region_scanlines;
+	if (_x < CYCLES_HBLANK - _A2_BORDER_WIDTH_CYCLES)
+		y -= 1;	// We're still in the previous scanline when the origin is translated
 	// The Apple 2gs drawing is shifted 6 scanlines down
 	// Let's realign it to match the 2e
 	if (memMgr->is2gs)
@@ -267,23 +288,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	// Start of VBLANK at which we flip the double buffering
 	if ((x == 0) && (y == (mode_scanlines + (2*_A2_BORDER_HEIGHT_SCANLINES))))
 	{
-		// start the next frame
-		// set the frame index for the buffer we'll move to reading
-		vrams_write->frame_idx = current_frame_idx;
-		++current_frame_idx;
-		// Flip the double buffers
-		if (vrams_read->bWasRendered)
-		{
-			vrams_read->bWasRendered = false;
-			auto _vtmp = vrams_write;
-			vrams_write = vrams_read;
-			vrams_read = _vtmp;
-		}
-		// reset the mode at each vblank
-		vrams_write->mode = A2Mode_e::NONE;
-		// Update the current region info
-		current_region = CycleCounter::GetInstance()->GetVideoRegion();
-		region_scanlines = ( current_region == VideoRegion_e::NTSC ? SCANLINES_TOTAL_NTSC : SCANLINES_TOTAL_PAL);
+		StartNextFrame();
 		return;
 	}
 
@@ -295,24 +300,31 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	if (x >= CYCLES_SCANLINES + (2*_A2_BORDER_WIDTH_CYCLES))
 		return;
 
-	if (x == CYCLES_SCANLINES + _A2_BORDER_WIDTH_CYCLES)
+	if (x == 0)
 	{
-		// This is the real start of the next row
 		// Always at the start of the row, set the SHR SCB to 0x10
 		// Because we check bit 4 of the SCB to know if that line is drawn as SHR
 		// The 2gs will always set bit 4 to 0 when sending it over
-		vrams_write->vram_shr[_BEAM_VRAM_WIDTH_SHR * (y+1)] = 0x10;
+		vrams_write->vram_shr[_BEAM_VRAM_WIDTH_SHR * y] = 0x10;
 	}
-	// Get the colors
-	color_background = gPaletteRGB[12 + (memMgr->switch_c022 & 0x0F)];
-	color_foreground = gPaletteRGB[12 + ((memMgr->switch_c022 & 0xF0) >> 4)];
-	color_border = gPaletteRGB[12 + (memMgr->switch_c034 & 0x0F)];
 
 	if (memMgr->IsSoftSwitch(A2SS_SHR))
 	{
 		// at least 1 byte in this vblank cycle is in SHR
 		vrams_write->mode = (vrams_write->mode == A2Mode_e::LEGACY ? A2Mode_e::MIXED : A2Mode_e::SHR);
 		auto contentOffset = _COLORBYTESOFFSET + (_A2_BORDER_WIDTH_CYCLES * 4);
+
+		auto memPtr = memMgr->GetApple2MemAuxPtr();
+		uint8_t* lineStartPtr = vrams_write->vram_shr + _BEAM_VRAM_WIDTH_SHR * y;
+		// get the SCB and palettes if we're starting a line
+		if (x == 0 && y >= _A2_BORDER_HEIGHT_SCANLINES)
+		{
+			lineStartPtr[0] = *(memPtr + _A2VIDEO_SHR_SCB_START + (y - _A2_BORDER_HEIGHT_SCANLINES));
+			// Get the palette
+			memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
+				memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
+				32);					// palette length is 32 bytes
+		}
 
 		// DO BORDERS
 		// we've already removed all uninteresting HBLANK cycles or VBLANK scanlines
@@ -322,26 +334,14 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			|| (x >= _A2_BORDER_WIDTH_CYCLES + CYCLES_SCANLINES))	// Right horizontal border
 		{
 			// write all 4 bytes at once
-			memset(vrams_write->vram_shr + (_BEAM_VRAM_WIDTH_SHR * y + _COLORBYTESOFFSET + (x*4)), memMgr->switch_c034, 4);
+			memset(vrams_write->vram_shr + (_BEAM_VRAM_WIDTH_SHR * y + _COLORBYTESOFFSET + (x*4)), (uint8_t)memMgr->switch_c034, 4);
 			return;
 		}
 
-		uint8_t* lineStartPtr = vrams_write->vram_shr + _BEAM_VRAM_WIDTH_SHR * y;
-		auto memPtr = memMgr->GetApple2MemAuxPtr();
-		if (x == _A2_BORDER_WIDTH_CYCLES)
-		{
-			// it's the beginning of the line
-			// Get the SCB
-			lineStartPtr[0] = *(memPtr + _A2VIDEO_SHR_SCB_START + y - _A2_BORDER_HEIGHT_SCANLINES);
-			// Get the palette
-			memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
-				   memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
-				   32);					// palette length is 32 bytes
-		}
 		// Get the color info for the 4 bytes where the beam is
 		auto xfb = (x - _A2_BORDER_WIDTH_CYCLES) * 4;	// the x first byte, given that every beam cycle renders 4 bytes
 		auto scb = lineStartPtr[0];
-		for (uint8_t i = 0; i < 4; i++)
+		for (uint32_t i = 0; i < 4; i++)
 		{
 			lineStartPtr[contentOffset + xfb + i] =
 				*(memPtr + _A2VIDEO_SHR_START + (y - _A2_BORDER_HEIGHT_SCANLINES) * _A2VIDEO_SHR_BYTES_PER_LINE + xfb + i);
@@ -466,6 +466,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 void A2VideoManager::ForceBeamFullScreenRender()
 {
 	// Forces a full screen render for the beam renderer
+	this->StartNextFrame();
+	this->Render();
 	// Move the beam over the whole screen
 	auto totalscanlines = (current_region == VideoRegion_e::NTSC ? SCANLINES_TOTAL_NTSC : SCANLINES_TOTAL_PAL);
 	for (uint32_t y = 0; y < totalscanlines; y++)
@@ -475,6 +477,7 @@ void A2VideoManager::ForceBeamFullScreenRender()
 			this->BeamIsAtPosition(x, y);
 		}
 	}
+	this->Render();
 }
 
 uXY A2VideoManager::ScreenSize()

@@ -116,7 +116,8 @@ void process_single_event(SDHREvent& e)
 	 HANDLE SOFT SWITCHES EVENTS
 	 *********************************
 	 */
-	if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
+	//if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
+	if (true) {
 		if (e.addr >> 8 == 0xc0)
 			memMgr->ProcessSoftSwitch(e.addr, e.data, e.rw, e.is_iigs);
 		// ignore non-control

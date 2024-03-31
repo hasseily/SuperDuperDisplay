@@ -78,6 +78,7 @@ public:
 
 	// We'll create 2 BeamRenderVRAMs objects, for double buffering
 	struct BeamRenderVRAMs {
+		uint32_t id = 0;
 		uint64_t frame_idx = 0;
 		bool bWasRendered = false;
 		A2Mode_e mode = A2Mode_e::LEGACY;
@@ -98,9 +99,6 @@ public:
 	uint64_t current_frame_idx = 0;
 	uint64_t rendered_frame_idx = UINT64_MAX;
 
-	uint32_t color_border = 0;
-	uint32_t color_foreground = UINT32_MAX;
-	uint32_t color_background = 0;
     bool bShouldReboot = false;             // When an Appletini reboot packet arrives
 	uXY ScreenSize();
 	
@@ -112,9 +110,11 @@ public:
 	void ToggleA2Video(bool value);
 
 	// Methods for the single multipurpose beam racing shader
-	void BeamIsAtPosition(uint32_t x, uint32_t y);
+	void BeamIsAtPosition(uint32_t _x, uint32_t _y);
+
 	void ForceBeamFullScreenRender();
 	
+	const uint32_t GetVRAMReadId() { return vrams_read->id; };
 	const uint8_t* GetLegacyVRAMReadPtr() { return vrams_read->vram_legacy; };
 	const uint8_t* GetSHRVRAMReadPtr() { return vrams_read->vram_shr; };
 	uint8_t* GetLegacyVRAMWritePtr() { return vrams_write->vram_legacy; };
@@ -142,6 +142,7 @@ private:
 		vrams_array = new BeamRenderVRAMs[2];
 		Initialize();
 	}
+	void StartNextFrame();
 
 	//////////////////////////////////////////////////////////////////////////
 	// Internal data
