@@ -376,17 +376,12 @@ int main(int argc, char* argv[])
         }   // while SDL_PollEvent
 
 		// Disable mouse if unused after cursorHideDelay
-		auto cursorState = SDL_ShowCursor(SDL_QUERY);
+		// ImGui overrides SDL_ShowCursor(), so we use ImGui's methods
+		// We could tell ImGui not to override it, but it really doesn't matter
 		if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
-		{
-			if (cursorState == SDL_ENABLE)
-				SDL_ShowCursor(SDL_DISABLE);
-		}
+			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 		else
-		{
-			if (cursorState == SDL_DISABLE)
-				SDL_ShowCursor(SDL_ENABLE);
-		}
+			ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 		
         if (sdhrManager->IsSdhrEnabled())
 			out_tex_id = sdhrManager->Render();
