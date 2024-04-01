@@ -116,6 +116,8 @@ void process_single_event(SDHREvent& e)
 	 HANDLE SOFT SWITCHES EVENTS
 	 *********************************
 	 */
+	// TODO: *** SDHR IS DISABLED ***
+	//		because we're getting spurious 0xC0A0 events from the GS
 	//if ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)) {
 	if (true) {
 		if (e.addr >> 8 == 0xc0)
