@@ -400,6 +400,12 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			break;
 		case BeamState_e::CONTENT:
 		{
+			if (_x < CYCLES_SC_HBL || _y >= mode_scanlines)
+			{
+				// Somehow in the middle of the frame the mode was switched, and we're beyond the
+				// legacy content area. Disregard.
+				break;
+			}
 			// Get the color info for the 4 bytes where the beam is
 			auto contentOffset = _COLORBYTESOFFSET + (_A2_BORDER_W_CYCLES * 4);
 			auto xfb = (_x - CYCLES_SC_HBL) * 4;	// the x first byte, given that every beam cycle renders 4 bytes
@@ -466,6 +472,12 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		break;
 	case BeamState_e::CONTENT:
 	{
+		if (_x < CYCLES_SC_HBL || _y >= mode_scanlines)
+		{
+			// Somehow in the middle of the frame the mode was switched, and we're beyond the
+			// legacy content area. Disregard.
+			break;
+		}
 		// Set the mode, and depending on the mode, grab the bytes
 		if (!memMgr->IsSoftSwitch(A2SS_TEXT))
 		{
@@ -521,11 +533,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		uint8_t* byteStartPtr = vrams_write->vram_legacy +
 			(_BEAM_VRAM_WIDTH_LEGACY * _TR_ANY_Y + _TR_ANY_X) * 4;
 
-		if (_y >= COUNT_SC_CONTENT)
-		{
-			std::cerr << "ERROR: Overflowing content area! y: " << _y << std::endl;
-			exit (1);
-		}
 		// Determine where in memory we should get the data from, and get it
 		if ((flags & 0b111) < 4)	// D/TEXT AND D/LGR
 		{
