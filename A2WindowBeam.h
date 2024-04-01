@@ -40,7 +40,6 @@ public:
 
 private:
 	bool vramTextureExists = false;						// true if the VRAM texture exists and only needs an update
-	bool bNeedsGPUVertexUpdate = true;					// Update the GPU if the vertex data has changed
 	A2VideoModeBeam_e video_mode = A2VIDEOBEAM_LEGACY;	// Which video mode is used
 	Shader shader = Shader();							// Shader used
 	uXY screen_count = {0,0};				// width,height in pixels of visible screen area of window

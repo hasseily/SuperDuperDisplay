@@ -74,8 +74,6 @@ void A2WindowBeam::UpdateVertexArray()
 	vertices.push_back(A2BeamVertex({ glm::vec2(-1,  1), glm::ivec2(0, screen_count.y) }));	// top left
 	vertices.push_back(A2BeamVertex({ glm::vec2(-1, -1), glm::ivec2(0, 0) }));	// bottom left
 	vertices.push_back(A2BeamVertex({ glm::vec2(1, -1), glm::ivec2(screen_count.x, 0) }));	// bottom right
-
-	bNeedsGPUVertexUpdate = true;
 }
 
 
@@ -86,8 +84,7 @@ GLuint A2WindowBeam::GetOutputTextureId()
 
 GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 {
-	// std::cerr << "Rendering " << (int)video_mode << " - "
-	// 	<< shouldUpdateDataInGPU << " - " << bNeedsGPUVertexUpdate << std::endl;
+	// std::cerr << "Rendering " << (int)video_mode << " - " << shouldUpdateDataInGPU << << std::endl;
 	if (!shader.isReady)
 		return UINT32_MAX;
 	if (vertices.size() == 0)
@@ -137,10 +134,9 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	
 	glBindVertexArray(VAO);
 
-	if (bNeedsGPUVertexUpdate)
+	// Always reload the vertices
+	// because compatibility with GL-ES on the rPi
 	{
-		bNeedsGPUVertexUpdate = false;
-
 		// load data into vertex buffers
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(A2BeamVertex), &vertices[0], GL_STATIC_DRAW);
@@ -156,7 +152,6 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(A2BeamVertex), (void*)offsetof(A2BeamVertex, PixelPos));
 		
 		// And set the borders
-		shader.use();
 		shader.setInt("hborder", (int)border_width_cycles);
 		shader.setInt("vborder", (int)border_height_scanlines);
 	}
