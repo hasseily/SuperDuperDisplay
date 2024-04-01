@@ -62,7 +62,8 @@ constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = _BEAM_VRAM_WIDTH_LEGACY * _BEAM_VRAM
 
 // The BORDER bytes have the exact border color in their lower 4 bits
 // Each SHR cycle is 4 bytes, and each byte is 4 pixels (2x2 when in 320 mode)
-constexpr uint32_t _BEAM_VRAM_WIDTH_SHR = 1 + 32 + (2 * _A2_BORDER_W_CYCLES * 4) + 160;
+constexpr uint32_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
+constexpr uint32_t _BEAM_VRAM_WIDTH_SHR = _COLORBYTESOFFSET + (2 * _A2_BORDER_W_CYCLES * 4) + 160;
 constexpr uint32_t _BEAM_VRAM_HEIGHT_SHR = 200 + (2 * _A2_BORDER_H_SCANLINES);
 constexpr uint32_t _BEAM_VRAM_SIZE_SHR = _BEAM_VRAM_WIDTH_SHR * _BEAM_VRAM_HEIGHT_SHR;
 

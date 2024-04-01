@@ -102,12 +102,6 @@ static uint16_t g_RAM_HGROffsets[] = {
 // Gotta have a transparency global just in case
 // static uint32_t gRGBTransparent = 0;
 
-// Rects of cycles and scanlines where the image is actually drawn (and not borders)
-constexpr int _A2_LEGACY_IMG_RECT[4] = { 25, 64, 0, 191 };	// leftC, rightC, topS, bottomS
-constexpr int _A2_SHR_IMG_RECT[4] = { 25, 64, 0, 199 };		// leftC, rightC, topS, bottomS
-
-constexpr uint32_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
-
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
 
