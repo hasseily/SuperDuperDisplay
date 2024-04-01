@@ -211,6 +211,7 @@ int main(int argc, char* argv[])
 
 	static bool bShouldTerminateNetworking = false;
 	static bool bShouldTerminateProcessing = false;
+	static bool bIsFullscreen = false;
     bool show_demo_window = false;
     bool show_metrics_window = false;
 	bool show_F1_window = true;
@@ -328,6 +329,15 @@ int main(int argc, char* argv[])
 				else if (event.key.keysym.sym == SDLK_F1) {  // Toggle debug window with F1
 					show_F1_window = !show_F1_window;
 				}
+				else if (event.key.keysym.sym == SDLK_F2) {
+					show_postprocessing_window = !show_postprocessing_window;
+				}
+				// Handle fullscreen toggle for Alt+Enter or F11
+				else if ((event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) ||
+					event.key.keysym.sym == SDLK_F11) {
+					bIsFullscreen = !bIsFullscreen; // Toggle state
+					SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+				}
 				// Camera movement!
 				if (!io.WantCaptureKeyboard) {
 					switch (event.key.keysym.sym)
@@ -423,7 +433,11 @@ int main(int argc, char* argv[])
 				if (ImGui::ColorEdit4("Window Color", window_bgcolor)) {
 					// std::cerr << "color " << window_bgcolor[0] << std::endl;
 				}
-				ImGui::Checkbox("PostProcessing Window", &show_postprocessing_window);
+				ImGui::Checkbox("PostProcessing Window (F2)", &show_postprocessing_window);
+				if (ImGui::Checkbox("Fullscreen (F11 or Alt-Enter)", &bIsFullscreen))
+				{
+					SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+				}
 				if (ImGui::Checkbox("VSYNC", &g_swapInterval))
 					set_vsync(g_swapInterval);
 				if (g_swapInterval)
