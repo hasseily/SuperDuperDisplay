@@ -254,6 +254,9 @@ int main(int argc, char* argv[])
 
 	set_vsync(g_swapInterval);
 
+	uint32_t lastMouseMoveTime = SDL_GetTicks();
+	const uint32_t cursorHideDelay = 3000; // After this delay, the mouse cursor disappears
+
     // Main loop
     bool done = false;
 	GLuint out_tex_id = 0;
@@ -307,6 +310,7 @@ int main(int argc, char* argv[])
 			}
                 break;
             case SDL_MOUSEMOTION:
+				lastMouseMoveTime = SDL_GetTicks();
                 if (event.motion.state & SDL_BUTTON_RMASK && !io.WantCaptureMouse) {
                     // Move the camera when the right mouse button is pressed while moving the mouse
                     sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
@@ -370,6 +374,13 @@ int main(int argc, char* argv[])
                 break;
             }   // switch event.type
         }   // while SDL_PollEvent
+
+		// Disable mouse if unused after cursorHideDelay
+		Uint32 currentTime = SDL_GetTicks();
+		if (SDL_GetTicks() - lastMouseMoveTime > cursorHideDelay)
+			SDL_ShowCursor(SDL_DISABLE);
+		else
+			SDL_ShowCursor(SDL_ENABLE);
 		
         if (sdhrManager->IsSdhrEnabled())
 			out_tex_id = sdhrManager->Render();
