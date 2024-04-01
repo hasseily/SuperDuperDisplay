@@ -376,11 +376,17 @@ int main(int argc, char* argv[])
         }   // while SDL_PollEvent
 
 		// Disable mouse if unused after cursorHideDelay
-		Uint32 currentTime = SDL_GetTicks();
-		if (SDL_GetTicks() - lastMouseMoveTime > cursorHideDelay)
-			SDL_ShowCursor(SDL_DISABLE);
+		auto cursorState = SDL_ShowCursor(SDL_QUERY);
+		if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
+		{
+			if (cursorState == SDL_ENABLE)
+				SDL_ShowCursor(SDL_DISABLE);
+		}
 		else
-			SDL_ShowCursor(SDL_ENABLE);
+		{
+			if (cursorState == SDL_DISABLE)
+				SDL_ShowCursor(SDL_ENABLE);
+		}
 		
         if (sdhrManager->IsSdhrEnabled())
 			out_tex_id = sdhrManager->Render();
