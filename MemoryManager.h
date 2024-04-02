@@ -89,6 +89,10 @@ public:
 	void SetSoftSwitch(A2SoftSwitch_e ss, bool state);
 	void ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool is_iigs);
 
+	// De/serialization in case one wants to save and restore state
+	std::string SerializeSwitches() const;
+	void DeserializeSwitches(const std::string& data);
+
 	// public singleton code
 	static MemoryManager* GetInstance()
 	{
@@ -103,7 +107,7 @@ public:
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
 	uint8_t switch_c022;				// Exact value of the switch c022	fg/bg color
-	int switch_c034;				// Exact value of the switch c034	border color
+	int switch_c034;					// Exact value of the switch c034	border color
 	bool is2gs;
 
 private:

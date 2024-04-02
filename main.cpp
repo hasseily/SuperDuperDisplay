@@ -486,9 +486,9 @@ int main(int argc, char* argv[])
 					ImGui::Text("Frame ID: %d", a2VideoManager->GetVRAMReadId());
 					border_w_slider_val = a2VideoManager->GetBordersWidthCycles();
 					border_h_slider_val = a2VideoManager->GetBordersHeightScanlines() / 8;
-					if (ImGui::SliderInt("Horizontal Borders", &border_w_slider_val, 0, 10, "%d", 1)
-						|| ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, 10, "%d", 1))
-						a2VideoManager->SetBordersWithReset(border_w_slider_val, border_h_slider_val);
+					if (ImGui::SliderInt("Horizontal Borders", &border_w_slider_val, 0, 7, "%d", 1)
+						|| ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, 3, "%d", 1))
+						a2VideoManager->SetBordersWithReinit(border_w_slider_val, border_h_slider_val);
 					if (ImGui::Button("Run Vertical Refresh"))
 						a2VideoManager->ForceBeamFullScreenRender();
 					if (ImGui::SliderInt("Border Color (0xC034)", &memManager->switch_c034, 0, 15))

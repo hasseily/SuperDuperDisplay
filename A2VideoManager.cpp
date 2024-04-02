@@ -221,7 +221,6 @@ void A2VideoManager::ResetComputer()
         return;
     bIsRebooting = true;
 	MemoryManager::GetInstance()->Initialize();
-	this->ForceBeamFullScreenRender();
     bIsRebooting = false;
 }
 
@@ -237,15 +236,18 @@ void A2VideoManager::ToggleA2Video(bool value)
 		bShouldInitializeRender = true;
 }
 
-void A2VideoManager::SetBordersWithReset(uint8_t width_cycles, uint8_t height_8s)
+void A2VideoManager::SetBordersWithReinit(uint8_t width_cycles, uint8_t height_8s)
 {
-	if (width_cycles > 10)
-		width_cycles = 10;
-	if (height_8s > 10)
-		height_8s = 10;
+	if (width_cycles > 7)
+		width_cycles = 7;
+	if (height_8s > 3)
+		height_8s = 3;
 	borders_w_cycles = width_cycles;
 	borders_h_scanlines = height_8s * 8;	// Must be multiple of 8s
-	this->ResetComputer();
+	auto _mms = MemoryManager::GetInstance()->SerializeSwitches();
+	this->Initialize();
+	MemoryManager::GetInstance()->DeserializeSwitches(_mms);
+	this->ForceBeamFullScreenRender();
 }
 
 
@@ -324,49 +326,58 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 
 	// Now determine the actual beam state
 	// And flip the frame when switching from BORDER_BOTTOM to NBVBLANK
-	switch (beamState)
+	// keep updating the beam state until it reaches steady state
+	auto _oldBeamState = beamState;
+
+	while (true)
 	{
-	case BeamState_e::UNKNOWN:
-		break;
-	case BeamState_e::NBHBLANK:
-		if (_x == (CYCLES_SC_HBL - borders_w_cycles))
-			beamState = BeamState_e::BORDER_LEFT;
-		break;
-	case BeamState_e::NBVBLANK:
-		if (_y == (region_scanlines - borders_h_scanlines))
-			beamState = BeamState_e::BORDER_TOP;
-		break;
-	case BeamState_e::BORDER_LEFT:
-		if (_x == CYCLES_SC_HBL)
-			beamState = BeamState_e::CONTENT;
-		break;
-	case BeamState_e::BORDER_RIGHT:
-		if (_x == borders_w_cycles)
-			beamState = BeamState_e::NBHBLANK;
-		break;
-	case BeamState_e::BORDER_TOP:
-		if (_y == 0)
-			beamState = BeamState_e::BORDER_RIGHT;
-		break;
-	case BeamState_e::BORDER_BOTTOM:
-		if (_y == (mode_scanlines + borders_h_scanlines))
+		switch (beamState)
 		{
-			beamState = BeamState_e::NBVBLANK;
-			// Start of NBVBLANK at which we flip the double buffering
-			StartNextFrame();
-		}
-		break;
-	case BeamState_e::CONTENT:
-		if (_x == 0)
-		{
-			if (_y == mode_scanlines)
-				beamState = BeamState_e::BORDER_BOTTOM;
-			else
+		case BeamState_e::UNKNOWN:
+			break;
+		case BeamState_e::NBHBLANK:
+			if (_x == (CYCLES_SC_HBL - borders_w_cycles))
+				beamState = BeamState_e::BORDER_LEFT;
+			break;
+		case BeamState_e::NBVBLANK:
+			if (_y == (region_scanlines - borders_h_scanlines))
+				beamState = BeamState_e::BORDER_TOP;
+			break;
+		case BeamState_e::BORDER_LEFT:
+			if (_x == CYCLES_SC_HBL)
+				beamState = BeamState_e::CONTENT;
+			break;
+		case BeamState_e::BORDER_RIGHT:
+			if (_x == borders_w_cycles)
+				beamState = BeamState_e::NBHBLANK;
+			break;
+		case BeamState_e::BORDER_TOP:
+			if (_y == 0)
 				beamState = BeamState_e::BORDER_RIGHT;
+			break;
+		case BeamState_e::BORDER_BOTTOM:
+			if (_y == (mode_scanlines + borders_h_scanlines))
+			{
+				beamState = BeamState_e::NBVBLANK;
+				// Start of NBVBLANK at which we flip the double buffering
+				StartNextFrame();
+			}
+			break;
+		case BeamState_e::CONTENT:
+			if (_x == 0)
+			{
+				if (_y == mode_scanlines)
+					beamState = BeamState_e::BORDER_BOTTOM;
+				else
+					beamState = BeamState_e::BORDER_RIGHT;
+			}
+			break;
+		default:
+			break;
 		}
-		break;
-	default:
-		break;
+		if (_oldBeamState == beamState)
+			break;
+		_oldBeamState = beamState;
 	}
 
 	// Now we get rid of all the non-border BLANK areas to avoid an overflow on the vertical border areas.
@@ -589,27 +600,34 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 
 void A2VideoManager::ForceBeamFullScreenRender()
 {
-	// Forces a full screen render for the beam renderer
 	// Move the beam over the whole screen
 	auto totalscanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
-	// Start anywhere in the non-border VBLANK area to get all the borders
-	int starty = SC_TOTAL_NTSC - borders_h_scanlines - 5;
+	// Start in the non-border VBLANK area to get all the borders
+	int starty = SC_TOTAL_NTSC - borders_h_scanlines - 1;
 	beamState = BeamState_e::NBVBLANK;
-	for (uint32_t y = starty; y < totalscanlines; y++)
+	// Run both frames
+	for (size_t i = 0; i < 2; i++)
 	{
-		for (uint32_t x = 0; x < 65; x++)
+		// Forces a full screen render for the beam renderer
+		rendered_frame_idx = UINT64_MAX;
+		for (uint32_t y = starty; y < totalscanlines; y++)
 		{
-			this->BeamIsAtPosition(x, y);
+			for (uint32_t x = 0; x < 65; x++)
+			{
+				this->BeamIsAtPosition(x, y);
+			}
 		}
-	}
-	for (uint32_t y = 0; y < starty; y++)
-	{
-		for (uint32_t x = 0; x < 65; x++)
+		for (uint32_t y = 0; y < starty; y++)
 		{
-			this->BeamIsAtPosition(x, y);
+			for (uint32_t x = 0; x < 65; x++)
+			{
+				this->BeamIsAtPosition(x, y);
+			}
 		}
+		this->Render();
+		this->StartNextFrame();
 	}
-	this->Render();
+
 }
 
 uXY A2VideoManager::ScreenSize()
@@ -660,18 +678,11 @@ GLuint A2VideoManager::Render()
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
-	// Exit if we've already rendered the buffer
-	if (rendered_frame_idx == vrams_read->frame_idx)
-		return output_texture_id;
-
-
 	// Initialization routine runs only once on init (or re-init)
 	// We do that here because we know the framebuffer is bound, and everything
 	// for drawing the SDHR stuff is active
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
-		
-		
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
 		glClearColor(0.f, 0.f, 0.f, 0.f);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -705,14 +716,16 @@ GLuint A2VideoManager::Render()
 				<< 0 << " - " << glerr << std::endl;
 		}
 
-		// Make sure the beam renderer has gone through one pass of the VRAM updates
-		// Unless we want SDD to display a "splash screen", in which case this is where
-		// we'd do it.
-		ForceBeamFullScreenRender();
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL render A2VideoManager error: " << glerr << std::endl;
 		}
+
+		rendered_frame_idx = UINT64_MAX;
 	}
+
+	// Exit if we've already rendered the buffer
+	if (rendered_frame_idx == vrams_read->frame_idx)
+		return output_texture_id;
 
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
 	// Now determine how we should merge both legacy and shr

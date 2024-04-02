@@ -15,7 +15,11 @@ A2WindowBeam::~A2WindowBeam()
 {
 	if (VRAMTEX != UINT_MAX)
 		glDeleteTextures(1, &VRAMTEX);
-
+	if (FBO == UINT_MAX)
+	{
+		glDeleteFramebuffers(1, &FBO);
+		glDeleteTextures(1, &output_texture_id);
+	}
 	if (VAO != UINT_MAX)
 	{
 		glDeleteVertexArrays(1, &VAO);
@@ -84,7 +88,7 @@ GLuint A2WindowBeam::GetOutputTextureId()
 
 GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 {
-	// std::cerr << "Rendering " << (int)video_mode << " - " << shouldUpdateDataInGPU << << std::endl;
+	// std::cerr << "Rendering " << (int)video_mode << " - " << shouldUpdateDataInGPU << std::endl;
 	if (!shader.isReady)
 		return UINT32_MAX;
 	if (vertices.size() == 0)

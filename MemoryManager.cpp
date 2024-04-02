@@ -1,4 +1,6 @@
 #include "MemoryManager.h"
+#include <iostream>
+#include <sstream>
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 MemoryManager* MemoryManager::s_instance;
@@ -382,4 +384,21 @@ void MemoryManager::WriteToMemory(uint16_t addr, uint8_t val, bool m2b0, bool is
 	else {
 		SetApple2Mem(addr, val);
 	}
+}
+
+std::string MemoryManager::SerializeSwitches() const {
+	std::ostringstream out;
+	out.write(reinterpret_cast<const char*>(&a2SoftSwitches), sizeof(a2SoftSwitches));
+	out.write(reinterpret_cast<const char*>(&switch_c022), sizeof(switch_c022));
+	out.write(reinterpret_cast<const char*>(&switch_c034), sizeof(switch_c034));
+	out.write(reinterpret_cast<const char*>(&is2gs), sizeof(is2gs));
+	return out.str();
+}
+
+void MemoryManager::DeserializeSwitches(const std::string& data) {
+	std::istringstream in(data);
+	in.read(reinterpret_cast<char*>(&a2SoftSwitches), sizeof(a2SoftSwitches));
+	in.read(reinterpret_cast<char*>(&switch_c022), sizeof(switch_c022));
+	in.read(reinterpret_cast<char*>(&switch_c034), sizeof(switch_c034));
+	in.read(reinterpret_cast<char*>(&is2gs), sizeof(is2gs));
 }

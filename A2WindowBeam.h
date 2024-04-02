@@ -53,8 +53,8 @@ private:
 	uint32_t border_width_cycles = 0;
 	uint32_t border_height_scanlines = 0;
 
-	GLuint output_texture_id = 0;	// the output texture for this object
-	GLuint FBO = UINT_MAX;			// the framebuffer for this object
+	GLuint output_texture_id = UINT_MAX;	// the output texture for this object
+	GLuint FBO = UINT_MAX;					// the framebuffer for this object
 
 	void UpdateVertexArray();
 };

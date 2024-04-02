@@ -28,7 +28,8 @@ enum class BeamState_e
 	BORDER_RIGHT,
 	BORDER_TOP,
 	BORDER_BOTTOM,
-	CONTENT
+	CONTENT,
+	BEAMSTATE_TOTAL_COUNT
 };
 
 // Those could be anywhere up to 6 or 7 cycles for horizontal borders
@@ -86,7 +87,7 @@ public:
 		// image assets are full 32-bit bitmap files, uploaded from PNG
 		uint32_t image_xcount = 0;	// width and height of asset in pixels
 		uint32_t image_ycount = 0;
-		GLuint tex_id = 0;	// Texture ID on the GPU that holds the image data
+		GLuint tex_id = UINT_MAX;	// Texture ID on the GPU that holds the image data
 	};
 
 	// We'll create 2 BeamRenderVRAMs objects, for double buffering
@@ -132,7 +133,7 @@ public:
 	GLuint GetOutputTextureId();	// merged output
 	void ActivateBeam();	// The apple 2 is rendering!
 	void DeactivateBeam();	// We don't have a connection to the Apple 2!
-	GLuint Render();	// render whatever mode is active (enabled windows)
+	GLuint Render();		// render whatever mode is active (enabled windows)
 
 	inline uint32_t GetVramWidthLegacy() { return (40 + (2 * borders_w_cycles)); };	// in 4 bytes!
 	inline uint32_t GetVramHeightLegacy() { return  (192 + (2 * borders_h_scanlines)); };
@@ -145,7 +146,7 @@ public:
 	// Changing borders reinitializes everything
 	// Pass in a cycle for width (7 or 8 (SHR) lines per increment)
 	// And a height (8 lines per increment)
-	void SetBordersWithReset(uint8_t width_cycles, uint8_t height_8s);
+	void SetBordersWithReinit(uint8_t width_cycles, uint8_t height_8s);
 	uint32_t GetBordersWidthCycles() const { return borders_w_cycles; }
 	uint32_t GetBordersHeightScanlines() const { return borders_h_scanlines; }
 
@@ -200,8 +201,8 @@ private:
 	// and a lot more for vertical borders. We just decided on a size
 	// But SHR starts VBLANK just like legacy modes, at scanline 192. Hence
 	// it has 8 less bottom border scanlines than legacy.
-	uint32_t borders_w_cycles = 1;
-	uint32_t borders_h_scanlines = 8 * 1;	// multiple of 8
+	uint32_t borders_w_cycles = 5;
+	uint32_t borders_h_scanlines = 8 * 2;	// multiple of 8
 
 	// The merged framebuffer width is going to be shr + border
 	uint32_t fb_width = 0;
