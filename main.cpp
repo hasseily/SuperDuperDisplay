@@ -223,6 +223,8 @@ int main(int argc, char* argv[])
 	int mem_load_position = 0;
 	bool vbl_region_is_PAL;
 	int vbl_slider_val;
+	int border_w_slider_val;
+	int border_h_slider_val;
 	float window_bgcolor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 
 	// Get the instances of all singletons before creating threads
@@ -482,6 +484,11 @@ int main(int argc, char* argv[])
 				if (ImGui::CollapsingHeader("Apple 2 Video"))
 				{
 					ImGui::Text("Frame ID: %d", a2VideoManager->GetVRAMReadId());
+					border_w_slider_val = a2VideoManager->GetBordersWidthCycles();
+					border_h_slider_val = a2VideoManager->GetBordersHeightScanlines() / 8;
+					if (ImGui::SliderInt("Horizontal Borders", &border_w_slider_val, 0, 10, "%d", 1)
+						|| ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, 10, "%d", 1))
+						a2VideoManager->SetBordersWithReset(border_w_slider_val, border_h_slider_val);
 					if (ImGui::Button("Run Vertical Refresh"))
 						a2VideoManager->ForceBeamFullScreenRender();
 					if (ImGui::SliderInt("Border Color (0xC034)", &memManager->switch_c034, 0, 15))
@@ -604,13 +611,13 @@ int main(int argc, char* argv[])
 		// Show the VRAM legacy window
 		if (mem_edit_vram_legacy.Open)
 		{
-			mem_edit_vram_legacy.DrawWindow("Memory Editor: Beam VRAM Legacy", a2VideoManager->GetLegacyVRAMWritePtr(), _BEAM_VRAM_SIZE_LEGACY);
+			mem_edit_vram_legacy.DrawWindow("Memory Editor: Beam VRAM Legacy", a2VideoManager->GetLegacyVRAMWritePtr(), a2VideoManager->GetVramSizeLegacy());
 		}
 		
 		// Show the VRAM SHR window
 		if (mem_edit_vram_shr.Open)
 		{
-			mem_edit_vram_shr.DrawWindow("Memory Editor: Beam VRAM SHR", a2VideoManager->GetSHRVRAMWritePtr(), _BEAM_VRAM_SIZE_SHR);
+			mem_edit_vram_shr.DrawWindow("Memory Editor: Beam VRAM SHR", a2VideoManager->GetSHRVRAMWritePtr(), a2VideoManager->GetVramSizeSHR());
 		}
 		
 		// Show the upload data region memory

@@ -35,16 +35,16 @@ enum class BeamState_e
 // and a lot more for vertical borders. We just decided on a size
 // But SHR starts VBLANK just like legacy modes, at scanline 192. Hence
 // it has 8 less bottom border scanlines than legacy.
-#define _A2_BORDER_W_CYCLES 5
-#define _A2_BORDER_H_SCANLINES 8*2		// Multiples of 8
+// #define _A2_BORDER_W_CYCLES 5
+// #define _A2_BORDER_H_SCANLINES 8*2		// Multiples of 8
 
 // Legacy mode VRAM is 4 bytes (main, aux, flags, colors)
 // for each "byte" of screen use
 // colors are 4-bit each of fg and bg colors as in the Apple 2gs
 
-constexpr uint32_t _BEAM_VRAM_WIDTH_LEGACY = (40 + (2 * _A2_BORDER_W_CYCLES));	// in 4 bytes!
-constexpr uint32_t _BEAM_VRAM_HEIGHT_LEGACY = 192 + (2 * _A2_BORDER_H_SCANLINES);
-constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = _BEAM_VRAM_WIDTH_LEGACY * _BEAM_VRAM_HEIGHT_LEGACY * 4;	// in bytes
+// constexpr uint32_t _BEAM_VRAM_WIDTH_LEGACY = (40 + (2 * _A2_BORDER_W_CYCLES));	// in 4 bytes!
+// constexpr uint32_t _BEAM_VRAM_HEIGHT_LEGACY = 192 + (2 * _A2_BORDER_H_SCANLINES);
+// constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = _BEAM_VRAM_WIDTH_LEGACY * _BEAM_VRAM_HEIGHT_LEGACY * 4;	// in bytes
 
 // SHR mode VRAM is the standard bytes of screen use ($2000 to $9CFF)
 // plus, for each of the 200 lines, at the beginning of the line draw
@@ -63,9 +63,9 @@ constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = _BEAM_VRAM_WIDTH_LEGACY * _BEAM_VRAM
 // The BORDER bytes have the exact border color in their lower 4 bits
 // Each SHR cycle is 4 bytes, and each byte is 4 pixels (2x2 when in 320 mode)
 constexpr uint32_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
-constexpr uint32_t _BEAM_VRAM_WIDTH_SHR = _COLORBYTESOFFSET + (2 * _A2_BORDER_W_CYCLES * 4) + 160;
-constexpr uint32_t _BEAM_VRAM_HEIGHT_SHR = 200 + (2 * _A2_BORDER_H_SCANLINES);
-constexpr uint32_t _BEAM_VRAM_SIZE_SHR = _BEAM_VRAM_WIDTH_SHR * _BEAM_VRAM_HEIGHT_SHR;
+// constexpr uint32_t _BEAM_VRAM_WIDTH_SHR = _COLORBYTESOFFSET + (2 * _A2_BORDER_W_CYCLES * 4) + 160;
+// constexpr uint32_t _BEAM_VRAM_HEIGHT_SHR = 200 + (2 * _A2_BORDER_H_SCANLINES);
+// constexpr uint32_t _BEAM_VRAM_SIZE_SHR = _BEAM_VRAM_WIDTH_SHR * _BEAM_VRAM_HEIGHT_SHR;
 
 class A2VideoManager
 {
@@ -95,11 +95,8 @@ public:
 		uint64_t frame_idx = 0;
 		bool bWasRendered = false;
 		A2Mode_e mode = A2Mode_e::LEGACY;
-		uint8_t vram_legacy[_BEAM_VRAM_SIZE_LEGACY];
-		uint8_t vram_shr[_BEAM_VRAM_SIZE_SHR];
-		BeamRenderVRAMs() :  vram_legacy{}, vram_shr{} // Zero-initialize
-		{
-		}
+		uint8_t* vram_legacy = nullptr;
+		uint8_t* vram_shr = nullptr;
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -136,6 +133,21 @@ public:
 	void ActivateBeam();	// The apple 2 is rendering!
 	void DeactivateBeam();	// We don't have a connection to the Apple 2!
 	GLuint Render();	// render whatever mode is active (enabled windows)
+
+	inline uint32_t GetVramWidthLegacy() { return (40 + (2 * borders_w_cycles)); };	// in 4 bytes!
+	inline uint32_t GetVramHeightLegacy() { return  (192 + (2 * borders_h_scanlines)); };
+	inline uint32_t GetVramSizeLegacy() { return (GetVramWidthLegacy() * GetVramHeightLegacy() * 4); };	// in bytes
+
+	inline uint32_t GetVramWidthSHR() { return (_COLORBYTESOFFSET + (2 * borders_w_cycles * 4) + 160); };	// in 4 bytes!
+	inline uint32_t GetVramHeightSHR() { return  (200 + (2 * borders_h_scanlines)); };
+	inline uint32_t GetVramSizeSHR() { return (GetVramWidthSHR() * GetVramHeightSHR() * 4); };	// in bytes
+
+	// Changing borders reinitializes everything
+	// Pass in a cycle for width (7 or 8 (SHR) lines per increment)
+	// And a height (8 lines per increment)
+	void SetBordersWithReset(uint8_t width_cycles, uint8_t height_8s);
+	uint32_t GetBordersWidthCycles() const { return borders_w_cycles; }
+	uint32_t GetBordersHeightScanlines() const { return borders_h_scanlines; }
 
 	// public singleton code
 	static A2VideoManager* GetInstance()
@@ -183,6 +195,13 @@ private:
 	GLuint merged_texture_id;	// the merged texture that merges both legacy+shr
 	GLuint output_texture_id;	// the actual output texture (could be legacy/shr/merged)
 	GLuint FBO_merged = UINT_MAX;		// the framebuffer object for the merge
+
+	// Those could be anywhere up to 6 or 7 cycles for horizontal borders
+	// and a lot more for vertical borders. We just decided on a size
+	// But SHR starts VBLANK just like legacy modes, at scanline 192. Hence
+	// it has 8 less bottom border scanlines than legacy.
+	uint32_t borders_w_cycles = 1;
+	uint32_t borders_h_scanlines = 8 * 1;	// multiple of 8
 
 	// The merged framebuffer width is going to be shr + border
 	uint32_t fb_width = 0;
