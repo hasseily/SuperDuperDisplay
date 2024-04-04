@@ -38,6 +38,10 @@ public:
 	void SetShaderPrograms(const char* shaderVertexPath, const char* shaderFragmentPath);
 	A2VideoModeBeam_e Get_video_mode() const { return video_mode; }
 
+	std::vector<A2BeamVertex> vertices;		// Vertices with XYRelative and XYPixels
+	unsigned int VAO = UINT_MAX;			// Vertex Array Object (holds buffers that are vertex related)
+	unsigned int VBO = UINT_MAX;			// Vertex Buffer Object (holds vertices)
+
 private:
 	bool vramTextureExists = false;						// true if the VRAM texture exists and only needs an update
 	A2VideoModeBeam_e video_mode = A2VIDEOBEAM_LEGACY;	// Which video mode is used
@@ -45,10 +49,6 @@ private:
 	uXY screen_count = {0,0};				// width,height in pixels of visible screen area of window
 
 	unsigned int VRAMTEX = UINT_MAX;		// VRAM buffer texture. Holds R as MAIN, G and AUX, B as flags
-
-	std::vector<A2BeamVertex> vertices;		// Vertices with XYRelative and XYPixels
-	unsigned int VAO = UINT_MAX;			// Vertex Array Object (holds buffers that are vertex related)
-	unsigned int VBO = UINT_MAX;			// Vertex Buffer Object (holds vertices)
 
 	uint32_t border_width_cycles = 0;
 	uint32_t border_height_scanlines = 0;

@@ -197,6 +197,18 @@ private:
 	GLuint output_texture_id;	// the actual output texture (could be legacy/shr/merged)
 	GLuint FBO_merged = UINT_MAX;		// the framebuffer object for the merge
 
+	// OFFSET buffer texture. Holds one signed int for each scanline to tell the shader
+	// how much to offset by x a line for the sine wobble of the merge
+	// The offset is negative for 14->16MHz and positive for 16->14MHz
+	// The offset curve is:
+	//			negative_offset = 2 - 1.1205^(d+28)
+	//			positive_offset = 2 - 1.1205^(-d+28)
+	// where d is the distance in scanlines from the mode switch
+	// Essentially the curve moves from +/- 16 pixels when d is 0 back down to 0 when d is 16
+	uint8_t* offset_buffer = nullptr;
+	bool offsetTextureExists = false;
+	unsigned int OFFSETTEX = UINT_MAX;
+
 	// Those could be anywhere up to 6 or 7 cycles for horizontal borders
 	// and a lot more for vertical borders. We just decided on a size
 	// But SHR starts VBLANK just like legacy modes, at scanline 192. Hence

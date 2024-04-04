@@ -170,6 +170,10 @@ void A2VideoManager::Initialize()
 	vrams_write = &vrams_array[current_frame_idx % 2];
 	vrams_read = &vrams_array[1 - (current_frame_idx % 2)];
 	
+	if (offset_buffer != nullptr)
+		delete[] offset_buffer;
+	offset_buffer = new uint8_t[GetVramHeightSHR()];
+
 	auto memMgr = MemoryManager::GetInstance();
 
 	// Set up the image assets (textures)
@@ -194,8 +198,7 @@ void A2VideoManager::Initialize()
 	// Wait until beam is at position (0,0) to start
 	beamState = BeamState_e::UNKNOWN;
 
-	// TODO: 	SET THE OUTPUT TEXTURE FOR EACH OF THE 2 WINDOWSBEAM
-	//			SO WE CAN MERGE THE 2 AFTERWARDS
+	offsetTextureExists = false;
 
 	// tell the next Render() call to run initialization routines
 	bShouldInitializeRender = true;
@@ -213,6 +216,14 @@ A2VideoManager::~A2VideoManager()
 			delete[] vrams_array[i].vram_shr;
 	}
 	delete[] vrams_array;
+
+	if (OFFSETTEX != UINT_MAX)
+		glDeleteTextures(1, &OFFSETTEX);
+	if (FBO_merged != UINT_MAX)
+	{
+		glDeleteFramebuffers(1, &FBO_merged);
+		glDeleteTextures(1, &merged_texture_id);
+	}
 }
 
 void A2VideoManager::ResetComputer()
@@ -285,7 +296,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	 ||e|        |e||                                                                      		 |
 	 ||r|        |r||                                                                      		 |
 	 |		        |----------------------         Vertical border       -----------------------|
-	 |		        |------------------------- (borders_h_scanlines) -------------------------|
+	 |		        |--------------------------- (borders_h_scanlines) --------------------------|
 	 |@		        |............................. vertical blanking ............................|
 	 |		        |............................. vertical blanking ............................|
 	 |		        |............................. vertical blanking ............................|
@@ -294,7 +305,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	 |		        |............................. vertical blanking ............................|
 	 |		        |............................. vertical blanking ............................|
 	 |&             |-----------------      Vertical border  (next frame)       -----------------|
-	 |		        |------------------------- (borders_h_scanlines) -------------------------|
+	 |		        |--------------------------- (borders_h_scanlines) --------------------------|
 
 	 In order to achieve a "correct" top, left, right, bottom border around the content, with
 	 the origin being at the start of the top border, we translate each border area's x & w
@@ -659,6 +670,8 @@ GLuint A2VideoManager::Render()
 		return UINT32_MAX;
 	
 	GLenum glerr;
+	if (OFFSETTEX == UINT_MAX)
+		glGenTextures(1, &OFFSETTEX);
 	if (FBO_merged == UINT_MAX)
 	{
 		glGenFramebuffers(1, &FBO_merged);
@@ -728,19 +741,123 @@ GLuint A2VideoManager::Render()
 		return output_texture_id;
 
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
+
+	// ===============================================================================
+	// ============================== MIXED MODE RENDER ==============================
+	// ===============================================================================
+
 	// Now determine how we should merge both legacy and shr
 	if (vrams_read->mode == A2Mode_e::MIXED)
 	{
 		// Both are active in this frame, we need to do the merge
-		// TODO: TAKE BOTH OUTPUT TEXTURES AND BIND THEM TO TEXTURES 13 and 14
-		// TODO: RENDER VIA A MERGE SHADER
+		fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
+		fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
 		output_width = fb_width;
 		output_height = fb_height;
 		glViewport(0, 0, output_width, output_height);
+		output_texture_id = merged_texture_id;
+
+		// first render both
 		GLuint legacy_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
 		GLuint shr_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
-		output_texture_id = merged_texture_id;
+
+		// then setup our merge rendering
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
+		glClearColor(0.f, 0.f, 0.f, 0.f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		// Bind both Legacy and SHR textures to Tex 13 and 14 respectively
+		glActiveTexture(GL_TEXTURE13);
+		glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
+		glActiveTexture(GL_TEXTURE14);
+		glBindTexture(GL_TEXTURE_2D, shr_texture_id);
+		glActiveTexture(GL_TEXTURE0);
+
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL render A2VideoManager error: " << glerr << std::endl;
+		}
+
+		shader_merge.use();
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
+			return UINT32_MAX;
+		}
+
+		auto shrwin = windowsbeam[A2VIDEOBEAM_SHR].get();
+
+		glBindVertexArray(shrwin->VAO);
+
+		// Always reload the vertices
+		// because compatibility with GL-ES on the rPi
+		// Using the exact same vertices as the SHR renderer
+		{
+			// load data into vertex buffers
+			glBindBuffer(GL_ARRAY_BUFFER, shrwin->VBO);
+			glBufferData(GL_ARRAY_BUFFER, shrwin->vertices.size() * sizeof(A2BeamVertex), &(shrwin->vertices[0]), GL_STATIC_DRAW);
+
+			// set the vertex attribute pointers
+			// vertex relative Positions: position 0, size 2
+			// (vec4 values x and y)
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(A2BeamVertex), (void*)0);
+			// vertex pixel Positions: position 1, size 2
+			// (vec4 values z and w)
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(A2BeamVertex), (void*)offsetof(A2BeamVertex, PixelPos));
+		}
+
+		// Associate the texture OFFSETTEX in TEXUNIT_DATABUFFER with the buffer
+		// This is the x offset to slide each of legacy or shr when the mode switches
+		// in order to simulate the sine wobble from the analog change between 14 and 16MHz
+		{
+			glActiveTexture(_TEXUNIT_DATABUFFER);
+			glBindTexture(GL_TEXTURE_2D, OFFSETTEX);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+			if (offsetTextureExists)	// it exists, do a glTexSubImage2D() update
+			{
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_h_with_border * 4), 200 + (2 * border_height_scanlines), GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+			}
+			else {	// texture doesn't exist, create it with glTexImage2D()
+				// Adjust the unpack alignment for textures with arbitrary widths
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, _COLORBYTESOFFSET + (cycles_h_with_border * 4), 200 + (2 * border_height_scanlines), 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				offsetTextureExists = true;
+			}
+			glActiveTexture(GL_TEXTURE0);
+
+			if ((glerr = glGetError()) != GL_NO_ERROR) {
+				std::cerr << "A2VideoManager merge tex update error: " << glerr << std::endl;
+			}
+		}
+
+		shader_merge.setInt("ticks", SDL_GetTicks());
+
+		// point the uniform at the OFFSET texture
+		glActiveTexture(_TEXUNIT_DATABUFFER);
+		glBindTexture(GL_TEXTURE_2D, OFFSETTEX);
+		shader_merge.setInt("OFFSETTEX", _TEXUNIT_DATABUFFER - GL_TEXTURE0);
+
+		// And set the 2 textures to merge
+		shader_merge.setInt("legacyTex", GL_TEXTURE13 - GL_TEXTURE0);
+		shader_merge.setInt("shrTex", GL_TEXTURE14 - GL_TEXTURE0);
+
+		glDrawArrays(GL_TRIANGLES, 0, (GLsizei)shrwin->vertices.size());
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glActiveTexture(GL_TEXTURE0);
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "A2VideoManager merged render error: " << glerr << std::endl;
+		}
 	}
+	// ===============================================================================
+	// ============================= LEGACY MODE RENDER ==============================
+	// ===============================================================================
 	else if (vrams_read->mode == A2Mode_e::LEGACY) {
 		// Only legacy is active, just bind the correct output for the postprocessor
 		output_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
@@ -749,6 +866,9 @@ GLuint A2VideoManager::Render()
 		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
 		// std::cerr << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
 	}
+	// ===============================================================================
+	// =============================== SHR MODE RENDER ===============================
+	// ===============================================================================
 	else if (vrams_read->mode == A2Mode_e::SHR) {
 		// Only SHR is active, just bind the correct output for the postprocessor
 		output_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
