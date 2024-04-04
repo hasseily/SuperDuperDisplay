@@ -15,7 +15,7 @@ A2WindowBeam::~A2WindowBeam()
 {
 	if (VRAMTEX != UINT_MAX)
 		glDeleteTextures(1, &VRAMTEX);
-	if (FBO == UINT_MAX)
+	if (FBO != UINT_MAX)
 	{
 		glDeleteFramebuffers(1, &FBO);
 		glDeleteTextures(1, &output_texture_id);
