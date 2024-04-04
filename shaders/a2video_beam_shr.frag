@@ -10,7 +10,6 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 /*
  Apple 2gs video beam shader for SHR.
- TODO: Fix based on new vram format
  
  This shader expects as input a VRAMTEX texture that is a GL_R8UI byte buffer.
  It is a series of 193 byte lines.

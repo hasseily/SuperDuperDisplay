@@ -33,7 +33,7 @@ void PostProcessor::Initialize()
 {
 	v_ppshaders.clear();
 	Shader shader_basic = Shader();
-	shader_basic.build("shaders/basic.vert", "shaders/basic.frag");
+	shader_basic.build(_SHADER_VERTEX_BASIC, _SHADER_FRAGMENT_BASIC);
 	v_ppshaders.push_back(shader_basic);
 	Shader shader_pp = Shader();
 	shader_pp.build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");

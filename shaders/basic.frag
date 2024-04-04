@@ -5,11 +5,11 @@ precision mediump float;
 #define COMPAT_PRECISION
 #endif
 
-in vec2 TexCoords;
+in vec2 vTexCoords;
 out vec4 fragColor;
 uniform sampler2D Texture;
 
 void main()
 {
-	fragColor = texture(Texture, TexCoords);
+	fragColor = texture(Texture, vTexCoords);
 }

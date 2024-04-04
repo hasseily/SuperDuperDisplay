@@ -172,7 +172,7 @@ void A2VideoManager::Initialize()
 	
 	if (offset_buffer != nullptr)
 		delete[] offset_buffer;
-	offset_buffer = new uint8_t[GetVramHeightSHR()];
+	offset_buffer = new int8_t[GetVramHeightSHR()];
 
 	auto memMgr = MemoryManager::GetInstance();
 
@@ -198,6 +198,7 @@ void A2VideoManager::Initialize()
 	// Wait until beam is at position (0,0) to start
 	beamState = BeamState_e::UNKNOWN;
 
+	shader_merge.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_MERGE_FRAGMENT);
 	offsetTextureExists = false;
 
 	// tell the next Render() call to run initialization routines
@@ -281,6 +282,9 @@ void A2VideoManager::StartNextFrame()
 	// Update the current region info
 	current_region = CycleCounter::GetInstance()->GetVideoRegion();
 	region_scanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
+	// For the merged mode
+	merge_last_change_mode = A2Mode_e::NONE;
+	merge_last_change_y = UINT_MAX;
 }
 
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
@@ -404,9 +408,41 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	// Always at the start of the row, set the SHR SCB to 0x10
 	// Because we check bit 4 of the SCB to know if that line is drawn as SHR
 	// The 2gs will always set bit 4 to 0 when sending it over
+	// Also check if the mode has switched in the middle of the frame
 	if (_x == 0)
 	{
 		vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
+
+		if ((vrams_write->mode == A2Mode_e::MIXED) &&
+			(beamState == BeamState_e::CONTENT || beamState == BeamState_e::BORDER_LEFT))
+		{
+			// Merge mode calculations
+			// determine the mode switch and update merge_last_change_mode and merge_last_change_y
+			auto _curr_mode = (memMgr->IsSoftSwitch(A2SS_SHR) ? A2Mode_e::SHR : A2Mode_e::LEGACY);
+			if ((merge_last_change_mode == A2Mode_e::LEGACY) && (_curr_mode == A2Mode_e::SHR))
+			{
+				// 14 -> 16MHz
+				merge_last_change_y = _TR_ANY_Y;
+			}
+			else if ((merge_last_change_mode == A2Mode_e::SHR) && (_curr_mode == A2Mode_e::LEGACY))
+			{
+				// 16 -> 14MHz
+				merge_last_change_y = _TR_ANY_Y;
+			}
+			merge_last_change_mode = _curr_mode;
+
+			// Finally set the offset
+			if ((_TR_ANY_Y - merge_last_change_y) > 20)
+				offset_buffer[_TR_ANY_Y] = 0;			// no offset at all, the CRT is at the new frequency
+			else
+			{
+				// If the change is to 28 MHz, shift negative (left). Otherwise, shift positive (right)
+				if (merge_last_change_mode == A2Mode_e::SHR)
+					offset_buffer[_TR_ANY_Y] = 4 - round(glm::pow(1.1205, _TR_ANY_Y - merge_last_change_y + 28));
+				else
+					offset_buffer[_TR_ANY_Y] = 4 - round(glm::pow(1.1205, merge_last_change_y - _TR_ANY_Y + 28));
+			}
+		}
 	}
 
 	// Now generate the VRAMs themselves
@@ -816,13 +852,13 @@ GLuint A2VideoManager::Render()
 			if (offsetTextureExists)	// it exists, do a glTexSubImage2D() update
 			{
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_h_with_border * 4), 200 + (2 * border_height_scanlines), GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, shrwin->GetHeight(), GL_RED_INTEGER, GL_UNSIGNED_BYTE, offset_buffer);
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 			}
 			else {	// texture doesn't exist, create it with glTexImage2D()
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, _COLORBYTESOFFSET + (cycles_h_with_border * 4), 200 + (2 * border_height_scanlines), 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 1, shrwin->GetHeight(), 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, offset_buffer);
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

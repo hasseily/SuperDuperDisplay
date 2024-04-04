@@ -81,6 +81,9 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 
 
 // SHADERS
+#define _SHADER_VERTEX_BASIC "shaders/basic.vert"
+#define _SHADER_FRAGMENT_BASIC "shaders/basic.frag"
+
 #define _SHADER_A2_VERTEX_DEFAULT "shaders/a2video.vert"
 #define _SHADER_TEXT_FRAGMENT "shaders/a2video_text.frag"
 #define _SHADER_LGR_FRAGMENT "shaders/a2video_lgr.frag"
@@ -89,6 +92,7 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _SHADER_SHR_FRAGMENT "shaders/a2video_shr.frag"
 #define _SHADER_BEAM_LEGACY_FRAGMENT "shaders/a2video_beam_legacy.frag"
 #define _SHADER_BEAM_SHR_FRAGMENT "shaders/a2video_beam_shr.frag"
+#define _SHADER_BEAM_MERGE_FRAGMENT "shaders/a2video_beam_merge.frag"
 
 #define _SHADER_SDHR_VERTEX_DEFAULT "shaders/sdhr_default_330.vert"
 #define _SHADER_SDHR_FRAGMENT_DEFAULT "shaders/sdhr_default_330.frag"
