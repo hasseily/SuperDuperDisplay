@@ -5,8 +5,8 @@ precision mediump float;
 #define COMPAT_PRECISION
 #endif
 
-in vec2 aPos;
-in vec2 texCoords;
+layout (location = 0) in vec2 aPos;
+layout (location = 1) in vec2 texCoords;
 out vec2 vTexCoords;
 
 void main()

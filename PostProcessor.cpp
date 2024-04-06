@@ -316,13 +316,9 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)(2 * sizeof(GLfloat)));
 
-	// Unbind the VAO
-	glBindVertexArray(0);
-
 
 	// Render the fullscreen quad
 	// Target the main SDL2 window
-	glBindVertexArray(quadVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {

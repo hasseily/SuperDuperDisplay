@@ -145,6 +145,33 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 // Manager Methods
 //////////////////////////////////////////////////////////////////////////
 
+A2VideoManager::~A2VideoManager()
+{
+	for (int i = 0; i < 2; i++)
+	{
+		if (vrams_array[i].vram_legacy != nullptr)
+			delete[] vrams_array[i].vram_legacy;
+		if (vrams_array[i].vram_shr != nullptr)
+			delete[] vrams_array[i].vram_shr;
+		if (vrams_array[i].offset_buffer != nullptr)
+			delete[] vrams_array[i].offset_buffer;
+	}
+	delete[] vrams_array;
+
+	if (OFFSETTEX != UINT_MAX)
+		glDeleteTextures(1, &OFFSETTEX);
+	if (quadVAO != UINT_MAX)
+	{
+		glDeleteVertexArrays(1, &quadVAO);
+		glDeleteBuffers(1, &quadVBO);
+	}
+	if (FBO_merged != UINT_MAX)
+	{
+		glDeleteFramebuffers(1, &FBO_merged);
+		glDeleteTextures(1, &merged_texture_id);
+	}
+}
+
 void A2VideoManager::Initialize()
 {
 	// Here do not reinitialize bBeamIsActive. It could still be active from earlier.
@@ -156,23 +183,24 @@ void A2VideoManager::Initialize()
 	for (int i = 0; i < 2; i++)
 	{
 		vrams_array[i].id = i;
-		vrams_array[i].frame_idx = 0;
+		vrams_array[i].frame_idx = i;
 		vrams_array[i].mode = A2Mode_e::SHR;
 		if (vrams_array[i].vram_legacy != nullptr)
 			delete[] vrams_array[i].vram_legacy;
 		if (vrams_array[i].vram_shr != nullptr)
 			delete[] vrams_array[i].vram_shr;
+		if (vrams_array[i].offset_buffer != nullptr)
+			delete[] vrams_array[i].offset_buffer;
 		vrams_array[i].vram_legacy = new uint8_t[GetVramSizeLegacy()];
 		vrams_array[i].vram_shr = new uint8_t[GetVramSizeSHR()];
+		vrams_array[i].offset_buffer = new GLfloat[GetVramHeightSHR()];
 		memset(vrams_array[i].vram_legacy, 0, GetVramSizeLegacy());
 		memset(vrams_array[i].vram_shr, 0, GetVramSizeSHR());
+		memset(vrams_array[i].offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
 	}
 	vrams_write = &vrams_array[current_frame_idx % 2];
 	vrams_read = &vrams_array[1 - (current_frame_idx % 2)];
-	
-	if (offset_buffer != nullptr)
-		delete[] offset_buffer;
-	offset_buffer = new int8_t[GetVramHeightSHR()];
+
 
 	auto memMgr = MemoryManager::GetInstance();
 
@@ -198,7 +226,7 @@ void A2VideoManager::Initialize()
 	// Wait until beam is at position (0,0) to start
 	beamState = BeamState_e::UNKNOWN;
 
-	shader_merge.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_MERGE_FRAGMENT);
+	shader_merge.build(_SHADER_VERTEX_BASIC, _SHADER_BEAM_MERGE_FRAGMENT);
 	offsetTextureExists = false;
 
 	// tell the next Render() call to run initialization routines
@@ -207,25 +235,6 @@ void A2VideoManager::Initialize()
 	bIsReady = true;
 }
 
-A2VideoManager::~A2VideoManager()
-{
-	for (int i = 0; i < 2; i++)
-	{
-		if (vrams_array[i].vram_legacy != nullptr)
-			delete[] vrams_array[i].vram_legacy;
-		if (vrams_array[i].vram_shr != nullptr)
-			delete[] vrams_array[i].vram_shr;
-	}
-	delete[] vrams_array;
-
-	if (OFFSETTEX != UINT_MAX)
-		glDeleteTextures(1, &OFFSETTEX);
-	if (FBO_merged != UINT_MAX)
-	{
-		glDeleteFramebuffers(1, &FBO_merged);
-		glDeleteTextures(1, &merged_texture_id);
-	}
-}
 
 void A2VideoManager::ResetComputer()
 {
@@ -243,6 +252,9 @@ bool A2VideoManager::IsReady()
 
 void A2VideoManager::ToggleA2Video(bool value)
 {
+	// If true, the A2 Video reinitializes fully
+	// Only call this method when reinit is necessary,
+	// like changing mode from SDHR to A2 Video
 	bA2VideoEnabled = value;
 	if (bA2VideoEnabled)
 		bShouldInitializeRender = true;
@@ -250,10 +262,10 @@ void A2VideoManager::ToggleA2Video(bool value)
 
 void A2VideoManager::SetBordersWithReinit(uint8_t width_cycles, uint8_t height_8s)
 {
-	if (width_cycles > 7)
-		width_cycles = 7;
-	if (height_8s > 3)
-		height_8s = 3;
+	if (width_cycles > _BORDER_WIDTH_MAX_CYCLES)
+		width_cycles = _BORDER_WIDTH_MAX_CYCLES;
+	if (height_8s > _BORDER_WIDTH_MAX_CYCLES)
+		height_8s = _BORDER_WIDTH_MAX_CYCLES;
 	borders_w_cycles = width_cycles;
 	borders_h_scanlines = height_8s * 8;	// Must be multiple of 8s
 	auto _mms = MemoryManager::GetInstance()->SerializeSwitches();
@@ -265,6 +277,7 @@ void A2VideoManager::SetBordersWithReinit(uint8_t width_cycles, uint8_t height_8
 
 void A2VideoManager::StartNextFrame()
 {
+	std::cerr << "starting next frame at current index: " << current_frame_idx << std::endl;
 	// start the next frame
 	// set the frame index for the buffer we'll move to reading
 	vrams_write->frame_idx = current_frame_idx;
@@ -276,6 +289,9 @@ void A2VideoManager::StartNextFrame()
 		auto _vtmp = vrams_write;
 		vrams_write = vrams_read;
 		vrams_read = _vtmp;
+		memset(vrams_write->vram_legacy, 0, GetVramSizeLegacy());
+		memset(vrams_write->vram_shr, 0, GetVramSizeSHR());
+		memset(vrams_write->offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
 	}
 	// reset the mode at each vblank
 	vrams_write->mode = A2Mode_e::NONE;
@@ -283,7 +299,6 @@ void A2VideoManager::StartNextFrame()
 	current_region = CycleCounter::GetInstance()->GetVideoRegion();
 	region_scanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
 	// For the merged mode
-	merge_last_change_mode = A2Mode_e::NONE;
 	merge_last_change_y = UINT_MAX;
 }
 
@@ -357,6 +372,11 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		case BeamState_e::NBVBLANK:
 			if (_y == (region_scanlines - borders_h_scanlines))
 				beamState = BeamState_e::BORDER_TOP;
+			if (_y == _SCANLINE_START_FRAME && _x == 0)
+			{
+				// Start of NBVBLANK at which we flip the double buffering
+				StartNextFrame();
+			}
 			break;
 		case BeamState_e::BORDER_LEFT:
 			if (_x == CYCLES_SC_HBL)
@@ -374,8 +394,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			if (_y == (mode_scanlines + borders_h_scanlines))
 			{
 				beamState = BeamState_e::NBVBLANK;
-				// Start of NBVBLANK at which we flip the double buffering
-				StartNextFrame();
 			}
 			break;
 		case BeamState_e::CONTENT:
@@ -413,8 +431,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	{
 		vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
 
-		if ((vrams_write->mode == A2Mode_e::MIXED) &&
-			(beamState == BeamState_e::CONTENT || beamState == BeamState_e::BORDER_LEFT))
+		if ((vrams_write->mode == A2Mode_e::MERGED) &&
+			(beamState == BeamState_e::CONTENT || beamState == BeamState_e::BORDER_RIGHT))
 		{
 			// Merge mode calculations
 			// determine the mode switch and update merge_last_change_mode and merge_last_change_y
@@ -423,25 +441,34 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			{
 				// 14 -> 16MHz
 				merge_last_change_y = _TR_ANY_Y;
+				std::cerr << "merge to 16 " << merge_last_change_y << std::endl;
 			}
 			else if ((merge_last_change_mode == A2Mode_e::SHR) && (_curr_mode == A2Mode_e::LEGACY))
 			{
 				// 16 -> 14MHz
 				merge_last_change_y = _TR_ANY_Y;
+				std::cerr << "merge to 14 " << merge_last_change_y << std::endl;
 			}
 			merge_last_change_mode = _curr_mode;
 
 			// Finally set the offset
-			if ((_TR_ANY_Y - merge_last_change_y) > 20)
-				offset_buffer[_TR_ANY_Y] = 0;			// no offset at all, the CRT is at the new frequency
+			// NOTE: We add 10.f to the offset so that the shader can know which mode to apply
+			//		 If it's negative, it's SHR. Positive, legacy.
+			if (_TR_ANY_Y < merge_last_change_y					// the switch happened last frame
+				|| (_TR_ANY_Y - merge_last_change_y) > 15)		// the switch has been recovered
+			{
+				vrams_write->offset_buffer[_TR_ANY_Y] = (_curr_mode == A2Mode_e::LEGACY ? -10.f : 10.f);
+			}
 			else
 			{
 				// If the change is to 28 MHz, shift negative (left). Otherwise, shift positive (right)
-				if (merge_last_change_mode == A2Mode_e::SHR)
-					offset_buffer[_TR_ANY_Y] = 4 - round(glm::pow(1.1205, _TR_ANY_Y - merge_last_change_y + 28));
+				float pixelShift = (GLfloat)glm::pow(1.1205, merge_last_change_y - _TR_ANY_Y + 28) - 4.0;
+				if (_curr_mode == A2Mode_e::LEGACY)
+					vrams_write->offset_buffer[_TR_ANY_Y] = -(10.f + pixelShift / 560.f);
 				else
-					offset_buffer[_TR_ANY_Y] = 4 - round(glm::pow(1.1205, merge_last_change_y - _TR_ANY_Y + 28));
+					vrams_write->offset_buffer[_TR_ANY_Y] = 10.f + pixelShift / 640.f;
 			}
+			std::cerr << "Offset: " << vrams_write->offset_buffer[_TR_ANY_Y] << " y: " << _TR_ANY_Y << std::endl;
 		}
 	}
 
@@ -450,8 +477,17 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	if (memMgr->IsSoftSwitch(A2SS_SHR))
 	{
 		// at least 1 byte in this vblank cycle is in SHR
-		vrams_write->mode = (vrams_write->mode == A2Mode_e::LEGACY ? A2Mode_e::MIXED : A2Mode_e::SHR);
-
+		switch (vrams_write->mode)
+		{
+		case A2Mode_e::NONE:
+			vrams_write->mode = A2Mode_e::SHR;
+			break;
+		case A2Mode_e::LEGACY:
+			SwitchToMergedMode(_y);
+			break;
+		default:
+			break;
+		}
 		auto memPtr = memMgr->GetApple2MemAuxPtr();
 		uint8_t* lineStartPtr = vrams_write->vram_shr + GetVramWidthSHR() * _TR_ANY_Y;
 
@@ -526,7 +562,17 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 
 	// The byte isn't SHR, it's legacy
 	// at least 1 byte in this vblank cycle is LEGACY
-	vrams_write->mode = (vrams_write->mode == A2Mode_e::SHR ? A2Mode_e::MIXED : A2Mode_e::LEGACY);
+	switch (vrams_write->mode)
+	{
+	case A2Mode_e::NONE:
+		vrams_write->mode = A2Mode_e::LEGACY;
+		break;
+	case A2Mode_e::SHR:
+		SwitchToMergedMode(_y);
+		break;
+	default:
+		break;
+	}
 	// the flags byte is:
 	// bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO, BORDER)
 	// bit 3: ALT charset for TEXT
@@ -645,18 +691,43 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 
 }
 
+// When we learn we're in merged mode, we need to update all previous scanlines
+// to set the merged mode. Ideally it should all be one mode without any difference
+// between legacy and SHR, and a single shader. But for better performance, and to
+// not make a _very_ rare case (merged mode) the standard pipeline, we have both
+// legacy and shr split into their own and we merge them later.
+void A2VideoManager::SwitchToMergedMode(uint32_t scanline)
+{
+	if (bIsSwitchingToMergedMode)
+		return;
+	bIsSwitchingToMergedMode = true;
+	// set the vrams write mode, and flip the A2SS_SHR softswitch to the previous
+	// setting to rerun the scanlines, before returning it to its current state
+	vrams_write->mode = A2Mode_e::MERGED;
+	auto memMgr = MemoryManager::GetInstance();
+	memMgr->SetSoftSwitch(A2SS_SHR, !memMgr->IsSoftSwitch(A2SS_SHR));
+	for (uint32_t y = 0; y < scanline; y++)
+	{
+		for (uint32_t x = 0; x < 65; x++)
+		{
+			this->BeamIsAtPosition(x, y);
+		}
+	}
+	memMgr->SetSoftSwitch(A2SS_SHR, !memMgr->IsSoftSwitch(A2SS_SHR));
+	bIsSwitchingToMergedMode = false;
+}
+
 void A2VideoManager::ForceBeamFullScreenRender()
 {
 	// Move the beam over the whole screen
 	auto totalscanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
-	// Start in the non-border VBLANK area to get all the borders
-	int starty = SC_TOTAL_NTSC - borders_h_scanlines - 1;
+	// Start right after the frame flip in the VBLANK non-border area
+	int starty = _SCANLINE_START_FRAME + 1;
 	beamState = BeamState_e::NBVBLANK;
 	// Run both frames
 	for (size_t i = 0; i < 2; i++)
 	{
-		// Forces a full screen render for the beam renderer
-		rendered_frame_idx = UINT64_MAX;
+		rendered_frame_idx = vrams_write->frame_idx;
 		for (uint32_t y = starty; y < totalscanlines; y++)
 		{
 			for (uint32_t x = 0; x < 65; x++)
@@ -666,22 +737,94 @@ void A2VideoManager::ForceBeamFullScreenRender()
 		}
 		for (uint32_t y = 0; y < starty; y++)
 		{
+			if (y == 50)
+				MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
+			if (y == 130)
+				MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
 			for (uint32_t x = 0; x < 65; x++)
 			{
 				this->BeamIsAtPosition(x, y);
 			}
 		}
-		this->Render();
-		this->StartNextFrame();
+		// the last y value (_SCANLINE_START_FRAME) flips the frame
 	}
-
 }
 
 uXY A2VideoManager::ScreenSize()
 {
-	return uXY({ output_width, output_height});
+	return uXY({ (uint32_t)output_width, (uint32_t)output_height});
 }
 
+void A2VideoManager::InitializeFullQuad() {
+	// Define the quad vertices with position and texture coordinates
+	GLfloat quadVertices[] = {
+		// Positions   // Texture Coords
+		-1.0f, -1.0f,  0.0f, 0.0f,
+		 1.0f,  1.0f,  1.0f, 1.0f,
+		 -1.0f, 1.0f,  0.0f, 1.0f,
+
+		-1.0f, -1.0f,  0.0f, 0.0f,
+		1.0f,  -1.0f,  1.0f, 0.0f,
+		 1.0f,  1.0f,  1.0f, 1.0f
+	};
+
+	// Generate and bind the Vertex Array Object (VAO)
+	glGenVertexArrays(1, &quadVAO);
+	glBindVertexArray(quadVAO);
+
+	// Generate and bind the Vertex Buffer Object (VBO)
+	if (quadVBO == UINT_MAX)
+		glGenBuffers(1, &quadVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+
+	// Position attribute
+	glEnableVertexAttribArray(0); // Enable the vertex attribute (0: position)
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
+
+	// Texture coordinate attribute
+	glEnableVertexAttribArray(1); // Enable the vertex attribute (1: texture coordinate)
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat)));
+
+	// Unbind the VBO and VAO to make sure they are not accidentally modified
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+
+void A2VideoManager::PrepareOffsetTexture() {
+	// Associate the texture OFFSETTEX in TEXUNIT_DATABUFFER with the buffer
+	// This is the x offset to slide each of legacy or shr when the mode switches
+	// in order to simulate the sine wobble from the analog change between 14 and 16MHz
+	if (!offsetTextureExists) {
+		// Generate the texture if it doesn't exist
+		if (OFFSETTEX == UINT_MAX)
+			glGenTextures(1, &OFFSETTEX);
+		glActiveTexture(_TEXUNIT_DATABUFFER);
+		glBindTexture(GL_TEXTURE_2D, OFFSETTEX);
+
+		// Set texture parameters
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+		// Create the texture
+		// Adjust the unpack alignment for textures with arbitrary widths
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, 1, GetVramHeightSHR(), 0, GL_RED, GL_FLOAT, vrams_read->offset_buffer);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+
+		offsetTextureExists = true;
+	}
+	else {
+		// Update the texture
+		glActiveTexture(_TEXUNIT_DATABUFFER);
+		glBindTexture(GL_TEXTURE_2D, OFFSETTEX);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, GetVramHeightSHR(), GL_RED, GL_FLOAT, vrams_read->offset_buffer);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	}
+}
 GLuint A2VideoManager::Render()
 {
 	// We first render both the legacy and shr "windows" as textures
@@ -691,14 +834,6 @@ GLuint A2VideoManager::Render()
 	// directly and avoid all the mess, unless the user has requested that
 	// the legacy mode use 16MHz instead of 14MHz for width.
 
-	// TODO: Make the merge shader that will go through each line
-	//		and determine which mode it's on and load from the correct
-	//		texture (legacy or shr) while also keeping track of the
-	//		switch between modes, hence translating the line as necessary
-	//		for the sine wobble effect
-
-	// TODO: make the buffer that determines the translation effect
-
 	if (!bIsReady)
 		return UINT32_MAX;
 
@@ -706,35 +841,37 @@ GLuint A2VideoManager::Render()
 		return UINT32_MAX;
 	
 	GLenum glerr;
-	if (OFFSETTEX == UINT_MAX)
-		glGenTextures(1, &OFFSETTEX);
 	if (FBO_merged == UINT_MAX)
 	{
 		glGenFramebuffers(1, &FBO_merged);
 		glGenTextures(1, &merged_texture_id);
+
 		glActiveTexture(_TEXUNIT_POSTPROCESS);
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
 		glBindTexture(GL_TEXTURE_2D, merged_texture_id);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, merged_texture_id, 0);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		glActiveTexture(GL_TEXTURE0);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, merged_texture_id, 0);
+
+		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (status != GL_FRAMEBUFFER_COMPLETE) {
+			std::cerr << "Framebuffer is not complete: " << status << std::endl;
+		}
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glBindTexture(GL_TEXTURE_2D, 0);
+		glActiveTexture(GL_TEXTURE0);
 	}
 
 	// Initialization routine runs only once on init (or re-init)
-	// We do that here because we know the framebuffer is bound, and everything
-	// for drawing the SDHR stuff is active
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
-		glClearColor(0.f, 0.f, 0.f, 0.f);
-		glClear(GL_COLOR_BUFFER_BIT);
 
 		// image asset 0: The apple 2e US font
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START);
@@ -776,117 +913,73 @@ GLuint A2VideoManager::Render()
 	if (rendered_frame_idx == vrams_read->frame_idx)
 		return output_texture_id;
 
+	std::cerr << "--- Actual Render: " << vrams_read->frame_idx << std::endl;
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
 
 	// ===============================================================================
-	// ============================== MIXED MODE RENDER ==============================
+	// ============================== MERGED MODE RENDER ==============================
 	// ===============================================================================
 
 	// Now determine how we should merge both legacy and shr
-	if (vrams_read->mode == A2Mode_e::MIXED)
+	if (vrams_read->mode == A2Mode_e::MERGED)
 	{
 		// Both are active in this frame, we need to do the merge
-		fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
-		fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
+
+		// first render Legacy in its viewport
+		auto legacy_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
+		auto legacy_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
+		glViewport(0, 0, legacy_width, legacy_height);
+		GLuint legacy_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
+
+		// Then render SHR in our viewport which is the same as SHR
 		output_width = fb_width;
 		output_height = fb_height;
 		glViewport(0, 0, output_width, output_height);
-		output_texture_id = merged_texture_id;
-
-		// first render both
-		GLuint legacy_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
 		GLuint shr_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
 
-		// then setup our merge rendering
+		// Setup for merged rendering
+		output_texture_id = merged_texture_id;
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
-		glClearColor(0.f, 0.f, 0.f, 0.f);
+		// glViewport(0, 0, output_width, output_height);
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		// Bind both Legacy and SHR textures to Tex 13 and 14 respectively
-		glActiveTexture(GL_TEXTURE13);
-		glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
-		glActiveTexture(GL_TEXTURE14);
-		glBindTexture(GL_TEXTURE_2D, shr_texture_id);
-		glActiveTexture(GL_TEXTURE0);
-
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL render A2VideoManager error: " << glerr << std::endl;
-		}
-
+		// Use the shader program
 		shader_merge.use();
+		shader_merge.setInt("ticks", SDL_GetTicks());
+		shader_merge.setInt("shrScanlineCount", (int)GetVramHeightSHR());
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
 			return UINT32_MAX;
 		}
 
-		auto shrwin = windowsbeam[A2VIDEOBEAM_SHR].get();
+		// Bind both Legacy and SHR textures to Tex 13 and 14 respectively
+		glActiveTexture(GL_TEXTURE13);
+		glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
+		shader_merge.setInt("legacyTex", GL_TEXTURE13 - GL_TEXTURE0);
+		shader_merge.setVec2("legacySize", legacy_width, legacy_height);
 
-		glBindVertexArray(shrwin->VAO);
+		glActiveTexture(GL_TEXTURE14);
+		glBindTexture(GL_TEXTURE_2D, shr_texture_id);
+		shader_merge.setInt("shrTex", GL_TEXTURE14 - GL_TEXTURE0);
+		shader_merge.setVec2("shrSize", fb_width, fb_height);
 
-		// Always reload the vertices
-		// because compatibility with GL-ES on the rPi
-		// Using the exact same vertices as the SHR renderer
-		{
-			// load data into vertex buffers
-			glBindBuffer(GL_ARRAY_BUFFER, shrwin->VBO);
-			glBufferData(GL_ARRAY_BUFFER, shrwin->vertices.size() * sizeof(A2BeamVertex), &(shrwin->vertices[0]), GL_STATIC_DRAW);
-
-			// set the vertex attribute pointers
-			// vertex relative Positions: position 0, size 2
-			// (vec4 values x and y)
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(A2BeamVertex), (void*)0);
-			// vertex pixel Positions: position 1, size 2
-			// (vec4 values z and w)
-			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(A2BeamVertex), (void*)offsetof(A2BeamVertex, PixelPos));
-		}
-
-		// Associate the texture OFFSETTEX in TEXUNIT_DATABUFFER with the buffer
-		// This is the x offset to slide each of legacy or shr when the mode switches
-		// in order to simulate the sine wobble from the analog change between 14 and 16MHz
-		{
-			glActiveTexture(_TEXUNIT_DATABUFFER);
-			glBindTexture(GL_TEXTURE_2D, OFFSETTEX);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-			if (offsetTextureExists)	// it exists, do a glTexSubImage2D() update
-			{
-				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, shrwin->GetHeight(), GL_RED_INTEGER, GL_UNSIGNED_BYTE, offset_buffer);
-				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-			}
-			else {	// texture doesn't exist, create it with glTexImage2D()
-				// Adjust the unpack alignment for textures with arbitrary widths
-				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 1, shrwin->GetHeight(), 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, offset_buffer);
-				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-				offsetTextureExists = true;
-			}
-			glActiveTexture(GL_TEXTURE0);
-
-			if ((glerr = glGetError()) != GL_NO_ERROR) {
-				std::cerr << "A2VideoManager merge tex update error: " << glerr << std::endl;
-			}
-		}
-
-		shader_merge.setInt("ticks", SDL_GetTicks());
-
-		// point the uniform at the OFFSET texture
-		glActiveTexture(_TEXUNIT_DATABUFFER);
-		glBindTexture(GL_TEXTURE_2D, OFFSETTEX);
+		// Point the uniform at the OFFSET texture
+		PrepareOffsetTexture();
 		shader_merge.setInt("OFFSETTEX", _TEXUNIT_DATABUFFER - GL_TEXTURE0);
 
-		// And set the 2 textures to merge
-		shader_merge.setInt("legacyTex", GL_TEXTURE13 - GL_TEXTURE0);
-		shader_merge.setInt("shrTex", GL_TEXTURE14 - GL_TEXTURE0);
+		// Render the fullscreen quad
+		if (quadVAO == UINT_MAX) {
+			InitializeFullQuad();
+		}
+		glBindVertexArray(quadVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 
-		glDrawArrays(GL_TRIANGLES, 0, (GLsizei)shrwin->vertices.size());
-		glBindTexture(GL_TEXTURE_2D, 0);
+		// Reset state
+		glBindVertexArray(0);
 		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "A2VideoManager merged render error: " << glerr << std::endl;
 		}

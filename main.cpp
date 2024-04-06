@@ -203,11 +203,13 @@ int main(int argc, char* argv[])
 	static MemoryEditor mem_edit_upload;
 	static MemoryEditor mem_edit_vram_legacy;
 	static MemoryEditor mem_edit_vram_shr;
+	static MemoryEditor mem_edit_offset_buffer;
 
 	mem_edit_a2e.Open = false;
 	mem_edit_upload.Open = false;
 	mem_edit_vram_legacy.Open = false;
 	mem_edit_vram_shr.Open = false;
+	mem_edit_offset_buffer.Open = false;
 
 	static bool bShouldTerminateNetworking = false;
 	static bool bShouldTerminateProcessing = false;
@@ -477,6 +479,7 @@ int main(int argc, char* argv[])
 					ImGui::Checkbox("Apple //e Memory Window", &mem_edit_a2e.Open);
 					ImGui::Checkbox("VRAM Legacy Memory Window", &mem_edit_vram_legacy.Open);
 					ImGui::Checkbox("VRAM SHR Memory Window", &mem_edit_vram_shr.Open);
+					ImGui::Checkbox("VRAM Offset Buffer", &mem_edit_offset_buffer.Open);
 					ImGui::Checkbox("SDHR Upload Region Memory Window", &mem_edit_upload.Open);
 					ImGui::Checkbox("ImGui Metrics Window", &show_metrics_window);
 					// ImGui::Checkbox("ImGui Demo Window", &show_demo_window);
@@ -486,8 +489,8 @@ int main(int argc, char* argv[])
 					ImGui::Text("Frame ID: %d", a2VideoManager->GetVRAMReadId());
 					border_w_slider_val = a2VideoManager->GetBordersWidthCycles();
 					border_h_slider_val = a2VideoManager->GetBordersHeightScanlines() / 8;
-					if (ImGui::SliderInt("Horizontal Borders", &border_w_slider_val, 0, 7, "%d", 1)
-						|| ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, 3, "%d", 1))
+					if (ImGui::SliderInt("Horizontal Borders", &border_w_slider_val, 0, _BORDER_WIDTH_MAX_CYCLES, "%d", 1)
+						|| ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, _BORDER_HEIGHT_MAX_MULT8, "%d", 1))
 						a2VideoManager->SetBordersWithReinit(border_w_slider_val, border_h_slider_val);
 					if (ImGui::Button("Run Vertical Refresh"))
 						a2VideoManager->ForceBeamFullScreenRender();
@@ -620,6 +623,12 @@ int main(int argc, char* argv[])
 			mem_edit_vram_shr.DrawWindow("Memory Editor: Beam VRAM SHR", a2VideoManager->GetSHRVRAMWritePtr(), a2VideoManager->GetVramSizeSHR());
 		}
 		
+		// Show the merge offset window
+		if (mem_edit_offset_buffer.Open)
+		{
+			mem_edit_offset_buffer.DrawWindow("Memory Editor: Offset Buffer", (void*)a2VideoManager->GetOffsetBufferReadPtr(), a2VideoManager->GetVramHeightSHR());
+		}
+
 		// Show the upload data region memory
 		if (mem_edit_upload.Open)
 		{

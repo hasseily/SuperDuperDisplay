@@ -12,16 +12,16 @@
 
 enum class A2Mode_e
 {
-	NONE,
+	NONE = 0,
 	LEGACY,
 	SHR,
-	MIXED,
+	MERGED,
 	A2MODE_TOTAL_COUNT
 };
 
 enum class BeamState_e
 {
-	UNKNOWN,
+	UNKNOWN = 0,
 	NBHBLANK,			// HBLANK not in border
 	NBVBLANK,			// VBLANK not in border
 	BORDER_LEFT,
@@ -32,20 +32,23 @@ enum class BeamState_e
 	BEAMSTATE_TOTAL_COUNT
 };
 
-// Those could be anywhere up to 6 or 7 cycles for horizontal borders
-// and a lot more for vertical borders. We just decided on a size
+// There could be anywhere up to 6 or 7 cycles for horizontal borders
+// and a lot more for vertical borders.
 // But SHR starts VBLANK just like legacy modes, at scanline 192. Hence
 // it has 8 less bottom border scanlines than legacy.
-// #define _A2_BORDER_W_CYCLES 5
-// #define _A2_BORDER_H_SCANLINES 8*2		// Multiples of 8
+// Vertical borders must be in multiples of 8 to ensure the shader works
+// properly given the text modes
+constexpr uint32_t _BORDER_WIDTH_MAX_CYCLES = 7;
+constexpr uint32_t _BORDER_HEIGHT_MAX_MULT8 = 3;	// 3*8 scanlines
+
+// Our arbitrary start of a new frame. It should be inside VBLANK and
+// after the maximum bottom border size, but before the top border
+constexpr uint32_t _SCANLINE_START_FRAME = 200 + (_BORDER_HEIGHT_MAX_MULT8 * 8) + 1;
 
 // Legacy mode VRAM is 4 bytes (main, aux, flags, colors)
 // for each "byte" of screen use
 // colors are 4-bit each of fg and bg colors as in the Apple 2gs
 
-// constexpr uint32_t _BEAM_VRAM_WIDTH_LEGACY = (40 + (2 * _A2_BORDER_W_CYCLES));	// in 4 bytes!
-// constexpr uint32_t _BEAM_VRAM_HEIGHT_LEGACY = 192 + (2 * _A2_BORDER_H_SCANLINES);
-// constexpr uint32_t _BEAM_VRAM_SIZE_LEGACY = _BEAM_VRAM_WIDTH_LEGACY * _BEAM_VRAM_HEIGHT_LEGACY * 4;	// in bytes
 
 // SHR mode VRAM is the standard bytes of screen use ($2000 to $9CFF)
 // plus, for each of the 200 lines, at the beginning of the line draw
@@ -64,9 +67,6 @@ enum class BeamState_e
 // The BORDER bytes have the exact border color in their lower 4 bits
 // Each SHR cycle is 4 bytes, and each byte is 4 pixels (2x2 when in 320 mode)
 constexpr uint32_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
-// constexpr uint32_t _BEAM_VRAM_WIDTH_SHR = _COLORBYTESOFFSET + (2 * _A2_BORDER_W_CYCLES * 4) + 160;
-// constexpr uint32_t _BEAM_VRAM_HEIGHT_SHR = 200 + (2 * _A2_BORDER_H_SCANLINES);
-// constexpr uint32_t _BEAM_VRAM_SIZE_SHR = _BEAM_VRAM_WIDTH_SHR * _BEAM_VRAM_HEIGHT_SHR;
 
 class A2VideoManager
 {
@@ -98,6 +98,7 @@ public:
 		A2Mode_e mode = A2Mode_e::LEGACY;
 		uint8_t* vram_legacy = nullptr;
 		uint8_t* vram_shr = nullptr;
+		GLfloat* offset_buffer = nullptr;
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -128,8 +129,10 @@ public:
 	const uint32_t GetVRAMReadId() { return vrams_read->id; };
 	const uint8_t* GetLegacyVRAMReadPtr() { return vrams_read->vram_legacy; };
 	const uint8_t* GetSHRVRAMReadPtr() { return vrams_read->vram_shr; };
+	const GLfloat* GetOffsetBufferReadPtr() { return vrams_read->offset_buffer; };
 	uint8_t* GetLegacyVRAMWritePtr() { return vrams_write->vram_legacy; };
 	uint8_t* GetSHRVRAMWritePtr() { return vrams_write->vram_shr; };
+	GLfloat* GetOffsetBufferWritePtr() { return vrams_write->offset_buffer; };
 	GLuint GetOutputTextureId();	// merged output
 	void ActivateBeam();	// The apple 2 is rendering!
 	void DeactivateBeam();	// We don't have a connection to the Apple 2!
@@ -169,6 +172,9 @@ private:
 		Initialize();
 	}
 	void StartNextFrame();
+	void SwitchToMergedMode(uint32_t scanline);
+	void InitializeFullQuad();
+	void PrepareOffsetTexture();
 
 	//////////////////////////////////////////////////////////////////////////
 	// Internal data
@@ -177,6 +183,7 @@ private:
 	bool bA2VideoEnabled = true;			// Is standard Apple 2 video enabled?
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
     bool bIsRebooting = false;              // Rebooting semaphore
+	bool bIsSwitchingToMergedMode = false;	// True when refreshing earlier scanlines for merged mode
 
 	// beam render state variables
 	bool bBeamIsActive = false;				// Is the beam active?
@@ -196,6 +203,8 @@ private:
 	GLuint merged_texture_id;	// the merged texture that merges both legacy+shr
 	GLuint output_texture_id;	// the actual output texture (could be legacy/shr/merged)
 	GLuint FBO_merged = UINT_MAX;		// the framebuffer object for the merge
+	GLuint quadVAO = UINT_MAX;
+	GLuint quadVBO = UINT_MAX;
 
 	// OFFSET buffer texture. Holds one signed int for each scanline to tell the shader
 	// how much to offset by x a line for the sine wobble of the merge
@@ -205,7 +214,6 @@ private:
 	//			positive_offset = 4 - 1.1205^(-d+28)
 	// where d is the distance in scanlines from the mode switch
 	// Essentially the curve moves from +/- 16 pixels when d is 0 back down to 0 when d is 20
-	int8_t* offset_buffer = nullptr;
 	bool offsetTextureExists = false;
 	unsigned int OFFSETTEX = UINT_MAX;
 	A2Mode_e merge_last_change_mode = A2Mode_e::NONE;
@@ -219,11 +227,11 @@ private:
 	uint32_t borders_h_scanlines = 8 * 2;	// multiple of 8
 
 	// The merged framebuffer width is going to be shr + border
-	uint32_t fb_width = 0;
-	uint32_t fb_height = 0;
+	GLint fb_width = 0;
+	GLint fb_height = 0;
 	// The actual final output width and height
-	uint32_t output_width = 0;
-	uint32_t output_height = 0;
+	GLint output_width = 0;
+	GLint output_height = 0;
 };
 #endif // A2VIDEOMANAGER_H
 

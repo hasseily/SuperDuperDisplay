@@ -89,6 +89,7 @@ GLuint A2WindowBeam::GetOutputTextureId()
 GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 {
 	// std::cerr << "Rendering " << (int)video_mode << " - " << shouldUpdateDataInGPU << std::endl;
+	// std::cerr << "border w " << border_width_cycles << " - h " << border_height_scanlines << std::endl;
 	if (!shader.isReady)
 		return UINT32_MAX;
 	if (vertices.size() == 0)
@@ -112,8 +113,8 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 		glBindTexture(GL_TEXTURE_2D, output_texture_id);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_count.x, screen_count.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);

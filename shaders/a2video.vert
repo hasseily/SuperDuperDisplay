@@ -9,7 +9,6 @@ layout (location = 0) in vec2 aPos;         // -1,1 relative position
 layout (location = 1) in vec2 pixelPos;     // pixel absolute position
 
 out vec2 vFragPos;      // pixel position
-out vec2 vTexCoords;    // relative position
 // out vec3 vColor;    // DEBUG for non-textured display
 
 uniform int ticks;      // ms since start
@@ -20,8 +19,5 @@ void main()
     // In A2Video the window always spans the whole screen
     gl_Position = vec4(aPos.xy, 0.0, 1.0); 
 
-    // pixelPos is the pixel coords of the vertex
     vFragPos = pixelPos;
-
-    vTexCoords = aPos;
 }
