@@ -492,6 +492,8 @@ int main(int argc, char* argv[])
 					if (ImGui::SliderInt("Horizontal Borders", &border_w_slider_val, 0, _BORDER_WIDTH_MAX_CYCLES, "%d", 1)
 						|| ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, _BORDER_HEIGHT_MAX_MULT8, "%d", 1))
 						a2VideoManager->SetBordersWithReinit(border_w_slider_val, border_h_slider_val);
+					if (ImGui::Checkbox("Force SHR width", &a2VideoManager->bForceSHRWidth))
+						a2VideoManager->ForceBeamFullScreenRender();
 					if (ImGui::Button("Run Vertical Refresh"))
 						a2VideoManager->ForceBeamFullScreenRender();
 					if (ImGui::SliderInt("Border Color (0xC034)", &memManager->switch_c034, 0, 15))

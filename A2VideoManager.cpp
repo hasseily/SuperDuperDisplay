@@ -926,7 +926,7 @@ GLuint A2VideoManager::Render()
 		// Both are active in this frame, we need to do the merge
 
 		// first render Legacy in its viewport
-		auto legacy_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
+		uint32_t legacy_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
 		auto legacy_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
 		glViewport(0, 0, legacy_width, legacy_height);
 		GLuint legacy_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
@@ -958,6 +958,7 @@ GLuint A2VideoManager::Render()
 		glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
 		shader_merge.setInt("legacyTex", GL_TEXTURE13 - GL_TEXTURE0);
 		shader_merge.setVec2("legacySize", legacy_width, legacy_height);
+		shader_merge.setInt("forceSHRWidth", bForceSHRWidth);
 
 		glActiveTexture(GL_TEXTURE14);
 		glBindTexture(GL_TEXTURE_2D, shr_texture_id);
@@ -989,7 +990,10 @@ GLuint A2VideoManager::Render()
 	// ===============================================================================
 	else if (vrams_read->mode == A2Mode_e::LEGACY) {
 		// Only legacy is active, just bind the correct output for the postprocessor
-		output_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
+		if (bForceSHRWidth == 0)
+			output_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
+		else
+			output_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
 		output_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
 		glViewport(0, 0, output_width, output_height);
 		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);

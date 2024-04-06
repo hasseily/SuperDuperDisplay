@@ -113,6 +113,8 @@ public:
 
     bool bShouldReboot = false;             // When an Appletini reboot packet arrives
 	uXY ScreenSize();
+
+	bool bForceSHRWidth = false;			// forces the legacy to have the SHR width
 	
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
