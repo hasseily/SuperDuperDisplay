@@ -441,13 +441,13 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			{
 				// 14 -> 16MHz
 				merge_last_change_y = _TR_ANY_Y;
-				std::cerr << "merge to 16 " << merge_last_change_y << std::endl;
+				// std::cerr << "merge to 16 " << merge_last_change_y << std::endl;
 			}
 			else if ((merge_last_change_mode == A2Mode_e::SHR) && (_curr_mode == A2Mode_e::LEGACY))
 			{
 				// 16 -> 14MHz
 				merge_last_change_y = _TR_ANY_Y;
-				std::cerr << "merge to 14 " << merge_last_change_y << std::endl;
+				// std::cerr << "merge to 14 " << merge_last_change_y << std::endl;
 			}
 			merge_last_change_mode = _curr_mode;
 
@@ -468,7 +468,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 				else
 					vrams_write->offset_buffer[_TR_ANY_Y] = 10.f + pixelShift / 640.f;
 			}
-			std::cerr << "Offset: " << vrams_write->offset_buffer[_TR_ANY_Y] << " y: " << _TR_ANY_Y << std::endl;
+			// std::cerr << "Offset: " << vrams_write->offset_buffer[_TR_ANY_Y] << " y: " << _TR_ANY_Y << std::endl;
 		}
 	}
 
