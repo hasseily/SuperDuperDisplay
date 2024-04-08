@@ -95,7 +95,7 @@ public:
 		uint32_t id = 0;
 		uint64_t frame_idx = 0;
 		bool bWasRendered = false;
-		A2Mode_e mode = A2Mode_e::LEGACY;
+		A2Mode_e mode = A2Mode_e::NONE;
 		uint8_t* vram_legacy = nullptr;
 		uint8_t* vram_shr = nullptr;
 		GLfloat* offset_buffer = nullptr;

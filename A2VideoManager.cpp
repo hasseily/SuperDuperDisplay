@@ -183,6 +183,8 @@ void A2VideoManager::Initialize()
 	{
 		vrams_array[i].id = i;
 		vrams_array[i].frame_idx = current_frame_idx + i;
+		vrams_array[i].bWasRendered = false;
+		vrams_array[i].mode = A2Mode_e::LEGACY;
 		if (vrams_array[i].vram_legacy != nullptr)
 			delete[] vrams_array[i].vram_legacy;
 		if (vrams_array[i].vram_shr != nullptr)
@@ -196,9 +198,8 @@ void A2VideoManager::Initialize()
 		memset(vrams_array[i].vram_shr, 0, GetVramSizeSHR());
 		memset(vrams_array[i].offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
 	}
-	vrams_write = &vrams_array[current_frame_idx % 2];
-	vrams_read = &vrams_array[1 - (current_frame_idx % 2)];
-
+	vrams_write = &vrams_array[0];
+	vrams_read = &vrams_array[1];
 
 	auto memMgr = MemoryManager::GetInstance();
 
@@ -273,23 +274,21 @@ void A2VideoManager::SetBordersWithReinit(uint8_t width_cycles, uint8_t height_8
 
 void A2VideoManager::StartNextFrame()
 {
-	// std::cerr << "starting next frame at current index: " << current_frame_idx << std::endl;
 	// start the next frame
 	// set the frame index for the buffer we'll move to reading
-	vrams_write->frame_idx = current_frame_idx;
-	++current_frame_idx;
+	vrams_write->frame_idx = ++current_frame_idx;
+	// std::cerr << "starting next frame at current index: " << current_frame_idx << std::endl;
+
 	// Flip the double buffers
-	if (vrams_read->bWasRendered)
-	{
-		vrams_read->bWasRendered = false;
-		auto _vtmp = vrams_write;
-		vrams_write = vrams_read;
-		vrams_read = _vtmp;
-		memset(vrams_write->vram_legacy, 0, GetVramSizeLegacy());
-		memset(vrams_write->vram_shr, 0, GetVramSizeSHR());
-		memset(vrams_write->offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
-	}
-	// reset the mode at each vblank
+	vrams_read->bWasRendered = false;
+	auto _vtmp = vrams_write;
+	vrams_write = vrams_read;
+	vrams_read = _vtmp;
+	memset(vrams_write->vram_legacy, 0, GetVramSizeLegacy());
+	memset(vrams_write->vram_shr, 0, GetVramSizeSHR());
+	memset(vrams_write->offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
+
+	// At each vblank reset the mode
 	vrams_write->mode = A2Mode_e::NONE;
 	// Update the current region info
 	current_region = CycleCounter::GetInstance()->GetVideoRegion();
@@ -727,34 +726,32 @@ void A2VideoManager::ForceBeamFullScreenRender()
 {
 	// Move the beam over the whole screen
 	auto totalscanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
-	// Start right after the frame flip in the VBLANK non-border area
-	int starty = _SCANLINE_START_FRAME + 1;
+	// Start 2 lines after the frame flip in the VBLANK non-border area
+	// and end 1 line after the frame flip, so we guarantee a clean frame flip
+	int starty = _SCANLINE_START_FRAME + 2;
 	beamState = BeamState_e::NBVBLANK;
-	// Run both frames
-	for (size_t i = 0; i < 1; i++)
+
+	for (uint32_t y = starty; y < totalscanlines; y++)
 	{
-		rendered_frame_idx = vrams_write->frame_idx;
-		for (uint32_t y = starty; y < totalscanlines; y++)
+		for (uint32_t x = 0; x < 65; x++)
 		{
-			for (uint32_t x = 0; x < 65; x++)
-			{
-				this->BeamIsAtPosition(x, y);
-			}
+			this->BeamIsAtPosition(x, y);
 		}
-		for (uint32_t y = 0; y < starty; y++)
-		{
-			if (y == 50)
-				MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
-			if (y == 130)
-				MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
-			for (uint32_t x = 0; x < 65; x++)
-			{
-				this->BeamIsAtPosition(x, y);
-			}
-		}
-		std::cerr << "finished FBFSR" << std::endl;
-		// the last y value (_SCANLINE_START_FRAME) flips the frame
 	}
+	for (uint32_t y = 0; y < starty; y++)
+	{
+		//if (y == 50)
+		//	MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
+		//if (y == 130)
+		//	MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
+		for (uint32_t x = 0; x < 65; x++)
+		{
+			this->BeamIsAtPosition(x, y);
+		}
+	}
+	std::cerr << "finished FBFSR" << std::endl;
+	// the y value _SCANLINE_START_FRAME flips the frame
+
 }
 
 uXY A2VideoManager::ScreenSize()
@@ -853,6 +850,8 @@ GLuint A2VideoManager::Render()
 		glGenFramebuffers(1, &FBO_merged);
 		glGenTextures(1, &merged_texture_id);
 
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
+
 		glActiveTexture(_TEXUNIT_POSTPROCESS);
 		glBindTexture(GL_TEXTURE_2D, merged_texture_id);
 
@@ -862,8 +861,6 @@ GLuint A2VideoManager::Render()
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, merged_texture_id, 0);
 
 		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -936,12 +933,14 @@ GLuint A2VideoManager::Render()
 		uint32_t legacy_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
 		auto legacy_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
 		glViewport(0, 0, legacy_width, legacy_height);
+		// std::cerr << "Rendering merged legacy to viewport " << legacy_width << " x " << legacy_height << std::endl;
 		GLuint legacy_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
 
 		// Then render SHR in our viewport which is the same as SHR
 		output_width = fb_width;
 		output_height = fb_height;
 		glViewport(0, 0, output_width, output_height);
+		// std::cerr << "Rendering merged SHR to viewport " << output_width << " x " << output_height << std::endl;
 		GLuint shr_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
 
 		// Setup for merged rendering
@@ -1001,7 +1000,7 @@ GLuint A2VideoManager::Render()
 		output_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
 		glViewport(0, 0, output_width, output_height);
 		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
-		// std::cerr << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
+		// std::cerr << "Rendering legacy to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "Legacy Mode draw error: " << glerr << std::endl;
 		}
@@ -1015,7 +1014,7 @@ GLuint A2VideoManager::Render()
 		output_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
 		glViewport(0, 0, output_width, output_height);
 		output_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
-		// std::cerr << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
+		// std::cerr << "Rendering SHR to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "SHR Mode draw error: " << glerr << std::endl;
 		}
@@ -1023,12 +1022,18 @@ GLuint A2VideoManager::Render()
 	glActiveTexture(_TEXUNIT_POSTPROCESS);
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
 
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "A2VideoManager Bind Texture error: " << glerr << std::endl;
+	}
 
 	// cleanup
 	glActiveTexture(GL_TEXTURE0);
 	glUseProgram(0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "A2VideoManager glViewport error: " << glerr << std::endl;
+	}
 
 	// all done, the texture for this Apple 2 beam cycle frame is rendered
 	rendered_frame_idx = vrams_read->frame_idx;

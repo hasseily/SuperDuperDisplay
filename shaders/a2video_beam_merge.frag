@@ -37,11 +37,16 @@ out vec4 fragColor;
 void main()
 {
 	float xOffset = texelFetch(OFFSETTEX, ivec2(0, gl_FragCoord.y/2.0), 0).r;
-	if (xOffset < 0.0)
-		if (forceSHRWidth == 0)	// Legacy is centered, in its original size
-			fragColor = texture(legacyTex, vec2(vTexCoords.x*shrSize.x/legacySize.x - (shrSize.x-legacySize.x)/(shrSize.x*2.0f) + xOffset + 10.f, vTexCoords.y * shrSize.y/legacySize.y));
-		else					// Legacy is stretched horizontally to SHR size
+	if (xOffset < 0.0) {			// LEGAGY
+		if (forceSHRWidth == 0) {	// Legacy is centered, in its original size
+			fragColor = texture(legacyTex, 
+									vec2(vTexCoords.x*shrSize.x/legacySize.x - (shrSize.x-legacySize.x)/(legacySize.x*2.0f) + xOffset + 10.f,
+										 vTexCoords.y * shrSize.y/legacySize.y - (shrSize.y-legacySize.y)/(legacySize.y*2.0f))
+								);
+		} else {					// Legacy is stretched horizontally to SHR size
 			fragColor = texture(legacyTex, vec2(vTexCoords.x + xOffset + 10.f, vTexCoords.y * shrSize.y/legacySize.y));
-	else
+		}
+	} else {						// SHR
 		fragColor = texture(shrTex, vec2(vTexCoords.x + xOffset - 10.f, vTexCoords.y));
+	}
 }
