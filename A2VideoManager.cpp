@@ -179,12 +179,10 @@ void A2VideoManager::Initialize()
 
 	oglHelper = OpenGLHelper::GetInstance();
 	bIsReady = false;
-	current_frame_idx = 0;
 	for (int i = 0; i < 2; i++)
 	{
 		vrams_array[i].id = i;
-		vrams_array[i].frame_idx = i;
-		vrams_array[i].mode = A2Mode_e::SHR;
+		vrams_array[i].frame_idx = current_frame_idx + i;
 		if (vrams_array[i].vram_legacy != nullptr)
 			delete[] vrams_array[i].vram_legacy;
 		if (vrams_array[i].vram_shr != nullptr)
@@ -222,9 +220,7 @@ void A2VideoManager::Initialize()
 	fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
 	fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
 
-	// We don't know the beam state
-	// Wait until beam is at position (0,0) to start
-	beamState = BeamState_e::UNKNOWN;
+	beamState = BeamState_e::NBVBLANK;
 
 	shader_merge.build(_SHADER_VERTEX_BASIC, _SHADER_BEAM_MERGE_FRAGMENT);
 	offsetTextureExists = false;
@@ -277,7 +273,7 @@ void A2VideoManager::SetBordersWithReinit(uint8_t width_cycles, uint8_t height_8
 
 void A2VideoManager::StartNextFrame()
 {
-	std::cerr << "starting next frame at current index: " << current_frame_idx << std::endl;
+	// std::cerr << "starting next frame at current index: " << current_frame_idx << std::endl;
 	// start the next frame
 	// set the frame index for the buffer we'll move to reading
 	vrams_write->frame_idx = current_frame_idx;
@@ -706,6 +702,16 @@ void A2VideoManager::SwitchToMergedMode(uint32_t scanline)
 	vrams_write->mode = A2Mode_e::MERGED;
 	auto memMgr = MemoryManager::GetInstance();
 	memMgr->SetSoftSwitch(A2SS_SHR, !memMgr->IsSoftSwitch(A2SS_SHR));
+	auto totalscanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
+	int starty = _SCANLINE_START_FRAME + 1;
+	beamState = BeamState_e::NBVBLANK;
+	for (uint32_t y = starty; y < totalscanlines; y++)
+	{
+		for (uint32_t x = 0; x < 65; x++)
+		{
+			this->BeamIsAtPosition(x, y);
+		}
+	}
 	for (uint32_t y = 0; y < scanline; y++)
 	{
 		for (uint32_t x = 0; x < 65; x++)
@@ -725,7 +731,7 @@ void A2VideoManager::ForceBeamFullScreenRender()
 	int starty = _SCANLINE_START_FRAME + 1;
 	beamState = BeamState_e::NBVBLANK;
 	// Run both frames
-	for (size_t i = 0; i < 2; i++)
+	for (size_t i = 0; i < 1; i++)
 	{
 		rendered_frame_idx = vrams_write->frame_idx;
 		for (uint32_t y = starty; y < totalscanlines; y++)
@@ -746,6 +752,7 @@ void A2VideoManager::ForceBeamFullScreenRender()
 				this->BeamIsAtPosition(x, y);
 			}
 		}
+		std::cerr << "finished FBFSR" << std::endl;
 		// the last y value (_SCANLINE_START_FRAME) flips the frame
 	}
 }
@@ -990,14 +997,14 @@ GLuint A2VideoManager::Render()
 	// ===============================================================================
 	else if (vrams_read->mode == A2Mode_e::LEGACY) {
 		// Only legacy is active, just bind the correct output for the postprocessor
-		if (bForceSHRWidth == 0)
-			output_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
-		else
-			output_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
+		output_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
 		output_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
 		glViewport(0, 0, output_width, output_height);
 		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
 		// std::cerr << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "Legacy Mode draw error: " << glerr << std::endl;
+		}
 	}
 	// ===============================================================================
 	// =============================== SHR MODE RENDER ===============================
@@ -1009,13 +1016,13 @@ GLuint A2VideoManager::Render()
 		glViewport(0, 0, output_width, output_height);
 		output_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
 		// std::cerr << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "SHR Mode draw error: " << glerr << std::endl;
+		}
 	}
 	glActiveTexture(_TEXUNIT_POSTPROCESS);
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
-	
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL draw error: " << glerr << std::endl;
-	}
+
 
 	// cleanup
 	glActiveTexture(GL_TEXTURE0);
