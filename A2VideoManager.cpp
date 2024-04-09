@@ -702,7 +702,7 @@ void A2VideoManager::SwitchToMergedMode(uint32_t scanline)
 	auto memMgr = MemoryManager::GetInstance();
 	memMgr->SetSoftSwitch(A2SS_SHR, !memMgr->IsSoftSwitch(A2SS_SHR));
 	auto totalscanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
-	int starty = _SCANLINE_START_FRAME + 1;
+	int starty = _SCANLINE_START_FRAME + 2;
 	beamState = BeamState_e::NBVBLANK;
 	for (uint32_t y = starty; y < totalscanlines; y++)
 	{
