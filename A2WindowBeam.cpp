@@ -173,9 +173,6 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		if (vramTextureExists)	// it exists, do a glTexSubImage2D() update
 		{
 			switch (video_mode) {
-			case A2VIDEOBEAM_LEGACY:
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_h_with_border, 192 + (2 * border_height_scanlines), GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
-				break;
 			case A2VIDEOBEAM_SHR:
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -189,9 +186,6 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		}
 		else {	// texture doesn't exist, create it with glTexImage2D()
 			switch (video_mode) {
-			case A2VIDEOBEAM_LEGACY:
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_h_with_border, 192 + (2 * border_height_scanlines), 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
-				break;
 			case A2VIDEOBEAM_SHR:
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
