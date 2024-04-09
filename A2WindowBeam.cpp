@@ -51,9 +51,6 @@ void A2WindowBeam::SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vert
 	// Legacy is 14 dots per cycle, SHR is 16 dots per cycle
 	// Multiply border size by 4 and not 2 because height is doubled
 	switch (video_mode) {
-	case A2VIDEOBEAM_LEGACY:
-		screen_count = uXY({ cycles_h_with_border * 14, 384 + (4 * border_height_scanlines) });
-		break;
 	case A2VIDEOBEAM_SHR:
 		screen_count = uXY({ cycles_h_with_border * 16 , 400 + (4 * border_height_scanlines) });
 		break;

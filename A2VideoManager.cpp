@@ -201,8 +201,6 @@ void A2VideoManager::Initialize()
 	vrams_write = &vrams_array[0];
 	vrams_read = &vrams_array[1];
 
-	auto memMgr = MemoryManager::GetInstance();
-
 	// Set up the image assets (textures)
 	// Assign them their respective GPU texture id
 	*image_assets = {};
