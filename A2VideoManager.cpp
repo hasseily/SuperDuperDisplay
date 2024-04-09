@@ -425,7 +425,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
 
 		if ((vrams_write->mode == A2Mode_e::MERGED) &&
-			(beamState == BeamState_e::CONTENT || beamState == BeamState_e::BORDER_RIGHT))
+			(beamState == BeamState_e::CONTENT || beamState == BeamState_e::BORDER_RIGHT
+			 || beamState == BeamState_e::BORDER_TOP  || beamState == BeamState_e::BORDER_BOTTOM))
 		{
 			// Merge mode calculations
 			// determine the mode switch and update merge_last_change_mode and merge_last_change_y
@@ -522,7 +523,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 				break;
 			}
 			// Get the color info for the 4 bytes where the beam is
-			auto contentOffset = _COLORBYTESOFFSET + (borders_w_cycles * 4);
 			auto xfb = (_x - CYCLES_SC_HBL) * 4;	// the x first byte, given that every beam cycle renders 4 bytes
 			auto scb = lineStartPtr[0];
 			memcpy(lineStartPtr + _COLORBYTESOFFSET + _TR_ANY_X * 4,
