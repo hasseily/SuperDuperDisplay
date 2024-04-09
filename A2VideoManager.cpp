@@ -740,16 +740,16 @@ void A2VideoManager::ForceBeamFullScreenRender()
 	}
 	for (uint32_t y = 0; y < starty; y++)
 	{
-		//if (y == 50)
-		//	MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
-		//if (y == 130)
-		//	MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
+		if (y == 50)
+			MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
+		if (y == 130)
+			MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
 		for (uint32_t x = 0; x < 65; x++)
 		{
 			this->BeamIsAtPosition(x, y);
 		}
 	}
-	std::cerr << "finished FBFSR" << std::endl;
+	// std::cerr << "finished FBFSR" << std::endl;
 	// the y value _SCANLINE_START_FRAME flips the frame
 
 }
@@ -917,7 +917,7 @@ GLuint A2VideoManager::Render()
 	if (rendered_frame_idx == vrams_read->frame_idx)
 		return output_texture_id;
 
-	std::cerr << "--- Actual Render: " << vrams_read->frame_idx << std::endl;
+	// std::cerr << "--- Actual Render: " << vrams_read->frame_idx << std::endl;
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
 
 	// ===============================================================================
