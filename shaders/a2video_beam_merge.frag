@@ -41,10 +41,12 @@ void main()
 		if (forceSHRWidth == 0) {	// Legacy is centered, in its original size
 			fragColor = texture(legacyTex, 
 									vec2(vTexCoords.x*shrSize.x/legacySize.x - (shrSize.x-legacySize.x)/(legacySize.x*2.0f) + xOffset + 10.f,
-										 vTexCoords.y * shrSize.y/legacySize.y - (shrSize.y-legacySize.y)/(legacySize.y*2.0f))
+										 vTexCoords.y * shrSize.y/legacySize.y)
 								);
 		} else {					// Legacy is stretched horizontally to SHR size
-			fragColor = texture(legacyTex, vec2(vTexCoords.x + xOffset + 10.f, vTexCoords.y * shrSize.y/legacySize.y));
+			fragColor = texture(legacyTex, 
+								vec2(vTexCoords.x + xOffset + 10.f, 
+									 vTexCoords.y * shrSize.y/legacySize.y));
 		}
 	} else {						// SHR
 		fragColor = texture(shrTex, vec2(vTexCoords.x + xOffset - 10.f, vTexCoords.y));
