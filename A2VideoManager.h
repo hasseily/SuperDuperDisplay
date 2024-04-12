@@ -164,6 +164,8 @@ public:
 	}
 	~A2VideoManager();
     
+	void extracted();
+	
 	void Initialize();
 	void ResetComputer();
 private:
@@ -177,7 +179,8 @@ private:
 	void SwitchToMergedMode(uint32_t scanline);
 	void InitializeFullQuad();
 	void PrepareOffsetTexture();
-
+	void ResetGLData();
+	
 	//////////////////////////////////////////////////////////////////////////
 	// Internal data
 	//////////////////////////////////////////////////////////////////////////
@@ -225,8 +228,8 @@ private:
 	// and a lot more for vertical borders. We just decided on a size
 	// But SHR starts VBLANK just like legacy modes, at scanline 192. Hence
 	// it has 8 less bottom border scanlines than legacy.
-	uint32_t borders_w_cycles = 5;
-	uint32_t borders_h_scanlines = 8 * 2;	// multiple of 8
+	uint32_t borders_w_cycles = 2;
+	uint32_t borders_h_scanlines = 8 * 1;	// multiple of 8
 
 	// The merged framebuffer width is going to be shr + border
 	GLint fb_width = 0;

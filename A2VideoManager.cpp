@@ -158,18 +158,7 @@ A2VideoManager::~A2VideoManager()
 	}
 	delete[] vrams_array;
 
-	if (OFFSETTEX != UINT_MAX)
-		glDeleteTextures(1, &OFFSETTEX);
-	if (quadVAO != UINT_MAX)
-	{
-		glDeleteVertexArrays(1, &quadVAO);
-		glDeleteBuffers(1, &quadVBO);
-	}
-	if (FBO_merged != UINT_MAX)
-	{
-		glDeleteFramebuffers(1, &FBO_merged);
-		glDeleteTextures(1, &merged_texture_id);
-	}
+	ResetGLData();
 }
 
 void A2VideoManager::Initialize()
@@ -177,6 +166,8 @@ void A2VideoManager::Initialize()
 	// Here do not reinitialize bBeamIsActive. It could still be active from earlier.
 	// The initialization process can be triggered from a ctrl-reset on the Apple 2.
 
+	ResetGLData();
+	
 	oglHelper = OpenGLHelper::GetInstance();
 	bIsReady = false;
 	for (int i = 0; i < 2; i++)
@@ -230,6 +221,23 @@ void A2VideoManager::Initialize()
 	bIsReady = true;
 }
 
+void A2VideoManager::ResetGLData() {
+	if (OFFSETTEX != UINT_MAX)
+		glDeleteTextures(1, &OFFSETTEX);
+	if (quadVAO != UINT_MAX)
+	{
+		glDeleteVertexArrays(1, &quadVAO);
+		glDeleteBuffers(1, &quadVBO);
+	}
+	if (FBO_merged != UINT_MAX)
+	{
+		glDeleteFramebuffers(1, &FBO_merged);
+		glDeleteTextures(1, &merged_texture_id);
+	}
+	OFFSETTEX = UINT_MAX;
+	quadVAO = UINT_MAX;
+	FBO_merged = UINT_MAX;
+}
 
 void A2VideoManager::ResetComputer()
 {
