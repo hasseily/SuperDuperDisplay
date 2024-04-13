@@ -236,6 +236,7 @@ void A2VideoManager::ResetGLData() {
 	}
 	OFFSETTEX = UINT_MAX;
 	quadVAO = UINT_MAX;
+	quadVBO = UINT_MAX;
 	FBO_merged = UINT_MAX;
 }
 
@@ -371,8 +372,12 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 				beamState = BeamState_e::BORDER_LEFT;
 			break;
 		case BeamState_e::NBVBLANK:
+			// if there are no vertical borders then _y never gets to region_scanlines
+			// and we need to handle this special case
 			if (_y == (region_scanlines - borders_h_scanlines))
 				beamState = BeamState_e::BORDER_TOP;
+			else if (_y == 0 && borders_h_scanlines == 0)
+				beamState = BeamState_e::BORDER_RIGHT;
 			if (_y == _SCANLINE_START_FRAME && _x == 0)
 			{
 				// Start of NBVBLANK at which we flip the double buffering
@@ -413,16 +418,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			break;
 		_oldBeamState = beamState;
 	}
-
-	// Now we get rid of all the non-border BLANK areas to avoid an overflow on the vertical border areas.
-	// We never want to process vertical borders that are in non-border HBLANK
-	// Otherwise we'd need the vertical border states to know when they're in HBLANK as well,
-	// complicating the state machine.
-
-	if (_x >= borders_w_cycles && _x < (CYCLES_SC_HBL - borders_w_cycles))
-		return;
-	if (_y >= (mode_scanlines + borders_h_scanlines) && _y < (region_scanlines - borders_h_scanlines))
-		return;
 
 	// Always at the start of the row, set the SHR SCB to 0x10
 	// Because we check bit 4 of the SCB to know if that line is drawn as SHR
@@ -474,6 +469,16 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		}
 	}
 
+	// Now we get rid of all the non-border BLANK areas to avoid an overflow on the vertical border areas.
+	// We never want to process vertical borders that are in non-border HBLANK
+	// Otherwise we'd need the vertical border states to know when they're in HBLANK as well,
+	// complicating the state machine.
+	
+	if (_x >= borders_w_cycles && _x < (CYCLES_SC_HBL - borders_w_cycles))
+		return;
+	if (_y >= (mode_scanlines + borders_h_scanlines) && _y < (region_scanlines - borders_h_scanlines))
+		return;
+	
 	// Now generate the VRAMs themselves
 
 	if (memMgr->IsSoftSwitch(A2SS_SHR))
