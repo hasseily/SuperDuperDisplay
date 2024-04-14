@@ -163,7 +163,7 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	// Always update that buffer in the GPU
 	if (shouldUpdateDataInGPU)
 	{
-		uint32_t cycles_h_with_border = 40 + (2 * border_width_cycles);
+		uint32_t cycles_w_with_border = 40 + (2 * border_width_cycles);
 		glActiveTexture(_TEXUNIT_DATABUFFER);
 		glBindTexture(GL_TEXTURE_2D, VRAMTEX);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
@@ -173,11 +173,11 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 			case A2VIDEOBEAM_SHR:
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_h_with_border * 4), 200 + (2 * border_height_scanlines), GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_w_with_border * 4), 200 + (2 * border_height_scanlines), GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				break;
 			default:
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_h_with_border, 192 + (2 * border_height_scanlines), GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_w_with_border, 192 + (2 * border_height_scanlines), GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
 			}
 		}
@@ -186,11 +186,11 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 			case A2VIDEOBEAM_SHR:
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, _COLORBYTESOFFSET + (cycles_h_with_border * 4), 200 + (2 * border_height_scanlines), 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, _COLORBYTESOFFSET + (cycles_w_with_border * 4), 200 + (2 * border_height_scanlines), 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				break;
 			default:
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_h_with_border, 192 + (2 * border_height_scanlines), 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_w_with_border, 192 + (2 * border_height_scanlines), 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
 			}
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
