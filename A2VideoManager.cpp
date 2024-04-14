@@ -753,10 +753,11 @@ void A2VideoManager::ForceBeamFullScreenRender()
 	}
 	for (uint32_t y = 0; y < starty; y++)
 	{
-		if (y == 50)
-			MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
-		if (y == 130)
-			MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
+		// For testing the merged mode
+//		if (y == 50)
+//			MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
+//		if (y == 130)
+//			MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
 		for (uint32_t x = 0; x < 65; x++)
 		{
 			this->BeamIsAtPosition(x, y);
