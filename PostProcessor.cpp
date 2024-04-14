@@ -14,16 +14,19 @@
 // below because "The declaration of a static data member in its class definition is not a definition"
 PostProcessor* PostProcessor::s_instance;
 
-// Buffers and vertices
-// The PostProcessor will take the legacy and shr output textures and merge them together,
-// optionally adding the sine wobble if both are present in the same frame
-// Its output size needs to be at least 40 pixels wider than SHR, i.e. 680 pixels to accommodate
-// the wobble. 20 pixels on each side.
-// It will also optionally add simple scanlines, or apply a more advanced CRT shader with many parameters.
-// It will draw directly into the main SDL2 window, centering itself based on the provided
-// viewport size in the render function. It will also resize itself to maximize the available space,
-// but only in integer scale
+// The PostProcessor will take any texture that's in slot _PP_INPUT_TEXTURE_UNIT and apply the
+// postprocessing shader on it.
+// It always dynamically calculates the texture's size and properly scales it up in integer steps
+// (or down in fractional steps).
 
+// The PostProcessor shader has 3 modes of operation:
+// - A passthrough mode
+// - A simple scanline mode that makes every other scanline black
+// - A full shader mode with a kitchensink of features
+
+// To make it more optimal for low end devices that may not approve of the full shader,
+// the passthrough mode uses a basic passthrough shader instead of the full one,
+// although the full shader can handle passthrough as well.
 
 //////////////////////////////////////////////////////////////////////////
 // Basic singleton methods
