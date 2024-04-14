@@ -172,7 +172,6 @@ void MosaicMesh::SetupDraw()
 	}
 
 	GLenum glerr;
-	auto oglHelper = OpenGLHelper::GetInstance();
 	shaderProgram->use();
 	shaderProgram->setInt("ticks", SDL_GetTicks() - ticks_since_first_render);
 	shaderProgram->setFloat("pixelSize", pixelSize);

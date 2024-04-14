@@ -414,7 +414,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			sockaddr_in src_addr;
 			socklen_t addrlen = sizeof(src_addr);
 			
-			packet->size = recvfrom(sockfd, reinterpret_cast<char*>(packet->data), PKT_BUFSZ, 0, (struct sockaddr *)&src_addr, &addrlen);
+			packet->size = (uint32_t)recvfrom(sockfd, reinterpret_cast<char*>(packet->data), PKT_BUFSZ, 0, (struct sockaddr *)&src_addr, &addrlen);
 			++num_packets_received;
 			if (!eventRecorder->IsInReplayMode())
 				packetInQueue.push(std::move(packet));
