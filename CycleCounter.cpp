@@ -43,8 +43,9 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 	{
 		if (m_cycle < CYCLES_SCREEN)
 		{
+			m_cycle_alignments++;
 			// determine the region
-			if ((m_cycle_alignments > 0) && (m_cycle < (CYCLES_SCREEN - cycles_vblank)))
+			if ((m_cycle_alignments > 1) && (m_cycle < (CYCLES_SCREEN - cycles_vblank)))
 			{
 				// If we've already done one cycle alignment at least, then if we're in the
 				// correct region we're certain that the VBL is beyond (CYCLES_SCREEN - cycles_vblank).
@@ -64,7 +65,6 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 				A2VideoManager::GetInstance()->BeamIsAtPosition(GetByteXPos(), GetScanline());
 				++m_cycle;
 			}
-			m_cycle_alignments++;
 			std::cout << "VBL Alignment " << m_cycle_alignments
 				<< ": " << m_prev_vbl_start << " ---> " << m_cycle << std::endl;
 		}
