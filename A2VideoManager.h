@@ -32,6 +32,20 @@ enum class BeamState_e
 	BEAMSTATE_TOTAL_COUNT
 };
 
+static std::string BeamStateToString(BeamState_e state) {
+	switch(state) {
+		case BeamState_e::UNKNOWN: return "UNKNOWN";
+		case BeamState_e::NBHBLANK: return "NBHBLANK";
+		case BeamState_e::NBVBLANK: return "NBVBLANK";
+		case BeamState_e::BORDER_LEFT: return "BORDER_LEFT";
+		case BeamState_e::BORDER_RIGHT: return "BORDER_RIGHT";
+		case BeamState_e::BORDER_TOP: return "BORDER_TOP";
+		case BeamState_e::BORDER_BOTTOM: return "BORDER_BOTTOM";
+		case BeamState_e::CONTENT: return "CONTENT";
+		default: return "INVALID_STATE";
+	}
+}
+
 // There could be anywhere up to 6 or 7 cycles for horizontal borders
 // and a lot more for vertical borders.
 // But SHR starts VBLANK just like legacy modes, at scanline 192. Hence

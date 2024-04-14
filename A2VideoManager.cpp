@@ -211,7 +211,9 @@ void A2VideoManager::Initialize()
 	fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
 
 	beamState = BeamState_e::NBVBLANK;
-
+	merge_last_change_mode = A2Mode_e::NONE;
+	merge_last_change_y = UINT_MAX;
+	
 	shader_merge.build(_SHADER_VERTEX_BASIC, _SHADER_BEAM_MERGE_FRAGMENT);
 	offsetTextureExists = false;
 
@@ -413,9 +415,11 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			break;
 		default:
 			break;
+			break;
 		}
 		if (_oldBeamState == beamState)
 			break;
+		// std::cerr << "switched " << BeamStateToString(_oldBeamState) << " --> " << BeamStateToString(beamState) << std::endl;
 		_oldBeamState = beamState;
 	}
 
@@ -427,9 +431,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	{
 		vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
 
-		if ((vrams_write->mode == A2Mode_e::MERGED) &&
-			(beamState == BeamState_e::CONTENT || beamState == BeamState_e::BORDER_RIGHT
-			 || beamState == BeamState_e::BORDER_TOP  || beamState == BeamState_e::BORDER_BOTTOM))
+		if ((vrams_write->mode == A2Mode_e::MERGED) && _TR_ANY_Y < (200 + 2*borders_h_scanlines))
 		{
 			// Merge mode calculations
 			// determine the mode switch and update merge_last_change_mode and merge_last_change_y
@@ -498,6 +500,19 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		auto memPtr = memMgr->GetApple2MemAuxPtr();
 		uint8_t* lineStartPtr = vrams_write->vram_shr + GetVramWidthSHR() * _TR_ANY_Y;
 
+		// get the SCB and palettes if we're starting a line
+		// and it's part of the content area. The top & bottom border areas don't care about SCB
+		// We may or may not have a border, so at this point the beamstate is either BORDER_LEFT or CONTENT
+		if ((_TR_ANY_X == 0) && (_y < mode_scanlines))
+		{
+			lineStartPtr[0] = memPtr[_A2VIDEO_SHR_SCB_START + _y];
+			vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = memPtr[_A2VIDEO_SHR_SCB_START + _y];
+			// Get the palette
+			memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
+				   memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
+				   32);					// palette length is 32 bytes
+		}
+		
 		switch (beamState)
 		{
 		case BeamState_e::UNKNOWN:
@@ -509,19 +524,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			// do nothing
 			break;
 		case BeamState_e::BORDER_LEFT:
-			memset(lineStartPtr + _COLORBYTESOFFSET + _TR_ANY_X * 4, (uint8_t)memMgr->switch_c034, 4);
-			// get the SCB and palettes if we're starting a line
-			// and it's part of the content area. The top & bottom border areas don't care about SCB
-			if ((_TR_ANY_X == 0) && (_y < mode_scanlines))
-			{
-				lineStartPtr[0] = memPtr[_A2VIDEO_SHR_SCB_START + _y];
-				vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = memPtr[_A2VIDEO_SHR_SCB_START + _y];
-				// Get the palette
-				memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
-					memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
-					32);					// palette length is 32 bytes
-			}
-			break;
 		case BeamState_e::BORDER_RIGHT:
 		case BeamState_e::BORDER_TOP:
 		case BeamState_e::BORDER_BOTTOM:
@@ -882,6 +884,7 @@ GLuint A2VideoManager::Render()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glActiveTexture(GL_TEXTURE0);
+		// std::cerr << "Generating FBO with size " << fb_width << " x " << fb_height << std::endl;
 	}
 
 	// Initialization routine runs only once on init (or re-init)

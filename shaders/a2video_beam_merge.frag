@@ -37,7 +37,7 @@ out vec4 fragColor;
 void main()
 {
 	float xOffset = texelFetch(OFFSETTEX, ivec2(0, gl_FragCoord.y/2.0), 0).r;
-	if (xOffset < 0.0) {			// LEGAGY
+	if (xOffset < 0.0) {			// LEGACY
 		if (forceSHRWidth == 0) {	// Legacy is centered, in its original size
 			fragColor = texture(legacyTex, 
 									vec2(vTexCoords.x*shrSize.x/legacySize.x - (shrSize.x-legacySize.x)/(legacySize.x*2.0f) + xOffset + 10.f,
