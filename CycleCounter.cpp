@@ -14,8 +14,6 @@ static bool bIsVBL = false;
 static VideoRegion_e m_region;	// We default to NTSC values unless we get a VBL in a wrong cycle
 std::mutex mtx_cycle;	// protect the cycle counter
 
-static uint32_t dbg_last_vbl_cycle = 0;
-
 uint32_t cycles_vblank;
 uint32_t cycles_total;
 
@@ -41,14 +39,16 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 	m_cycle = (m_cycle % cycles_total);
 
 	// Update VBL and region automatically with 0xC019
-	//if (isVBL)
-	if (false)
+	if (isVBL)
 	{
 		if (m_cycle < CYCLES_SCREEN)
 		{
 			// determine the region
-			if ((m_cycle_alignments > 0) && (m_cycle < 7000))	// shouldn't happen, so it's the other region
+			if ((m_cycle_alignments > 0) && (m_cycle < (CYCLES_SCREEN - cycles_vblank)))
 			{
+				// If we've already done one cycle alignment at least, then if we're in the
+				// correct region we're certain that the VBL is beyond (CYCLES_SCREEN - cycles_vblank).
+				// Hence here we've demonstrated that we're in the wrong region and should switch region.
 				std::cout << "	VBL in cycle: " << m_cycle << ". " << std::endl;
 				if (m_region == VideoRegion_e::NTSC)
 					SetVideoRegion(VideoRegion_e::PAL);

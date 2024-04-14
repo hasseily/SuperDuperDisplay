@@ -12,7 +12,7 @@ constexpr uint32_t CYCLES_SC_HBL = 25;			// always 25 cycles
 constexpr uint32_t CYCLES_SC_CONTENT = 40;		// each scanline content area is 40 bytes, 1 cycle per byte
 constexpr uint32_t CYCLES_SC_TOTAL = CYCLES_SC_CONTENT + CYCLES_SC_HBL;
 constexpr uint32_t COUNT_SC_CONTENT = 192;		// EVEN IN SHR with 200 visible lines, the VBL triggers at line 192.
-constexpr uint32_t CYCLES_SCREEN = (CYCLES_SC_CONTENT + CYCLES_SC_HBL) * COUNT_SC_CONTENT;
+constexpr uint32_t CYCLES_SCREEN = CYCLES_SC_TOTAL * COUNT_SC_CONTENT;
 constexpr uint32_t CYCLES_TOTAL_NTSC = 17030;
 constexpr uint32_t CYCLES_TOTAL_PAL = 20280;
 
