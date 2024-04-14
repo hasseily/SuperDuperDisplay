@@ -67,6 +67,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MemoryLoader.h; path = extras/MemoryLoader.h; sourceTree = "<group>"; };
 		BB8330D62B6645B300071F38 /* SuperDuperDisplay */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SuperDuperDisplay; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB96E3E12B664CDB00A3077C /* libSDL2-2.0.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libSDL2-2.0.0.dylib"; path = "../../../../../opt/homebrew/Cellar/sdl2/2.28.5/lib/libSDL2-2.0.0.dylib"; sourceTree = "<group>"; };
 		BB96E3EA2B6650BA00A3077C /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
@@ -175,6 +176,7 @@
 		BB8330D82B6645B300071F38 /* SuperDuperDisplay */ = {
 			isa = PBXGroup;
 			children = (
+				BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */,
 				BBB525022B6648A200A65C62 /* A2VideoManager.cpp */,
 				BBB524FC2B6648A100A65C62 /* A2VideoManager.h */,
 				BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */,

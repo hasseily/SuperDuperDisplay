@@ -272,6 +272,12 @@ int main(int argc, char* argv[])
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
 
+	// Load up the first screen in SHR, with green border color
+	if (MemoryLoadSHR("assets/logo.shr"))
+		{
+			memManager->switch_c034 = 12;
+			memManager->SetSoftSwitch(A2SoftSwitch_e::A2SS_SHR, true);
+		}
 	// Run a refresh to show the first screen
 	a2VideoManager->ForceBeamFullScreenRender();
 
@@ -504,7 +510,7 @@ int main(int argc, char* argv[])
 					mem_load_position = std::clamp(mem_load_position, 0, 0xFFFF);
 					ImGui::SameLine();
 					ImGui::Checkbox("Aux Bank", &mem_load_aux_bank);
-					if (MemoryLoad(mem_load_position, mem_load_aux_bank))
+					if (MemoryLoadUsingDialog(mem_load_position, mem_load_aux_bank))
 						a2VideoManager->ForceBeamFullScreenRender();
 					bool ssValue0 = memManager->IsSoftSwitch(A2SS_80STORE);
 					if (ImGui::Checkbox("A2SS_80STORE", &ssValue0)) {

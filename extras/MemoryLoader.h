@@ -4,7 +4,11 @@
 #define MEMORYLOADER_H
 
 #include <cstdint>
+#include <string>
 
-bool MemoryLoad(uint32_t position, bool bAuxBank);
+bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank);
+bool MemoryLoadHGR(std::string filePath);
+bool MemoryLoadDHR(std::string filePath);
+bool MemoryLoadSHR(std::string filePath);
 
 #endif /* MEMORYLOADER_H */
