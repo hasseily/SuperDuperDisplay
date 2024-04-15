@@ -75,6 +75,16 @@ void set_vsync(bool _on)
 		g_swapInterval = (SDL_GL_SetSwapInterval(0) != 0);		// no VSYNC
 }
 
+static void DisplaySplashScreen(A2VideoManager *&a2VideoManager, MemoryManager *&memManager) {
+	if (MemoryLoadSHR("assets/logo.shr"))
+	{
+		memManager->switch_c034 = 12;
+		memManager->SetSoftSwitch(A2SoftSwitch_e::A2SS_SHR, true);
+	}
+	// Run a refresh to show the first screen
+	a2VideoManager->ForceBeamFullScreenRender();
+}
+
 // Main code
 int main(int argc, char* argv[])
 {
@@ -201,15 +211,9 @@ int main(int argc, char* argv[])
     // Our state
 	static MemoryEditor mem_edit_a2e;
 	static MemoryEditor mem_edit_upload;
-	static MemoryEditor mem_edit_vram_legacy;
-	static MemoryEditor mem_edit_vram_shr;
-	static MemoryEditor mem_edit_offset_buffer;
 
 	mem_edit_a2e.Open = false;
 	mem_edit_upload.Open = false;
-	mem_edit_vram_legacy.Open = false;
-	mem_edit_vram_shr.Open = false;
-	mem_edit_offset_buffer.Open = false;
 
 	static bool bShouldTerminateNetworking = false;
 	static bool bShouldTerminateProcessing = false;
@@ -218,15 +222,12 @@ int main(int argc, char* argv[])
     bool show_metrics_window = false;
 	bool show_F1_window = true;
 	bool show_texture_window = false;
+	bool show_a2video_window = false;
 	bool show_postprocessing_window = false;
 	bool show_recorder_window = false;
 	int _slotnum = 0;
-	bool mem_load_aux_bank = false;
-	int mem_load_position = 0;
 	bool vbl_region_is_PAL;
 	int vbl_slider_val;
-	int border_w_slider_val;
-	int border_h_slider_val;
 	float window_bgcolor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 
 	// Get the instances of all singletons before creating threads
@@ -273,13 +274,7 @@ int main(int argc, char* argv[])
 #else
 
 	// Load up the first screen in SHR, with green border color
-	if (MemoryLoadSHR("assets/logo.shr"))
-		{
-			memManager->switch_c034 = 12;
-			memManager->SetSoftSwitch(A2SoftSwitch_e::A2SS_SHR, true);
-		}
-	// Run a refresh to show the first screen
-	a2VideoManager->ForceBeamFullScreenRender();
+	DisplaySplashScreen(a2VideoManager, memManager);
 
     while (!done)
 #endif
@@ -345,6 +340,9 @@ int main(int argc, char* argv[])
 				}
 				else if (event.key.keysym.sym == SDLK_F2) {
 					show_postprocessing_window = !show_postprocessing_window;
+				}
+				else if (event.key.keysym.sym == SDLK_F3) {
+					show_a2video_window = !show_a2video_window;
 				}
 				// Handle fullscreen toggle for Alt+Enter or F11
 				else if ((event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) ||
@@ -456,6 +454,7 @@ int main(int argc, char* argv[])
 					// std::cerr << "color " << window_bgcolor[0] << std::endl;
 				}
 				ImGui::Checkbox("PostProcessing Window (F2)", &show_postprocessing_window);
+				ImGui::Checkbox("Apple 2 Video Modes Window (F3)", &show_a2video_window);
 				if (ImGui::Checkbox("Fullscreen (F11 or Alt-Enter)", &bIsFullscreen))
 				{
 					SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
@@ -475,118 +474,17 @@ int main(int argc, char* argv[])
 				ImGui::Separator();
 				if (ImGui::Button("Reset")) {
 					a2VideoManager->ResetComputer();
+					DisplaySplashScreen(a2VideoManager, memManager);
 				}
 				if (ImGui::Button("Quit App (Ctrl-c)"))
 					done = true;
-				if (ImGui::CollapsingHeader("Windows"))
+				if (ImGui::CollapsingHeader("Other Windows"))
 				{
 					ImGui::Checkbox("Event Recorder Window", &show_recorder_window);
 					ImGui::Checkbox("Textures Window", &show_texture_window);
 					ImGui::Checkbox("Apple //e Memory Window", &mem_edit_a2e.Open);
-					ImGui::Checkbox("VRAM Legacy Memory Window", &mem_edit_vram_legacy.Open);
-					ImGui::Checkbox("VRAM SHR Memory Window", &mem_edit_vram_shr.Open);
-					ImGui::Checkbox("VRAM Offset Buffer", &mem_edit_offset_buffer.Open);
-					ImGui::Checkbox("SDHR Upload Region Memory Window", &mem_edit_upload.Open);
 					ImGui::Checkbox("ImGui Metrics Window", &show_metrics_window);
 					// ImGui::Checkbox("ImGui Demo Window", &show_demo_window);
-				}
-				if (ImGui::CollapsingHeader("Apple 2 Video"))
-				{
-					ImGui::Text("Frame ID: %d", a2VideoManager->GetVRAMReadId());
-					border_w_slider_val = a2VideoManager->GetBordersWidthCycles();
-					border_h_slider_val = a2VideoManager->GetBordersHeightScanlines() / 8;
-					if (ImGui::SliderInt("Horizontal Borders", &border_w_slider_val, 0, _BORDER_WIDTH_MAX_CYCLES, "%d", 1)
-						|| ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, _BORDER_HEIGHT_MAX_MULT8, "%d", 1))
-						a2VideoManager->SetBordersWithReinit(border_w_slider_val, border_h_slider_val);
-					if (ImGui::Checkbox("Force SHR width", &a2VideoManager->bForceSHRWidth))
-						a2VideoManager->ForceBeamFullScreenRender();
-					if (ImGui::Button("Run Vertical Refresh"))
-						a2VideoManager->ForceBeamFullScreenRender();
-					if (ImGui::SliderInt("Border Color (0xC034)", &memManager->switch_c034, 0, 15))
-						a2VideoManager->ForceBeamFullScreenRender();
-					ImGui::Text("Load Memory Start: ");
-					ImGui::SameLine();
-					ImGui::InputInt("##mem_load", &mem_load_position, 1, 1024, ImGuiInputTextFlags_CharsHexadecimal);
-					mem_load_position = std::clamp(mem_load_position, 0, 0xFFFF);
-					ImGui::SameLine();
-					ImGui::Checkbox("Aux Bank", &mem_load_aux_bank);
-					if (MemoryLoadUsingDialog(mem_load_position, mem_load_aux_bank))
-						a2VideoManager->ForceBeamFullScreenRender();
-					bool ssValue0 = memManager->IsSoftSwitch(A2SS_80STORE);
-					if (ImGui::Checkbox("A2SS_80STORE", &ssValue0)) {
-						memManager->SetSoftSwitch(A2SS_80STORE, ssValue0);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					bool ssValue1 = memManager->IsSoftSwitch(A2SS_RAMRD);
-					if (ImGui::Checkbox("A2SS_RAMRD", &ssValue1)) {
-						memManager->SetSoftSwitch(A2SS_RAMRD, ssValue1);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					bool ssValue2 = memManager->IsSoftSwitch(A2SS_RAMWRT);
-					if (ImGui::Checkbox("A2SS_RAMWRT", &ssValue2)) {
-						memManager->SetSoftSwitch(A2SS_RAMWRT, ssValue2);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					bool ssValue3 = memManager->IsSoftSwitch(A2SS_80COL);
-					if (ImGui::Checkbox("A2SS_80COL", &ssValue3)) {
-						memManager->SetSoftSwitch(A2SS_80COL, ssValue3);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					bool ssValue4 = memManager->IsSoftSwitch(A2SS_ALTCHARSET);
-					if (ImGui::Checkbox("A2SS_ALTCHARSET", &ssValue4)) {
-						memManager->SetSoftSwitch(A2SS_ALTCHARSET, ssValue4);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					bool ssValue5 = memManager->IsSoftSwitch(A2SS_INTCXROM);
-					if (ImGui::Checkbox("A2SS_INTCXROM", &ssValue5)) {
-						memManager->SetSoftSwitch(A2SS_INTCXROM, ssValue5);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					bool ssValue6 = memManager->IsSoftSwitch(A2SS_SLOTC3ROM);
-					if (ImGui::Checkbox("A2SS_SLOTC3ROM", &ssValue6)) {
-						memManager->SetSoftSwitch(A2SS_SLOTC3ROM, ssValue6);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					bool ssValue7 = memManager->IsSoftSwitch(A2SS_TEXT);
-					if (ImGui::Checkbox("A2SS_TEXT", &ssValue7)) {
-						memManager->SetSoftSwitch(A2SS_TEXT, ssValue7);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					bool ssValue8 = memManager->IsSoftSwitch(A2SS_MIXED);
-					if (ImGui::Checkbox("A2SS_MIXED", &ssValue8)) {
-						memManager->SetSoftSwitch(A2SS_MIXED, ssValue8);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					bool ssValue9 = memManager->IsSoftSwitch(A2SS_PAGE2);
-					if (ImGui::Checkbox("A2SS_PAGE2", &ssValue9)) {
-						memManager->SetSoftSwitch(A2SS_PAGE2, ssValue9);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					bool ssValue10 = memManager->IsSoftSwitch(A2SS_HIRES);
-					if (ImGui::Checkbox("A2SS_HIRES", &ssValue10)) {
-						memManager->SetSoftSwitch(A2SS_HIRES, ssValue10);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					bool ssValue11 = memManager->IsSoftSwitch(A2SS_DHGR);
-					if (ImGui::Checkbox("A2SS_DHGR", &ssValue11)) {
-						memManager->SetSoftSwitch(A2SS_DHGR, ssValue11);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					bool ssValue12 = memManager->IsSoftSwitch(A2SS_DHGRMONO);
-					if (ImGui::Checkbox("A2SS_DHGRMONO", &ssValue12)) {
-						memManager->SetSoftSwitch(A2SS_DHGRMONO, ssValue12);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					bool ssValue13 = memManager->IsSoftSwitch(A2SS_SHR);
-					if (ImGui::Checkbox("A2SS_SHR", &ssValue13)) {
-						memManager->SetSoftSwitch(A2SS_SHR, ssValue13);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					bool ssValue14 = memManager->IsSoftSwitch(A2SS_GREYSCALE);
-					if (ImGui::Checkbox("A2SS_GREYSCALE", &ssValue14)) {
-						memManager->SetSoftSwitch(A2SS_GREYSCALE, ssValue14);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
 				}
 				if (ImGui::CollapsingHeader("SDHR"))
 				{
@@ -596,6 +494,7 @@ int main(int argc, char* argv[])
 					ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
 					ImGui::Checkbox("Untextured Geometry", &sdhrManager->bDebugNoTextures);         // Show textures toggle
 					ImGui::Checkbox("Perspective Projection", &sdhrManager->bUsePerspective);       // Change projection type
+					ImGui::Checkbox("SDHR Upload Region Memory Window", &mem_edit_upload.Open);
 				}
 				ImGui::PopItemWidth();
             }
@@ -603,11 +502,15 @@ int main(int argc, char* argv[])
 		}
 		// Show the postprocessing window
 		if (show_postprocessing_window)
-			postProcessor->DisplayImGuiPPWindow(&show_postprocessing_window);
+			postProcessor->DisplayImGuiWindow(&show_postprocessing_window);
 
+		// Show the a2VideoManager window
+		if (show_a2video_window)
+			a2VideoManager->DisplayImGuiWindow(&show_a2video_window);
+		
         // The VCR event recorder
 		if (show_recorder_window)
-			eventRecorder->DisplayImGuiRecorderWindow(&show_recorder_window);
+			eventRecorder->DisplayImGuiWindow(&show_recorder_window);
 
         // Show the metrics window
         if (show_metrics_window)
@@ -618,24 +521,6 @@ int main(int argc, char* argv[])
         {
             mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", memManager->GetApple2MemPtr(), 2*_A2_MEMORY_SHADOW_END);
         }
-
-		// Show the VRAM legacy window
-		if (mem_edit_vram_legacy.Open)
-		{
-			mem_edit_vram_legacy.DrawWindow("Memory Editor: Beam VRAM Legacy", a2VideoManager->GetLegacyVRAMWritePtr(), a2VideoManager->GetVramSizeLegacy());
-		}
-		
-		// Show the VRAM SHR window
-		if (mem_edit_vram_shr.Open)
-		{
-			mem_edit_vram_shr.DrawWindow("Memory Editor: Beam VRAM SHR", a2VideoManager->GetSHRVRAMWritePtr(), a2VideoManager->GetVramSizeSHR());
-		}
-		
-		// Show the merge offset window
-		if (mem_edit_offset_buffer.Open)
-		{
-			mem_edit_offset_buffer.DrawWindow("Memory Editor: Offset Buffer", (void*)a2VideoManager->GetOffsetBufferReadPtr(), a2VideoManager->GetVramHeightSHR());
-		}
 
 		// Show the upload data region memory
 		if (mem_edit_upload.Open)

@@ -28,7 +28,7 @@ public:
 	~PostProcessor();
 
 	void Render(SDL_Window* window, GLuint inputTextureId);
-	void DisplayImGuiPPWindow(bool* p_open);
+	void DisplayImGuiWindow(bool* p_open);
 
 	// public properties
 	std::vector<Shader>v_ppshaders;
@@ -49,7 +49,7 @@ private:
 	GLuint quadVAO = UINT_MAX;
 	GLuint quadVBO = UINT_MAX;
 	
-	bool imguiWindowIsOpen = false;
+	bool bImguiWindowIsOpen = false;
 
 	Shader shaderProgram;
 

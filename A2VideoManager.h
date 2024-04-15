@@ -9,6 +9,8 @@
 #include "common.h"
 #include "A2WindowBeam.h"
 #include "CycleCounter.h"
+#include "imgui.h"
+#include "imgui_memory_editor.h"
 
 enum class A2Mode_e
 {
@@ -135,6 +137,7 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 
 	bool IsReady();		// true after full initialization
+	void DisplayImGuiWindow(bool* p_open);
 	void ToggleA2Video(bool value);
 
 	// Methods for the single multipurpose beam racing shader
@@ -204,6 +207,14 @@ private:
     bool bIsRebooting = false;              // Rebooting semaphore
 	bool bIsSwitchingToMergedMode = false;	// True when refreshing earlier scanlines for merged mode
 
+	// imgui vars
+	bool bImguiWindowIsOpen = false;
+	bool bImguiMemLoadAuxBank = false;
+	int iImguiMemLoadPosition = 0;
+	MemoryEditor mem_edit_vram_legacy;
+	MemoryEditor mem_edit_vram_shr;
+	MemoryEditor mem_edit_offset_buffer;
+	
 	// beam render state variables
 	bool bBeamIsActive = false;				// Is the beam active?
 	BeamState_e beamState = BeamState_e::UNKNOWN;

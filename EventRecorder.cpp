@@ -285,7 +285,7 @@ void EventRecorder::RecordEvent(SDHREvent* sdhr_event)
 		StopRecording();
 }
 
-void EventRecorder::DisplayImGuiRecorderWindow(bool* p_open)
+void EventRecorder::DisplayImGuiWindow(bool* p_open)
 {
 	if (p_open)
 	{

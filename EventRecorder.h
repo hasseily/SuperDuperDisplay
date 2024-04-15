@@ -37,7 +37,7 @@ class EventRecorder
 {
 public:
 	void RecordEvent(SDHREvent* sdhr_event);
-	void DisplayImGuiRecorderWindow(bool* p_open);
+	void DisplayImGuiWindow(bool* p_open);
 	void Update();
 	inline const EventRecorderStates_e GetState() { return m_state; };
 	inline const bool IsRecording() { return (m_state == EventRecorderStates_e::RECORDING); };

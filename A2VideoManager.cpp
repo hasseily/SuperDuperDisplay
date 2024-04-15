@@ -15,8 +15,10 @@
 #include <iomanip>
 #include "OpenGLHelper.h"
 #include "MemoryManager.h"
+#include "extras/MemoryLoader.h"
 #include "EventRecorder.h"
 #include "GRAddr2XY.h"
+#include "imgui.h"
 
 static inline uint32_t SETRGBCOLOR(uint8_t r, uint8_t g, uint8_t b)
 {
@@ -99,14 +101,8 @@ static uint16_t g_RAM_HGROffsets[] = {
 	0x03D0, 0x07D0, 0x0BD0, 0x0FD0, 0x13D0, 0x17D0, 0x1BD0, 0x1FD0
 };
 
-// Gotta have a transparency global just in case
-// static uint32_t gRGBTransparent = 0;
-
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
-
-static OpenGLHelper* oglHelper;
-
 
 //////////////////////////////////////////////////////////////////////////
 // Image Asset Methods
@@ -126,7 +122,7 @@ void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const c
 	}
 	if (tex_id != UINT_MAX)
 	{
-		oglHelper->load_texture(data, width, height, channels, tex_id);
+		OpenGLHelper::GetInstance()->load_texture(data, width, height, channels, tex_id);
 		stbi_image_free(data);
 	}
 	else {
@@ -168,7 +164,7 @@ void A2VideoManager::Initialize()
 
 	ResetGLData();
 	
-	oglHelper = OpenGLHelper::GetInstance();
+	auto oglHelper = OpenGLHelper::GetInstance();
 	bIsReady = false;
 	for (int i = 0; i < 2; i++)
 	{
@@ -217,6 +213,10 @@ void A2VideoManager::Initialize()
 	shader_merge.build(_SHADER_VERTEX_BASIC, _SHADER_BEAM_MERGE_FRAGMENT);
 	offsetTextureExists = false;
 
+	mem_edit_vram_legacy.Open = false;
+	mem_edit_vram_shr.Open = false;
+	mem_edit_offset_buffer.Open = false;
+	
 	// tell the next Render() call to run initialization routines
 	bShouldInitializeRender = true;
 	
@@ -1070,3 +1070,151 @@ void A2VideoManager::DeactivateBeam()
 {
 	bBeamIsActive = false;
 }
+
+
+///
+///
+/// ImGUI Interface
+///
+///
+
+void A2VideoManager::DisplayImGuiWindow(bool* p_open)
+{
+	bImguiWindowIsOpen = p_open;
+	if (p_open)
+	{
+		ImGui::Begin("Apple 2 Video Manager", p_open);
+		if (!ImGui::IsWindowCollapsed())
+		{
+			auto memManager = MemoryManager::GetInstance();
+			auto border_w_slider_val = (int)this->GetBordersWidthCycles();
+			auto border_h_slider_val = (int)this->GetBordersHeightScanlines() / 8;
+			ImGui::PushItemWidth(200);
+			
+			if (ImGui::Button("Run Vertical Refresh"))
+				this->ForceBeamFullScreenRender();
+			ImGui::SameLine();
+			ImGui::Text("Frame ID: %d", this->GetVRAMReadId());
+			
+			ImGui::SeparatorText("[ BORDERS AND WIDTH ]");
+			if (ImGui::SliderInt("Horizontal Borders", &border_w_slider_val, 0, _BORDER_WIDTH_MAX_CYCLES, "%d", 1)
+				|| ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, _BORDER_HEIGHT_MAX_MULT8, "%d", 1))
+				this->SetBordersWithReinit(border_w_slider_val, border_h_slider_val);
+			if (ImGui::SliderInt("Border Color (0xC034)", &memManager->switch_c034, 0, 15))
+				this->ForceBeamFullScreenRender();
+			if (ImGui::Checkbox("Force SHR width", &this->bForceSHRWidth))
+				this->ForceBeamFullScreenRender();
+			
+			ImGui::SeparatorText("[ LOAD FILE INTO MEMORY ]");
+			ImGui::Text("Load Memory Start: ");
+			ImGui::SameLine();
+			ImGui::InputInt("##mem_load", &iImguiMemLoadPosition, 1, 1024, ImGuiInputTextFlags_CharsHexadecimal);
+			iImguiMemLoadPosition = std::clamp(iImguiMemLoadPosition, 0, 0xFFFF);
+			ImGui::Checkbox("Aux Bank", &bImguiMemLoadAuxBank);
+			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank))
+				this->ForceBeamFullScreenRender();
+			
+			ImGui::SeparatorText("[ VRAM WINDOWS ]");
+			ImGui::Checkbox("VRAM Legacy Memory Window", &mem_edit_vram_legacy.Open);
+			ImGui::Checkbox("VRAM SHR Memory Window", &mem_edit_vram_shr.Open);
+			ImGui::Checkbox("VRAM Offset Buffer", &mem_edit_offset_buffer.Open);
+			
+			ImGui::SeparatorText("[ SOFT SWITCHES ]");
+			bool ssValue0 = memManager->IsSoftSwitch(A2SS_80STORE);
+			if (ImGui::Checkbox("A2SS_80STORE", &ssValue0)) {
+				memManager->SetSoftSwitch(A2SS_80STORE, ssValue0);
+				this->ForceBeamFullScreenRender();
+			}
+			bool ssValue1 = memManager->IsSoftSwitch(A2SS_RAMRD);
+			if (ImGui::Checkbox("A2SS_RAMRD", &ssValue1)) {
+				memManager->SetSoftSwitch(A2SS_RAMRD, ssValue1);
+				this->ForceBeamFullScreenRender();
+			}
+			bool ssValue2 = memManager->IsSoftSwitch(A2SS_RAMWRT);
+			if (ImGui::Checkbox("A2SS_RAMWRT", &ssValue2)) {
+				memManager->SetSoftSwitch(A2SS_RAMWRT, ssValue2);
+				this->ForceBeamFullScreenRender();
+			}
+			bool ssValue3 = memManager->IsSoftSwitch(A2SS_80COL);
+			if (ImGui::Checkbox("A2SS_80COL", &ssValue3)) {
+				memManager->SetSoftSwitch(A2SS_80COL, ssValue3);
+				this->ForceBeamFullScreenRender();
+			}
+			bool ssValue4 = memManager->IsSoftSwitch(A2SS_ALTCHARSET);
+			if (ImGui::Checkbox("A2SS_ALTCHARSET", &ssValue4)) {
+				memManager->SetSoftSwitch(A2SS_ALTCHARSET, ssValue4);
+				this->ForceBeamFullScreenRender();
+			}
+			bool ssValue5 = memManager->IsSoftSwitch(A2SS_INTCXROM);
+			if (ImGui::Checkbox("A2SS_INTCXROM", &ssValue5)) {
+				memManager->SetSoftSwitch(A2SS_INTCXROM, ssValue5);
+				this->ForceBeamFullScreenRender();
+			}
+			bool ssValue6 = memManager->IsSoftSwitch(A2SS_SLOTC3ROM);
+			if (ImGui::Checkbox("A2SS_SLOTC3ROM", &ssValue6)) {
+				memManager->SetSoftSwitch(A2SS_SLOTC3ROM, ssValue6);
+				this->ForceBeamFullScreenRender();
+			}
+			bool ssValue7 = memManager->IsSoftSwitch(A2SS_TEXT);
+			if (ImGui::Checkbox("A2SS_TEXT", &ssValue7)) {
+				memManager->SetSoftSwitch(A2SS_TEXT, ssValue7);
+				this->ForceBeamFullScreenRender();
+			}
+			bool ssValue8 = memManager->IsSoftSwitch(A2SS_MIXED);
+			if (ImGui::Checkbox("A2SS_MIXED", &ssValue8)) {
+				memManager->SetSoftSwitch(A2SS_MIXED, ssValue8);
+				this->ForceBeamFullScreenRender();
+			}
+			bool ssValue9 = memManager->IsSoftSwitch(A2SS_PAGE2);
+			if (ImGui::Checkbox("A2SS_PAGE2", &ssValue9)) {
+				memManager->SetSoftSwitch(A2SS_PAGE2, ssValue9);
+				this->ForceBeamFullScreenRender();
+			}
+			bool ssValue10 = memManager->IsSoftSwitch(A2SS_HIRES);
+			if (ImGui::Checkbox("A2SS_HIRES", &ssValue10)) {
+				memManager->SetSoftSwitch(A2SS_HIRES, ssValue10);
+				this->ForceBeamFullScreenRender();
+			}
+			bool ssValue11 = memManager->IsSoftSwitch(A2SS_DHGR);
+			if (ImGui::Checkbox("A2SS_DHGR", &ssValue11)) {
+				memManager->SetSoftSwitch(A2SS_DHGR, ssValue11);
+				this->ForceBeamFullScreenRender();
+			}
+			bool ssValue12 = memManager->IsSoftSwitch(A2SS_DHGRMONO);
+			if (ImGui::Checkbox("A2SS_DHGRMONO", &ssValue12)) {
+				memManager->SetSoftSwitch(A2SS_DHGRMONO, ssValue12);
+				this->ForceBeamFullScreenRender();
+			}
+			bool ssValue13 = memManager->IsSoftSwitch(A2SS_SHR);
+			if (ImGui::Checkbox("A2SS_SHR", &ssValue13)) {
+				memManager->SetSoftSwitch(A2SS_SHR, ssValue13);
+				this->ForceBeamFullScreenRender();
+			}
+			bool ssValue14 = memManager->IsSoftSwitch(A2SS_GREYSCALE);
+			if (ImGui::Checkbox("A2SS_GREYSCALE", &ssValue14)) {
+				memManager->SetSoftSwitch(A2SS_GREYSCALE, ssValue14);
+				this->ForceBeamFullScreenRender();
+			}
+		}
+		ImGui::End();
+	}
+
+	// Show the VRAM legacy window
+	if (mem_edit_vram_legacy.Open)
+	{
+		mem_edit_vram_legacy.DrawWindow("Memory Editor: Beam VRAM Legacy", this->GetLegacyVRAMWritePtr(), this->GetVramSizeLegacy());
+	}
+	
+	// Show the VRAM SHR window
+	if (mem_edit_vram_shr.Open)
+	{
+		mem_edit_vram_shr.DrawWindow("Memory Editor: Beam VRAM SHR", this->GetSHRVRAMWritePtr(), this->GetVramSizeSHR());
+	}
+	
+	// Show the merge offset window
+	if (mem_edit_offset_buffer.Open)
+	{
+		mem_edit_offset_buffer.DrawWindow("Memory Editor: Offset Buffer", (void*)this->GetOffsetBufferReadPtr(), this->GetVramHeightSHR());
+	}
+}
+

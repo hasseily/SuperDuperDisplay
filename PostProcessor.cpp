@@ -281,8 +281,8 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 //		std::cout << "Viewport coordinates:" << ": (" << quadViewportCoords[0] << ", " << quadViewportCoords[1]
 //		<< "), (" << quadViewportCoords[2] << ", " << quadViewportCoords[3] << ")" << std::endl;
 	
-	if (imguiWindowIsOpen || (!shaderProgram.isReady)
-		|| (last_bound_texture != inputTextureId) 
+	if (bImguiWindowIsOpen || (!shaderProgram.isReady)
+		|| (last_bound_texture != inputTextureId)
 		|| (prev_texWidth != texWidth) || (prev_texHeight != texHeight))
 	{
 		// only update the shader parameters in certain cases
@@ -335,9 +335,9 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	++frame_count;
 }
 
-void PostProcessor::DisplayImGuiPPWindow(bool* p_open)
+void PostProcessor::DisplayImGuiWindow(bool* p_open)
 {
-	imguiWindowIsOpen = p_open;
+	bImguiWindowIsOpen = p_open;
 	if (p_open)
 	{
 		ImGui::Begin("Post Processing CRT Shader", p_open);
