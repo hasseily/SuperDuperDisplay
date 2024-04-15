@@ -50,6 +50,14 @@ uniform sampler2D a2ModesTex2;			// LGR
 uniform sampler2D a2ModesTex3;			// HGR
 uniform sampler2D a2ModesTex4;			// DHGR
 
+// Special modes mask is
+// enum A2VideoSpecialMode_e
+// {
+// 		A2_VSM_NONE 			= 0b0000,
+// 		A2_VSM_DHGRCOL140Mixed 	= 0b0001,
+// };
+uniform int specialModesMask;
+
 // Colors for foreground and background
 const vec4 tintcolors[16] = vec4[16](
 	 vec4(0.000000,	0.000000,	0.000000,	1.000000)	/*BLACK,*/
@@ -251,6 +259,52 @@ For each pixel, determine which memory byte it is part of,
 			{
 				byteVal4 = texelFetch(VRAMTEX, ivec2(xCol + 1, uFragPos.y / 2u), 0).g;
 			}
+			
+			if ((specialModesMask & 0x1) == 1) // bDHGRCOL140Mixed
+			{
+				// Implement COLOR140 MIXED mode
+				// High bit of the relevant byte of the dot determines if it's color or bw
+				// We need to align to 4 dots / color pixel, so we can't change the mode until
+				// we reach the beginning of the next 4 dots.
+				// We therefore have the following, each of aux and main being 7 dots:
+				// aux1-main1-aux2-main2 | aux1-main1-aux2-main2 | ...
+				// aux1 is aligned, there's nothing special to do. If the high bit is bw, the whole thing is bw
+				// main1 has the first dot using the aux1 mode.
+				// aux2 has the first 2 dots using the main1 mode.
+				// main2 has the first 2 dots using the aux2 mode.
+				// NOTE: The byteVals we've calculated above are not the same. They're centered around
+				// the main+aux bytes of this texel, so they're main-[aux-main]-aux
+				
+				uint xFragPos = uFragPos.x - uint(hborder * 14);
+
+				// First determine in which position it is within each 28 dot block (aux1-main1-aux2-main2)
+				int dotPosIn28 = int(xFragPos) % 28;
+				// And the dot's position inside the byte
+				int bitPos = int(xFragPos) % 7;
+				// and which byte to take the mode from: its own or the previous one
+				// if its bit position (0-6) is lower than its 4-dot position within the 28, then it has
+				// to use the previous byte's color mode.
+				int modeByteOffset = clamp(bitPos - (int(xFragPos) % 4), -1, 0);
+				// Which of byteVal1, byteVal2 or byteVal3 should we use for mode?
+				int byteForMode = 1 + (int(xFragPos / 7u) % 2) + modeByteOffset;
+				uint isColor = 1u;
+				if (byteForMode == 0)
+					isColor = byteVal1 >> 7u;
+				else if (byteForMode == 1)
+					isColor = byteVal2 >> 7u;
+				else
+					isColor = byteVal3 >> 7u;
+				
+				if (isColor == 0u)	// we're in bw mode!
+				{
+					// Same as DHGRMONO
+					fragColor = vec4(1.0f) * float(clamp(((byteVal3 << 7) | (byteVal2 & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
+					return;
+				}
+			}	// end bDHGRCOL140Mixed
+			
+			// Otherwise we're in color mode, same as standard DHGR
+			
 			// Calculate the column offset in the color texture
 			int wordVal = (int(byteVal1) & 0x70) | ((int(byteVal2) & 0x7F) << 7) |
 				((int(byteVal3) & 0x7F) << 14) | ((int(byteVal4) & 0x07) << 21);
@@ -267,7 +321,8 @@ For each pixel, determine which memory byte it is part of,
 		{
 			// Use the .g (AUX) if the dot is one of the first 7, otherwise .r (MAIN)
 			// Find out if the related bit is on, and set the color to white or black
-			fragColor = vec4(1.0f) * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (uFragPos.x % 14u)), 0u, 1u));
+			uint xFragPos = uFragPos.x - uint(hborder * 14);
+			fragColor = vec4(1.0f) * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
 			return;
 			break;
 		}

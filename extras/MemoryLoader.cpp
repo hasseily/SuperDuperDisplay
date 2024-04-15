@@ -19,7 +19,7 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
 		pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + position;
 	else
 		pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + position;
-	if (ImGui::Button("Load File in Memory"))
+	if (ImGui::Button("Load File"))
 	{
 		ImGui::SetNextWindowSize(ImVec2(800, 400));
 		IGFD::FileDialogConfig config;

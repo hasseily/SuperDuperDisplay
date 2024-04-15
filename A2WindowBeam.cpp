@@ -207,7 +207,8 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	}
 
 	shader.setInt("ticks", SDL_GetTicks());
-
+	shader.setInt("specialModesMask", specialModesMask);
+	
 	// point the uniform at the VRAM texture
 	glActiveTexture(_TEXUNIT_DATABUFFER);
 	glBindTexture(GL_TEXTURE_2D, VRAMTEX);

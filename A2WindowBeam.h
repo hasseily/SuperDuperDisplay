@@ -17,6 +17,14 @@ enum A2VideoModeBeam_e
 	A2VIDEOBEAM_TOTAL_COUNT
 };
 
+// Special less compatible modes from lesser known cards
+// like Chat Mauve RGB cards, or Apple RGB card
+enum A2VideoSpecialMode_e
+{
+	A2_VSM_NONE 			= 0b0000,
+	A2_VSM_DHGRCOL140Mixed 	= 0b0001,
+};
+
 struct A2BeamVertex {
 	glm::vec2 RelPos;		// Relative position of the vertex
 	glm::vec2 PixelPos;		// Pixel position of the vertex in the Apple 2 screen
@@ -41,6 +49,8 @@ public:
 	std::vector<A2BeamVertex> vertices;		// Vertices with XYRelative and XYPixels
 	unsigned int VAO = UINT_MAX;			// Vertex Array Object (holds buffers that are vertex related)
 	unsigned int VBO = UINT_MAX;			// Vertex Buffer Object (holds vertices)
+	
+	int specialModesMask = A2_VSM_NONE;		// Or'ed A2VideoSpecialMode_e
 
 private:
 	bool vramTextureExists = false;						// true if the VRAM texture exists and only needs an update

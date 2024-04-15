@@ -132,6 +132,12 @@ public:
 
 	bool bForceSHRWidth = false;			// forces the legacy to have the SHR width
 	
+	// Enable manually setting a DHGR mode that mixes 140 width 16-col and 560 width b/w
+	// It was available in certain RGB cards like the Apple and Chat Mauve RGB cards
+	// It could be set in software using a combination of soft switches but due to potential
+	// conflicts we'll just let the users choose this mode whenever they want to
+	bool bUseDHGRCOL140Mixed = false;
+	
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
 	//////////////////////////////////////////////////////////////////////////
