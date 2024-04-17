@@ -55,6 +55,8 @@ uniform sampler2D a2ModesTex4;			// DHGR
 // {
 // 		A2_VSM_NONE 			= 0b0000,
 // 		A2_VSM_DHGRCOL140Mixed 	= 0b0001,
+//		A2_VSM_HGRSPEC1			= 0b0010,
+//		A2_VSM_HGRSPEC2		 	= 0b0100,
 // };
 uniform int specialModesMask;
 
@@ -192,9 +194,9 @@ For each pixel, determine which memory byte it is part of,
 
  // Lookup Table:
  // y (0-255) * 32 columns of 32 pixels
- // . each column is: high-bit (prev byte) & 2 pixels from previous byte & 2 pixels from next byte
- // . each 32-pixel unit is 2 * 16-pixel sub-units: 16 pixels for even video byte & 16 pixels for odd video byte
- //   . where 16 pixels represent the 7 Apple pixels, expanded to 14 pixels (and the last 2 are discarded)
+ // Each column is: high-bit (prev byte) & 2 pixels from previous byte & 2 pixels from next byte
+ // Each 32-pixel unit is 2 * 16-pixel sub-units: 16 pixels for even video byte & 16 pixels for odd video byte
+ // where 16 pixels represent the 7 Apple pixels, expanded to 14 pixels (and the last 2 are discarded)
  //		currHighBit=0: {14 pixels + 2 pad} * 2
  //		currHighBit=1: {1 pixel + 14 pixels + 1 pad} * 2
 
