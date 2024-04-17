@@ -81,16 +81,6 @@ const vec4 tintcolors[16] = vec4[16](
 in vec2 vFragPos;       // The fragment position in pixels
 out vec4 fragColor;
 
-uint reverseBits(uint x) {
-	uint result = 0u;
-	uint i;
-	for (i = 0u; i < 32u; ++i) {
-		result = (result << 1u) | (x & 1u);
-		x >>= 1u;
-	}
-	return (result >> 24);
-}
-
 void main()
 {
 	// first determine which VRAMTEX texel this fragment is part of, including
@@ -244,16 +234,17 @@ For each pixel, determine which memory byte it is part of,
 				// and see if it matches 11011 or 00100
 				// In HGR the bits will look like (p=previous, c=current, n=next byte):
 				// p5 p6 c0 c1 c2 c3 c4 c5 c6 n0 n1
-				// So we need to reverse the bits of each byte and take the relevant bits
-				// of the previous and next and prepend/append to create the bitstream
-				// around the current byte.
-				uint revCurrByte = reverseBits(targetTexel.r);
-				uint bankShift = revCurrByte & 0x1u;
-				uint bitStream = ((reverseBits(byteValPrev) & 0x6u) << 8) |
-									((revCurrByte & 0xFEu) << 1) |
-									(reverseBits(byteValNext) >> 6);
+				// Because the bits are reversed from the natural order in the byte, we'll
+				// do everything reversed and instead put n1 on the far left and p5 on the
+				// far right at position 0.
+				uint bitStream = ((byteValNext & 0x3u) << 9) |			// n1 n0
+									((targetTexel.r & 0x7Fu) << 2) |	// c6 .. c0
+									(((byteValPrev & 0x7Fu) >> 5));		// p6 p5
 				// take the 5 centered bits around the pixel we want to draw
-				uint fiveCenteredBits = (bitStream >> (6u - (fragOffset.x-bankShift)/2u)) & 0x1Fu;
+				// while being careful to remember we're in reverse
+				uint bankShift = targetTexel.r >> 7;	// color bit (bit 7)
+				uint fiveCenteredBits = (bitStream >> ((fragOffset.x-bankShift)/2u)) & 0x1Fu;
+				
 				if ((specialModesMask & 0x2) > 0)	// HGRSPEC1
 				{
 					// For SPEC1 mode, 11011 returns black
