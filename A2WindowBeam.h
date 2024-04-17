@@ -23,6 +23,8 @@ enum A2VideoSpecialMode_e
 {
 	A2_VSM_NONE 			= 0b0000,
 	A2_VSM_DHGRCOL140Mixed 	= 0b0001,
+	A2_VSM_HGRSPEC1			= 0b0010,
+	A2_VSM_HGRSPEC2		 	= 0b0100,
 };
 
 struct A2BeamVertex {

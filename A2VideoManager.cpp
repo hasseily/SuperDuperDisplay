@@ -1018,6 +1018,14 @@ GLuint A2VideoManager::Render()
 			windowsbeam[A2VIDEOBEAM_LEGACY]->specialModesMask |= A2_VSM_DHGRCOL140Mixed;
 		else
 			windowsbeam[A2VIDEOBEAM_LEGACY]->specialModesMask &= ~A2_VSM_DHGRCOL140Mixed;
+		if (bUseHGRSPEC1)
+			windowsbeam[A2VIDEOBEAM_LEGACY]->specialModesMask |= A2_VSM_HGRSPEC1;
+		else
+			windowsbeam[A2VIDEOBEAM_LEGACY]->specialModesMask &= ~A2_VSM_HGRSPEC1;
+		if (bUseHGRSPEC2)
+			windowsbeam[A2VIDEOBEAM_LEGACY]->specialModesMask |= A2_VSM_HGRSPEC2;
+		else
+			windowsbeam[A2VIDEOBEAM_LEGACY]->specialModesMask &= ~A2_VSM_HGRSPEC2;
 
 		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
 		// std::cerr << "Rendering legacy to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
@@ -1114,6 +1122,12 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			if (ImGui::Checkbox("DHGR COL140 Mixed", &bUseDHGRCOL140Mixed))
 				this->ForceBeamFullScreenRender();
 			ImGui::SetItemTooltip("A DHGR mode that mixes 16 colors and b/w, found in certain RGB cards");
+			if (ImGui::Checkbox("HGR SPEC1", &bUseHGRSPEC1))
+				this->ForceBeamFullScreenRender();
+			ImGui::SetItemTooltip("A HGR mode that makes 11011 be black, found in the EVE card");
+			if (ImGui::Checkbox("HGR SPEC2", &bUseHGRSPEC2))
+				this->ForceBeamFullScreenRender();
+			ImGui::SetItemTooltip("A HGR mode that makes 00100 be white, found in the EVE card");
 			
 			ImGui::SeparatorText("[ LOAD FILE INTO MEMORY ]");
 			ImGui::Text("Load Memory Start: ");

@@ -137,6 +137,10 @@ public:
 	// It could be set in software using a combination of soft switches but due to potential
 	// conflicts we'll just let the users choose this mode whenever they want to
 	bool bUseDHGRCOL140Mixed = false;
+	// And a HGR mode that forces the centered dot around 11011 to be black
+	bool bUseHGRSPEC1 = false;
+	// And a HGR mode that forces the centered dot around 00100 to be white
+	bool bUseHGRSPEC2 = false;
 	
 	//////////////////////////////////////////////////////////////////////////
 	// Methods

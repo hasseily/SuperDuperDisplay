@@ -81,6 +81,16 @@ const vec4 tintcolors[16] = vec4[16](
 in vec2 vFragPos;       // The fragment position in pixels
 out vec4 fragColor;
 
+uint reverseBits(uint x) {
+	uint result = 0u;
+	uint i;
+	for (i = 0u; i < 32u; ++i) {
+		result = (result << 1u) | (x & 1u);
+		x >>= 1u;
+	}
+	return (result >> 24);
+}
+
 void main()
 {
 	// first determine which VRAMTEX texel this fragment is part of, including
@@ -188,7 +198,7 @@ For each pixel, determine which memory byte it is part of,
  Even bytes use even columns, odd bytes use odd columns.
  Also calculate the high bit and last 2 bits from the previous byte
  (i.e. the 3 most significant bits), and the first 2 bits from the
- next byte (i.e. the 3 least significant bits).
+ next byte (i.e. the 2 least significant bits).
 
  // Lookup Table:
  // y (0-255) * 32 columns of 32 pixels
@@ -224,6 +234,46 @@ For each pixel, determine which memory byte it is part of,
 
 			// calculate the column offset in the color texture
 			int texXOffset = (int((byteValPrev & 0xE0u) << 2) | int((byteValNext & 0x03u) << 5)) + ((xCol - hborder) & 1) * 16;
+			
+			if ((specialModesMask & 0x6) > 0) // HGRSPEC1 or HGRSPEC2
+			{
+				// The problem with the HGRSPEC modes is that we need to force some pixels
+				// to be black or white based on the bit patterns. Since we're using
+				// a lookup texture for HGR, and we haven't generated lookup textures for
+				// these modes, we need to recreate the exact bit pattern around the pixel
+				// and see if it matches 11011 or 00100
+				// In HGR the bits will look like (p=previous, c=current, n=next byte):
+				// p5 p6 c0 c1 c2 c3 c4 c5 c6 n0 n1
+				// So we need to reverse the bits of each byte and take the relevant bits
+				// of the previous and next and prepend/append to create the bitstream
+				// around the current byte.
+				uint revCurrByte = reverseBits(targetTexel.r);
+				uint bankShift = revCurrByte & 0x1u;
+				uint bitStream = ((reverseBits(byteValPrev) & 0x6u) << 8) |
+									((revCurrByte & 0xFEu) << 1) |
+									(reverseBits(byteValNext) >> 6);
+				// take the 5 centered bits around the pixel we want to draw
+				uint fiveCenteredBits = (bitStream >> (6u - (fragOffset.x-bankShift)/2u)) & 0x1Fu;
+				if ((specialModesMask & 0x2) > 0)	// HGRSPEC1
+				{
+					// For SPEC1 mode, 11011 returns black
+					if (fiveCenteredBits == 0x1Bu)	// 11011
+					{
+						fragColor = vec4(0.0,0.0,0.0,1.0);
+						return;
+					}
+				}
+				if ((specialModesMask & 0x4) > 0)// HGRSPEC2
+				{
+					// For SPEC2 mode, 00100 returns white
+					if (fiveCenteredBits == 0x4u)	// 00100
+					{
+						fragColor = vec4(1.0,1.0,1.0,1.0);
+						return;
+					}
+				}
+			} // HGRSPEC1 or HGRSPEC2
+				
 
 			// Now get the texture color. We know the X offset as well as the fragment's offset on top of that.
 			// The y value is just the byte's value
