@@ -29,6 +29,8 @@ public:
 
 	void Render(SDL_Window* window, GLuint inputTextureId);
 	void DisplayImGuiWindow(bool* p_open);
+	nlohmann::json SerializeSate();
+	void DeserializeSate(const nlohmann::json &jsonState);
 
 	// public properties
 	std::vector<Shader>v_ppshaders;

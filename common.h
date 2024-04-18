@@ -10,6 +10,7 @@
 
 #include "glad/glad.h"
 #include <SDL.h>
+#include "nlohmann/json.hpp"
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>

@@ -1,10 +1,8 @@
 #include "PostProcessor.h"
-#include "common.h"
 #include "imgui.h"
 #include "imgui_internal.h"		// for PushItemFlag
 #include "extras/ImGuiFileDialog.h"
 // For save/restore of presets
-#include "nlohmann/json.hpp"
 #include <fstream>
 #include <sstream>
 
@@ -57,7 +55,8 @@ PostProcessor::~PostProcessor()
 // Main methods
 //////////////////////////////////////////////////////////////////////////
 
-void PostProcessor::SaveState(int profile_id) {
+nlohmann::json PostProcessor::SerializeSate()
+{
 	nlohmann::json jsonState = {
 		{"p_postprocessing_level", p_postprocessing_level},
 		{"bCRTFillWindow", bCRTFillWindow},
@@ -96,6 +95,51 @@ void PostProcessor::SaveState(int profile_id) {
 		{"p_zoomx", p_zoomx},
 		{"p_zoomy", p_zoomy}
 	};
+	return jsonState;
+}
+
+void PostProcessor::DeserializeSate(const nlohmann::json &jsonState)
+{
+	p_postprocessing_level = jsonState["p_postprocessing_level"];
+	bCRTFillWindow = jsonState["bCRTFillWindow"];
+	p_bzl = jsonState["p_bzl"];
+	p_corner = jsonState["p_corner"];
+	p_ext_gamma = jsonState["p_ext_gamma"];
+	p_interlace = jsonState["p_interlace"];
+	p_potato = jsonState["p_potato"];
+	p_slot = jsonState["p_slot"];
+	p_vig = jsonState["p_vig"];
+	p_bgr = jsonState["p_bgr"];
+	p_black = jsonState["p_black"];
+	p_br_dep = jsonState["p_br_dep"];
+	p_brightness = jsonState["p_brightness"];
+	p_c_space = jsonState["p_c_space"];
+	p_c_str = jsonState["p_c_str"];
+	p_centerx = jsonState["p_centerx"];
+	p_centery = jsonState["p_centery"];
+	p_conv_b = jsonState["p_conv_b"];
+	p_conv_g = jsonState["p_conv_g"];
+	p_conv_r = jsonState["p_conv_r"];
+	p_gb = jsonState["p_gb"];
+	p_m_type = jsonState["p_m_type"];
+	p_maskh = jsonState["p_maskh"];
+	p_maskl = jsonState["p_maskl"];
+	p_msize = jsonState["p_msize"];
+	p_rb = jsonState["p_rb"];
+	p_rg = jsonState["p_rg"];
+	p_saturation = jsonState["p_saturation"];
+	p_scanline_weight = jsonState["p_scanline_weight"];
+	p_scanline_type = jsonState["p_scanline_type"];
+	p_slotw = jsonState["p_slotw"];
+	p_warpx = jsonState["p_warpx"];
+	p_warpy = jsonState["p_warpy"];
+	p_barrel_distortion = jsonState["p_barrel_distortion"];
+	p_zoomx = jsonState["p_zoomx"];
+	p_zoomy = jsonState["p_zoomy"];
+}
+
+void PostProcessor::SaveState(int profile_id) {
+	nlohmann::json jsonState = SerializeSate();
 	
 	std::ostringstream filename;
 	filename << "pp_profile_" << profile_id << ".json";
@@ -111,43 +155,7 @@ void PostProcessor::LoadState(int profile_id) {
 	
 	if (file.is_open()) {
 		file >> jsonState;
-		
-		p_postprocessing_level = jsonState["p_postprocessing_level"];
-		bCRTFillWindow = jsonState["bCRTFillWindow"];
-		p_bzl = jsonState["p_bzl"];
-		p_corner = jsonState["p_corner"];
-		p_ext_gamma = jsonState["p_ext_gamma"];
-		p_interlace = jsonState["p_interlace"];
-		p_potato = jsonState["p_potato"];
-		p_slot = jsonState["p_slot"];
-		p_vig = jsonState["p_vig"];
-		p_bgr = jsonState["p_bgr"];
-		p_black = jsonState["p_black"];
-		p_br_dep = jsonState["p_br_dep"];
-		p_brightness = jsonState["p_brightness"];
-		p_c_space = jsonState["p_c_space"];
-		p_c_str = jsonState["p_c_str"];
-		p_centerx = jsonState["p_centerx"];
-		p_centery = jsonState["p_centery"];
-		p_conv_b = jsonState["p_conv_b"];
-		p_conv_g = jsonState["p_conv_g"];
-		p_conv_r = jsonState["p_conv_r"];
-		p_gb = jsonState["p_gb"];
-		p_m_type = jsonState["p_m_type"];
-		p_maskh = jsonState["p_maskh"];
-		p_maskl = jsonState["p_maskl"];
-		p_msize = jsonState["p_msize"];
-		p_rb = jsonState["p_rb"];
-		p_rg = jsonState["p_rg"];
-		p_saturation = jsonState["p_saturation"];
-		p_scanline_weight = jsonState["p_scanline_weight"];
-		p_scanline_type = jsonState["p_scanline_type"];
-		p_slotw = jsonState["p_slotw"];
-		p_warpx = jsonState["p_warpx"];
-		p_warpy = jsonState["p_warpy"];
-		p_barrel_distortion = jsonState["p_barrel_distortion"];
-		p_zoomx = jsonState["p_zoomx"];
-		p_zoomy = jsonState["p_zoomy"];
+		DeserializeSate(jsonState);
 	}
 }
 
@@ -496,4 +504,3 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		ImGui::End();
 	}
 }
-

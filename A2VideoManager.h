@@ -182,6 +182,12 @@ public:
 	uint32_t GetBordersWidthCycles() const { return borders_w_cycles; }
 	uint32_t GetBordersHeightScanlines() const { return borders_h_scanlines; }
 
+	nlohmann::json SerializeSate();
+	void DeserializeSate(const nlohmann::json &jsonState);
+	
+	void Initialize();
+	void ResetComputer();
+	
 	// public singleton code
 	static A2VideoManager* GetInstance()
 	{
@@ -190,11 +196,7 @@ public:
 		return s_instance;
 	}
 	~A2VideoManager();
-    
-	void extracted();
-	
-	void Initialize();
-	void ResetComputer();
+
 private:
 	static A2VideoManager* s_instance;
 	A2VideoManager()

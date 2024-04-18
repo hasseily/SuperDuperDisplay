@@ -273,6 +273,36 @@ int main(int argc, char* argv[])
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
 
+	// Get the saved states from previous runs
+	nlohmann::json settingsState;
+	std::ifstream inFile("Settings.json");
+	if (inFile.is_open()) {
+		inFile >> settingsState;
+		inFile.close();
+		if (settingsState.contains("Post Processor")) {
+			postProcessor->DeserializeSate(settingsState["Post Processor"]);
+		}
+		if (settingsState.contains("Apple 2 Video")) {
+			a2VideoManager->DeserializeSate(settingsState["Apple 2 Video"]);
+		}
+		if (settingsState.contains("Main")) {
+			auto _sm = settingsState["Main"];
+			bIsFullscreen = _sm["fullscreen"];
+			window_bgcolor[0] = _sm["window background color"][0];
+			window_bgcolor[1] = _sm["window background color"][1];
+			window_bgcolor[2] = _sm["window background color"][2];
+			window_bgcolor[3] = _sm["window background color"][3];
+			show_F1_window = _sm["show F1 window"];
+			show_a2video_window = _sm["show Apple 2 Video window"];
+			show_postprocessing_window = _sm["show Post Processor window"];
+			show_recorder_window = _sm["show Recorder window"];
+			show_texture_window = _sm["show texture window"];
+			show_metrics_window = _sm["show metrics window"];
+		}
+	} else {
+		std::cerr << "No saved Settings.json file" << std::endl;
+	}
+	
 	// Load up the first screen in SHR, with green border color
 	DisplaySplashScreen(a2VideoManager, memManager);
 
@@ -589,6 +619,27 @@ int main(int argc, char* argv[])
     bShouldTerminateNetworking = true;
     thread_server.join();
 
+	// Serialize settings and save them
+	settingsState["Post Processor"] = postProcessor->SerializeSate();
+	settingsState["Apple 2 Video"] = a2VideoManager->SerializeSate();
+	settingsState["Main"] = {
+		{"fullscreen", bIsFullscreen},
+		{"window background color", window_bgcolor},
+		{"show F1 window", show_F1_window},
+		{"show Apple 2 Video window", show_a2video_window},
+		{"show Post Processor window", show_postprocessing_window},
+		{"show Recorder window", show_recorder_window},
+		{"show texture window", show_texture_window},
+		{"show metrics window", show_metrics_window},
+	};
+	std::ofstream outFile("Settings.json");
+	if (outFile.is_open()) {
+		outFile << settingsState.dump(4);	// 4 spaces indent
+		outFile.close();
+	} else {
+		std::cerr << "Unable to save Settings.json file" << std::endl;
+	}
+	
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
