@@ -100,42 +100,42 @@ nlohmann::json PostProcessor::SerializeSate()
 
 void PostProcessor::DeserializeSate(const nlohmann::json &jsonState)
 {
-	p_postprocessing_level = jsonState["p_postprocessing_level"];
-	bCRTFillWindow = jsonState["bCRTFillWindow"];
-	p_bzl = jsonState["p_bzl"];
-	p_corner = jsonState["p_corner"];
-	p_ext_gamma = jsonState["p_ext_gamma"];
-	p_interlace = jsonState["p_interlace"];
-	p_potato = jsonState["p_potato"];
-	p_slot = jsonState["p_slot"];
-	p_vig = jsonState["p_vig"];
-	p_bgr = jsonState["p_bgr"];
-	p_black = jsonState["p_black"];
-	p_br_dep = jsonState["p_br_dep"];
-	p_brightness = jsonState["p_brightness"];
-	p_c_space = jsonState["p_c_space"];
-	p_c_str = jsonState["p_c_str"];
-	p_centerx = jsonState["p_centerx"];
-	p_centery = jsonState["p_centery"];
-	p_conv_b = jsonState["p_conv_b"];
-	p_conv_g = jsonState["p_conv_g"];
-	p_conv_r = jsonState["p_conv_r"];
-	p_gb = jsonState["p_gb"];
-	p_m_type = jsonState["p_m_type"];
-	p_maskh = jsonState["p_maskh"];
-	p_maskl = jsonState["p_maskl"];
-	p_msize = jsonState["p_msize"];
-	p_rb = jsonState["p_rb"];
-	p_rg = jsonState["p_rg"];
-	p_saturation = jsonState["p_saturation"];
-	p_scanline_weight = jsonState["p_scanline_weight"];
-	p_scanline_type = jsonState["p_scanline_type"];
-	p_slotw = jsonState["p_slotw"];
-	p_warpx = jsonState["p_warpx"];
-	p_warpy = jsonState["p_warpy"];
-	p_barrel_distortion = jsonState["p_barrel_distortion"];
-	p_zoomx = jsonState["p_zoomx"];
-	p_zoomy = jsonState["p_zoomy"];
+	p_postprocessing_level = jsonState.value("p_postprocessing_level", p_postprocessing_level);
+	bCRTFillWindow = jsonState.value("bCRTFillWindow", bCRTFillWindow);
+	p_bzl = jsonState.value("p_bzl", p_bzl);
+	p_corner = jsonState.value("p_corner", p_corner);
+	p_ext_gamma = jsonState.value("p_ext_gamma", p_ext_gamma);
+	p_interlace = jsonState.value("p_interlace", p_interlace);
+	p_potato = jsonState.value("p_potato", p_potato);
+	p_slot = jsonState.value("p_slot", p_slot);
+	p_vig = jsonState.value("p_vig", p_vig);
+	p_bgr = jsonState.value("p_bgr", p_bgr);
+	p_black = jsonState.value("p_black", p_black);
+	p_br_dep = jsonState.value("p_br_dep", p_br_dep);
+	p_brightness = jsonState.value("p_brightness", p_brightness);
+	p_c_space = jsonState.value("p_c_space", p_c_space);
+	p_c_str = jsonState.value("p_c_str", p_c_str);
+	p_centerx = jsonState.value("p_centerx", p_centerx);
+	p_centery = jsonState.value("p_centery", p_centery);
+	p_conv_b = jsonState.value("p_conv_b", p_conv_b);
+	p_conv_g = jsonState.value("p_conv_g", p_conv_g);
+	p_conv_r = jsonState.value("p_conv_r", p_conv_r);
+	p_gb = jsonState.value("p_gb", p_gb);
+	p_m_type = jsonState.value("p_m_type", p_m_type);
+	p_maskh = jsonState.value("p_maskh", p_maskh);
+	p_maskl = jsonState.value("p_maskl", p_maskl);
+	p_msize = jsonState.value("p_msize", p_msize);
+	p_rb = jsonState.value("p_rb", p_rb);
+	p_rg = jsonState.value("p_rg", p_rg);
+	p_saturation = jsonState.value("p_saturation", p_saturation);
+	p_scanline_weight = jsonState.value("p_scanline_weight", p_scanline_weight);
+	p_scanline_type = jsonState.value("p_scanline_type", p_scanline_type);
+	p_slotw = jsonState.value("p_slotw", p_slotw);
+	p_warpx = jsonState.value("p_warpx", p_warpx);
+	p_warpy = jsonState.value("p_warpy", p_warpy);
+	p_barrel_distortion = jsonState.value("p_barrel_distortion", p_barrel_distortion);
+	p_zoomx = jsonState.value("p_zoomx", p_zoomx);
+	p_zoomy = jsonState.value("p_zoomy", p_zoomy);
 }
 
 void PostProcessor::SaveState(int profile_id) {
@@ -172,7 +172,6 @@ void PostProcessor::SelectShader()
 		shaderProgram.use();
 		// Update uniforms
 		shaderProgram.setInt("A2Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
-		shaderProgram.setInt("BezelTexture", _TEXUNIT_IMAGE_ASSETS_START + 7 - GL_TEXTURE0);
 		shaderProgram.setInt("FrameCount", frame_count);
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
 		shaderProgram.setVec2("InputSize", glm::vec2(texWidth, texHeight));
@@ -199,7 +198,7 @@ void PostProcessor::SelectShader()
 		shaderProgram.setFloat("WARPX", p_warpx);
 		shaderProgram.setFloat("WARPY", p_warpy);
 		shaderProgram.setFloat("BARRELDISTORTION", p_barrel_distortion);
-		shaderProgram.setFloat("corner", p_corner ? 1.0f : 0.0f);
+		shaderProgram.setFloat("corner", p_corner / 10000);
 		shaderProgram.setFloat("vig", p_vig ? 1.0f : 0.0f);
 		shaderProgram.setFloat("BR_DEP", p_br_dep);
 		shaderProgram.setFloat("c_space", (float)p_c_space);
@@ -474,8 +473,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::SliderFloat("Curvature Horizontal", &p_warpx, 0.00f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Curvature Vertical", &p_warpy, 0.00f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Barrel Distortion", &p_barrel_distortion, -2.00f, 2.00f, "%.2f");
-			ImGui::Checkbox("Corners Cut", &p_corner);
-			ImGui::Checkbox("Bezel", &p_bzl);
+			ImGui::SliderFloat("Corners Cut", &p_corner, 0.f, 10.f, "%.3f");
 			ImGui::Separator();
 			
 			// Color Settings

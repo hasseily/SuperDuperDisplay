@@ -913,9 +913,6 @@ GLuint A2VideoManager::Render()
 		// image asset 6: DHGR texture
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 6);
 		image_assets[6].AssignByFilename(this, "assets/Texture_composite_dhgr.png");
-		// image asset 7: The bezel for postprocessing
-		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 7);
-		image_assets[7].AssignByFilename(this, "assets/Bezel.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL AssignByFilename error: " 
 				<< 0 << " - " << glerr << std::endl;
@@ -974,16 +971,16 @@ GLuint A2VideoManager::Render()
 			return UINT32_MAX;
 		}
 
-		// Bind both Legacy and SHR textures to Tex 13 and 14 respectively
-		glActiveTexture(GL_TEXTURE13);
+		// Bind both Legacy and SHR textures to Tex 7 and 8 respectively
+		glActiveTexture(GL_TEXTURE7);
 		glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
-		shader_merge.setInt("legacyTex", GL_TEXTURE13 - GL_TEXTURE0);
+		shader_merge.setInt("legacyTex", GL_TEXTURE7 - GL_TEXTURE0);
 		shader_merge.setVec2("legacySize", legacy_width, legacy_height);
 		shader_merge.setInt("forceSHRWidth", bForceSHRWidth);
 
-		glActiveTexture(GL_TEXTURE14);
+		glActiveTexture(GL_TEXTURE8);
 		glBindTexture(GL_TEXTURE_2D, shr_texture_id);
-		shader_merge.setInt("shrTex", GL_TEXTURE14 - GL_TEXTURE0);
+		shader_merge.setInt("shrTex", GL_TEXTURE8- GL_TEXTURE0);
 		shader_merge.setVec2("shrSize", fb_width, fb_height);
 
 		// Point the uniform at the OFFSET texture
@@ -1256,5 +1253,6 @@ nlohmann::json A2VideoManager::SerializeSate()
 
 void A2VideoManager::DeserializeSate(const nlohmann::json &jsonState)
 {
-	SetBordersWithReinit(jsonState["borders_w_cycles"], jsonState["borders_h_8scanlines"]);
+	SetBordersWithReinit(jsonState.value("borders_w_cycles", borders_w_cycles),
+						 jsonState.value("borders_h_8scanlines", borders_h_scanlines / 8));
 }

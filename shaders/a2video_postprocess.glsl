@@ -7,7 +7,6 @@ This shader uses parts from:
 crt-Geom (scanlines)
 Quillez (main filter)
 Dogway's inverse Gamma
-NewPixie Bezel Code only
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the Free
@@ -61,7 +60,6 @@ uniform COMPAT_PRECISION vec2 InputSize;
 uniform COMPAT_PRECISION vec2 ViewportSize;
 uniform COMPAT_PRECISION vec4 VideoRect;
 uniform sampler2D A2Texture;
-uniform sampler2D BezelTexture;
 in vec2 TexCoords;
 in vec2 scale;
 in vec2 ps;
@@ -243,19 +241,22 @@ void main() {
 		RB, GB, 1.0
 		);
 
+	
+	
+	float corn;
+	if (corner > 0.0) {
+		corn = TexCoords.x * TexCoords.y * (1.-TexCoords.x) * (1.-TexCoords.y);
+		// res = res * smoothstep(0.0, 0.0010, corn);	// if we want it smooth
+		if (corn < corner)								// if we want it cut
+			discard;
+	}
+	
 // zoom in and center screen for bezel
 	vec2 pos = Warp(TexCoords*vec2(1.0-zoomx,1.0-zoomy)-vec2(centerx,centery)/100.0);
 	
 // If people brefer the BarrelDistortion algo
 	pos = BarrelDistortion(pos);
 
-	float corn;
-	if (corner == 1.0){
-		corn = pos.x * pos.y * (1.-pos.x) * (1.-pos.y);
-	}	 
-
-	vec4 bez = texture(BezelTexture,TexCoords*0.95+vec2(0.022,0.022));	
-	bez.rgb = mix(bez.rgb, vec3(0.40),0.4);
 	vec2 bpos = pos;
 	vec2 dx = vec2(ps.x,0.0);
 	
@@ -339,19 +340,6 @@ void main() {
 	res *= hue;
 	res -= vec3(BLACK);
 	res *= blck;
-
-	if (corner == 1.0) {
-		// res = res * smoothstep(0.0, 0.0010, corn);	// if we want it smooth
-		if (corn < 0.0010)								// if we want it cut
-			res = vec3(0.0, 0.0, 0.0);
-	}
-// Apply bezel code, adapted from New-Pixie
-	if (bzl >0.0)
-		res.rgb = mix(	
-						max(res.rgb, 0.0),
-						pow( abs(bez.rgb), vec3( 1.4 ) ),
-						bez.w * bez.w
-						);
 
 	FragColor = vec4(res, 1.0);
 	if (SCANLINE_TYPE == 1.0) {

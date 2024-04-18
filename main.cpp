@@ -31,6 +31,7 @@
 #include "OpenGLHelper.h"
 #include "CycleCounter.h"
 #include "extras/MemoryLoader.h"
+#include "extras/ImGuiFileDialog.h"
 #include "PostProcessor.h"
 #include "EventRecorder.h"
 
@@ -218,6 +219,8 @@ int main(int argc, char* argv[])
 	static bool bShouldTerminateNetworking = false;
 	static bool bShouldTerminateProcessing = false;
 	static bool bIsFullscreen = false;
+	bool bBezelIsActive = false;
+	std::string bezelTexturePath = "assets/Bezels/Bezel.png";
     bool show_demo_window = false;
     bool show_metrics_window = false;
 	bool show_F1_window = true;
@@ -287,20 +290,33 @@ int main(int argc, char* argv[])
 		}
 		if (settingsState.contains("Main")) {
 			auto _sm = settingsState["Main"];
-			bIsFullscreen = _sm["fullscreen"];
-			window_bgcolor[0] = _sm["window background color"][0];
-			window_bgcolor[1] = _sm["window background color"][1];
-			window_bgcolor[2] = _sm["window background color"][2];
-			window_bgcolor[3] = _sm["window background color"][3];
-			show_F1_window = _sm["show F1 window"];
-			show_a2video_window = _sm["show Apple 2 Video window"];
-			show_postprocessing_window = _sm["show Post Processor window"];
-			show_recorder_window = _sm["show Recorder window"];
-			show_texture_window = _sm["show texture window"];
-			show_metrics_window = _sm["show metrics window"];
+			bIsFullscreen = _sm.value("fullscreen", bIsFullscreen);
+			bezelTexturePath = _sm.value("bezel texture path", bezelTexturePath);
+			bBezelIsActive = _sm.value("bBezelIsActive", bBezelIsActive);
+			show_F1_window = _sm.value("show F1 window", show_F1_window);
+			show_a2video_window = _sm.value("show Apple 2 Video window", show_a2video_window);
+			show_postprocessing_window = _sm.value("show Post Processor window", show_postprocessing_window);
+			show_recorder_window = _sm.value("show Recorder window", show_recorder_window);
+			show_texture_window = _sm.value("show texture window", show_texture_window);
+			show_metrics_window = _sm.value("show metrics window", show_metrics_window);
+			if (_sm.contains("window background color") && _sm["window background color"].is_array()) {
+				for (size_t i = 0; i < 4; ++i) {
+					window_bgcolor[i] = _sm["window background color"][i].get<float>();
+				}
+			}
 		}
 	} else {
 		std::cerr << "No saved Settings.json file" << std::endl;
+	}
+	
+	// Load the bezel texture
+	A2VideoManager::ImageAsset bezel_asset;
+	glGenTextures(1, &bezel_asset.tex_id);
+	if (bBezelIsActive)
+	{
+		glActiveTexture(_TEXUNIT_BEZEL);
+		bezel_asset.AssignByFilename(a2VideoManager, bezelTexturePath.c_str());
+		glActiveTexture(GL_TEXTURE0);
 	}
 	
 	// Load up the first screen in SHR, with green border color
@@ -445,6 +461,30 @@ int main(int argc, char* argv[])
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
 
+		// Get the current window size
+		ImVec2 window_pos = ImVec2(0, 0);
+		ImVec2 window_size = ImGui::GetIO().DisplaySize;
+		
+		// Calculate the coordinates to cover the full screen
+		ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Top-left
+		ImVec2 uv_max = ImVec2(1.0f, 1.0f); // Bottom-right
+		
+		// Get the foreground draw list to render on top of everything else
+		ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
+		
+		// Add the image to the draw list
+		if (bBezelIsActive)
+		{
+			draw_list->AddImage(
+								(void*)bezel_asset.tex_id,
+								window_pos,                  // Position
+								ImVec2(window_pos.x + window_size.x, window_pos.y + window_size.y), // End Position
+								uv_min,                      // UV Min
+								uv_max,                      // UV Max
+								IM_COL32(255, 255, 255, 255) // Tint Color
+								);
+		}
+		
 		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
@@ -482,6 +522,15 @@ int main(int argc, char* argv[])
 				ImGui::Separator();
 				if (ImGui::ColorEdit4("Window Color", window_bgcolor)) {
 					// std::cerr << "color " << window_bgcolor[0] << std::endl;
+				}
+				ImGui::Checkbox("Bezel", &bBezelIsActive);
+				ImGui::SameLine();
+				if (ImGui::Button("Select Bezel Texture"))
+				{
+					IGFD::FileDialogConfig config;
+					config.path = "./assets/Bezels/";
+					ImGui::SetNextWindowSize(ImVec2(800, 400));
+					ImGuiFileDialog::Instance()->OpenDialog("ChooseBezelLoad", "Select Bezel Texture", ".png,", config);
 				}
 				ImGui::Checkbox("PostProcessing Window (F2)", &show_postprocessing_window);
 				ImGui::Checkbox("Apple 2 Video Modes Window (F3)", &show_a2video_window);
@@ -529,6 +578,18 @@ int main(int argc, char* argv[])
 				ImGui::PopItemWidth();
             }
 			ImGui::End();
+		}
+		// In case the user wants to change the bezel
+		if (ImGuiFileDialog::Instance()->Display("ChooseBezelLoad")) {
+			// Check if a file was selected
+			if (ImGuiFileDialog::Instance()->IsOk()) {
+				bezelTexturePath = ImGuiFileDialog::Instance()->GetFilePathName();
+				// Load the bezel texture
+				glActiveTexture(_TEXUNIT_BEZEL);
+				bezel_asset.AssignByFilename(a2VideoManager, bezelTexturePath.c_str());
+				glActiveTexture(GL_TEXTURE0);
+			}
+			ImGuiFileDialog::Instance()->Close();
 		}
 		// Show the postprocessing window
 		if (show_postprocessing_window)
@@ -624,6 +685,8 @@ int main(int argc, char* argv[])
 	settingsState["Apple 2 Video"] = a2VideoManager->SerializeSate();
 	settingsState["Main"] = {
 		{"fullscreen", bIsFullscreen},
+		{"bBezelIsActive", bBezelIsActive},
+		{"bezel texture path", bezelTexturePath},
 		{"window background color", window_bgcolor},
 		{"show F1 window", show_F1_window},
 		{"show Apple 2 Video window", show_a2video_window},

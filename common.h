@@ -51,6 +51,7 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 // Post processing input texture is always in tex14
 #define _TEXUNIT_DATABUFFER GL_TEXTURE1			// Texunit of the data buffer (vram for legacy, TBO for SDHR)
 #define _TEXUNIT_IMAGE_ASSETS_START GL_TEXTURE2	// Start of the image assets
+#define _TEXUNIT_BEZEL GL_TEXTURE14				// Bezel Texture
 #define _TEXUNIT_POSTPROCESS GL_TEXTURE15		// input texunit the PP will use to generate the final output
 
 

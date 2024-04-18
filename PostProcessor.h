@@ -70,7 +70,7 @@ private:
 	// Shader parameter variables
 	int p_postprocessing_level = 1;
 	bool p_bzl = false;
-	bool p_corner = false;
+	float p_corner = 0.0f;
 	bool p_ext_gamma = false;
 	bool p_interlace = false;
 	bool p_potato = false;
