@@ -22,9 +22,9 @@ enum A2VideoModeBeam_e
 enum A2VideoSpecialMode_e
 {
 	A2_VSM_NONE 			= 0b0000,
-	A2_VSM_DHGRCOL140Mixed 	= 0b0001,
-	A2_VSM_HGRSPEC1			= 0b0010,
-	A2_VSM_HGRSPEC2		 	= 0b0100,
+	A2_VSM_DHGRCOL140Mixed 	= 0b0001,	// Mode that mixes 560 wide B/W alongside 160 wide DHGR color
+	A2_VSM_HGRSPEC1			= 0b0010,	// Mode that forces black in middle pixel of 11011 pattern in HGR
+	A2_VSM_HGRSPEC2		 	= 0b0100,	// Mode that forces white in middle pixel of 00100 pattern in HGR
 };
 
 struct A2BeamVertex {
