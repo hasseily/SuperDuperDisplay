@@ -220,7 +220,7 @@ int main(int argc, char* argv[])
 	static bool bShouldTerminateProcessing = false;
 	static bool bIsFullscreen = false;
 	bool bBezelIsActive = false;
-	std::string bezelTexturePath = "assets/Bezels/Bezel.png";
+	std::string bezelTexturePath = "assets/Bezels/generic_monitor.png";
     bool show_demo_window = false;
     bool show_metrics_window = false;
 	bool show_F1_window = true;
@@ -289,7 +289,15 @@ int main(int argc, char* argv[])
 			a2VideoManager->DeserializeSate(settingsState["Apple 2 Video"]);
 		}
 		if (settingsState.contains("Main")) {
+			int _wx, _wy, _ww, _wh;
+			SDL_GetWindowPosition(window, &_wx, &_wy);
+			SDL_GetWindowSize(window, &_ww, &_wh);
 			auto _sm = settingsState["Main"];
+			int _displayIndex = _sm.value("display index", 0);
+			_wx = _sm.value("window x", _wx);
+			_wy = _sm.value("window y", _wy);
+			_ww = _sm.value("window width", _ww);
+			_wh = _sm.value("window height", _wh);
 			bIsFullscreen = _sm.value("fullscreen", bIsFullscreen);
 			bezelTexturePath = _sm.value("bezel texture path", bezelTexturePath);
 			bBezelIsActive = _sm.value("bBezelIsActive", bBezelIsActive);
@@ -304,6 +312,14 @@ int main(int argc, char* argv[])
 					window_bgcolor[i] = _sm["window background color"][i].get<float>();
 				}
 			}
+			// update the main window accordingly
+			SDL_Rect displayBounds;
+			if (SDL_GetDisplayBounds(_displayIndex, &displayBounds) == 0) {
+				if ((_wx < (displayBounds.x + displayBounds.w)) && (_wy < (displayBounds.y + displayBounds.h)))
+					SDL_SetWindowPosition(window, _wx, _wy);
+				SDL_SetWindowSize(window, _ww, _wh);
+			}
+			SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 		}
 	} else {
 		std::cerr << "No saved Settings.json file" << std::endl;
@@ -312,12 +328,9 @@ int main(int argc, char* argv[])
 	// Load the bezel texture
 	A2VideoManager::ImageAsset bezel_asset;
 	glGenTextures(1, &bezel_asset.tex_id);
-	if (bBezelIsActive)
-	{
-		glActiveTexture(_TEXUNIT_BEZEL);
-		bezel_asset.AssignByFilename(a2VideoManager, bezelTexturePath.c_str());
-		glActiveTexture(GL_TEXTURE0);
-	}
+	glActiveTexture(_TEXUNIT_BEZEL);
+	bezel_asset.AssignByFilename(a2VideoManager, bezelTexturePath.c_str());
+	glActiveTexture(GL_TEXTURE0);
 	
 	// Load up the first screen in SHR, with green border color
 	DisplaySplashScreen(a2VideoManager, memManager);
@@ -681,26 +694,36 @@ int main(int argc, char* argv[])
     thread_server.join();
 
 	// Serialize settings and save them
-	settingsState["Post Processor"] = postProcessor->SerializeSate();
-	settingsState["Apple 2 Video"] = a2VideoManager->SerializeSate();
-	settingsState["Main"] = {
-		{"fullscreen", bIsFullscreen},
-		{"bBezelIsActive", bBezelIsActive},
-		{"bezel texture path", bezelTexturePath},
-		{"window background color", window_bgcolor},
-		{"show F1 window", show_F1_window},
-		{"show Apple 2 Video window", show_a2video_window},
-		{"show Post Processor window", show_postprocessing_window},
-		{"show Recorder window", show_recorder_window},
-		{"show texture window", show_texture_window},
-		{"show metrics window", show_metrics_window},
-	};
-	std::ofstream outFile("Settings.json");
-	if (outFile.is_open()) {
-		outFile << settingsState.dump(4);	// 4 spaces indent
-		outFile.close();
-	} else {
-		std::cerr << "Unable to save Settings.json file" << std::endl;
+	{
+		int _wx, _wy, _ww, _wh;
+		SDL_GetWindowPosition(window, &_wx, &_wy);
+		SDL_GetWindowSize(window, &_ww, &_wh);
+		settingsState["Post Processor"] = postProcessor->SerializeSate();
+		settingsState["Apple 2 Video"] = a2VideoManager->SerializeSate();
+		settingsState["Main"] = {
+			{"display index", SDL_GetWindowDisplayIndex(window)},
+			{"window x", _wx},
+			{"window y", _wy},
+			{"window width", _ww},
+			{"window height", _wh},
+			{"fullscreen", bIsFullscreen},
+			{"bBezelIsActive", bBezelIsActive},
+			{"bezel texture path", bezelTexturePath},
+			{"window background color", window_bgcolor},
+			{"show F1 window", show_F1_window},
+			{"show Apple 2 Video window", show_a2video_window},
+			{"show Post Processor window", show_postprocessing_window},
+			{"show Recorder window", show_recorder_window},
+			{"show texture window", show_texture_window},
+			{"show metrics window", show_metrics_window},
+		};
+		std::ofstream outFile("Settings.json");
+		if (outFile.is_open()) {
+			outFile << settingsState.dump(4);	// 4 spaces indent
+			outFile.close();
+		} else {
+			std::cerr << "Unable to save Settings.json file" << std::endl;
+		}
 	}
 	
     // Cleanup

@@ -240,19 +240,18 @@ void main() {
 		RG, 1.0, -GB,
 		RB, GB, 1.0
 		);
-
+	
+// zoom in and center screen for bezel
+	vec2 pos = Warp(TexCoords*vec2(1.0-zoomx,1.0-zoomy)-vec2(centerx,centery)/100.0);
 	
 	
 	float corn;
 	if (corner > 0.0) {
-		corn = TexCoords.x * TexCoords.y * (1.-TexCoords.x) * (1.-TexCoords.y);
+		corn = pos.x * pos.y * (1.-pos.x) * (1.-pos.y);
 		// res = res * smoothstep(0.0, 0.0010, corn);	// if we want it smooth
 		if (corn < corner)								// if we want it cut
 			discard;
 	}
-	
-// zoom in and center screen for bezel
-	vec2 pos = Warp(TexCoords*vec2(1.0-zoomx,1.0-zoomy)-vec2(centerx,centery)/100.0);
 	
 // If people brefer the BarrelDistortion algo
 	pos = BarrelDistortion(pos);

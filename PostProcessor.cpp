@@ -466,14 +466,14 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 				p_centery = 0;
 
 			}
-			ImGui::SliderFloat("Zoom Image X", &p_zoomx, -1.0f, 1.0f, "%.3f");
-			ImGui::SliderFloat("Zoom Image Y", &p_zoomy, -1.0f, 1.0f, "%.3f");
+			ImGui::SliderFloat("Zoom Image X", &p_zoomx, -2.0f, 2.0f, "%.3f");
+			ImGui::SliderFloat("Zoom Image Y", &p_zoomy, -2.0f, 2.0f, "%.3f");
 			ImGui::SliderFloat("Image Center X", &p_centerx, -100.0f, 100.0f, "%.2f");
 			ImGui::SliderFloat("Image Center Y", &p_centery, -100.0f, 100.0f, "%.2f");
 			ImGui::SliderFloat("Curvature Horizontal", &p_warpx, 0.00f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Curvature Vertical", &p_warpy, 0.00f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Barrel Distortion", &p_barrel_distortion, -2.00f, 2.00f, "%.2f");
-			ImGui::SliderFloat("Corners Cut", &p_corner, 0.f, 10.f, "%.3f");
+			ImGui::SliderFloat("Corners Cut", &p_corner, 0.f, 90.f, "%.3f");
 			ImGui::Separator();
 			
 			// Color Settings
