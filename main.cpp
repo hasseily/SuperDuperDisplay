@@ -125,14 +125,14 @@ int main(int argc, char* argv[])
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 #if defined(__APPLE__)
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
-        | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED | SDL_WINDOW_ALLOW_HIGHDPI
+        | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
         | SDL_WINDOW_SHOWN);
 #elif defined(IMGUI_IMPL_OPENGL_ES2)
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
-		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN);
+		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN);
 #else
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
-        | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED | SDL_WINDOW_ALLOW_HIGHDPI
+        | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
         | SDL_WINDOW_SHOWN);
 #endif
 	// Get the actual display size
@@ -277,6 +277,7 @@ int main(int argc, char* argv[])
 #else
 
 	// Get the saved states from previous runs
+	std::cout << "Loading previous state..." << std::endl;
 	nlohmann::json settingsState;
 	std::ifstream inFile("Settings.json");
 	if (inFile.is_open()) {
@@ -331,7 +332,8 @@ int main(int argc, char* argv[])
 	glActiveTexture(_TEXUNIT_BEZEL);
 	bezel_asset.AssignByFilename(a2VideoManager, bezelTexturePath.c_str());
 	glActiveTexture(GL_TEXTURE0);
-	
+	std::cout << "Previous state loaded!" << std::endl;
+
 	// Load up the first screen in SHR, with green border color
 	DisplaySplashScreen(a2VideoManager, memManager);
 
