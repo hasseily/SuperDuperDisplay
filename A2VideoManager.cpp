@@ -351,11 +351,11 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		_y = (_y + region_scanlines - 6) % region_scanlines;
 	}
 
-	// Do not bother with the beam state until we get a 0,0
+	// Do not bother with the beam state until we get a frame start
 	// Then we can start doing work
-	if (_x == 0 && _y == 0)	// initialize
+	if (_y == _SCANLINE_START_FRAME && _x == 0)	// frame start
 	{
-		beamState = BeamState_e::BORDER_RIGHT;
+		beamState = BeamState_e::NBVBLANK;
 	}
 
 	// Now determine the actual beam state
