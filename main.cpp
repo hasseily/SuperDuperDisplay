@@ -126,14 +126,15 @@ int main(int argc, char* argv[])
 #if defined(__APPLE__)
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
         | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-        | SDL_WINDOW_SHOWN);
+        | SDL_WINDOW_SHOWN | SDL_WINDOW_MAXIMIZED);
 #elif defined(IMGUI_IMPL_OPENGL_ES2)
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
-		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN);
+		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI 
+		| SDL_WINDOW_SHOWN | SDL_WINDOW_MAXIMIZED);
 #else
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
         | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-        | SDL_WINDOW_SHOWN);
+        | SDL_WINDOW_SHOWN | SDL_WINDOW_MAXIMIZED);
 #endif
 	// Get the actual display size
 	SDL_DisplayMode displayMode;
@@ -142,8 +143,8 @@ int main(int argc, char* argv[])
 		SDL_Quit();
 		return 1;
 	}
-    window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
-		displayMode.w, displayMode.h, window_flags);
+    window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+		800, 600, window_flags);	// Window will still be maximized to size of screen, with title bar
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
 
