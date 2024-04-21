@@ -250,11 +250,15 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	}
 
 	// How much can we scale the output quad?
-	// Always scale up in integers numbers
+	// Always scale up in integers numbers, but auto scale down is float
 	float _scale = static_cast<float>(viewportWidth) / static_cast<float>(texWidth);
 	_scale = std::min(_scale, static_cast<float>(viewportHeight) / static_cast<float>(texHeight));
 	if (_scale > 1.0f)
 		_scale = std::floor(_scale);
+	max_integer_scale = std::max(1, static_cast<int>(_scale));
+	integer_scale = std::min(integer_scale, max_integer_scale);
+	if (!bAutoScale)
+		_scale = static_cast<float>(integer_scale);
 
 	// Determine the quad's origin
 	quadWidth = static_cast<int>(_scale * texWidth);
@@ -427,6 +431,14 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		ImGui::RadioButton("None##PPLEVEL", &p_postprocessing_level, 0); ImGui::SameLine();
 		ImGui::RadioButton("Scanline only##PPLEVEL", &p_postprocessing_level, 1); ImGui::SameLine();
 		ImGui::RadioButton("Full CRT##PPLEVEL", &p_postprocessing_level, 2);
+		ImGui::Separator();
+		ImGui::Text("[ BASE INTEGER SCALE ]");
+		ImGui::Checkbox("Auto", &bAutoScale);
+		if (bAutoScale)
+			ImGui::BeginDisabled();
+		ImGui::SliderInt("Integer Scale", &integer_scale, 1, max_integer_scale, "%d");
+		if (bAutoScale)
+			ImGui::EndDisabled();
 
 		if (p_postprocessing_level > 1) {
 			ImGui::Separator();
