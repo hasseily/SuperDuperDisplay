@@ -342,7 +342,7 @@ void main() {
 
 	FragColor = vec4(res, 1.0);
 	if (SCANLINE_TYPE == 1.0) {
-		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
+		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(bpos.y * TextureSize.y), 2.0));
 	}
 }
 
