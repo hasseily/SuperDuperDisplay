@@ -869,8 +869,8 @@ GLuint A2VideoManager::Render()
 		glActiveTexture(_TEXUNIT_POSTPROCESS);
 		glBindTexture(GL_TEXTURE_2D, merged_texture_id);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -1112,7 +1112,14 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 				this->SetBordersWithReinit(border_w_slider_val, border_h_slider_val);
 			if (ImGui::SliderInt("Border Color (0xC034)", &memManager->switch_c034, 0, 15))
 				this->ForceBeamFullScreenRender();
-			if (ImGui::Checkbox("Force SHR width", &this->bForceSHRWidth))
+			if (ImGui::Checkbox("Mirror output for bezel reflection", &this->bMirrorRepeatOutputTexture))
+			{
+				glActiveTexture(_TEXUNIT_POSTPROCESS);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
+				glActiveTexture(GL_TEXTURE0);
+			}
+			if (ImGui::Checkbox("Force SHR width in merged mode", &this->bForceSHRWidth))
 				this->ForceBeamFullScreenRender();
 			
 			ImGui::SeparatorText("[ EXTRA MODES ]");

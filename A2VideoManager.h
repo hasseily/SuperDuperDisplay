@@ -218,6 +218,7 @@ private:
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
     bool bIsRebooting = false;              // Rebooting semaphore
 	bool bIsSwitchingToMergedMode = false;	// True when refreshing earlier scanlines for merged mode
+	bool bMirrorRepeatOutputTexture = false;	// Choose to mirror repeat texture wrap, or not
 
 	// imgui vars
 	bool bImguiWindowIsOpen = false;
