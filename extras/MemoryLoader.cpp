@@ -32,7 +32,6 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
 		// Check if a file was selected
 		if (ImGuiFileDialog::Instance()->IsOk()) {
 			std::string filePath = ImGuiFileDialog::Instance()->GetFilePathName();
-			ImGuiFileDialog::Instance()->Close();
 			if (filePath.length() >= 4) {
 				// Extract the last 4 characters
 				std::string extension = filePath.substr(filePath.length() - 4, 4);
@@ -69,6 +68,8 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
 				filePath[0] = '\0';
 			}
 		}
+		ImGuiFileDialog::Instance()->Close();
+
 	}
 	return res;
 }
