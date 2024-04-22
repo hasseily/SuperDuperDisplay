@@ -315,13 +315,13 @@ int main(int argc, char* argv[])
 				}
 			}
 			// update the main window accordingly
+			SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 			SDL_Rect displayBounds;
 			if (SDL_GetDisplayBounds(_displayIndex, &displayBounds) == 0) {
 				if ((_wx < (displayBounds.x + displayBounds.w)) && (_wy < (displayBounds.y + displayBounds.h)))
 					SDL_SetWindowPosition(window, _wx, _wy);
 				SDL_SetWindowSize(window, _ww, _wh);
 			}
-			SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 		}
 	} else {
 		std::cerr << "No saved Settings.json file" << std::endl;
@@ -372,6 +372,11 @@ int main(int argc, char* argv[])
                 break;
             case SDL_WINDOWEVENT:
 			{
+				if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+					int width = event.window.data1;
+					int height = event.window.data2;
+					glViewport(0, 0, width, height);
+				}
 				if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
 					done = true;
 			}
