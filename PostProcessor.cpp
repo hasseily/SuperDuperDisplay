@@ -60,6 +60,9 @@ nlohmann::json PostProcessor::SerializeState()
 	nlohmann::json jsonState = {
 		{"p_postprocessing_level", p_postprocessing_level},
 		{"bCRTFillWindow", bCRTFillWindow},
+		{"integer_scale", integer_scale},
+		{"bAutoScale", bAutoScale},
+		{"bCRTFillWindow", bCRTFillWindow},
 		{"p_bzl", p_bzl},
 		{"p_corner", p_corner},
 		{"p_ext_gamma", p_ext_gamma},
@@ -102,6 +105,8 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 {
 	p_postprocessing_level = jsonState.value("p_postprocessing_level", p_postprocessing_level);
 	bCRTFillWindow = jsonState.value("bCRTFillWindow", bCRTFillWindow);
+	integer_scale = jsonState.value("integer_scale", integer_scale);
+	bAutoScale = jsonState.value("bAutoScale", bAutoScale);
 	p_bzl = jsonState.value("p_bzl", p_bzl);
 	p_corner = jsonState.value("p_corner", p_corner);
 	p_ext_gamma = jsonState.value("p_ext_gamma", p_ext_gamma);
