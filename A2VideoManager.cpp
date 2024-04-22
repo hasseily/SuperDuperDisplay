@@ -384,6 +384,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			{
 				// Start of NBVBLANK at which we flip the double buffering
 				StartNextFrame();
+				beamState = BeamState_e::BORDER_TOP;
 			}
 			break;
 		case BeamState_e::BORDER_LEFT:
