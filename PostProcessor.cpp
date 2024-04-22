@@ -55,7 +55,7 @@ PostProcessor::~PostProcessor()
 // Main methods
 //////////////////////////////////////////////////////////////////////////
 
-nlohmann::json PostProcessor::SerializeSate()
+nlohmann::json PostProcessor::SerializeState()
 {
 	nlohmann::json jsonState = {
 		{"p_postprocessing_level", p_postprocessing_level},
@@ -98,7 +98,7 @@ nlohmann::json PostProcessor::SerializeSate()
 	return jsonState;
 }
 
-void PostProcessor::DeserializeSate(const nlohmann::json &jsonState)
+void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 {
 	p_postprocessing_level = jsonState.value("p_postprocessing_level", p_postprocessing_level);
 	bCRTFillWindow = jsonState.value("bCRTFillWindow", bCRTFillWindow);
@@ -139,7 +139,7 @@ void PostProcessor::DeserializeSate(const nlohmann::json &jsonState)
 }
 
 void PostProcessor::SaveState(int profile_id) {
-	nlohmann::json jsonState = SerializeSate();
+	nlohmann::json jsonState = SerializeState();
 	
 	std::ostringstream filename;
 	filename << "pp_profile_" << profile_id << ".json";
@@ -155,7 +155,7 @@ void PostProcessor::LoadState(int profile_id) {
 	
 	if (file.is_open()) {
 		file >> jsonState;
-		DeserializeSate(jsonState);
+		DeserializeState(jsonState);
 	}
 }
 

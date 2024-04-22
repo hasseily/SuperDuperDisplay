@@ -285,10 +285,10 @@ int main(int argc, char* argv[])
 		inFile >> settingsState;
 		inFile.close();
 		if (settingsState.contains("Post Processor")) {
-			postProcessor->DeserializeSate(settingsState["Post Processor"]);
+			postProcessor->DeserializeState(settingsState["Post Processor"]);
 		}
 		if (settingsState.contains("Apple 2 Video")) {
-			a2VideoManager->DeserializeSate(settingsState["Apple 2 Video"]);
+			a2VideoManager->DeserializeState(settingsState["Apple 2 Video"]);
 		}
 		if (settingsState.contains("Main")) {
 			int _wx, _wy, _ww, _wh;
@@ -706,8 +706,8 @@ int main(int argc, char* argv[])
 		int _wx, _wy, _ww, _wh;
 		SDL_GetWindowPosition(window, &_wx, &_wy);
 		SDL_GetWindowSize(window, &_ww, &_wh);
-		settingsState["Post Processor"] = postProcessor->SerializeSate();
-		settingsState["Apple 2 Video"] = a2VideoManager->SerializeSate();
+		settingsState["Post Processor"] = postProcessor->SerializeState();
+		settingsState["Apple 2 Video"] = a2VideoManager->SerializeState();
 		settingsState["Main"] = {
 			{"display index", SDL_GetWindowDisplayIndex(window)},
 			{"window x", _wx},

@@ -1250,7 +1250,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 	}
 }
 
-nlohmann::json A2VideoManager::SerializeSate()
+nlohmann::json A2VideoManager::SerializeState()
 {
 	nlohmann::json jsonState = {
 		{"borders_w_cycles", borders_w_cycles},
@@ -1259,7 +1259,7 @@ nlohmann::json A2VideoManager::SerializeSate()
 	return jsonState;
 }
 
-void A2VideoManager::DeserializeSate(const nlohmann::json &jsonState)
+void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 {
 	SetBordersWithReinit(jsonState.value("borders_w_cycles", borders_w_cycles),
 						 jsonState.value("borders_h_8scanlines", borders_h_scanlines / 8));

@@ -182,8 +182,8 @@ public:
 	uint32_t GetBordersWidthCycles() const { return borders_w_cycles; }
 	uint32_t GetBordersHeightScanlines() const { return borders_h_scanlines; }
 
-	nlohmann::json SerializeSate();
-	void DeserializeSate(const nlohmann::json &jsonState);
+	nlohmann::json SerializeState();
+	void DeserializeState(const nlohmann::json &jsonState);
 	
 	void Initialize();
 	void ResetComputer();
