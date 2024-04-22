@@ -314,9 +314,12 @@ For each pixel, determine which memory byte it is part of,
 				// aux1 is aligned, there's nothing special to do. If the high bit is bw, the whole thing is bw
 				// main1 has the first dot using the aux1 mode.
 				// aux2 has the first 2 dots using the main1 mode.
-				// main2 has the first 2 dots using the aux2 mode.
+				// main2 has the first 3 dots using the aux2 mode.
+				// In other words, aux1 mode bit controls the first 8 dots, main1 controls the next 8 dots, and so on.
+				// main2 is unique in that it controls only the last 4 dots. 8+8+8+4 = 28 dots.
+
 				// NOTE: The byteVals we've calculated above are not the same. They're centered around
-				// the main+aux bytes of this texel, so they're main-[aux-main]-aux
+				// the main+aux bytes of this texel, so they're main2-[aux1-main1]-aux2
 				
 				uint xFragPos = uFragPos.x - uint(hborder * 14);
 
