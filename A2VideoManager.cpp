@@ -1255,12 +1255,25 @@ nlohmann::json A2VideoManager::SerializeState()
 	nlohmann::json jsonState = {
 		{"borders_w_cycles", borders_w_cycles},
 		{"borders_h_8scanlines", borders_h_scanlines / 8},
+		{"borders_color", MemoryManager::GetInstance()->switch_c034},
+		{"enable_texture_repeat_mirroring", bMirrorRepeatOutputTexture},
+		{"enable_DHGRCOL140Mixed", bUseDHGRCOL140Mixed},
+		{"enable_HGRSPEC1", bUseHGRSPEC1},
+		{"enable_HGRSPEC2", bUseHGRSPEC2},
+		{"force_shr_width_in_merge_mode", bForceSHRWidth},
 	};
 	return jsonState;
 }
 
 void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 {
+	MemoryManager::GetInstance()->switch_c034 = jsonState.value("borders_color", MemoryManager::GetInstance()->switch_c034);
+	bMirrorRepeatOutputTexture = jsonState.value("enable_texture_repeat_mirroring", bMirrorRepeatOutputTexture);
+	bUseDHGRCOL140Mixed = jsonState.value("enable_DHGRCOL140Mixed", bUseDHGRCOL140Mixed);
+	bUseHGRSPEC1 = jsonState.value("enable_HGRSPEC1", bUseHGRSPEC1);
+	bUseHGRSPEC2 = jsonState.value("enable_HGRSPEC2", bUseHGRSPEC2);
+	bForceSHRWidth = jsonState.value("force_shr_width_in_merge_mode", bForceSHRWidth);
+
 	SetBordersWithReinit(jsonState.value("borders_w_cycles", borders_w_cycles),
 						 jsonState.value("borders_h_8scanlines", borders_h_scanlines / 8));
 }
