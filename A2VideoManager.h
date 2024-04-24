@@ -121,7 +121,7 @@ public:
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
 
-	ImageAsset image_assets[7];
+	ImageAsset image_assets[5];
 	std::unique_ptr<A2WindowBeam> windowsbeam[A2VIDEOBEAM_TOTAL_COUNT];	// beam racing GPU render
 
 	uint64_t current_frame_idx = 0;

@@ -899,21 +899,15 @@ GLuint A2VideoManager::Render()
 		// image asset 1: The alternate font
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 1);
 		image_assets[1].AssignByFilename(this, "assets/Apple2eFont14x16 - Alternate.png");
-		// image asset 2: The apple 2e US font 80COL
+		// image asset 2: LGR texture (overkill for color, useful for dithered b/w)
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 2);
-		image_assets[2].AssignByFilename(this, "assets/Apple2eFont7x16 - Regular.png");
-		// image asset 3: The alternate font 80COL
+		image_assets[2].AssignByFilename(this, "assets/Texture_composite_lgr.png");
+		// image asset 3: HGR texture
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 3);
-		image_assets[3].AssignByFilename(this, "assets/Apple2eFont7x16 - Alternate.png");
-		// image asset 4: LGR texture (overkill for color, useful for dithered b/w)
+		image_assets[3].AssignByFilename(this, "assets/Texture_composite_hgr.png");
+		// image asset 4: DHGR texture
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 4);
-		image_assets[4].AssignByFilename(this, "assets/Texture_composite_lgr.png");
-		// image asset 5: HGR texture
-		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 5);
-		image_assets[5].AssignByFilename(this, "assets/Texture_composite_hgr.png");
-		// image asset 6: DHGR texture
-		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 6);
-		image_assets[6].AssignByFilename(this, "assets/Texture_composite_dhgr.png");
+		image_assets[4].AssignByFilename(this, "assets/Texture_composite_dhgr.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL AssignByFilename error: " 
 				<< 0 << " - " << glerr << std::endl;

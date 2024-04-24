@@ -218,9 +218,9 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	// 2 font textures + lgr, hgr, dhgr
 	shader.setInt("a2ModesTex0", _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0);	// D/TEXT font regular
 	shader.setInt("a2ModesTex1", _TEXUNIT_IMAGE_ASSETS_START + 1 - GL_TEXTURE0);	// D/TEXT font alternate
-	shader.setInt("a2ModesTex2", _TEXUNIT_IMAGE_ASSETS_START + 4 - GL_TEXTURE0);	// D/LGR
-	shader.setInt("a2ModesTex3", _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0);	// HGR
-	shader.setInt("a2ModesTex4", _TEXUNIT_IMAGE_ASSETS_START + 6 - GL_TEXTURE0);	// DHGR
+	shader.setInt("a2ModesTex2", _TEXUNIT_IMAGE_ASSETS_START + 2 - GL_TEXTURE0);	// D/LGR
+	shader.setInt("a2ModesTex3", _TEXUNIT_IMAGE_ASSETS_START + 3 - GL_TEXTURE0);	// HGR
+	shader.setInt("a2ModesTex4", _TEXUNIT_IMAGE_ASSETS_START + 4 - GL_TEXTURE0);	// DHGR
 	
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glBindTexture(GL_TEXTURE_2D, 0);
