@@ -36,11 +36,16 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
 				// Extract the last 4 characters
 				std::string extension = filePath.substr(filePath.length() - 4, 4);
 				if (extension == ".hgr")
-					return MemoryLoadHGR(filePath);
-				if (extension == ".dhr")
-					return MemoryLoadDHR(filePath);
-				if (extension == ".shr")
-					return MemoryLoadSHR(filePath);
+					res = MemoryLoadHGR(filePath);
+				else if (extension == ".dhr")
+					res =  MemoryLoadDHR(filePath);
+				else if (extension == ".shr")
+					res = MemoryLoadSHR(filePath);
+				if (res)
+				{
+					ImGuiFileDialog::Instance()->Close();
+					return res;
+				}
 			}
 			// If a file is selected, read and load it into the array
 			if (filePath[0] != '\0') {
