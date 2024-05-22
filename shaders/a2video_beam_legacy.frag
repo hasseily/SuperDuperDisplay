@@ -83,6 +83,14 @@ const vec4 tintcolors[16] = vec4[16](
 in vec2 vFragPos;       // The fragment position in pixels
 out vec4 fragColor;
 
+
+// Perform left rotation on a 4-bit nibble (for DLGR AUX memory)
+// Why? I don't know, can't find any docs, but AppleWin does it and it is Correct
+uint ROL_NIB(uint x)
+{
+        return ((x << 1) & 0xFu) | ((x >> 3) & 0x1u);
+}
+
 void main()
 {
 	// first determine which VRAMTEX texel this fragment is part of, including
@@ -164,9 +172,12 @@ void main()
 			// In LGR mode, all 14 dots are from MAIN
 
 			// Get the byte value depending on MAIN or AUX
-			uint byteVal = (1u - (a2mode - 2u)) * targetTexel.r	// LGR
+			// Rotate left each nibble of the AUX byte
+			uint byteVal = (1u - (a2mode - 2u)) * targetTexel.r     // LGR
 							// DLGR: take .r if offset is 7-13, otherwise take .g if offset is 0-6
-							+ (a2mode - 2u) * (targetTexel.r * (fragOffset.x / 7u) + targetTexel.g * (1u - (fragOffset.x / 7u)));
+							+ (a2mode - 2u) * (targetTexel.r * (fragOffset.x / 7u)
+							+ ((ROL_NIB(targetTexel.g >> 4) << 4) | ROL_NIB(targetTexel.g & 0xFu)) * (1u - (fragOffset.x / 7u)));
+
 			// get the color depending on vertical position
 			uvec2 byteOrigin;
 			byteOrigin = (1u - (fragOffset.y / 8u)) * uvec2(0u, (byteVal & 0xFu) * 16u) // Top pixel, color of the 4 low bits
