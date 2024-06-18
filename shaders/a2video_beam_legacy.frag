@@ -457,7 +457,7 @@ For each pixel, determine which memory byte it is part of,
 			
 			if (monitorColorType > 0)	// Monitor is monochrome
 			{
-				if (((targetTexel.b & 0xF0u) >> 4) > 0.f)	// phosphor color (dot is on)
+				if (((targetTexel.b & 0xF0u) >> 4) > 0u)	// phosphor color (dot is on)
 					fragColor = monitorcolors[monitorColorType];
 				else							// black (dot is off)
 					fragColor = monitorcolors[0];
