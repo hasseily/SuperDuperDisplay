@@ -30,6 +30,7 @@ public:
 	const bool IsVBL();
 	const bool IsHBL();
 	const bool IsInBlank();
+	bool isVideoRegionDynamic = true;		// Video region will reconfigure automatically as necessary
 	const VideoRegion_e GetVideoRegion();
 	void SetVideoRegion(VideoRegion_e region);
 	void Reset();

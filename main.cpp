@@ -230,7 +230,7 @@ int main(int argc, char* argv[])
 	bool show_postprocessing_window = false;
 	bool show_recorder_window = false;
 	int _slotnum = 0;
-	bool vbl_region_is_PAL;
+	int vbl_region;
 	int vbl_slider_val;
 	float window_bgcolor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 
@@ -260,6 +260,7 @@ int main(int argc, char* argv[])
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
     uint64_t dt_LAST = 0;
 	float deltaTime = 0.f;
+	float worst_frame_rate = 1000000.f;
 
 	set_vsync(g_swapInterval);
 
@@ -518,6 +519,9 @@ int main(int argc, char* argv[])
 				ImGui::PushItemWidth(110);
                 ImGui::Text("Press F1 at any time to toggle this window");
                 ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+				if ((worst_frame_rate > io.Framerate) && (io.Framerate > 0))
+					worst_frame_rate = io.Framerate;
+				ImGui::Text("Worst Frame rate %.3f ms/frame", 1000.0f / worst_frame_rate);
 				int _vw, _vh;
 				SDL_GL_GetDrawableSize(window, &_vw, &_vh);
 				ImGui::Text("Drawable Size: %d x %d", _vw, _vh);
@@ -527,13 +531,34 @@ int main(int argc, char* argv[])
 				ImGui::Text("Max Incoming Packet Queue: %lu", get_max_incoming_packets());
 				ImGui::Text("Network Processing Time: %llu ns", get_duration_network_processing_ns());
 				ImGui::Text("Packets Processing Time: %llu ns", get_duration_packet_processing_ns());
-				vbl_region_is_PAL = (cycleCounter->GetVideoRegion() == VideoRegion_e::PAL);
-				if (ImGui::Checkbox("PAL Mode", &vbl_region_is_PAL))
+				ImGui::Separator();
+				ImGui::Text("Region: ");  ImGui::SameLine();
+				if (cycleCounter->isVideoRegionDynamic)
+					vbl_region = 0;
+				else
+					vbl_region = (cycleCounter->GetVideoRegion() == VideoRegion_e::PAL ? 1 : 2);
+				if (ImGui::RadioButton("Auto##REGION", &vbl_region, 0))
 				{
-					if (vbl_region_is_PAL)
-						cycleCounter->SetVideoRegion(VideoRegion_e::PAL);
-					else
-						cycleCounter->SetVideoRegion(VideoRegion_e::NTSC);
+					cycleCounter->isVideoRegionDynamic = true;
+				}
+				if (vbl_region == 0)
+				{
+					ImGui::SameLine();
+					(cycleCounter->GetVideoRegion() == VideoRegion_e::PAL
+						? ImGui::Text(" (P)")
+						: ImGui::Text(" (N)"));
+				}
+				ImGui::SameLine();
+				if (ImGui::RadioButton("PAL##REGION", &vbl_region, 1))
+				{
+					cycleCounter->isVideoRegionDynamic = false;
+					cycleCounter->SetVideoRegion(VideoRegion_e::PAL);
+				}
+				ImGui::SameLine();
+				if (ImGui::RadioButton("NTSC##REGION", &vbl_region, 2))
+				{
+					cycleCounter->isVideoRegionDynamic = false;
+					cycleCounter->SetVideoRegion(VideoRegion_e::NTSC);
 				}
 				vbl_slider_val = cycleCounter->GetScreenCycles();
 				if (ImGui::SliderInt("Set VBL Start", &vbl_slider_val, 0, (int)cycleCounter->GetScreenCycles()))
@@ -560,7 +585,10 @@ int main(int argc, char* argv[])
 					SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 				}
 				if (ImGui::Checkbox("VSYNC", &g_swapInterval))
+				{
 					set_vsync(g_swapInterval);
+					worst_frame_rate = 100000000.f;
+				}
 				if (g_swapInterval)
 				{
 					ImGui::SameLine();

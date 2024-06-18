@@ -39,7 +39,7 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 	m_cycle = (m_cycle % cycles_total);
 
 	// Update VBL and region automatically with 0xC019
-	if (isVBL)
+	if (isVideoRegionDynamic && isVBL)
 	{
 		if (m_cycle < CYCLES_SCREEN)
 		{
