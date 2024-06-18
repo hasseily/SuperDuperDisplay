@@ -1017,6 +1017,8 @@ GLuint A2VideoManager::Render()
 		else
 			windowsbeam[A2VIDEOBEAM_LEGACY]->specialModesMask &= ~A2_VSM_HGRSPEC2;
 
+		windowsbeam[A2VIDEOBEAM_LEGACY]->monitorColorType = eA2MonitorType;
+		
 		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
 		// std::cerr << "Rendering legacy to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -1031,6 +1033,7 @@ GLuint A2VideoManager::Render()
 		output_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
 		output_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
 		glViewport(0, 0, output_width, output_height);
+		windowsbeam[A2VIDEOBEAM_SHR]->monitorColorType = eA2MonitorType;
 		output_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
 		// std::cerr << "Rendering SHR to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -1117,6 +1120,15 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			}
 			if (ImGui::Checkbox("Force SHR width in merged mode", &this->bForceSHRWidth))
 				this->ForceBeamFullScreenRender();
+			
+			//eA2MonitorType
+			const char* monitorTypes[] = { "Color", "White", "Green", "Amber" };
+			if (ImGui::Combo("Monitor Type", &this->eA2MonitorType, monitorTypes, IM_ARRAYSIZE(monitorTypes)))
+			{
+				windowsbeam[A2VIDEOBEAM_LEGACY]->monitorColorType = eA2MonitorType;
+				windowsbeam[A2VIDEOBEAM_SHR]->monitorColorType = eA2MonitorType;
+				this->ForceBeamFullScreenRender();
+			}
 			
 			ImGui::SeparatorText("[ EXTRA MODES ]");
 			if (ImGui::Checkbox("DHGR COL140 Mixed", &bUseDHGRCOL140Mixed))
@@ -1251,6 +1263,7 @@ nlohmann::json A2VideoManager::SerializeState()
 		{"borders_w_cycles", borders_w_cycles},
 		{"borders_h_8scanlines", borders_h_scanlines / 8},
 		{"borders_color", MemoryManager::GetInstance()->switch_c034},
+		{"monitor_type", eA2MonitorType},
 		{"enable_texture_repeat_mirroring", bMirrorRepeatOutputTexture},
 		{"enable_DHGRCOL140Mixed", bUseDHGRCOL140Mixed},
 		{"enable_HGRSPEC1", bUseHGRSPEC1},
@@ -1263,6 +1276,7 @@ nlohmann::json A2VideoManager::SerializeState()
 void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 {
 	MemoryManager::GetInstance()->switch_c034 = jsonState.value("borders_color", MemoryManager::GetInstance()->switch_c034);
+	eA2MonitorType = jsonState.value("monitor_type", eA2MonitorType);
 	bMirrorRepeatOutputTexture = jsonState.value("enable_texture_repeat_mirroring", bMirrorRepeatOutputTexture);
 	bUseDHGRCOL140Mixed = jsonState.value("enable_DHGRCOL140Mixed", bUseDHGRCOL140Mixed);
 	bUseHGRSPEC1 = jsonState.value("enable_HGRSPEC1", bUseHGRSPEC1);

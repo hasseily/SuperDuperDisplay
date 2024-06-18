@@ -27,6 +27,16 @@ enum A2VideoSpecialMode_e
 	A2_VSM_HGRSPEC2		 	= 0b0100,	// Mode that forces white in middle pixel of 00100 pattern in HGR
 };
 
+// Monitor color type
+enum A2VideoMonitorType_e
+{
+	A2_MON_COLOR = 0,
+	A2_MON_WHITE,
+	A2_MON_GREEN,
+	A2_MON_AMBER,
+	A2_MON_TOTAL_COUNT
+};
+
 struct A2BeamVertex {
 	glm::vec2 RelPos;		// Relative position of the vertex
 	glm::vec2 PixelPos;		// Pixel position of the vertex in the Apple 2 screen
@@ -53,6 +63,7 @@ public:
 	unsigned int VBO = UINT_MAX;			// Vertex Buffer Object (holds vertices)
 	
 	int specialModesMask = A2_VSM_NONE;		// Or'ed A2VideoSpecialMode_e
+	int monitorColorType = A2_MON_COLOR;	// Monitor color type A2VideoMonitorType_e
 
 private:
 	bool vramTextureExists = false;						// true if the VRAM texture exists and only needs an update

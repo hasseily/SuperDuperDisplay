@@ -66,6 +66,27 @@ const uint palette640[16] = uint[16](
 									 8u,9u,10u,11u
 								   );
 
+// Monitor color type
+// enum A2VideoMonitorType_e
+// {
+// 		A2_MON_COLOR = 0,
+// 		A2_MON_WHITE,
+// 		A2_MON_GREEN,
+// 		A2_MON_AMBER,
+//		A2_MON_TOTAL_COUNT
+// };
+
+uniform int monitorColorType;
+// colors for monitor color types
+const vec4 monitorcolors[5] = vec4[5](
+	vec4(0.000000,	0.000000,	0.000000,	1.000000)	/*BLACK, -- this is a color monitor */
+	,vec4(1.000000,	1.000000,	1.000000,	1.000000)	/*WHITE PHOSPHOR,*/
+	,vec4(0.290196,	1.000000,	0.000000,	1.000000)	/*GREEN PHOSPHOR,*/
+	,vec4(1.000000,	0.717647,	0.000000,	1.000000)	/*AMBER PHOSPHOR,*/
+	,vec4(1.000000,	0.000000,	0.500000,	1.000000)	/*PINK, -- this option shouldn't exist */
+);
+
+
 const vec4 bordercolors[16] = vec4[16] (
     vec4(0.00, 0.00, 0.00, 1.0), // BLACK
     vec4(0.67, 0.07, 0.30, 1.0), // DEEP_RED
@@ -99,6 +120,14 @@ vec4 ConvertIIgs2RGB(uint gscolor)
 	return vec4(_red, _green, _blue, _alpha);
 }
 
+// If the monitor is monochrome, get the luminance (greyscale) value of the color
+// and apply it to the monochrome value
+vec4 GetMonochromeValue(vec4 aColor, vec4 monchromeColor)
+{
+	float luminance = dot(aColor.rgb, vec3(0.299, 0.587, 0.114));
+	return vec4(monchromeColor.rgb * luminance, aColor.a);
+}
+
 void main()
 {
 	uint scanline = uint(vFragPos.y) / 2u;
@@ -108,6 +137,8 @@ void main()
 		(vFragPos.x < float(hborder*16)) || (vFragPos.x >= float(640+hborder*16)))
 	{
 		fragColor = bordercolors[texelFetch(VRAMTEX, ivec2(33u + uint(float(vFragPos.x) / 4.0), scanline), 0).r & 0x0Fu];
+		if (monitorColorType > 0)
+			fragColor = GetMonochromeValue(fragColor, monitorcolors[monitorColorType]);
 		return;
 	}
 
@@ -147,4 +178,7 @@ void main()
 	paletteColorB1 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u, scanline), 0).r;
 	paletteColorB2 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u + 1u, scanline), 0).r;
 	fragColor = ConvertIIgs2RGB((paletteColorB2 << 8) + paletteColorB1);
+	
+	if (monitorColorType > 0)
+		fragColor = GetMonochromeValue(fragColor, monitorcolors[monitorColorType]);
 }

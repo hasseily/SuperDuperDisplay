@@ -60,6 +60,26 @@ uniform sampler2D a2ModesTex4;			// DHGR
 // };
 uniform int specialModesMask;
 
+// Monitor color type
+// enum A2VideoMonitorType_e
+// {
+// 		A2_MON_COLOR = 0,
+// 		A2_MON_WHITE,
+// 		A2_MON_GREEN,
+// 		A2_MON_AMBER,
+//		A2_MON_TOTAL_COUNT
+// };
+
+uniform int monitorColorType;
+// colors for monitor color types
+const vec4 monitorcolors[5] = vec4[5](
+    vec4(0.000000,	0.000000,	0.000000,	1.000000)	/*BLACK, -- this is a color monitor */
+    ,vec4(1.000000,	1.000000,	1.000000,	1.000000)	/*WHITE PHOSPHOR,*/
+    ,vec4(0.290196,	1.000000,	0.000000,	1.000000)	/*GREEN PHOSPHOR,*/
+    ,vec4(1.000000,	0.717647,	0.000000,	1.000000)	/*AMBER PHOSPHOR,*/
+    ,vec4(1.000000,	0.000000,	0.500000,	1.000000)	/*PINK, -- this option shouldn't exist */
+);
+									  
 // Colors for foreground and background
 const vec4 tintcolors[16] = vec4[16](
 	 vec4(0.000000,	0.000000,	0.000000,	1.000000)	/*BLACK,*/
@@ -155,9 +175,18 @@ void main()
 																	   // get the color of flashing or the one above
 			tex = ((1.f - tex) * isFlashing) + (tex * (1.f - isFlashing));
 			
-			// And provide for tint coloring that the 2gs can do
-			fragColor = (tex * tintcolors[(targetTexel.a & 0xF0u) >> 4])		// foreground (dot is on)
-			+ ((1.f - tex) * tintcolors[targetTexel.a & 0x0Fu]);	// background (dot is off)
+			if (monitorColorType > 0)
+			{
+				if (length(tex.rgb) > 0.f)	// phosphor color (dot is on)
+					fragColor = monitorcolors[monitorColorType];
+				else					// black (dot is off)
+					fragColor = monitorcolors[0];
+			} else {
+				// Color monitor
+				// Also provide for tint coloring that the 2gs can do
+				fragColor = (tex * tintcolors[(targetTexel.a & 0xF0u) >> 4])		// foreground (dot is on)
+				+ ((1.f - tex) * tintcolors[targetTexel.a & 0x0Fu]);	// background (dot is off)
+			}
 			return;
 			break;
 		}
@@ -187,6 +216,15 @@ void main()
 			// if we're in DLGR (a2mode - 2u), get every other column
 			fragColor = texture(a2ModesTex2,
 								(vec2(byteOrigin) + vec2(fragOffset * uvec2(1u + (a2mode - 2u), 1u)) + vec2(0.5,0.5)) / vec2(textureSize2d));
+			
+			// TODO: use a proper monochrome lookup for LGR. The patterns shouldn't be filled
+			if (monitorColorType > 0)	// monitor is monochrome
+			{
+				if (length(fragColor.rgb) > 0.f)	// phosphor color (dot is on)
+					fragColor = monitorcolors[monitorColorType];
+				else							// black (dot is off)
+					fragColor = monitorcolors[0];
+			}
 			return;
 			break;
 		}
@@ -220,8 +258,16 @@ For each pixel, determine which memory byte it is part of,
  ((prevbyte & 0xE0) << 2) | ((nextbyte & 0x03) << 5) + (tileColRow.x & 1) * 16
  The row pixel value is simply the memory byte value of our pixel
  */
- 
+
 			// The byte value is just targetTexel.r
+
+			if (monitorColorType > 0)		// Special monochrome version
+			{
+				uint xFragPos = uFragPos.x - uint(hborder * 14);
+				fragColor = monitorcolors[monitorColorType] * float(clamp(targetTexel.r & (1u << ((xFragPos % 14u)/2u)), 0u, 1u));
+				return;
+			}
+			
 			// Grab the other byte values that matter
 			uint byteValPrev = 0u;
 			uint byteValNext = 0u;
@@ -299,6 +345,14 @@ For each pixel, determine which memory byte it is part of,
  */
 			// In DHGR, as in all double modes, the even bytes are from AUX, odd bytes from MAIN
 			// We already have in targetTexel both MAIN and AUX bytes (R and G respectively)
+			
+			if (monitorColorType > 0)		// Special monochrome version (basically DHGRMONO)
+			{
+				uint xFragPos = uFragPos.x - uint(hborder * 14);
+				fragColor = monitorcolors[monitorColorType] * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
+				return;
+			}
+			
 			// We need a previous MAIN byte and a subsequent AUX byte to calculate the colors
 			uint byteVal1 = 0u;				// MAIN
 			uint byteVal2 = targetTexel.g;	// AUX
@@ -379,7 +433,8 @@ For each pixel, determine which memory byte it is part of,
 			// Use the .g (AUX) if the dot is one of the first 7, otherwise .r (MAIN)
 			// Find out if the related bit is on, and set the color to white or black
 			uint xFragPos = uFragPos.x - uint(hborder * 14);
-			fragColor = vec4(1.0f) * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
+			int mColorType = max(monitorColorType, 1);	// Force color to be white
+			fragColor = monitorcolors[mColorType] * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
 			return;
 			break;
 		}
@@ -399,6 +454,14 @@ For each pixel, determine which memory byte it is part of,
 				fragColor = texture(a2ModesTex2,
 									(vec2(byteOrigin) + vec2(fragOffset) + vec2(0.5,0.5)) / vec2(textureSize2d));
 			*/
+			
+			if (monitorColorType > 0)	// Monitor is monochrome
+			{
+				if (((targetTexel.b & 0xF0u) >> 4) > 0.f)	// phosphor color (dot is on)
+					fragColor = monitorcolors[monitorColorType];
+				else							// black (dot is off)
+					fragColor = monitorcolors[0];
+			}
 			return;
 			break;
 		}
