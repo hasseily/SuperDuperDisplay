@@ -242,7 +242,7 @@ int main(int argc, char* argv[])
 	bool show_postprocessing_window = false;
 	bool show_recorder_window = false;
 	int _slotnum = 0;
-	int vbl_region;
+	int vbl_region = 2;		// Default to NTSC. 0 is auto, 1 is PAL, 2 is NTSC
 	int vbl_slider_val;
 	float window_bgcolor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 
@@ -314,6 +314,15 @@ int main(int argc, char* argv[])
 			_ww = _sm.value("window width", _ww);
 			_wh = _sm.value("window height", _wh);
 			bIsFullscreen = _sm.value("fullscreen", bIsFullscreen);
+			vbl_region = _sm.value("videoregion", vbl_region);
+			if (vbl_region == 0)
+			{
+				cycleCounter->isVideoRegionDynamic = true;
+			}
+			else {
+				cycleCounter->isVideoRegionDynamic = false;
+				cycleCounter->SetVideoRegion(vbl_region == 1 ? VideoRegion_e::PAL : VideoRegion_e::NTSC);
+			}
 			bezelTexturePath = _sm.value("bezel texture path", bezelTexturePath);
 			bBezelIsActive = _sm.value("bBezelIsActive", bBezelIsActive);
 			show_F1_window = _sm.value("show F1 window", show_F1_window);
@@ -755,6 +764,7 @@ int main(int argc, char* argv[])
 			{"window width", _ww},
 			{"window height", _wh},
 			{"fullscreen", bIsFullscreen},
+			{"videoregion", vbl_region},
 			{"bBezelIsActive", bBezelIsActive},
 			{"bezel texture path", bezelTexturePath},
 			{"window background color", window_bgcolor},
