@@ -62,6 +62,14 @@ void GLAPIENTRY DebugCallbackKHR(GLenum source,
 	<< " type = " << type << ", severity = " << severity << ", message = " << message << std::endl;
 }
 
+bool initialize_glad() {
+	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
+		std::cerr << "Failed to initialize GLAD" << std::endl;
+		return false;
+	}
+	return true;
+}
+
 void set_vsync(bool _on)
 {
 	// If vsync requested, try to make it adaptive vsync first
@@ -163,10 +171,14 @@ int main(int argc, char* argv[])
     ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
     ImGui_ImplOpenGL3_Init(glhelper->get_glsl_version()->c_str());
 
-	if (!gladLoadGL()) {
-		std::cout << "Failed to initialize OpenGL context" << std::endl;
-		return -1;
-	}
+    // Initialize GLAD
+    if (!initialize_glad()) {
+        SDL_GL_DeleteContext(gl_context);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
 	while ((glerr = glGetError()) != GL_NO_ERROR) {
         // reset and clear error
 		std::cerr << "gladLoadGL error: " << glerr << std::endl;
