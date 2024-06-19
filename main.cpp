@@ -313,6 +313,8 @@ int main(int argc, char* argv[])
 			_wy = _sm.value("window y", _wy);
 			_ww = _sm.value("window width", _ww);
 			_wh = _sm.value("window height", _wh);
+			g_swapInterval = _sm.value("vsync", g_swapInterval);
+			set_vsync(g_swapInterval);
 			bIsFullscreen = _sm.value("fullscreen", bIsFullscreen);
 			vbl_region = _sm.value("videoregion", vbl_region);
 			if (vbl_region == 0)
@@ -764,6 +766,7 @@ int main(int argc, char* argv[])
 			{"window width", _ww},
 			{"window height", _wh},
 			{"fullscreen", bIsFullscreen},
+			{"vsync", g_swapInterval},
 			{"videoregion", vbl_region},
 			{"bBezelIsActive", bBezelIsActive},
 			{"bezel texture path", bezelTexturePath},
