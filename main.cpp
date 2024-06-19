@@ -134,15 +134,15 @@ int main(int argc, char* argv[])
 #if defined(__APPLE__)
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
         | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-        | SDL_WINDOW_SHOWN | SDL_WINDOW_MAXIMIZED);
+        | SDL_WINDOW_SHOWN);
 #elif defined(IMGUI_IMPL_OPENGL_ES2)
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
 		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI 
-		| SDL_WINDOW_SHOWN | SDL_WINDOW_MAXIMIZED);
+		| SDL_WINDOW_SHOWN);
 #else
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
         | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-        | SDL_WINDOW_SHOWN | SDL_WINDOW_MAXIMIZED);
+        | SDL_WINDOW_SHOWN);
 #endif
 	// Get the actual display size
 	SDL_DisplayMode displayMode;
@@ -151,8 +151,8 @@ int main(int argc, char* argv[])
 		SDL_Quit();
 		return 1;
 	}
-    window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-		800, 600, window_flags);	// Window will still be maximized to size of screen, with title bar
+    window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+		displayMode.w, displayMode.h, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
 
@@ -337,13 +337,13 @@ int main(int argc, char* argv[])
 				}
 			}
 			// update the main window accordingly
-			SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 			SDL_Rect displayBounds;
 			if (SDL_GetDisplayBounds(_displayIndex, &displayBounds) == 0) {
 				if ((_wx < (displayBounds.x + displayBounds.w)) && (_wy < (displayBounds.y + displayBounds.h)))
 					SDL_SetWindowPosition(window, _wx, _wy);
 				SDL_SetWindowSize(window, _ww, _wh);
 			}
+			SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 		}
 	} else {
 		std::cerr << "No saved Settings.json file" << std::endl;
