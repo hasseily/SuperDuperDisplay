@@ -293,9 +293,9 @@ void A2VideoManager::StartNextFrame()
 	auto _vtmp = vrams_write;
 	vrams_write = vrams_read;
 	vrams_read = _vtmp;
-	memset(vrams_write->vram_legacy, 0, GetVramSizeLegacy());
-	memset(vrams_write->vram_shr, 0, GetVramSizeSHR());
-	memset(vrams_write->offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
+//	memset(vrams_write->vram_legacy, 0, GetVramSizeLegacy());
+//	memset(vrams_write->vram_shr, 0, GetVramSizeSHR());
+//	memset(vrams_write->offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
 
 	// At each vblank reset the mode
 	vrams_write->mode = A2Mode_e::NONE;
