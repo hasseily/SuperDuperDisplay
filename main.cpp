@@ -809,6 +809,22 @@ int main(int argc, char* argv[])
 					_shouldResetFPS = true;
 				if (ImGui::Checkbox("Disable PostProcessing render", &_M8DBG_bDisablePPRender))
 					_shouldResetFPS = true;
+				if (ImGui::Checkbox("VSYNC##M8", &g_swapInterval))
+				{
+					set_vsync(g_swapInterval);
+					worst_frame_rate = 100000000.f;
+					_shouldResetFPS = true;
+				}
+				if (g_swapInterval)
+				{
+					ImGui::SameLine();
+					ImGui::Text("On");
+					if (g_adaptiveVsync)
+					{
+						ImGui::SameLine();
+						ImGui::Text("(Adaptive)");
+					}
+				}
 				static bool _m8ssSHR = memManager->IsSoftSwitch(A2SS_SHR);
 				if (ImGui::Checkbox("A2SS_SHR##M8", &_m8ssSHR)) {
 					memManager->SetSoftSwitch(A2SS_SHR, _m8ssSHR);
@@ -835,6 +851,7 @@ int main(int argc, char* argv[])
 
 				if (_shouldResetFPS)
 				{
+					_M8DBG_fps = 0;
 					_M8DBG_fps_worst = 100000.f;
 					_M8DBG_fps_samples = 0;
 					a2VideoManager->ForceBeamFullScreenRender();
