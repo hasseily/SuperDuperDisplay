@@ -219,6 +219,9 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 					break;
 			}
 		}
+		else {
+			currentReplayEvent = 0;
+		}
 	}
 	SetState(EventRecorderStates_e::STOPPED);
 	return 0;

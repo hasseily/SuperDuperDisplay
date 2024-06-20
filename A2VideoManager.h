@@ -157,6 +157,9 @@ public:
 
 	void ForceBeamFullScreenRender();
 	
+	bool SelectLegacyShader(const int index);
+	bool SelectSHRShader(const int index);
+
 	const uint32_t GetVRAMReadId() { return vrams_read->id; };
 	const uint8_t* GetLegacyVRAMReadPtr() { return vrams_read->vram_legacy; };
 	const uint8_t* GetSHRVRAMReadPtr() { return vrams_read->vram_shr; };

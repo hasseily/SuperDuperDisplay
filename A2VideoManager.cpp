@@ -769,6 +769,47 @@ void A2VideoManager::ForceBeamFullScreenRender()
 
 }
 
+bool A2VideoManager::SelectLegacyShader(const int index)
+{
+	switch (index)
+	{
+	case 0:		// uniform
+		windowsbeam[A2VIDEOBEAM_LEGACY]->SetShaderPrograms(_SHADER_A2_VERTEX_DEFAULT, "shaders/_legacy_test0.frag");
+		break;
+	case 1:		// static
+		windowsbeam[A2VIDEOBEAM_LEGACY]->SetShaderPrograms(_SHADER_A2_VERTEX_DEFAULT, "shaders/_legacy_test1.frag");
+		break;
+	case 2:		// VRAM
+		windowsbeam[A2VIDEOBEAM_LEGACY]->SetShaderPrograms(_SHADER_A2_VERTEX_DEFAULT, "shaders/_legacy_test2.frag");
+		break;
+	case 3:		// full
+		windowsbeam[A2VIDEOBEAM_LEGACY]->SetShaderPrograms(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
+		break;
+	default:
+		return false;
+	}
+	return true;
+}
+
+bool A2VideoManager::SelectSHRShader(const int index)
+{
+	switch (index)
+	{
+	case 0:		// borders
+		windowsbeam[A2VIDEOBEAM_SHR]->SetShaderPrograms(_SHADER_A2_VERTEX_DEFAULT, "shaders/_shr_test0.frag");
+		break;
+	case 1:		// no borders, unused pixels are pink
+		windowsbeam[A2VIDEOBEAM_SHR]->SetShaderPrograms(_SHADER_A2_VERTEX_DEFAULT, "shaders/_shr_test1.frag");
+		break;
+	case 2:		// full
+		windowsbeam[A2VIDEOBEAM_SHR]->SetShaderPrograms(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_SHR_FRAGMENT);
+		break;
+	default:
+		return false;
+	}
+	return true;
+}
+
 uXY A2VideoManager::ScreenSize()
 {
 	return uXY({ (uint32_t)output_width, (uint32_t)output_height});

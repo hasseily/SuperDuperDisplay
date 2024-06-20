@@ -3,6 +3,7 @@
 #define GL_SILENCE_DEPRECATION // Silence deprecation warnings on macOS for OpenGL
 
 #define IMGUI_USER_CONFIG "../my_imgui_config.h"
+
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_opengl3.h"
@@ -45,6 +46,15 @@ static uint32_t fbHeight = 0;
 static bool g_swapInterval = true;  // VSYNC
 static bool g_adaptiveVsync = true;	
 static SDL_Window* window;
+
+bool _M8DBG_bDisableVideoRender = false;
+bool _M8DBG_bDisablePPRender = false;
+bool _M8DBG_bDisplayFPSOnScreen = true;
+bool _M8DBG_bShowF8Window = true;
+float _M8DBG_fps = 0.f;
+float _M8DBG_fps_worst = 100000.f;
+uint64_t _M8DBG_fps_samples = 0;
+int _M8DBG_average_fps_window = 5;	// in seconds
 
 // OpenGL Debug callback function
 void GLAPIENTRY DebugCallbackKHR(GLenum source,
@@ -220,7 +230,9 @@ int main(int argc, char* argv[])
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != nullptr);
 
-    io.Fonts->AddFontFromFileTTF("./assets/BerkeliumIIHGR.ttf", 10.0f);
+	// Add the font with the configuration
+	static auto imgui_font_small = io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 10.0f);
+	static auto imgui_font_large = io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 20.0f);
 
     // Our state
 	static MemoryEditor mem_edit_a2e;
@@ -236,9 +248,9 @@ int main(int argc, char* argv[])
 	std::string bezelTexturePath = "assets/Bezels/generic_monitor.png";
     bool show_demo_window = false;
     bool show_metrics_window = false;
-	bool show_F1_window = true;
+	bool show_F1_window = false;
 	bool show_texture_window = false;
-	bool show_a2video_window = false;
+	bool show_a2video_window = true;
 	bool show_postprocessing_window = false;
 	bool show_recorder_window = false;
 	int _slotnum = 0;
@@ -435,6 +447,9 @@ int main(int argc, char* argv[])
 				else if (event.key.keysym.sym == SDLK_F3) {
 					show_a2video_window = !show_a2video_window;
 				}
+				else if (event.key.keysym.sym == SDLK_F8) {
+					_M8DBG_bShowF8Window = !_M8DBG_bShowF8Window;
+				}
 				// Handle fullscreen toggle for Alt+Enter or F11
 				else if ((event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) ||
 					event.key.keysym.sym == SDLK_F11) {
@@ -482,10 +497,13 @@ int main(int argc, char* argv[])
 		else
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 		
-        if (sdhrManager->IsSdhrEnabled())
-			out_tex_id = sdhrManager->Render();
-        else
-			out_tex_id = a2VideoManager->Render();
+		if (!_M8DBG_bDisableVideoRender)
+		{
+			if (sdhrManager->IsSdhrEnabled())
+				out_tex_id = sdhrManager->Render();
+			else
+				out_tex_id = a2VideoManager->Render();
+		}
 
 		if (out_tex_id == UINT32_MAX)
 			std::cerr << "ERROR: NO RENDERER OUTPUT!" << std::endl;
@@ -499,12 +517,26 @@ int main(int argc, char* argv[])
 			window_bgcolor[3]);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		postProcessor->Render(window, out_tex_id);
+		if (!_M8DBG_bDisablePPRender)
+			postProcessor->Render(window, out_tex_id);
 
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
+
+		// Calculate worst frame rate
+		if ((worst_frame_rate > io.Framerate) && (io.Framerate > 0))
+			worst_frame_rate = io.Framerate;
+
+		// Calculate M8 Debugging average frame rate
+		// Reset it every second
+		auto tspan = SDL_GetPerformanceFrequency() * _M8DBG_average_fps_window;
+		++_M8DBG_fps_samples;
+		auto _samples = (_M8DBG_fps_samples < tspan ? _M8DBG_fps_samples : tspan);
+		_M8DBG_fps = (_M8DBG_fps * (_samples - 1) + io.Framerate) / _samples;
+		if (_M8DBG_fps_worst > io.Framerate)
+			_M8DBG_fps_worst = io.Framerate;
 
 		// Get the current window size
 		ImVec2 window_pos = ImVec2(0, 0);
@@ -530,6 +562,16 @@ int main(int argc, char* argv[])
 								);
 		}
 		
+		if (_M8DBG_bDisplayFPSOnScreen)
+		{
+			char _fpsBuf[100];
+			sprintf_s(_fpsBuf, "AVERAGE FPS: %.0f\nWORST   FPS: %.0f", _M8DBG_fps, _M8DBG_fps_worst);
+			ImGui::PushFont(imgui_font_large);
+			draw_list->AddText(ImVec2(42, 42), IM_COL32(0, 50, 35, 255), _fpsBuf);
+			draw_list->AddText(ImVec2(40, 40), IM_COL32(255, 255, 0, 255), _fpsBuf);
+			ImGui::PopFont();
+		}
+
 		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
@@ -542,8 +584,6 @@ int main(int argc, char* argv[])
 				ImGui::PushItemWidth(110);
                 ImGui::Text("Press F1 at any time to toggle this window");
                 ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-				if ((worst_frame_rate > io.Framerate) && (io.Framerate > 0))
-					worst_frame_rate = io.Framerate;
 				ImGui::Text("Worst Frame rate %.3f ms/frame", 1000.0f / worst_frame_rate);
 				int _vw, _vh;
 				SDL_GL_GetDrawableSize(window, &_vw, &_vh);
@@ -603,7 +643,8 @@ int main(int argc, char* argv[])
 				}
 				ImGui::Checkbox("PostProcessing Window (F2)", &show_postprocessing_window);
 				ImGui::Checkbox("Apple 2 Video Modes Window (F3)", &show_a2video_window);
-				if (ImGui::Checkbox("Fullscreen (F11 or Alt-Enter)", &bIsFullscreen))
+				ImGui::Checkbox("M8 Debug Window (F8)", &_M8DBG_bShowF8Window);
+				if (ImGui::Checkbox("Fullscreen (F11 or Alt-Enter)", &_M8DBG_bShowF8Window))
 				{
 					SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 				}
@@ -704,7 +745,8 @@ int main(int argc, char* argv[])
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
 				ImGui::Text("Texture ID: %d (%d x %d)", (int)glhelper->get_texture_id_at_slot(_slotnum), _w, _h);
-				ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+				ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum),
+					ImVec2(avail_size.x, avail_size.y - 30), ImVec2(0, 0), ImVec2(1, 1));
 			}
 			else if (_slotnum == _SDHR_MAX_TEXTURES)
 			{
@@ -727,6 +769,52 @@ int main(int argc, char* argv[])
 				ImGui::Image((void*)target_tex_id, avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
 			glBindTexture(GL_TEXTURE_2D, 0);
+			ImGui::End();
+		}
+
+		if (_M8DBG_bShowF8Window)
+		{
+			ImGui::Begin("M8 Debugging", &_M8DBG_bShowF8Window);
+			if (!ImGui::IsWindowCollapsed())
+			{
+				bool _shouldResetFPS = false;
+				ImGui::PushItemWidth(110);
+				ImGui::Checkbox("Display FPS on screen", &_M8DBG_bDisplayFPSOnScreen);
+				ImGui::SliderInt("Average FPS range (s)", &_M8DBG_average_fps_window, 1, 60);
+				if (ImGui::Button("Reset FPS numbers"))
+					_shouldResetFPS = true;
+				ImGui::Separator();
+				if (ImGui::Checkbox("Disable Apple 2 Video render", &_M8DBG_bDisableVideoRender))
+					_shouldResetFPS = true;
+				if (ImGui::Checkbox("Disable PostProcessing render", &_M8DBG_bDisablePPRender))
+					_shouldResetFPS = true;
+				if (ImGui::Button("Run Vertical Refresh##M8"))
+					a2VideoManager->ForceBeamFullScreenRender();
+				ImGui::Separator();
+				ImGui::Text("Legacy Shader");
+				const char* _legshaders[] = { "0 - Uniform", "1 - Static", "2 - VRAM", "3 - Full" };
+				static int _legshader_current = 3;
+				if (ImGui::ListBox("##LegacyShader", &_legshader_current, _legshaders, IM_ARRAYSIZE(_legshaders), 4))
+				{
+					a2VideoManager->SelectLegacyShader(_legshader_current);
+					_shouldResetFPS = true;
+				}
+				ImGui::Text("SHR Shader");
+				const char* _shrshaders[] = { "0 - Borders", "1 - No Borders", "2 - Full" };
+				static int _shrshader_current = 2;
+				if (ImGui::ListBox("##SHRShader", &_shrshader_current, _shrshaders, IM_ARRAYSIZE(_shrshaders), 3))
+				{
+					a2VideoManager->SelectSHRShader(_shrshader_current);
+					_shouldResetFPS = true;
+				}
+				ImGui::PopItemWidth();
+
+				if (_shouldResetFPS)
+				{
+					_M8DBG_fps_worst = 100000.f;
+					_M8DBG_fps_samples = 0;
+				}
+			}
 			ImGui::End();
 		}
 
