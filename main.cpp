@@ -157,11 +157,16 @@ int main(int argc, char* argv[])
 #endif
 	// Get the actual display size
 	SDL_DisplayMode displayMode;
-	if (SDL_GetDesktopDisplayMode(0, &displayMode) != 0) {
-		std::cerr << "SDL_GetDesktopDisplayMode Error: " << SDL_GetError() << std::endl;
+	if (SDL_GetCurrentDisplayMode(0, &displayMode) != 0) {
+		std::cerr << "SDL_GetCurrentDisplayMode Error: " << SDL_GetError() << std::endl;
 		SDL_Quit();
 		return 1;
 	}
+
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+	// switch display mode to 1200x1000
+#endif
+
     window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		displayMode.w, displayMode.h, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
