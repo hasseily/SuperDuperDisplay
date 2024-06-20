@@ -170,7 +170,7 @@ void A2VideoManager::Initialize()
 	{
 		vrams_array[i].id = i;
 		vrams_array[i].frame_idx = current_frame_idx + i;
-		vrams_array[i].bWasRendered = false;
+		vrams_array[i].bWasRendered = true;		// otherwise it won't render the first frame
 		vrams_array[i].mode = A2Mode_e::LEGACY;
 		if (vrams_array[i].vram_legacy != nullptr)
 			delete[] vrams_array[i].vram_legacy;
@@ -288,11 +288,16 @@ void A2VideoManager::StartNextFrame()
 	vrams_write->frame_idx = ++current_frame_idx;
 	// std::cerr << "starting next frame at current index: " << current_frame_idx << std::endl;
 
-	// Flip the double buffers
-	vrams_read->bWasRendered = false;
-	auto _vtmp = vrams_write;
-	vrams_write = vrams_read;
-	vrams_read = _vtmp;
+	// Flip the double buffers only if the read buffer was rendered
+	// Otherwise it means the renderer is too slow and hasn't finished rendering
+	// We just overwrite the current buffer
+	if (vrams_read->bWasRendered == true)
+	{
+		vrams_read->bWasRendered = false;
+		auto _vtmp = vrams_write;
+		vrams_write = vrams_read;
+		vrams_read = _vtmp;
+	}
 //	memset(vrams_write->vram_legacy, 0, GetVramSizeLegacy());
 //	memset(vrams_write->vram_shr, 0, GetVramSizeSHR());
 //	memset(vrams_write->offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
