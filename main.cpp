@@ -17,6 +17,7 @@
 #endif
 
 #include <cstring>
+#include <cstdio>
 #include <algorithm>
 #include <thread>
 
@@ -565,7 +566,7 @@ int main(int argc, char* argv[])
 		if (_M8DBG_bDisplayFPSOnScreen)
 		{
 			char _fpsBuf[100];
-			sprintf_s(_fpsBuf, "AVERAGE FPS: %.0f\nWORST   FPS: %.0f", _M8DBG_fps, _M8DBG_fps_worst);
+			snprintf(_fpsBuf, 100, "AVERAGE FPS: %.0f\nWORST   FPS: %.0f", _M8DBG_fps, _M8DBG_fps_worst);
 			ImGui::PushFont(imgui_font_large);
 			draw_list->AddText(ImVec2(42, 42), IM_COL32(0, 50, 35, 255), _fpsBuf);
 			draw_list->AddText(ImVec2(40, 40), IM_COL32(255, 255, 0, 255), _fpsBuf);
