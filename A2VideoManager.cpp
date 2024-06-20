@@ -960,7 +960,7 @@ GLuint A2VideoManager::Render()
 	}
 
 	// Exit if we've already rendered the buffer
-	if (rendered_frame_idx == vrams_read->frame_idx)
+	if ((rendered_frame_idx == vrams_read->frame_idx) && !bAlwaysRenderBuffer)
 		return output_texture_id;
 
 	// std::cerr << "--- Actual Render: " << vrams_read->frame_idx << std::endl;

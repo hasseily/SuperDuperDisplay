@@ -809,6 +809,8 @@ int main(int argc, char* argv[])
 					_shouldResetFPS = true;
 				if (ImGui::Checkbox("Disable PostProcessing render", &_M8DBG_bDisablePPRender))
 					_shouldResetFPS = true;
+				if (ImGui::Checkbox("Force render even if VRAM unchanged", &a2VideoManager->bAlwaysRenderBuffer))
+					_shouldResetFPS = true;
 				if (ImGui::Checkbox("VSYNC##M8", &g_swapInterval))
 				{
 					set_vsync(g_swapInterval);

@@ -130,6 +130,7 @@ public:
     bool bShouldReboot = false;             // When an Appletini reboot packet arrives
 	uXY ScreenSize();
 
+	bool bAlwaysRenderBuffer = false;		// If true, forces a rerender even if the VRAM hasn't changed
 	bool bForceSHRWidth = false;			// forces the legacy to have the SHR width
 	
 	// Enable manually setting a DHGR mode that mixes 140 width 16-col and 560 width b/w
