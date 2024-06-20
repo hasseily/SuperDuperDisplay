@@ -232,7 +232,8 @@ int main(int argc, char* argv[])
     //IM_ASSERT(font != nullptr);
 
 	// Add the font with the configuration
-	static auto imgui_font_small = io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 10.0f);
+	io.Fonts->AddFontDefault();
+	//static auto imgui_font_small = io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 10.0f);
 	static auto imgui_font_large = io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 20.0f);
 
     // Our state
@@ -778,6 +779,20 @@ int main(int argc, char* argv[])
 			ImGui::Begin("M8 Debugging", &_M8DBG_bShowF8Window);
 			if (!ImGui::IsWindowCollapsed())
 			{
+				// Retrieve OpenGL version info
+				const GLubyte* renderer = glGetString(GL_RENDERER);
+				const GLubyte* version = glGetString(GL_VERSION);
+				GLint major, minor;
+				glGetIntegerv(GL_MAJOR_VERSION, &major);
+				glGetIntegerv(GL_MINOR_VERSION, &minor);
+				GLint accelerated = 0;
+				SDL_GL_GetAttribute(SDL_GL_ACCELERATED_VISUAL, &accelerated);
+				ImGui::Text("Renderer: %s", renderer);
+				ImGui::Text("OpenGL version: %s", version);
+				ImGui::Text("Major version: %d", major);
+				ImGui::Text("Minor version: %d", minor);
+				ImGui::Text("Hardware Acceleration: %s", accelerated ? "Enabled" : "Disabled");
+				ImGui::Separator();
 				bool _shouldResetFPS = false;
 				ImGui::PushItemWidth(110);
 				ImGui::Checkbox("Display FPS on screen", &_M8DBG_bDisplayFPSOnScreen);
@@ -789,8 +804,11 @@ int main(int argc, char* argv[])
 					_shouldResetFPS = true;
 				if (ImGui::Checkbox("Disable PostProcessing render", &_M8DBG_bDisablePPRender))
 					_shouldResetFPS = true;
-				if (ImGui::Button("Run Vertical Refresh##M8"))
-					a2VideoManager->ForceBeamFullScreenRender();
+				static bool _m8ssSHR = memManager->IsSoftSwitch(A2SS_SHR);
+				if (ImGui::Checkbox("A2SS_SHR##M8", &_m8ssSHR)) {
+					memManager->SetSoftSwitch(A2SS_SHR, _m8ssSHR);
+					_shouldResetFPS = true;
+				}
 				ImGui::Separator();
 				ImGui::Text("Legacy Shader");
 				const char* _legshaders[] = { "0 - Uniform", "1 - Static", "2 - VRAM", "3 - Full" };
@@ -814,6 +832,7 @@ int main(int argc, char* argv[])
 				{
 					_M8DBG_fps_worst = 100000.f;
 					_M8DBG_fps_samples = 0;
+					a2VideoManager->ForceBeamFullScreenRender();
 				}
 			}
 			ImGui::End();
