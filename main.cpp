@@ -52,6 +52,8 @@ bool _M8DBG_bDisableVideoRender = false;
 bool _M8DBG_bDisablePPRender = false;
 bool _M8DBG_bDisplayFPSOnScreen = true;
 bool _M8DBG_bShowF8Window = true;
+int _M8DBG_windowWidth = 800;
+int _M8DBG_windowHeight = 600;
 float _M8DBG_fps = 0.f;
 float _M8DBG_fps_worst = 100000.f;
 uint64_t _M8DBG_fps_samples = 0;
@@ -380,6 +382,8 @@ int main(int argc, char* argv[])
 
 	// Load up the first screen in SHR, with green border color
 	DisplaySplashScreen(a2VideoManager, memManager);
+
+	SDL_GetWindowSize(window, &_M8DBG_windowWidth, &_M8DBG_windowHeight);
 
     while (!done)
 #endif
@@ -800,6 +804,14 @@ int main(int argc, char* argv[])
 				ImGui::Separator();
 				bool _shouldResetFPS = false;
 				ImGui::PushItemWidth(110);
+
+				ImGui::InputInt("Width", &_M8DBG_windowWidth);
+				ImGui::InputInt("Height", &_M8DBG_windowHeight);
+				if (ImGui::Button("Apply"))
+				{
+					SDL_SetWindowSize(window, _M8DBG_windowWidth, _M8DBG_windowHeight);
+				}
+				ImGui::Separator();
 				ImGui::Checkbox("Display FPS on screen", &_M8DBG_bDisplayFPSOnScreen);
 				ImGui::SliderInt("Average FPS range (s)", &_M8DBG_average_fps_window, 1, 60);
 				if (ImGui::Button("Reset FPS numbers"))
