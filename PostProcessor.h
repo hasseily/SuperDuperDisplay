@@ -107,6 +107,21 @@ private:
 	float p_zoomx = 0.0f;
 	float p_zoomy = 0.0f;
 
+	// new crt shader variables
+	float p2_scan_line_amount = 1.0f;
+	float p2_scan_line_strength = -8.0f;
+	float p2_pixel_strength = -2.0f;
+	float p2_warp_amount = 0.1f;
+	float p2_noise_amount =0.03f;
+	float p2_interference_amount = 0.2f;
+	float p2_grille_amount = 0.1f;
+	float p2_grille_size = 1.0f;
+	float p2_vignette_amount = 0.6f;
+	float p2_vignette_intensity = 0.4f;
+	float p2_aberration_amount = 0.5f;
+	float p2_roll_line_amount = 0.3f;
+	float p2_roll_speed = 1.0f;
+
 };
 
 #endif	// POSTPROCESSOR_H

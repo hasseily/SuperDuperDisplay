@@ -39,6 +39,9 @@ void PostProcessor::Initialize()
 	Shader shader_pp = Shader();
 	shader_pp.build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");
 	v_ppshaders.push_back(shader_pp);
+	Shader shader_pp2 = Shader();
+	shader_pp2.build("shaders/a2video_postprocess2.glsl", "shaders/a2video_postprocess2.glsl");
+	v_ppshaders.push_back(shader_pp2);
 }
 
 PostProcessor::~PostProcessor()
@@ -167,15 +170,17 @@ void PostProcessor::LoadState(int profile_id) {
 void PostProcessor::SelectShader()
 {
 	// Choose the shader
-	if (p_postprocessing_level == 0) {		// basic passthrough shader
+	switch (p_postprocessing_level)
+	{
+	case 0:	// basic passthrough shader
 		shaderProgram = v_ppshaders.at(0);
 		shaderProgram.use();
 		shaderProgram.setInt("Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
-	}
-	else {
+		break;
+	case 2:	// original CRT shader
 		shaderProgram = v_ppshaders.at(1);
 		shaderProgram.use();
-		// Update uniforms
+		// common
 		shaderProgram.setInt("A2Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
 		shaderProgram.setInt("FrameCount", frame_count);
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
@@ -183,8 +188,9 @@ void PostProcessor::SelectShader()
 		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
 		shaderProgram.setVec4("VideoRect", quadViewportCoords);
-
 		shaderProgram.setFloat("POSTPROCESSING_LEVEL", (float)p_postprocessing_level);
+
+		// shader specific
 		shaderProgram.setFloat("SCANLINE_TYPE", (float)p_scanline_type);
 		shaderProgram.setFloat("SCANLINE_WEIGHT", p_scanline_weight);
 		shaderProgram.setFloat("INTERLACE", p_interlace ? 1.0f : 0.0f);
@@ -219,6 +225,33 @@ void PostProcessor::SelectShader()
 		shaderProgram.setFloat("CONV_G", p_conv_g);
 		shaderProgram.setFloat("CONV_B", p_conv_b);
 		shaderProgram.setFloat("POTATO", p_potato ? 1.0f : 0.0f);
+		break;
+	default:	// new crt shader
+		shaderProgram = v_ppshaders.at(2);
+		shaderProgram.use();
+		// common
+		shaderProgram.setInt("A2Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
+		shaderProgram.setInt("FrameCount", frame_count);
+		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
+		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
+		shaderProgram.setFloat("POSTPROCESSING_LEVEL", (float)p_postprocessing_level);
+
+		// shader specific
+		shaderProgram.setFloat("time", SDL_GetTicks()/1000.f);
+		shaderProgram.setFloat("scan_line_amount", p2_scan_line_amount);
+		shaderProgram.setFloat("scan_line_strength", p2_scan_line_strength);
+		shaderProgram.setFloat("pixel_strength", p2_pixel_strength);
+		shaderProgram.setFloat("warp_amount", p2_warp_amount);
+		shaderProgram.setFloat("noise_amount", p2_noise_amount);
+		shaderProgram.setFloat("interference_amount", p2_interference_amount);
+		shaderProgram.setFloat("grille_amount", p2_grille_amount);
+		shaderProgram.setFloat("grille_size", p2_grille_size);
+		shaderProgram.setFloat("vignette_amount", p2_vignette_amount);
+		shaderProgram.setFloat("vignette_intensity", p2_vignette_intensity);
+		shaderProgram.setFloat("aberration_amount", p2_aberration_amount);
+		shaderProgram.setFloat("roll_line_amount", p2_roll_line_amount);
+		shaderProgram.setFloat("roll_speed", p2_roll_speed);
+		break;
 	}
 }
 
@@ -435,7 +468,8 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		ImGui::Text("[ POSTPROCESSING LEVEL ]");
 		ImGui::RadioButton("None##PPLEVEL", &p_postprocessing_level, 0); ImGui::SameLine();
 		ImGui::RadioButton("Scanline only##PPLEVEL", &p_postprocessing_level, 1); ImGui::SameLine();
-		ImGui::RadioButton("Full CRT##PPLEVEL", &p_postprocessing_level, 2);
+		ImGui::RadioButton("CRT 1##PPLEVEL", &p_postprocessing_level, 2); ImGui::SameLine();
+		ImGui::RadioButton("CRT 2##PPLEVEL", &p_postprocessing_level, 3);
 		ImGui::Separator();
 		ImGui::Text("[ BASE INTEGER SCALE ]");
 		ImGui::Checkbox("Auto", &bAutoScale);
@@ -445,7 +479,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		if (bAutoScale)
 			ImGui::EndDisabled();
 
-		if (p_postprocessing_level > 1) {
+		if (p_postprocessing_level == 2) {
 			ImGui::Separator();
 			// Scanline and Interlacing
 			ImGui::Text("[ SCANLINE TYPE ]");
@@ -513,6 +547,24 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::SliderFloat("Convergence Green X-axis", &p_conv_g, -3.0f, 3.0f, "%.2f");
 			ImGui::SliderFloat("Convergence Blue X-Axis", &p_conv_b, -3.0f, 3.0f, "%.2f");
 			ImGui::Checkbox("Potato Boost(Simple Gamma, adjust Mask)", &p_potato);
+		}
+		else if (p_postprocessing_level == 3) {
+			ImGui::Separator();
+			// Scanline and Interlacing
+			ImGui::SliderFloat("Scanline Amount", &p2_scan_line_amount, 0.f, 1.f, "%.05f");
+			ImGui::SliderFloat("Scanline Strength", &p2_scan_line_strength, -12.f, -1.f, "%.1f");
+			ImGui::Separator();
+			ImGui::SliderFloat("Pixel Strength", &p2_pixel_strength, -4.f, 0.f, "%.05f");
+			ImGui::SliderFloat("Warp Amount", &p2_warp_amount, 0.f, 5.f, "%.05f");
+			ImGui::SliderFloat("Noise Amount", &p2_noise_amount, 0.f, 0.3f, "%.005f");
+			ImGui::SliderFloat("Interference Amount", &p2_interference_amount, 0.f, 1.f, "%.05f");
+			ImGui::SliderFloat("Grille Amount", &p2_grille_amount, 0.f, 1.f, "%.05f");
+			ImGui::SliderFloat("Grille Size", &p2_grille_size, 1.f, 5.f, "%.05f");
+			ImGui::SliderFloat("Vignette Amount", &p2_vignette_amount, 0.f, 1.f, "%.05f");
+			ImGui::SliderFloat("Vignette Intensity", &p2_vignette_intensity, 0.f, 1.f, "%.05f");
+			ImGui::SliderFloat("Aberration Amount", &p2_aberration_amount, 0.f, 1.f, "%.05f");
+			ImGui::SliderFloat("Roll Line Amount", &p2_roll_line_amount, 0.f, 1.f, "%.05f");
+			ImGui::SliderFloat("Roll Speed", &p2_roll_speed, -8.f, 8.f, "%.1f");
 		}
 
 		ImGui::PopItemWidth();
