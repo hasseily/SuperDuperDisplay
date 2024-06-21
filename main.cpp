@@ -52,6 +52,7 @@ bool _M8DBG_bDisableVideoRender = false;
 bool _M8DBG_bDisablePPRender = false;
 bool _M8DBG_bDisplayFPSOnScreen = true;
 bool _M8DBG_bShowF8Window = true;
+bool _M8DBG_bRunKarateka = false;
 int _M8DBG_windowWidth = 800;
 int _M8DBG_windowHeight = 600;
 float _M8DBG_fps = 0.f;
@@ -655,7 +656,7 @@ int main(int argc, char* argv[])
 				ImGui::Checkbox("PostProcessing Window (F2)", &show_postprocessing_window);
 				ImGui::Checkbox("Apple 2 Video Modes Window (F3)", &show_a2video_window);
 				ImGui::Checkbox("M8 Debug Window (F8)", &_M8DBG_bShowF8Window);
-				if (ImGui::Checkbox("Fullscreen (F11 or Alt-Enter)", &_M8DBG_bShowF8Window))
+				if (ImGui::Checkbox("Fullscreen (F11 or Alt-Enter)", &bIsFullscreen))
 				{
 					SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 				}
@@ -803,15 +804,16 @@ int main(int argc, char* argv[])
 				ImGui::Text("Hardware Acceleration: %s", accelerated ? "Enabled" : "Disabled");
 				ImGui::Separator();
 				bool _shouldResetFPS = false;
-				ImGui::PushItemWidth(110);
-
-				ImGui::InputInt("Width", &_M8DBG_windowWidth);
-				ImGui::InputInt("Height", &_M8DBG_windowHeight);
+				ImGui::PushItemWidth(80);
+				ImGui::InputInt("Width", &_M8DBG_windowWidth, 10, 100); ImGui::SameLine();
+				ImGui::InputInt("Height", &_M8DBG_windowHeight, 10, 100); ImGui::SameLine();
 				if (ImGui::Button("Apply"))
 				{
 					SDL_SetWindowSize(window, _M8DBG_windowWidth, _M8DBG_windowHeight);
 				}
 				ImGui::Separator();
+				ImGui::PopItemWidth();
+				ImGui::PushItemWidth(110);
 				ImGui::Checkbox("Display FPS on screen", &_M8DBG_bDisplayFPSOnScreen);
 				ImGui::SliderInt("Average FPS range (s)", &_M8DBG_average_fps_window, 1, 60);
 				if (ImGui::Button("Reset FPS numbers"))
@@ -843,6 +845,22 @@ int main(int argc, char* argv[])
 				if (ImGui::Checkbox("A2SS_SHR##M8", &_m8ssSHR)) {
 					memManager->SetSoftSwitch(A2SS_SHR, _m8ssSHR);
 					_shouldResetFPS = true;
+				}
+				if (ImGui::Checkbox("Run Karateka Demo", &_M8DBG_bRunKarateka))
+				{
+					if (_M8DBG_bRunKarateka)
+					{
+						std::ifstream karatekafile("./recordings/test.vcr", std::ios::binary);
+						eventRecorder->ReadRecordingFile(karatekafile);
+						eventRecorder->StartReplay();
+						memManager->SetSoftSwitch(A2SS_SHR, false);
+						_m8ssSHR = false;
+						memManager->SetSoftSwitch(A2SS_TEXT, false);
+						memManager->SetSoftSwitch(A2SS_HIRES, true);
+					}
+					else {
+						eventRecorder->StopReplay();
+					}
 				}
 				ImGui::Separator();
 				ImGui::Text("Legacy Shader");

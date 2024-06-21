@@ -106,6 +106,7 @@ void EventRecorder::ReadRecordingFile(std::ifstream& file)
 			ReadEvent(file);
 		}
 	}
+	bHasRecording = true;
 }
 
 void EventRecorder::WriteEvent(const SDHREvent& event, std::ofstream& file) {
@@ -388,7 +389,6 @@ void EventRecorder::DisplayImGuiWindow(bool* p_open)
 						ImGui::OpenPopup("Recorder Error Modal");
 					}
 					file.close();
-					bHasRecording = true;
 				}
 				else {
 					m_lastErrorString = "Error opening file";
