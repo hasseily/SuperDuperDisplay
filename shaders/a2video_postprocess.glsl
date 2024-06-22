@@ -214,10 +214,14 @@ vec2 Warp(vec2 pos) {
 	return pos;
 }
 
-vec2 BarrelDistortion(vec2 coord) {
-	vec2 cc = coord - 0.5;
-	float dist = dot(cc, cc);
-	return coord + cc * dist * BARRELDISTORTION;
+vec2 BarrelDistortion(vec2 uv) {
+	vec2 delta = uv - 0.5;
+	float delta2 = dot(delta.xy, delta.xy);
+	float delta4 = delta2 * delta2;
+	float delta_offset = delta4 * BARRELDISTORTION;
+	
+	vec2 warped = uv + delta * delta_offset;
+	return (warped - 0.5) / mix(1.0,1.2,BARRELDISTORTION/5.0) + 0.5;
 }
 
 void main() {
