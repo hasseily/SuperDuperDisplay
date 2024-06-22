@@ -523,7 +523,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::SliderFloat("Image Center Y", &p_centery, -100.0f, 100.0f, "%.2f");
 			ImGui::SliderFloat("Curvature Horizontal", &p_warpx, 0.00f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Curvature Vertical", &p_warpy, 0.00f, 0.25f, "%.2f");
-			ImGui::SliderFloat("Barrel Distortion", &p_barrel_distortion, -2.00f, 2.00f, "%.2f");
+			ImGui::SliderFloat("Barrel Distortion", &p_barrel_distortion, -0.20f, 5.00f, "%.2f");
 			ImGui::SliderFloat("Corners Cut", &p_corner, 0.f, 90.f, "%.3f");
 			ImGui::Separator();
 			
