@@ -130,12 +130,12 @@ vec4 GetMonochromeValue(vec4 aColor, vec4 monchromeColor)
 
 void main()
 {
-	uint scanline = uint(vFragPos.y) / 2u;
-	if (scanline % 2u == 1) {
+	if (uint(vFragPos.y) % 2u == 1) {
 		fragColor = vec4(0.f, 0.f, 0.f, 1.f);
 		return;
 	}
 
+	uint scanline = uint(vFragPos.y) / 2u;
 	// first do the borders
 	if ((vFragPos.y < float(vborder*2)) || (vFragPos.y >= float(vborder*2+400)) || 
 		(vFragPos.x < float(hborder*16)) || (vFragPos.x >= float(640+hborder*16)))
