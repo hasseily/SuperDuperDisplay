@@ -117,7 +117,7 @@ void main()
 	// the x and y offsets from the origin
 	// REMINDER: we're working on dots, with 560 dots per line. And lines are doubled
 	uvec2 uFragPos = uvec2(vFragPos);
-	if (uFragPos.y % 2u == 1) {
+	if (uFragPos.y % 2u == 1u) {
 		fragColor = vec4(0.f, 0.f, 0.f, 1.f);
 		return;
 	}

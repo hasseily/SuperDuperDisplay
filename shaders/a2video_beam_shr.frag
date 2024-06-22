@@ -130,7 +130,7 @@ vec4 GetMonochromeValue(vec4 aColor, vec4 monchromeColor)
 
 void main()
 {
-	if (uint(vFragPos.y) % 2u == 1) {
+	if (uint(vFragPos.y) % 2u == 1u) {
 		fragColor = vec4(0.f, 0.f, 0.f, 1.f);
 		return;
 	}
