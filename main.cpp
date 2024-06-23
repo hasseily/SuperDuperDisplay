@@ -51,7 +51,7 @@ static SDL_Window* window;
 // For FPS calculations
 static float fps_worst = 1000000.f;
 static uint64_t fps_frame_count = 0;
-static auto fps_start_time = SDL_GetTicks64();
+static auto fps_start_time = SDL_GetTicks();
 static uint32_t fps_string_id = UINT32_MAX;
 static uint32_t fps_string_id2 = UINT32_MAX;
 static char fps_str_buf[40];
@@ -118,7 +118,7 @@ void ResetFPSCalculations(A2VideoManager* a2VideoManager)
 {
 	fps_worst = 100000.f;
 	fps_frame_count = 0;
-	fps_start_time = SDL_GetTicks64();
+	fps_start_time = SDL_GetTicks();
 	a2VideoManager->ForceBeamFullScreenRender();
 }
 
