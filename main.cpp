@@ -62,7 +62,7 @@ bool _M8DBG_bDisablePPRender = false;
 bool _M8DBG_bDisplayFPSOnScreen = true;
 float _M8DBG_average_fps_window = 1.f;	// in seconds
 bool _M8DBG_bShowF8Window = true;
-bool _M8DBG_bRunKarateka = false;
+bool _M8DBG_bRunKarateka = true;
 int _M8DBG_windowWidth = 800;
 int _M8DBG_windowHeight = 600;
 
@@ -398,12 +398,6 @@ int main(int argc, char* argv[])
 	DisplaySplashScreen(a2VideoManager, memManager);
 
 	SDL_GetWindowSize(window, &_M8DBG_windowWidth, &_M8DBG_windowHeight);
-
-	std::ifstream karatekafile("./recordings/test.vcr", std::ios::binary);
-	eventRecorder->ReadRecordingFile(karatekafile);
-	memManager->SetSoftSwitch(A2SS_SHR, false);
-	memManager->SetSoftSwitch(A2SS_TEXT, false);
-	memManager->SetSoftSwitch(A2SS_HIRES, true);
 
     while (!done)
 #endif
