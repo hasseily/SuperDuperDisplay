@@ -394,7 +394,7 @@ void A2VideoManager::StartNextFrame()
 	{
 
 		// Draw the overlay strings
-		for each (auto _str in strings_to_draw)
+		for (const auto& _str : strings_to_draw)
 		{
 			_str.second.Draw();
 		}
