@@ -62,7 +62,7 @@ bool _M8DBG_bDisablePPRender = false;
 bool _M8DBG_bDisplayFPSOnScreen = true;
 float _M8DBG_average_fps_window = 1.f;	// in seconds
 bool _M8DBG_bShowF8Window = true;
-bool _M8DBG_bRunKarateka = true;
+bool _M8DBG_bRunKarateka = false;
 int _M8DBG_windowWidth = 800;
 int _M8DBG_windowHeight = 600;
 
