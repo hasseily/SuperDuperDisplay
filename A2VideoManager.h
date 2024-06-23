@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <map>
 
 #include "common.h"
 #include "A2WindowBeam.h"
@@ -89,7 +90,7 @@ class A2VideoManager
 public:
 
 	//////////////////////////////////////////////////////////////////////////
-	// SDHR state structs
+	// Extra structs
 	//////////////////////////////////////////////////////////////////////////
 
 		// NOTE:	Anything labled "id" is an internal identifier by the GPU
@@ -115,6 +116,20 @@ public:
 		uint8_t* vram_legacy = nullptr;
 		uint8_t* vram_shr = nullptr;
 		GLfloat* offset_buffer = nullptr;
+	};
+
+	// A string to draw on the Apple 2 screen
+	// X and Y positions are based on the TEXT1 mode, so 40x24 maximum
+	struct OverlayString {
+		uint32_t id;
+		uint32_t x = 0;		// byte position
+		uint32_t y = 0;		// scanline
+		uint8_t flags = 0b00001000;		// alternate charset in TEXT
+		uint8_t colors = 0b11010010;	// yellow on dark blue
+		std::string text;
+
+		void Draw();
+		void DrawCharacter(uint32_t pos);
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -152,6 +167,14 @@ public:
 	bool IsReady();		// true after full initialization
 	void DisplayImGuiWindow(bool* p_open);
 	void ToggleA2Video(bool value);
+
+	// String drawing
+	uint32_t DrawString(const std::string& text, uint32_t x, uint32_t y);
+	void SetStringText(uint32_t id, const std::string& text);
+	void SetStringText(uint32_t id, const char* text);
+	void SetStringColors(uint32_t id, uint8_t colors);
+	void MoveString(uint32_t id, float x, float y);
+	void EraseString(uint32_t id);
 
 	// Methods for the single multipurpose beam racing shader
 	void BeamIsAtPosition(uint32_t _x, uint32_t _y);
@@ -281,6 +304,10 @@ private:
 	// The actual final output width and height
 	GLint output_width = 0;
 	GLint output_height = 0;
+
+	// strings to draw
+	std::map<uint32_t, OverlayString> strings_to_draw;
+	bool bSemaphoreStringAdd = false;
 };
 #endif // A2VIDEOMANAGER_H
 

@@ -48,17 +48,23 @@ static bool g_swapInterval = true;  // VSYNC
 static bool g_adaptiveVsync = true;	
 static SDL_Window* window;
 
+// For FPS calculations
+static float fps_worst = 1000000.f;
+static uint64_t fps_frame_count = 0;
+static auto fps_start_time = SDL_GetTicks64();
+static uint32_t fps_string_id = UINT32_MAX;
+static uint32_t fps_string_id2 = UINT32_MAX;
+static char fps_str_buf[40];
+static char fps_str_buf2[40];
+
 bool _M8DBG_bDisableVideoRender = false;
 bool _M8DBG_bDisablePPRender = false;
 bool _M8DBG_bDisplayFPSOnScreen = true;
+float _M8DBG_average_fps_window = 1.f;	// in seconds
 bool _M8DBG_bShowF8Window = true;
 bool _M8DBG_bRunKarateka = false;
 int _M8DBG_windowWidth = 800;
 int _M8DBG_windowHeight = 600;
-float _M8DBG_fps = 0.f;
-float _M8DBG_fps_worst = 100000.f;
-uint64_t _M8DBG_fps_samples = 0;
-int _M8DBG_average_fps_window = 5;	// in seconds
 
 // OpenGL Debug callback function
 void GLAPIENTRY DebugCallbackKHR(GLenum source,
@@ -105,6 +111,14 @@ static void DisplaySplashScreen(A2VideoManager *&a2VideoManager, MemoryManager *
 		memManager->SetSoftSwitch(A2SoftSwitch_e::A2SS_SHR, true);
 	}
 	// Run a refresh to show the first screen
+	a2VideoManager->ForceBeamFullScreenRender();
+}
+
+void ResetFPSCalculations(A2VideoManager* a2VideoManager)
+{
+	fps_worst = 100000.f;
+	fps_frame_count = 0;
+	fps_start_time = SDL_GetTicks64();
 	a2VideoManager->ForceBeamFullScreenRender();
 }
 
@@ -294,7 +308,6 @@ int main(int argc, char* argv[])
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
     uint64_t dt_LAST = 0;
 	float deltaTime = 0.f;
-	float worst_frame_rate = 1000000.f;
 
 	set_vsync(g_swapInterval);
 
@@ -386,6 +399,12 @@ int main(int argc, char* argv[])
 
 	SDL_GetWindowSize(window, &_M8DBG_windowWidth, &_M8DBG_windowHeight);
 
+	std::ifstream karatekafile("./recordings/test.vcr", std::ios::binary);
+	eventRecorder->ReadRecordingFile(karatekafile);
+	memManager->SetSoftSwitch(A2SS_SHR, false);
+	memManager->SetSoftSwitch(A2SS_TEXT, false);
+	memManager->SetSoftSwitch(A2SS_HIRES, true);
+
     while (!done)
 #endif
     {
@@ -404,6 +423,9 @@ int main(int argc, char* argv[])
         dt_LAST = dt_NOW;
         dt_NOW = SDL_GetPerformanceCounter();
 		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
+
+		if (!eventRecorder->IsInReplayMode())
+			eventRecorder->StartReplay();
 
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -452,6 +474,7 @@ int main(int argc, char* argv[])
 				}
 				else if (event.key.keysym.sym == SDLK_F1) {  // Toggle debug window with F1
 					show_F1_window = !show_F1_window;
+					ResetFPSCalculations(a2VideoManager);
 				}
 				else if (event.key.keysym.sym == SDLK_F2) {
 					show_postprocessing_window = !show_postprocessing_window;
@@ -467,6 +490,7 @@ int main(int argc, char* argv[])
 					event.key.keysym.sym == SDLK_F11) {
 					bIsFullscreen = !bIsFullscreen; // Toggle state
 					SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+					ResetFPSCalculations(a2VideoManager);
 				}
 				// Camera movement!
 				if (!io.WantCaptureKeyboard) {
@@ -501,14 +525,6 @@ int main(int argc, char* argv[])
             }   // switch event.type
         }   // while SDL_PollEvent
 
-		// Disable mouse if unused after cursorHideDelay
-		// ImGui overrides SDL_ShowCursor(), so we use ImGui's methods
-		// We could tell ImGui not to override it, but it really doesn't matter
-		if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
-			ImGui::SetMouseCursor(ImGuiMouseCursor_None);
-		else
-			ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-		
 		if (!_M8DBG_bDisableVideoRender)
 		{
 			if (sdhrManager->IsSdhrEnabled())
@@ -532,71 +548,58 @@ int main(int argc, char* argv[])
 		if (!_M8DBG_bDisablePPRender)
 			postProcessor->Render(window, out_tex_id);
 
-		// Start the Dear ImGui frame
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplSDL2_NewFrame();
-		ImGui::NewFrame();
-
-		// Calculate worst frame rate
-		if ((worst_frame_rate > io.Framerate) && (io.Framerate > 0))
-			worst_frame_rate = io.Framerate;
-
-		// Calculate M8 Debugging average frame rate
-		// Reset it every second
-		auto tspan = SDL_GetPerformanceFrequency() * _M8DBG_average_fps_window;
-		++_M8DBG_fps_samples;
-		auto _samples = (_M8DBG_fps_samples < tspan ? _M8DBG_fps_samples : tspan);
-		_M8DBG_fps = (_M8DBG_fps * (_samples - 1) + io.Framerate) / _samples;
-		if (_M8DBG_fps_worst > io.Framerate)
-			_M8DBG_fps_worst = io.Framerate;
-
-		// Get the current window size
-		ImVec2 window_pos = ImVec2(0, 0);
-		ImVec2 window_size = ImGui::GetIO().DisplaySize;
-		
-		// Calculate the coordinates to cover the full screen
-		ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Top-left
-		ImVec2 uv_max = ImVec2(1.0f, 1.0f); // Bottom-right
-		
-		// Get the foreground draw list to render on top of everything else
-		ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
-		
-		// Add the image to the draw list
-		if (bBezelIsActive)
-		{
-			draw_list->AddImage(
-								(void*)bezel_asset.tex_id,
-								window_pos,                  // Position
-								ImVec2(window_pos.x + window_size.x, window_pos.y + window_size.y), // End Position
-								uv_min,                      // UV Min
-								uv_max,                      // UV Max
-								IM_COL32(255, 255, 255, 255) // Tint Color
-								);
-		}
-		
-		if (_M8DBG_bDisplayFPSOnScreen)
-		{
-			char _fpsBuf[100];
-			snprintf(_fpsBuf, 100, "AVERAGE FPS: %.0f\nWORST   FPS: %.0f", _M8DBG_fps, _M8DBG_fps_worst);
-			ImGui::PushFont(imgui_font_large);
-			draw_list->AddText(ImVec2(42, 42), IM_COL32(0, 50, 35, 255), _fpsBuf);
-			draw_list->AddText(ImVec2(40, 40), IM_COL32(255, 255, 0, 255), _fpsBuf);
-			ImGui::PopFont();
-		}
-
-		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-		if (show_demo_window)
-			ImGui::ShowDemoWindow(&show_demo_window);
-
 		if (show_F1_window)
 		{
+			// Disable mouse if unused after cursorHideDelay
+			// ImGui overrides SDL_ShowCursor(), so we use ImGui's methods
+			// We could tell ImGui not to override it, but it really doesn't matter
+			if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
+				ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+			else
+				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+
+			// Start the Dear ImGui frame
+			ImGui_ImplOpenGL3_NewFrame();
+			ImGui_ImplSDL2_NewFrame();
+			ImGui::NewFrame();
+
+			// Get the current window size
+			ImVec2 window_pos = ImVec2(0, 0);
+			ImVec2 window_size = ImGui::GetIO().DisplaySize;
+
+			// Calculate the coordinates to cover the full screen
+			ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Top-left
+			ImVec2 uv_max = ImVec2(1.0f, 1.0f); // Bottom-right
+
+			// Get the foreground draw list to render on top of everything else
+			ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
+
+			// Add the image to the draw list
+			if (bBezelIsActive)
+			{
+				draw_list->AddImage(
+					(void*)bezel_asset.tex_id,
+					window_pos,                  // Position
+					ImVec2(window_pos.x + window_size.x, window_pos.y + window_size.y), // End Position
+					uv_min,                      // UV Min
+					uv_max,                      // UV Max
+					IM_COL32(255, 255, 255, 255) // Tint Color
+				);
+			}
+
+
+
+			// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+			if (show_demo_window)
+				ImGui::ShowDemoWindow(&show_demo_window);
+
 			ImGui::Begin("Super Duper Display", &show_F1_window);
 			if (!ImGui::IsWindowCollapsed())
 			{
 				ImGui::PushItemWidth(110);
-                ImGui::Text("Press F1 at any time to toggle this window");
-                ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-				ImGui::Text("Worst Frame rate %.3f ms/frame", 1000.0f / worst_frame_rate);
+				ImGui::Text("Press F1 at any time to toggle the GUI");
+				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+				ImGui::Text("Worst Frame rate %.3f ms/frame", 1000.0f / fps_worst);
 				int _vw, _vh;
 				SDL_GL_GetDrawableSize(window, &_vw, &_vh);
 				ImGui::Text("Drawable Size: %d x %d", _vw, _vh);
@@ -663,7 +666,7 @@ int main(int argc, char* argv[])
 				if (ImGui::Checkbox("VSYNC", &g_swapInterval))
 				{
 					set_vsync(g_swapInterval);
-					worst_frame_rate = 100000000.f;
+					ResetFPSCalculations(a2VideoManager);
 				}
 				if (g_swapInterval)
 				{
@@ -701,202 +704,236 @@ int main(int argc, char* argv[])
 					ImGui::Checkbox("SDHR Upload Region Memory Window", &mem_edit_upload.Open);
 				}
 				ImGui::PopItemWidth();
-            }
+			}
 			ImGui::End();
-		}
-		// In case the user wants to change the bezel
-		if (ImGuiFileDialog::Instance()->Display("ChooseBezelLoad")) {
-			// Check if a file was selected
-			if (ImGuiFileDialog::Instance()->IsOk()) {
-				bezelTexturePath = ImGuiFileDialog::Instance()->GetFilePathName();
-				// Load the bezel texture
-				glActiveTexture(_TEXUNIT_BEZEL);
-				bezel_asset.AssignByFilename(a2VideoManager, bezelTexturePath.c_str());
-				glActiveTexture(GL_TEXTURE0);
-			}
-			ImGuiFileDialog::Instance()->Close();
-		}
-		// Show the postprocessing window
-		if (show_postprocessing_window)
-			postProcessor->DisplayImGuiWindow(&show_postprocessing_window);
-
-		// Show the a2VideoManager window
-		if (show_a2video_window)
-			a2VideoManager->DisplayImGuiWindow(&show_a2video_window);
-		
-        // The VCR event recorder
-		if (show_recorder_window)
-			eventRecorder->DisplayImGuiWindow(&show_recorder_window);
-
-        // Show the metrics window
-        if (show_metrics_window)
-			ImGui::ShowMetricsWindow(&show_metrics_window);
-
-        // Show the Apple //e memory
-        if (mem_edit_a2e.Open)
-        {
-            mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", memManager->GetApple2MemPtr(), 2*_A2_MEMORY_SHADOW_END);
-        }
-
-		// Show the upload data region memory
-		if (mem_edit_upload.Open)
-		{
-            mem_edit_upload.DrawWindow("Memory Editor: Upload memory", memManager->GetApple2MemPtr(), 2*_A2_MEMORY_SHADOW_END);
-		}
-        
-		// Show the 16 textures loaded (which are always bound to GL_TEXTURE2 -> GL_TEXTURE18)
-        if (show_texture_window)
-		{
-			ImGui::Begin("Texture Viewer", &show_texture_window);
-			ImVec2 avail_size = ImGui::GetContentRegionAvail();
-            ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES+1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
-			GLint _w, _h;
-			if (_slotnum < _SDHR_MAX_TEXTURES)
-			{
-				glBindTexture(GL_TEXTURE_2D, glhelper->get_texture_id_at_slot(_slotnum));
-				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
-				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
-				ImGui::Text("Texture ID: %d (%d x %d)", (int)glhelper->get_texture_id_at_slot(_slotnum), _w, _h);
-				ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum),
-					ImVec2(avail_size.x, avail_size.y - 30), ImVec2(0, 0), ImVec2(1, 1));
-			}
-			else if (_slotnum == _SDHR_MAX_TEXTURES)
-			{
-				glBindTexture(GL_TEXTURE_2D, a2VideoManager->GetOutputTextureId());
-				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
-				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
-				ImGui::Text("Output Texture ID: %d (%d x %d)", (int)a2VideoManager->GetOutputTextureId(), _w, _h);
-				ImGui::Image((void*)a2VideoManager->GetOutputTextureId(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
-			}
-			else if (_slotnum == _SDHR_MAX_TEXTURES+1)
-			{
-				glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
-				GLint target_tex_id = 0;
-				glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
-				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, target_tex_id);
-				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
-				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
-				ImGui::Text("_PP_INPUT_TEXTURE_UNIT: %d (%d x %d)", target_tex_id, _w, _h);
-				ImGui::Image((void*)target_tex_id, avail_size, ImVec2(0, 0), ImVec2(1, 1));
-			}
-			glBindTexture(GL_TEXTURE_2D, 0);
-			ImGui::End();
-		}
-
-		if (_M8DBG_bShowF8Window)
-		{
-			ImGui::Begin("M8 Debugging", &_M8DBG_bShowF8Window);
-			if (!ImGui::IsWindowCollapsed())
-			{
-				// Retrieve OpenGL version info
-				const GLubyte* renderer = glGetString(GL_RENDERER);
-				const GLubyte* version = glGetString(GL_VERSION);
-				GLint major, minor;
-				glGetIntegerv(GL_MAJOR_VERSION, &major);
-				glGetIntegerv(GL_MINOR_VERSION, &minor);
-				GLint accelerated = 0;
-				SDL_GL_GetAttribute(SDL_GL_ACCELERATED_VISUAL, &accelerated);
-				ImGui::Text("Renderer: %s", renderer);
-				ImGui::Text("OpenGL version: %s", version);
-				ImGui::Text("Major version: %d", major);
-				ImGui::Text("Minor version: %d", minor);
-				ImGui::Text("Hardware Acceleration: %s", accelerated ? "Enabled" : "Disabled");
-				ImGui::Separator();
-				bool _shouldResetFPS = false;
-				ImGui::PushItemWidth(80);
-				ImGui::InputInt("Width", &_M8DBG_windowWidth, 10, 100); ImGui::SameLine();
-				ImGui::InputInt("Height", &_M8DBG_windowHeight, 10, 100); ImGui::SameLine();
-				if (ImGui::Button("Apply"))
-				{
-					SDL_SetWindowSize(window, _M8DBG_windowWidth, _M8DBG_windowHeight);
+			
+			// In case the user wants to change the bezel
+			if (ImGuiFileDialog::Instance()->Display("ChooseBezelLoad")) {
+				// Check if a file was selected
+				if (ImGuiFileDialog::Instance()->IsOk()) {
+					bezelTexturePath = ImGuiFileDialog::Instance()->GetFilePathName();
+					// Load the bezel texture
+					glActiveTexture(_TEXUNIT_BEZEL);
+					bezel_asset.AssignByFilename(a2VideoManager, bezelTexturePath.c_str());
+					glActiveTexture(GL_TEXTURE0);
 				}
-				ImGui::Separator();
-				ImGui::PopItemWidth();
-				ImGui::PushItemWidth(110);
-				ImGui::Checkbox("Display FPS on screen", &_M8DBG_bDisplayFPSOnScreen);
-				ImGui::SliderInt("Average FPS range (s)", &_M8DBG_average_fps_window, 1, 60);
-				if (ImGui::Button("Reset FPS numbers"))
-					_shouldResetFPS = true;
-				ImGui::Separator();
-				if (ImGui::Checkbox("Disable Apple 2 Video render", &_M8DBG_bDisableVideoRender))
-					_shouldResetFPS = true;
-				if (ImGui::Checkbox("Disable PostProcessing render", &_M8DBG_bDisablePPRender))
-					_shouldResetFPS = true;
-				if (ImGui::Checkbox("Force render even if VRAM unchanged", &a2VideoManager->bAlwaysRenderBuffer))
-					_shouldResetFPS = true;
-				if (ImGui::Checkbox("VSYNC##M8", &g_swapInterval))
+				ImGuiFileDialog::Instance()->Close();
+			}
+			// Show the postprocessing window
+			if (show_postprocessing_window)
+				postProcessor->DisplayImGuiWindow(&show_postprocessing_window);
+
+			// Show the a2VideoManager window
+			if (show_a2video_window)
+				a2VideoManager->DisplayImGuiWindow(&show_a2video_window);
+
+			// The VCR event recorder
+			if (show_recorder_window)
+				eventRecorder->DisplayImGuiWindow(&show_recorder_window);
+
+			// Show the metrics window
+			if (show_metrics_window)
+				ImGui::ShowMetricsWindow(&show_metrics_window);
+
+			// Show the Apple //e memory
+			if (mem_edit_a2e.Open)
+			{
+				mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", memManager->GetApple2MemPtr(), 2 * _A2_MEMORY_SHADOW_END);
+			}
+
+			// Show the upload data region memory
+			if (mem_edit_upload.Open)
+			{
+				mem_edit_upload.DrawWindow("Memory Editor: Upload memory", memManager->GetApple2MemPtr(), 2 * _A2_MEMORY_SHADOW_END);
+			}
+
+			// Show the 16 textures loaded (which are always bound to GL_TEXTURE2 -> GL_TEXTURE18)
+			if (show_texture_window)
+			{
+				ImGui::Begin("Texture Viewer", &show_texture_window);
+				ImVec2 avail_size = ImGui::GetContentRegionAvail();
+				ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES + 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
+				GLint _w, _h;
+				if (_slotnum < _SDHR_MAX_TEXTURES)
 				{
-					set_vsync(g_swapInterval);
-					worst_frame_rate = 100000000.f;
-					_shouldResetFPS = true;
+					glBindTexture(GL_TEXTURE_2D, glhelper->get_texture_id_at_slot(_slotnum));
+					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
+					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
+					ImGui::Text("Texture ID: %d (%d x %d)", (int)glhelper->get_texture_id_at_slot(_slotnum), _w, _h);
+					ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum),
+						ImVec2(avail_size.x, avail_size.y - 30), ImVec2(0, 0), ImVec2(1, 1));
 				}
-				if (g_swapInterval)
+				else if (_slotnum == _SDHR_MAX_TEXTURES)
 				{
-					ImGui::SameLine();
-					ImGui::Text("On");
-					if (g_adaptiveVsync)
+					glBindTexture(GL_TEXTURE_2D, a2VideoManager->GetOutputTextureId());
+					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
+					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
+					ImGui::Text("Output Texture ID: %d (%d x %d)", (int)a2VideoManager->GetOutputTextureId(), _w, _h);
+					ImGui::Image((void*)a2VideoManager->GetOutputTextureId(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+				}
+				else if (_slotnum == _SDHR_MAX_TEXTURES + 1)
+				{
+					glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
+					GLint target_tex_id = 0;
+					glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
+					glActiveTexture(GL_TEXTURE0);
+					glBindTexture(GL_TEXTURE_2D, target_tex_id);
+					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
+					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
+					ImGui::Text("_PP_INPUT_TEXTURE_UNIT: %d (%d x %d)", target_tex_id, _w, _h);
+					ImGui::Image((void*)target_tex_id, avail_size, ImVec2(0, 0), ImVec2(1, 1));
+				}
+				glBindTexture(GL_TEXTURE_2D, 0);
+				ImGui::End();
+			}
+
+			if (_M8DBG_bShowF8Window)
+			{
+				ImGui::Begin("M8 Debugging", &_M8DBG_bShowF8Window);
+				if (!ImGui::IsWindowCollapsed())
+				{
+					// Retrieve OpenGL version info
+					const GLubyte* renderer = glGetString(GL_RENDERER);
+					const GLubyte* version = glGetString(GL_VERSION);
+					GLint major, minor;
+					glGetIntegerv(GL_MAJOR_VERSION, &major);
+					glGetIntegerv(GL_MINOR_VERSION, &minor);
+					GLint accelerated = 0;
+					SDL_GL_GetAttribute(SDL_GL_ACCELERATED_VISUAL, &accelerated);
+					ImGui::Text("Renderer: %s", renderer);
+					ImGui::Text("OpenGL version: %s", version);
+					ImGui::Text("Major version: %d", major);
+					ImGui::Text("Minor version: %d", minor);
+					ImGui::Text("Hardware Acceleration: %s", accelerated ? "Enabled" : "Disabled");
+					ImGui::Separator();
+					ImGui::PushItemWidth(80);
+					ImGui::InputInt("Width", &_M8DBG_windowWidth, 10, 100); ImGui::SameLine();
+					ImGui::InputInt("Height", &_M8DBG_windowHeight, 10, 100); ImGui::SameLine();
+					if (ImGui::Button("Apply"))
+					{
+						SDL_SetWindowSize(window, _M8DBG_windowWidth, _M8DBG_windowHeight);
+					}
+					ImGui::Separator();
+					ImGui::PopItemWidth();
+					ImGui::PushItemWidth(110);
+					ImGui::Checkbox("Display FPS on screen", &_M8DBG_bDisplayFPSOnScreen);
+					ImGui::SliderFloat("Average FPS range (s)", &_M8DBG_average_fps_window, 0.1f, 10.f, "%.1f");
+					if (ImGui::Button("Reset FPS numbers"))
+						ResetFPSCalculations(a2VideoManager);
+					ImGui::Separator();
+					if (ImGui::Checkbox("Disable Apple 2 Video render", &_M8DBG_bDisableVideoRender))
+						ResetFPSCalculations(a2VideoManager);
+					if (ImGui::Checkbox("Disable PostProcessing render", &_M8DBG_bDisablePPRender))
+						ResetFPSCalculations(a2VideoManager);
+					if (ImGui::Checkbox("Force render even if VRAM unchanged", &a2VideoManager->bAlwaysRenderBuffer))
+						ResetFPSCalculations(a2VideoManager);
+					if (ImGui::Checkbox("VSYNC##M8", &g_swapInterval))
+					{
+						set_vsync(g_swapInterval);
+						ResetFPSCalculations(a2VideoManager);
+					}
+					if (g_swapInterval)
 					{
 						ImGui::SameLine();
-						ImGui::Text("(Adaptive)");
+						ImGui::Text("On");
+						if (g_adaptiveVsync)
+						{
+							ImGui::SameLine();
+							ImGui::Text("(Adaptive)");
+						}
 					}
-				}
-				static bool _m8ssSHR = memManager->IsSoftSwitch(A2SS_SHR);
-				if (ImGui::Checkbox("A2SS_SHR##M8", &_m8ssSHR)) {
-					memManager->SetSoftSwitch(A2SS_SHR, _m8ssSHR);
-					_shouldResetFPS = true;
-				}
-				if (ImGui::Checkbox("Run Karateka Demo", &_M8DBG_bRunKarateka))
-				{
-					if (_M8DBG_bRunKarateka)
+					static bool _m8ssSHR = memManager->IsSoftSwitch(A2SS_SHR);
+					if (ImGui::Checkbox("A2SS_SHR##M8", &_m8ssSHR)) {
+						memManager->SetSoftSwitch(A2SS_SHR, _m8ssSHR);
+						ResetFPSCalculations(a2VideoManager);
+					}
+					if (ImGui::Checkbox("Run Karateka Demo", &_M8DBG_bRunKarateka))
 					{
-						std::ifstream karatekafile("./recordings/test.vcr", std::ios::binary);
-						eventRecorder->ReadRecordingFile(karatekafile);
-						eventRecorder->StartReplay();
-						memManager->SetSoftSwitch(A2SS_SHR, false);
-						_m8ssSHR = false;
-						memManager->SetSoftSwitch(A2SS_TEXT, false);
-						memManager->SetSoftSwitch(A2SS_HIRES, true);
+						if (_M8DBG_bRunKarateka)
+						{
+							std::ifstream karatekafile("./recordings/test.vcr", std::ios::binary);
+							eventRecorder->ReadRecordingFile(karatekafile);
+							eventRecorder->StartReplay();
+							memManager->SetSoftSwitch(A2SS_SHR, false);
+							_m8ssSHR = false;
+							memManager->SetSoftSwitch(A2SS_TEXT, false);
+							memManager->SetSoftSwitch(A2SS_HIRES, true);
+						}
+						else {
+							eventRecorder->StopReplay();
+						}
 					}
-					else {
-						eventRecorder->StopReplay();
+					ImGui::Separator();
+					ImGui::Text("Legacy Shader");
+					const char* _legshaders[] = { "0 - Uniform", "1 - Static", "2 - VRAM", "3 - Full" };
+					static int _legshader_current = 3;
+					if (ImGui::ListBox("##LegacyShader", &_legshader_current, _legshaders, IM_ARRAYSIZE(_legshaders), 4))
+					{
+						a2VideoManager->SelectLegacyShader(_legshader_current);
+						ResetFPSCalculations(a2VideoManager);
 					}
-				}
-				ImGui::Separator();
-				ImGui::Text("Legacy Shader");
-				const char* _legshaders[] = { "0 - Uniform", "1 - Static", "2 - VRAM", "3 - Full" };
-				static int _legshader_current = 3;
-				if (ImGui::ListBox("##LegacyShader", &_legshader_current, _legshaders, IM_ARRAYSIZE(_legshaders), 4))
-				{
-					a2VideoManager->SelectLegacyShader(_legshader_current);
-					_shouldResetFPS = true;
-				}
-				ImGui::Text("SHR Shader");
-				const char* _shrshaders[] = { "0 - Borders", "1 - No Borders", "2 - Full" };
-				static int _shrshader_current = 2;
-				if (ImGui::ListBox("##SHRShader", &_shrshader_current, _shrshaders, IM_ARRAYSIZE(_shrshaders), 3))
-				{
-					a2VideoManager->SelectSHRShader(_shrshader_current);
-					_shouldResetFPS = true;
-				}
-				ImGui::PopItemWidth();
+					ImGui::Text("SHR Shader");
+					const char* _shrshaders[] = { "0 - Borders", "1 - No Borders", "2 - Full" };
+					static int _shrshader_current = 2;
+					if (ImGui::ListBox("##SHRShader", &_shrshader_current, _shrshaders, IM_ARRAYSIZE(_shrshaders), 3))
+					{
+						a2VideoManager->SelectSHRShader(_shrshader_current);
+						ResetFPSCalculations(a2VideoManager);
+					}
+					ImGui::PopItemWidth();
 
-				if (_shouldResetFPS)
+				}
+				ImGui::End();
+			}
+
+			// Rendering
+			ImGui::Render();
+
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		}	// show F1 window
+
+		SDL_GL_SwapWindow(window);
+
+		// FPS overlay - Calculate frame rates
+		fps_frame_count++;
+		uint32_t currentTime = SDL_GetTicks();
+		uint32_t elapsedTime = currentTime - fps_start_time;
+		// Calculate frame rate every second
+		if (elapsedTime > (_M8DBG_average_fps_window * 1000))
+		{
+			float fps = fps_frame_count / (elapsedTime / 1000.0f);
+			if ((fps_worst > fps) && (fps > 0))
+				fps_worst = fps;
+
+			if (_M8DBG_bDisplayFPSOnScreen)
+			{
+				snprintf(fps_str_buf, 40,  "AVERAGE FPS: %.0f", fps);
+				snprintf(fps_str_buf2, 40, "WORST FPS: %.0f", fps_worst);
+				if (fps_string_id != UINT32_MAX)
 				{
-					_M8DBG_fps = 0;
-					_M8DBG_fps_worst = 100000.f;
-					_M8DBG_fps_samples = 0;
-					a2VideoManager->ForceBeamFullScreenRender();
+					a2VideoManager->SetStringText(fps_string_id, fps_str_buf);
+					a2VideoManager->SetStringText(fps_string_id2, fps_str_buf2);
+				}
+				else {
+					// Create the FPS overlay string
+					fps_string_id = a2VideoManager->DrawString(std::string(fps_str_buf), 0, 0);
+					fps_string_id2 = a2VideoManager->DrawString(std::string(fps_str_buf2), 2, 8);
+					a2VideoManager->SetStringColors(fps_string_id2, 0b10010010);
 				}
 			}
-			ImGui::End();
+			else {
+				if (fps_string_id != UINT32_MAX)
+				{
+					a2VideoManager->EraseString(fps_string_id);
+					fps_string_id = UINT32_MAX;
+				}
+			}
+
+
+			// Reset for next calculation
+			fps_start_time = currentTime;
+			fps_frame_count = 0;
 		}
-
-		// Rendering
-		ImGui::Render();
-
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-		SDL_GL_SwapWindow(window);
 
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL end of render error: " << glerr << std::endl;

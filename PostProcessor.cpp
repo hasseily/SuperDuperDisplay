@@ -172,10 +172,13 @@ void PostProcessor::SelectShader()
 	// Choose the shader
 	switch (p_postprocessing_level)
 	{
-	case 0:	// basic passthrough shader
+	case 0:	// basic passthrough shader with optional scanlines
+	case 1:
 		shaderProgram = v_ppshaders.at(0);
 		shaderProgram.use();
 		shaderProgram.setInt("Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
+		shaderProgram.setFloat("POSTPROCESSING_LEVEL", (float)p_postprocessing_level);
+		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 		break;
 	case 2:	// original CRT shader
 		shaderProgram = v_ppshaders.at(1);

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <map>
 #include "SDL.h"
+#include <SDL_opengl.h>
 #ifdef _DEBUGTIMINGS
 #include <chrono>
 #endif
@@ -103,6 +104,104 @@ static uint16_t g_RAM_HGROffsets[] = {
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
+
+//////////////////////////////////////////////////////////////////////////
+// OverlayString Methods
+//////////////////////////////////////////////////////////////////////////
+uint32_t A2VideoManager::DrawString(const std::string& text, uint32_t x, uint32_t y)
+{
+	auto glstr = OverlayString();
+	glstr.text = text;
+	glstr.x = x;
+	glstr.y = y;
+	while (bSemaphoreStringAdd == true) {};
+	bSemaphoreStringAdd = true;
+	uint32_t id = strings_to_draw.size();
+	glstr.id = id;
+	strings_to_draw[id] = glstr;
+	bSemaphoreStringAdd = false;
+	return id;
+}
+
+void A2VideoManager::SetStringText(uint32_t id, const std::string& text)
+{
+	if (auto search = strings_to_draw.find(id); search != strings_to_draw.end())
+	{
+		search->second.text = text;
+	}
+}
+
+void A2VideoManager::SetStringText(uint32_t id, const char* text)
+{
+	if (auto search = strings_to_draw.find(id); search != strings_to_draw.end())
+	{
+		search->second.text = text;
+	}
+}
+
+void A2VideoManager::SetStringColors(uint32_t id, uint8_t colors)
+{
+	if (auto search = strings_to_draw.find(id); search != strings_to_draw.end())
+	{
+		search->second.colors = colors;
+	}
+}
+
+void A2VideoManager::MoveString(uint32_t id, float x, float y)
+{
+	if (auto search = strings_to_draw.find(id); search != strings_to_draw.end())
+	{
+		search->second.x = x;
+		search->second.y = y;
+	}
+}
+
+void A2VideoManager::EraseString(uint32_t id)
+{
+	strings_to_draw.erase(id);
+}
+
+void A2VideoManager::OverlayString::Draw()
+{
+	for (size_t i = 0; i < text.length(); ++i) {
+		DrawCharacter(i);
+	}
+}
+
+void A2VideoManager::OverlayString::DrawCharacter(uint32_t pos)
+{
+	// Apple 2 alternate font atlas only has 0x20-0x7E
+	char c = text.at(pos);
+	if (c < 0x20 || c > 0x7E)
+		return;
+
+	auto a2VideoMgr = A2VideoManager::GetInstance();
+	auto _w = 40 + (2 * a2VideoMgr->borders_w_cycles);
+	auto vram_start = 4 * ((_w * this->y) + pos + this->x);
+
+	if ((vram_start + (7 * _w) + 3) > a2VideoMgr->GetVramSizeLegacy())	// out of bounds
+		return;
+
+	// the flags byte is:
+	// bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO, BORDER)
+	// bit 3: ALT charset for TEXT
+	// bits 4-7: border color (like in the 2gs)
+	// 
+	// the colors byte is:
+	// bits 0-3: background color
+	// bits 4-7: foreground color
+
+	for (size_t i = 0; i < 8; i++)
+	{
+		auto offset = vram_start + (i * _w * 4);
+		uint8_t* vram_ptr = a2VideoMgr->vrams_write->vram_legacy + offset;
+
+		vram_ptr[0] = c + 0x80;		// main
+		vram_ptr[1] = 0;			// aux
+		vram_ptr[2] = this->flags;
+		vram_ptr[3] = this->colors;
+	}
+}
 
 //////////////////////////////////////////////////////////////////////////
 // Image Asset Methods
@@ -293,6 +392,13 @@ void A2VideoManager::StartNextFrame()
 	// We just overwrite the current buffer
 	if (vrams_read->bWasRendered == true)
 	{
+
+		// Draw the overlay strings
+		for each (auto _str in strings_to_draw)
+		{
+			_str.second.Draw();
+		}
+
 		vrams_read->bWasRendered = false;
 		auto _vtmp = vrams_write;
 		vrams_write = vrams_read;
