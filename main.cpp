@@ -268,8 +268,6 @@ int main(int argc, char* argv[])
 	static bool bShouldTerminateNetworking = false;
 	static bool bShouldTerminateProcessing = false;
 	static bool bIsFullscreen = false;
-	bool bBezelIsActive = false;
-	std::string bezelTexturePath = "assets/Bezels/generic_monitor.png";
     bool show_demo_window = false;
     bool show_metrics_window = false;
 	bool show_F1_window = false;
@@ -360,8 +358,6 @@ int main(int argc, char* argv[])
 				cycleCounter->isVideoRegionDynamic = false;
 				cycleCounter->SetVideoRegion(vbl_region == 1 ? VideoRegion_e::PAL : VideoRegion_e::NTSC);
 			}
-			bezelTexturePath = _sm.value("bezel texture path", bezelTexturePath);
-			bBezelIsActive = _sm.value("bBezelIsActive", bBezelIsActive);
 			show_F1_window = _sm.value("show F1 window", show_F1_window);
 			show_a2video_window = _sm.value("show Apple 2 Video window", show_a2video_window);
 			show_postprocessing_window = _sm.value("show Post Processor window", show_postprocessing_window);
@@ -386,12 +382,6 @@ int main(int argc, char* argv[])
 		std::cerr << "No saved Settings.json file" << std::endl;
 	}
 	
-	// Load the bezel texture
-	A2VideoManager::ImageAsset bezel_asset;
-	glGenTextures(1, &bezel_asset.tex_id);
-	glActiveTexture(_TEXUNIT_BEZEL);
-	bezel_asset.AssignByFilename(a2VideoManager, bezelTexturePath.c_str());
-	glActiveTexture(GL_TEXTURE0);
 	std::cout << "Previous state loaded!" << std::endl;
 
 	// Load up the first screen in SHR, with green border color
@@ -568,20 +558,6 @@ int main(int argc, char* argv[])
 			// Get the foreground draw list to render on top of everything else
 			ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
 
-			// Add the image to the draw list
-			if (bBezelIsActive)
-			{
-				draw_list->AddImage(
-					(void*)bezel_asset.tex_id,
-					window_pos,                  // Position
-					ImVec2(window_pos.x + window_size.x, window_pos.y + window_size.y), // End Position
-					uv_min,                      // UV Min
-					uv_max,                      // UV Max
-					IM_COL32(255, 255, 255, 255) // Tint Color
-				);
-			}
-
-
 
 			// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 			if (show_demo_window)
@@ -641,15 +617,6 @@ int main(int argc, char* argv[])
 				if (ImGui::ColorEdit4("Window Color", window_bgcolor)) {
 					// std::cerr << "color " << window_bgcolor[0] << std::endl;
 				}
-				ImGui::Checkbox("Bezel", &bBezelIsActive);
-				ImGui::SameLine();
-				if (ImGui::Button("Select Bezel Texture"))
-				{
-					IGFD::FileDialogConfig config;
-					config.path = "./assets/Bezels/";
-					ImGui::SetNextWindowSize(ImVec2(800, 400));
-					ImGuiFileDialog::Instance()->OpenDialog("ChooseBezelLoad", "Select Bezel Texture", ".png,", config);
-				}
 				ImGui::Checkbox("PostProcessing Window (F2)", &show_postprocessing_window);
 				ImGui::Checkbox("Apple 2 Video Modes Window (F3)", &show_a2video_window);
 				ImGui::Checkbox("M8 Debug Window (F8)", &_M8DBG_bShowF8Window);
@@ -701,18 +668,6 @@ int main(int argc, char* argv[])
 			}
 			ImGui::End();
 			
-			// In case the user wants to change the bezel
-			if (ImGuiFileDialog::Instance()->Display("ChooseBezelLoad")) {
-				// Check if a file was selected
-				if (ImGuiFileDialog::Instance()->IsOk()) {
-					bezelTexturePath = ImGuiFileDialog::Instance()->GetFilePathName();
-					// Load the bezel texture
-					glActiveTexture(_TEXUNIT_BEZEL);
-					bezel_asset.AssignByFilename(a2VideoManager, bezelTexturePath.c_str());
-					glActiveTexture(GL_TEXTURE0);
-				}
-				ImGuiFileDialog::Instance()->Close();
-			}
 			// Show the postprocessing window
 			if (show_postprocessing_window)
 				postProcessor->DisplayImGuiWindow(&show_postprocessing_window);
@@ -961,8 +916,6 @@ int main(int argc, char* argv[])
 			{"fullscreen", bIsFullscreen},
 			{"vsync", g_swapInterval},
 			{"videoregion", vbl_region},
-			{"bBezelIsActive", bBezelIsActive},
-			{"bezel texture path", bezelTexturePath},
 			{"window background color", window_bgcolor},
 			{"show F1 window", show_F1_window},
 			{"show Apple 2 Video window", show_a2video_window},

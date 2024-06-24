@@ -259,7 +259,6 @@
     <Image Include="assets\Apple2eFont14x16 - Regular.png" />
     <Image Include="assets\Apple2eFont7x16 - Alternate.png" />
     <Image Include="assets\Apple2eFont7x16 - Regular.png" />
-    <Image Include="assets\Bezel.png" />
     <Image Include="assets\Texture_composite_complete.png" />
     <Image Include="assets\Texture_composite_dhgr.png" />
     <Image Include="assets\Texture_composite_hgr.png" />
