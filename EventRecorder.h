@@ -51,6 +51,11 @@ public:
 		return s_instance;
 	}
 	~EventRecorder();
+
+	void ReadRecordingFile(std::ifstream& file);
+	void StopReplay();
+	void StartReplay();
+
 private:
 	void Initialize();
 
@@ -62,8 +67,6 @@ private:
 	void LoadRecording();
 	
 	// replay
-	void StopReplay();
-	void StartReplay();
 	void PauseReplay(bool pause);
 	void RewindReplay();
 
@@ -71,7 +74,6 @@ private:
 	void MakeRAMSnapshot(size_t cycle);
 	void ApplyRAMSnapshot(size_t snapshot_index);
 	void WriteRecordingFile(std::ofstream& file);
-	void ReadRecordingFile(std::ifstream& file);
 	void WriteEvent(const SDHREvent& event, std::ofstream& file);
 	void ReadEvent(std::ifstream& file);
 

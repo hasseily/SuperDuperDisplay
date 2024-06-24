@@ -106,6 +106,7 @@ void EventRecorder::ReadRecordingFile(std::ifstream& file)
 			ReadEvent(file);
 		}
 	}
+	bHasRecording = true;
 }
 
 void EventRecorder::WriteEvent(const SDHREvent& event, std::ofstream& file) {
@@ -163,6 +164,7 @@ void EventRecorder::RewindReplay()
 {
 	StopReplay();
 	currentReplayEvent = 0;
+	bUserMovedEventSlider = true;
 }
 
 int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldStopReplay)
@@ -184,6 +186,7 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 		// Check if the user requested to move to a different area in the recording
 		if (bUserMovedEventSlider)
 		{
+			bUserMovedEventSlider = false;
 			// Move to the requested event. In order to do this cleanly, we need:
 			// 1. to find the closest previous memory snapshot
 			// 2. run all events between the mem snapshot and the requested event
@@ -218,6 +221,9 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 				if (elapsed >= targetDuration)
 					break;
 			}
+		}
+		else {
+			currentReplayEvent = 0;
 		}
 	}
 	SetState(EventRecorderStates_e::STOPPED);
@@ -385,7 +391,6 @@ void EventRecorder::DisplayImGuiWindow(bool* p_open)
 						ImGui::OpenPopup("Recorder Error Modal");
 					}
 					file.close();
-					bHasRecording = true;
 				}
 				else {
 					m_lastErrorString = "Error opening file";

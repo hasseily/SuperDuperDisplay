@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <map>
 #include "SDL.h"
+#include <SDL_opengl.h>
 #ifdef _DEBUGTIMINGS
 #include <chrono>
 #endif
@@ -105,6 +106,104 @@ static uint16_t g_RAM_HGROffsets[] = {
 A2VideoManager* A2VideoManager::s_instance;
 
 //////////////////////////////////////////////////////////////////////////
+// OverlayString Methods
+//////////////////////////////////////////////////////////////////////////
+uint32_t A2VideoManager::DrawString(const std::string& text, uint32_t x, uint32_t y)
+{
+	auto glstr = OverlayString();
+	glstr.text = text;
+	glstr.x = x;
+	glstr.y = y;
+	while (bSemaphoreStringAdd == true) {};
+	bSemaphoreStringAdd = true;
+	uint32_t id = strings_to_draw.size();
+	glstr.id = id;
+	strings_to_draw[id] = glstr;
+	bSemaphoreStringAdd = false;
+	return id;
+}
+
+void A2VideoManager::SetStringText(uint32_t id, const std::string& text)
+{
+	if (auto search = strings_to_draw.find(id); search != strings_to_draw.end())
+	{
+		search->second.text = text;
+	}
+}
+
+void A2VideoManager::SetStringText(uint32_t id, const char* text)
+{
+	if (auto search = strings_to_draw.find(id); search != strings_to_draw.end())
+	{
+		search->second.text = text;
+	}
+}
+
+void A2VideoManager::SetStringColors(uint32_t id, uint8_t colors)
+{
+	if (auto search = strings_to_draw.find(id); search != strings_to_draw.end())
+	{
+		search->second.colors = colors;
+	}
+}
+
+void A2VideoManager::MoveString(uint32_t id, float x, float y)
+{
+	if (auto search = strings_to_draw.find(id); search != strings_to_draw.end())
+	{
+		search->second.x = x;
+		search->second.y = y;
+	}
+}
+
+void A2VideoManager::EraseString(uint32_t id)
+{
+	strings_to_draw.erase(id);
+}
+
+void A2VideoManager::OverlayString::Draw()
+{
+	for (size_t i = 0; i < text.length(); ++i) {
+		DrawCharacter(i);
+	}
+}
+
+void A2VideoManager::OverlayString::DrawCharacter(uint32_t pos)
+{
+	// Apple 2 alternate font atlas only has 0x20-0x7E
+	char c = text.at(pos);
+	if (c < 0x20 || c > 0x7E)
+		return;
+
+	auto a2VideoMgr = A2VideoManager::GetInstance();
+	auto _w = 40 + (2 * a2VideoMgr->borders_w_cycles);
+	auto vram_start = 4 * ((_w * this->y) + pos + this->x);
+
+	if ((vram_start + (7 * _w) + 3) > a2VideoMgr->GetVramSizeLegacy())	// out of bounds
+		return;
+
+	// the flags byte is:
+	// bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO, BORDER)
+	// bit 3: ALT charset for TEXT
+	// bits 4-7: border color (like in the 2gs)
+	// 
+	// the colors byte is:
+	// bits 0-3: background color
+	// bits 4-7: foreground color
+
+	for (size_t i = 0; i < 8; i++)
+	{
+		auto offset = vram_start + (i * _w * 4);
+		uint8_t* vram_ptr = a2VideoMgr->vrams_write->vram_legacy + offset;
+
+		vram_ptr[0] = c + 0x80;		// main
+		vram_ptr[1] = 0;			// aux
+		vram_ptr[2] = this->flags;
+		vram_ptr[3] = this->colors;
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
 // Image Asset Methods
 //////////////////////////////////////////////////////////////////////////
 
@@ -170,7 +269,7 @@ void A2VideoManager::Initialize()
 	{
 		vrams_array[i].id = i;
 		vrams_array[i].frame_idx = current_frame_idx + i;
-		vrams_array[i].bWasRendered = false;
+		vrams_array[i].bWasRendered = true;		// otherwise it won't render the first frame
 		vrams_array[i].mode = A2Mode_e::LEGACY;
 		if (vrams_array[i].vram_legacy != nullptr)
 			delete[] vrams_array[i].vram_legacy;
@@ -288,14 +387,26 @@ void A2VideoManager::StartNextFrame()
 	vrams_write->frame_idx = ++current_frame_idx;
 	// std::cerr << "starting next frame at current index: " << current_frame_idx << std::endl;
 
-	// Flip the double buffers
-	vrams_read->bWasRendered = false;
-	auto _vtmp = vrams_write;
-	vrams_write = vrams_read;
-	vrams_read = _vtmp;
-	memset(vrams_write->vram_legacy, 0, GetVramSizeLegacy());
-	memset(vrams_write->vram_shr, 0, GetVramSizeSHR());
-	memset(vrams_write->offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
+	// Flip the double buffers only if the read buffer was rendered
+	// Otherwise it means the renderer is too slow and hasn't finished rendering
+	// We just overwrite the current buffer
+	if (vrams_read->bWasRendered == true)
+	{
+
+		// Draw the overlay strings
+		for (auto& _str : strings_to_draw)
+		{
+			_str.second.Draw();
+		}
+
+		vrams_read->bWasRendered = false;
+		auto _vtmp = vrams_write;
+		vrams_write = vrams_read;
+		vrams_read = _vtmp;
+	}
+//	memset(vrams_write->vram_legacy, 0, GetVramSizeLegacy());
+//	memset(vrams_write->vram_shr, 0, GetVramSizeSHR());
+//	memset(vrams_write->offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
 
 	// At each vblank reset the mode
 	vrams_write->mode = A2Mode_e::NONE;
@@ -769,6 +880,32 @@ void A2VideoManager::ForceBeamFullScreenRender()
 
 }
 
+bool A2VideoManager::SelectLegacyShader(const int index)
+{
+	switch (index)
+	{
+	case 0:		// full
+		windowsbeam[A2VIDEOBEAM_LEGACY]->SetShaderPrograms(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
+		break;
+	default:
+		return false;
+	}
+	return true;
+}
+
+bool A2VideoManager::SelectSHRShader(const int index)
+{
+	switch (index)
+	{
+	case 0:		// full
+		windowsbeam[A2VIDEOBEAM_SHR]->SetShaderPrograms(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_SHR_FRAGMENT);
+		break;
+	default:
+		return false;
+	}
+	return true;
+}
+
 uXY A2VideoManager::ScreenSize()
 {
 	return uXY({ (uint32_t)output_width, (uint32_t)output_height});
@@ -919,7 +1056,7 @@ GLuint A2VideoManager::Render()
 	}
 
 	// Exit if we've already rendered the buffer
-	if (rendered_frame_idx == vrams_read->frame_idx)
+	if ((rendered_frame_idx == vrams_read->frame_idx) && !bAlwaysRenderBuffer)
 		return output_texture_id;
 
 	// std::cerr << "--- Actual Render: " << vrams_read->frame_idx << std::endl;

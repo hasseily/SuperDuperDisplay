@@ -167,15 +167,20 @@ void PostProcessor::LoadState(int profile_id) {
 void PostProcessor::SelectShader()
 {
 	// Choose the shader
-	if (p_postprocessing_level == 0) {		// basic passthrough shader
+	switch (p_postprocessing_level)
+	{
+	case 0:	// basic passthrough shader with optional scanlines
+	case 1:
 		shaderProgram = v_ppshaders.at(0);
 		shaderProgram.use();
 		shaderProgram.setInt("Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
-	}
-	else {
+		shaderProgram.setFloat("POSTPROCESSING_LEVEL", (float)p_postprocessing_level);
+		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
+		break;
+	case 2:	// CRT shader
 		shaderProgram = v_ppshaders.at(1);
 		shaderProgram.use();
-		// Update uniforms
+		// common
 		shaderProgram.setInt("A2Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
 		shaderProgram.setInt("FrameCount", frame_count);
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
@@ -183,8 +188,9 @@ void PostProcessor::SelectShader()
 		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
 		shaderProgram.setVec4("VideoRect", quadViewportCoords);
-
 		shaderProgram.setFloat("POSTPROCESSING_LEVEL", (float)p_postprocessing_level);
+
+		// shader specific
 		shaderProgram.setFloat("SCANLINE_TYPE", (float)p_scanline_type);
 		shaderProgram.setFloat("SCANLINE_WEIGHT", p_scanline_weight);
 		shaderProgram.setFloat("INTERLACE", p_interlace ? 1.0f : 0.0f);
@@ -219,6 +225,7 @@ void PostProcessor::SelectShader()
 		shaderProgram.setFloat("CONV_G", p_conv_g);
 		shaderProgram.setFloat("CONV_B", p_conv_b);
 		shaderProgram.setFloat("POTATO", p_potato ? 1.0f : 0.0f);
+		break;
 	}
 }
 
@@ -445,7 +452,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		if (bAutoScale)
 			ImGui::EndDisabled();
 
-		if (p_postprocessing_level > 1) {
+		if (p_postprocessing_level == 2) {
 			ImGui::Separator();
 			// Scanline and Interlacing
 			ImGui::Text("[ SCANLINE TYPE ]");
@@ -489,7 +496,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::SliderFloat("Image Center Y", &p_centery, -100.0f, 100.0f, "%.2f");
 			ImGui::SliderFloat("Curvature Horizontal", &p_warpx, 0.00f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Curvature Vertical", &p_warpy, 0.00f, 0.25f, "%.2f");
-			ImGui::SliderFloat("Barrel Distortion", &p_barrel_distortion, -2.00f, 2.00f, "%.2f");
+			ImGui::SliderFloat("Barrel Distortion", &p_barrel_distortion, -0.30f, 5.00f, "%.2f");
 			ImGui::SliderFloat("Corners Cut", &p_corner, 0.f, 90.f, "%.3f");
 			ImGui::Separator();
 			
