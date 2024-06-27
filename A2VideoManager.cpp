@@ -505,6 +505,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		}
 		if (beamState == BeamState_e::CONTENT)
 		{
+			if (_x < CYCLES_SC_HBL || _y >= mode_scanlines)		// bounds check if mode changes midway
+				return;
 			uint32_t _toff = 40 * (_y/8) + (_x - CYCLES_SC_HBL);
 			// Override when the byte is an overlay
 			if (overlay_text[_toff] > 0)
