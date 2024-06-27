@@ -817,7 +817,7 @@ int main(int argc, char* argv[])
 					{
 						if (_M8DBG_bRunKarateka)
 						{
-							std::ifstream karatekafile("./recordings/test.vc2r", std::ios::binary);
+							std::ifstream karatekafile("./recordings/test.vcr", std::ios::binary);
 							if (!karatekafile.is_open()) {
 								_M8DBG_bKaratekaLoadFailed = true;
 							}
