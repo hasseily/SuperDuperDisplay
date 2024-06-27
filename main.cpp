@@ -818,11 +818,25 @@ int main(int argc, char* argv[])
 						{
 							std::ifstream karatekafile("./recordings/test.vcr", std::ios::binary);
 							eventRecorder->ReadRecordingFile(karatekafile);
-							eventRecorder->StartReplay();
-							memManager->SetSoftSwitch(A2SS_SHR, false);
-							_m8ssSHR = false;
-							memManager->SetSoftSwitch(A2SS_TEXT, false);
-							memManager->SetSoftSwitch(A2SS_HIRES, true);
+							if (!karatekafile.is_open()) {
+								if (ImGui::BeginPopupModal("File Loading Error", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+								{
+									ImGui::Text("Failed to open the file ./recordings/test.vcr");
+									// Buttons to close the modal
+									if (ImGui::Button("OK", ImVec2(120, 0))) {
+										// Handle OK (e.g., process data, close modal)
+										ImGui::CloseCurrentPopup();
+									}
+									ImGui::EndPopup();
+								}
+							}
+							else {
+								eventRecorder->StartReplay();
+								memManager->SetSoftSwitch(A2SS_SHR, false);
+								_m8ssSHR = false;
+								memManager->SetSoftSwitch(A2SS_TEXT, false);
+								memManager->SetSoftSwitch(A2SS_HIRES, true);
+							}
 						}
 						else {
 							eventRecorder->StopReplay();
