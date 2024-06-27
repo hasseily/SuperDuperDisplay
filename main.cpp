@@ -60,6 +60,7 @@ bool _M8DBG_bDisplayFPSOnScreen = true;
 float _M8DBG_average_fps_window = 1.f;	// in seconds
 bool _M8DBG_bShowF8Window = true;
 bool _M8DBG_bRunKarateka = false;
+bool _M8DBG_bKaratekaLoadFailed = false;
 int _M8DBG_windowWidth = 800;
 int _M8DBG_windowHeight = 600;
 
@@ -816,21 +817,12 @@ int main(int argc, char* argv[])
 					{
 						if (_M8DBG_bRunKarateka)
 						{
-							std::ifstream karatekafile("./recordings/test.vcr", std::ios::binary);
-							eventRecorder->ReadRecordingFile(karatekafile);
+							std::ifstream karatekafile("./recordings/test.vc2r", std::ios::binary);
 							if (!karatekafile.is_open()) {
-								if (ImGui::BeginPopupModal("File Loading Error", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-								{
-									ImGui::Text("Failed to open the file ./recordings/test.vcr");
-									// Buttons to close the modal
-									if (ImGui::Button("OK", ImVec2(120, 0))) {
-										// Handle OK (e.g., process data, close modal)
-										ImGui::CloseCurrentPopup();
-									}
-									ImGui::EndPopup();
-								}
+								_M8DBG_bKaratekaLoadFailed = true;
 							}
 							else {
+								eventRecorder->ReadRecordingFile(karatekafile);
 								eventRecorder->StartReplay();
 								memManager->SetSoftSwitch(A2SS_SHR, false);
 								_m8ssSHR = false;
@@ -861,6 +853,21 @@ int main(int argc, char* argv[])
 					}
 					ImGui::PopItemWidth();
 
+				}
+
+				if (_M8DBG_bKaratekaLoadFailed)
+				{
+					ImGui::OpenPopup("File Loading Error");
+					if (ImGui::BeginPopupModal("File Loading Error", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+					{
+						ImGui::Text("Failed to open the file ./recordings/test.vcr");
+						if (ImGui::Button("OK", ImVec2(120, 0))) {
+							ImGui::CloseCurrentPopup();
+							_M8DBG_bKaratekaLoadFailed = false;
+							_M8DBG_bRunKarateka = false;
+						}
+						ImGui::EndPopup();
+					}
 				}
 				ImGui::End();
 			}
