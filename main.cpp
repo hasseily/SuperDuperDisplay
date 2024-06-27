@@ -36,6 +36,7 @@
 #include "extras/ImGuiFileDialog.h"
 #include "PostProcessor.h"
 #include "EventRecorder.h"
+#include "ShmProcessor.h"
 
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
 #include <unistd.h>
@@ -307,10 +308,14 @@ int main(int argc, char* argv[])
 	}
 	std::cout << "Renderer Ready!" << std::endl;
 
-	// Run the network thread that will update the internal state as well as the apple 2 memory
-	std::thread thread_server(socket_server_thread, (uint16_t)_SDHR_SERVER_PORT, &bShouldTerminateNetworking);
-    // And run the processing thread
-	std::thread thread_processor(process_events_thread, &bShouldTerminateProcessing);
+	// Do not run the network thread or old processing threads
+	// std::thread thread_server(socket_server_thread, (uint16_t)_SDHR_SERVER_PORT, &bShouldTerminateNetworking);
+	// std::thread thread_processor(process_events_thread, &bShouldTerminateProcessing);
+    // Only run the SHM processing thread
+
+	ShmProcessor processor;
+	std::thread thread_readshm(&ShmProcessor::ProcessSHMEvents, &processor, &bShouldTerminateProcessing);
+
 
     // Delta Time
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
@@ -919,10 +924,11 @@ int main(int argc, char* argv[])
 
     // Stop all threads
 	bShouldTerminateProcessing = true;
-	terminate_processing_thread();
-	thread_processor.join();
+	// terminate_processing_thread();
+	thread_readshm.join();
+	// thread_processor.join();
     bShouldTerminateNetworking = true;
-    thread_server.join();
+    // thread_server.join();
 
 	// Serialize settings and save them
 	{
