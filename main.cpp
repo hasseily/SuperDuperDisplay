@@ -52,10 +52,7 @@ static SDL_Window* window;
 static float fps_worst = 1000000.f;
 static uint64_t fps_frame_count = 0;
 static auto fps_start_time = SDL_GetTicks();
-static uint32_t fps_string_id = UINT32_MAX;
-static uint32_t fps_string_id2 = UINT32_MAX;
 static char fps_str_buf[40];
-static char fps_str_buf2[40];
 
 bool _M8DBG_bDisableVideoRender = false;
 bool _M8DBG_bDisablePPRender = false;
@@ -120,6 +117,18 @@ void ResetFPSCalculations(A2VideoManager* a2VideoManager)
 	fps_frame_count = 0;
 	fps_start_time = SDL_GetTicks();
 	a2VideoManager->ForceBeamFullScreenRender();
+}
+
+void DrawFPSOverlay(A2VideoManager* a2VideoManager)
+{
+	if (_M8DBG_bDisplayFPSOnScreen)
+	{
+		a2VideoManager->DrawOverlayString("AVERAGE FPS: ", 13, 0b11010010, 0, 0);
+		a2VideoManager->DrawOverlayString("WORST FPS: ", 11, 0b11010010, 2, 1);
+	} else {
+		a2VideoManager->EraseOverlayRange(20, 0, 0);
+		a2VideoManager->EraseOverlayRange(20, 0, 1);
+	}
 }
 
 // Main code
@@ -389,6 +398,9 @@ int main(int argc, char* argv[])
 
 	SDL_GetWindowSize(window, &_M8DBG_windowWidth, &_M8DBG_windowHeight);
 
+	if (_M8DBG_bDisplayFPSOnScreen)
+		DrawFPSOverlay(a2VideoManager);
+	
     while (!done)
 #endif
     {
@@ -765,7 +777,11 @@ int main(int argc, char* argv[])
 					ImGui::Separator();
 					ImGui::PopItemWidth();
 					ImGui::PushItemWidth(110);
-					ImGui::Checkbox("Display FPS on screen", &_M8DBG_bDisplayFPSOnScreen);
+					if (ImGui::Checkbox("Display FPS on screen", &_M8DBG_bDisplayFPSOnScreen))
+					{
+						ResetFPSCalculations(a2VideoManager);
+						DrawFPSOverlay(a2VideoManager);
+					}
 					ImGui::SliderFloat("Average FPS range (s)", &_M8DBG_average_fps_window, 0.1f, 10.f, "%.1f");
 					if (ImGui::Button("Reset FPS numbers"))
 						ResetFPSCalculations(a2VideoManager);
@@ -854,28 +870,15 @@ int main(int argc, char* argv[])
 			if ((fps_worst > fps) && (fps > 0))
 				fps_worst = fps;
 
+			//if (false)
 			if (_M8DBG_bDisplayFPSOnScreen)
 			{
-				snprintf(fps_str_buf, 40,  "AVERAGE FPS: %.0f", fps);
-				snprintf(fps_str_buf2, 40, "WORST FPS: %.0f", fps_worst);
-				if (fps_string_id != UINT32_MAX)
-				{
-					a2VideoManager->SetStringText(fps_string_id, fps_str_buf);
-					a2VideoManager->SetStringText(fps_string_id2, fps_str_buf2);
-				}
-				else {
-					// Create the FPS overlay string
-					fps_string_id = a2VideoManager->DrawString(std::string(fps_str_buf), 0, 0);
-					fps_string_id2 = a2VideoManager->DrawString(std::string(fps_str_buf2), 2, 8);
-					a2VideoManager->SetStringColors(fps_string_id2, 0b10010010);
-				}
-			}
-			else {
-				if (fps_string_id != UINT32_MAX)
-				{
-					a2VideoManager->EraseString(fps_string_id);
-					fps_string_id = UINT32_MAX;
-				}
+				snprintf(fps_str_buf, 10,  "%.0f ", fps);
+				a2VideoManager->EraseOverlayRange(6, 13, 0);
+				a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b11010010, 13, 0);
+				snprintf(fps_str_buf, 10, "%.0f ", fps_worst);
+				a2VideoManager->EraseOverlayRange(6, 13, 1);
+				a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b10010010, 13, 1);
 			}
 
 

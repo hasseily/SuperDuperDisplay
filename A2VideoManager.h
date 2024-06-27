@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <map>
+#include <vector>
 
 #include "common.h"
 #include "A2WindowBeam.h"
@@ -118,20 +118,6 @@ public:
 		GLfloat* offset_buffer = nullptr;
 	};
 
-	// A string to draw on the Apple 2 screen
-	// X and Y positions are based on the TEXT1 mode, so 40x24 maximum
-	struct OverlayString {
-		uint32_t id;
-		uint32_t x = 0;		// byte position
-		uint32_t y = 0;		// scanline
-		uint8_t flags = 0b00001000;		// alternate charset in TEXT
-		uint8_t colors = 0b11010010;	// yellow on dark blue
-		std::string text;
-
-		void Draw();
-		void DrawCharacter(uint32_t pos);
-	};
-
 	//////////////////////////////////////////////////////////////////////////
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
@@ -147,6 +133,7 @@ public:
 
 	bool bAlwaysRenderBuffer = false;		// If true, forces a rerender even if the VRAM hasn't changed
 	bool bForceSHRWidth = false;			// forces the legacy to have the SHR width
+	bool bNoMergedModeWobble = false;	// Don't pixel shift the sine wobble if both SHR and Legacy are on screen
 	
 	// Enable manually setting a DHGR mode that mixes 140 width 16-col and 560 width b/w
 	// It was available in certain RGB cards like the Apple and Chat Mauve RGB cards
@@ -159,7 +146,8 @@ public:
 	bool bUseHGRSPEC2 = false;
 	
 	int eA2MonitorType = A2_MON_COLOR;
-	
+
+
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
 	//////////////////////////////////////////////////////////////////////////
@@ -168,13 +156,12 @@ public:
 	void DisplayImGuiWindow(bool* p_open);
 	void ToggleA2Video(bool value);
 
-	// String drawing
-	uint32_t DrawString(const std::string& text, uint32_t x, uint32_t y);
-	void SetStringText(uint32_t id, const std::string& text);
-	void SetStringText(uint32_t id, const char* text);
-	void SetStringColors(uint32_t id, uint8_t colors);
-	void MoveString(uint32_t id, float x, float y);
-	void EraseString(uint32_t id);
+	// Overlay String drawing
+	void DrawOverlayString(const std::string& text, uint8_t colors, uint32_t x, uint32_t y);
+	void DrawOverlayString(const char* text, uint8_t len, uint8_t colors, uint32_t x, uint32_t y);
+	void DrawOverlayCharacter(const char c, uint8_t colors, uint32_t x, uint32_t y);
+	void EraseOverlayRange(uint8_t len, uint32_t x, uint32_t y);
+	void EraseOverlayCharacter(uint32_t x, uint32_t y);
 
 	// Methods for the single multipurpose beam racing shader
 	void BeamIsAtPosition(uint32_t _x, uint32_t _y);
@@ -305,9 +292,13 @@ private:
 	GLint output_width = 0;
 	GLint output_height = 0;
 
-	// strings to draw
-	std::map<uint32_t, OverlayString> strings_to_draw;
-	bool bSemaphoreStringAdd = false;
+	// Overlay strings handling
+	uint8_t overlay_text[40*24];	// text for each overlay
+	uint8_t overlay_colors[40*24];
+	uint8_t overlay_lines[24];
+	bool bWasSHRBeforeOverlay = false;
+	bool bOverlayOverrides = false;	// override wobble and width in merged mode
+	void UpdateOverlayLine(uint32_t y);
 };
 #endif // A2VIDEOMANAGER_H
 

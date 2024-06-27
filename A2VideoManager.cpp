@@ -106,101 +106,60 @@ static uint16_t g_RAM_HGROffsets[] = {
 A2VideoManager* A2VideoManager::s_instance;
 
 //////////////////////////////////////////////////////////////////////////
-// OverlayString Methods
+// Overlay String Methods
 //////////////////////////////////////////////////////////////////////////
-uint32_t A2VideoManager::DrawString(const std::string& text, uint32_t x, uint32_t y)
-{
-	auto glstr = OverlayString();
-	glstr.text = text;
-	glstr.x = x;
-	glstr.y = y;
-	while (bSemaphoreStringAdd == true) {};
-	bSemaphoreStringAdd = true;
-	uint32_t id = strings_to_draw.size();
-	glstr.id = id;
-	strings_to_draw[id] = glstr;
-	bSemaphoreStringAdd = false;
-	return id;
-}
 
-void A2VideoManager::SetStringText(uint32_t id, const std::string& text)
+void A2VideoManager::DrawOverlayString(const std::string& text, uint8_t colors, uint32_t x, uint32_t y)
 {
-	if (auto search = strings_to_draw.find(id); search != strings_to_draw.end())
+	for (uint8_t i = 0; i < text.length(); ++i)
 	{
-		search->second.text = text;
+		overlay_text[40 * y + x + i] = text.c_str()[i] + 0x80;
+		overlay_colors[40 * y + x + i] = colors;
 	}
+	overlay_lines[y] = 1;
 }
 
-void A2VideoManager::SetStringText(uint32_t id, const char* text)
+void A2VideoManager::DrawOverlayString(const char* text, uint8_t len, uint8_t colors, uint32_t x, uint32_t y)
 {
-	if (auto search = strings_to_draw.find(id); search != strings_to_draw.end())
+	uint8_t i = 0;
+	while (text[i] != '\0')
 	{
-		search->second.text = text;
+		overlay_text[40 * y + x + i] = text[i] + 0x80;
+		overlay_colors[40 * y+ + x + i] = colors;
+		++i;
 	}
+	overlay_lines[y] = 1;
 }
 
-void A2VideoManager::SetStringColors(uint32_t id, uint8_t colors)
+void A2VideoManager::DrawOverlayCharacter(const char c, uint8_t colors, uint32_t x, uint32_t y)
 {
-	if (auto search = strings_to_draw.find(id); search != strings_to_draw.end())
-	{
-		search->second.colors = colors;
-	}
+	overlay_text[40 * y + x] = c + 0x80;
+	overlay_colors[40 * y + x] = colors;
+	overlay_lines[y] = 1;
 }
 
-void A2VideoManager::MoveString(uint32_t id, float x, float y)
+void A2VideoManager::EraseOverlayRange(uint8_t len, uint32_t x, uint32_t y)
 {
-	if (auto search = strings_to_draw.find(id); search != strings_to_draw.end())
-	{
-		search->second.x = x;
-		search->second.y = y;
-	}
+	memset(overlay_text + (40 * y + x), 0, len);
+	UpdateOverlayLine(y);
 }
 
-void A2VideoManager::EraseString(uint32_t id)
+void A2VideoManager::EraseOverlayCharacter(uint32_t x, uint32_t y)
 {
-	strings_to_draw.erase(id);
+	overlay_text[40 * y + x] = 0;
+	UpdateOverlayLine(y);
 }
 
-void A2VideoManager::OverlayString::Draw()
+inline void A2VideoManager::UpdateOverlayLine(uint32_t y)
 {
-	for (size_t i = 0; i < text.length(); ++i) {
-		DrawCharacter(i);
+	for (uint8_t i=0; i<40; ++i) {
+		if (overlay_text[40 * y + i] > 0)
+		{
+			overlay_lines[y] = 1;
+			return;
+		}
 	}
-}
-
-void A2VideoManager::OverlayString::DrawCharacter(uint32_t pos)
-{
-	// Apple 2 alternate font atlas only has 0x20-0x7E
-	char c = text.at(pos);
-	if (c < 0x20 || c > 0x7E)
-		return;
-
-	auto a2VideoMgr = A2VideoManager::GetInstance();
-	auto _w = 40 + (2 * a2VideoMgr->borders_w_cycles);
-	auto vram_start = 4 * ((_w * this->y) + pos + this->x);
-
-	if ((vram_start + (7 * _w) + 3) > a2VideoMgr->GetVramSizeLegacy())	// out of bounds
-		return;
-
-	// the flags byte is:
-	// bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO, BORDER)
-	// bit 3: ALT charset for TEXT
-	// bits 4-7: border color (like in the 2gs)
-	// 
-	// the colors byte is:
-	// bits 0-3: background color
-	// bits 4-7: foreground color
-
-	for (size_t i = 0; i < 8; i++)
-	{
-		auto offset = vram_start + (i * _w * 4);
-		uint8_t* vram_ptr = a2VideoMgr->vrams_write->vram_legacy + offset;
-
-		vram_ptr[0] = c + 0x80;		// main
-		vram_ptr[1] = 0;			// aux
-		vram_ptr[2] = this->flags;
-		vram_ptr[3] = this->colors;
-	}
+	overlay_lines[y] = 0;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -319,6 +278,10 @@ void A2VideoManager::Initialize()
 	// tell the next Render() call to run initialization routines
 	bShouldInitializeRender = true;
 	
+	// clear the text overlay
+	std::memset(overlay_text, 0, sizeof(overlay_text));
+	std::memset(overlay_colors, 0, sizeof(overlay_colors));
+
 	bIsReady = true;
 }
 
@@ -392,13 +355,6 @@ void A2VideoManager::StartNextFrame()
 	// We just overwrite the current buffer
 	if (vrams_read->bWasRendered == true)
 	{
-
-		// Draw the overlay strings
-		for (auto& _str : strings_to_draw)
-		{
-			_str.second.Draw();
-		}
-
 		vrams_read->bWasRendered = false;
 		auto _vtmp = vrams_write;
 		vrams_write = vrams_read;
@@ -535,6 +491,37 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		_oldBeamState = beamState;
 	}
 
+	// Check for text overlay in this position
+	if ((_y < COUNT_SC_CONTENT) && (overlay_lines[_y / 8] == 1))
+	{
+		bOverlayOverrides = true;	// Never wobble if there's an overlay
+		if (_x == 0)
+		{
+			bWasSHRBeforeOverlay = memMgr->IsSoftSwitch(A2SS_SHR);
+			memMgr->SetSoftSwitch(A2SS_SHR, false);
+		} else if (_x == (CYCLES_SC_TOTAL - 1))
+		{
+			memMgr->SetSoftSwitch(A2SS_SHR, bWasSHRBeforeOverlay);
+		}
+		if (beamState == BeamState_e::CONTENT)
+		{
+			uint32_t _toff = 40 * (_y/8) + (_x - CYCLES_SC_HBL);
+			// Override when the byte is an overlay
+			if (overlay_text[_toff] > 0)
+			{
+				if (vrams_write->mode == A2Mode_e::SHR)
+					vrams_write->mode = A2Mode_e::MERGED;
+				for (uint8_t ii=0; ii<8; ++ii) {
+					uint8_t* byteStartPtr = vrams_write->vram_legacy + (GetVramWidthLegacy() * (_TR_ANY_Y + ii) + _TR_ANY_X) * 4;
+					byteStartPtr[0] = overlay_text[_toff];		// main
+					byteStartPtr[2] = 0b1000;
+					byteStartPtr[3] = overlay_colors[_toff];
+				}
+				return;
+			}
+		}
+	}
+
 	// Always at the start of the row, set the SHR SCB to 0x10
 	// Because we check bit 4 of the SCB to know if that line is drawn as SHR
 	// The 2gs will always set bit 4 to 0 when sending it over
@@ -565,21 +552,28 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			// Finally set the offset
 			// NOTE: We add 10.f to the offset so that the shader can know which mode to apply
 			//		 If it's negative, it's SHR. Positive, legacy.
-			if (_TR_ANY_Y < merge_last_change_y					// the switch happened last frame
-				|| (_TR_ANY_Y - merge_last_change_y) > 15)		// the switch has been recovered
+			if (bNoMergedModeWobble || bOverlayOverrides)
 			{
 				vrams_write->offset_buffer[_TR_ANY_Y] = (_curr_mode == A2Mode_e::LEGACY ? -10.f : 10.f);
 			}
 			else
 			{
-				// If the change is to 28 MHz, shift negative (left). Otherwise, shift positive (right)
-				float pixelShift = (GLfloat)glm::pow(1.1205, merge_last_change_y - _TR_ANY_Y + 28) - 4.0;
-				if (_curr_mode == A2Mode_e::LEGACY)
-					vrams_write->offset_buffer[_TR_ANY_Y] = -(10.f + pixelShift / 560.f);
+				if (_TR_ANY_Y < merge_last_change_y					// the switch happened last frame
+					|| (_TR_ANY_Y - merge_last_change_y) > 15)		// the switch has been recovered
+				{
+					vrams_write->offset_buffer[_TR_ANY_Y] = (_curr_mode == A2Mode_e::LEGACY ? -10.f : 10.f);
+				}
 				else
-					vrams_write->offset_buffer[_TR_ANY_Y] = 10.f + pixelShift / 640.f;
+				{
+					// If the change is to 28 MHz, shift negative (left). Otherwise, shift positive (right)
+					float pixelShift = (GLfloat)glm::pow(1.1205, merge_last_change_y - _TR_ANY_Y + 28) - 4.0;
+					if (_curr_mode == A2Mode_e::LEGACY)
+						vrams_write->offset_buffer[_TR_ANY_Y] = -(10.f + pixelShift / 560.f);
+					else
+						vrams_write->offset_buffer[_TR_ANY_Y] = 10.f + pixelShift / 640.f;
+				}
+				// std::cerr << "Offset: " << vrams_write->offset_buffer[_TR_ANY_Y] << " y: " << _TR_ANY_Y << std::endl;
 			}
-			// std::cerr << "Offset: " << vrams_write->offset_buffer[_TR_ANY_Y] << " y: " << _TR_ANY_Y << std::endl;
 		}
 	}
 
@@ -682,6 +676,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 
 	// The byte isn't SHR, it's legacy
 	// at least 1 byte in this vblank cycle is LEGACY
+	// Note that overlay bytes are always legacy
 	switch (vrams_write->mode)
 	{
 	case A2Mode_e::NONE:
@@ -808,7 +803,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	default:
 		break;
 	}
-
 }
 
 // When we learn we're in merged mode, we need to update all previous scanlines
@@ -1106,7 +1100,7 @@ GLuint A2VideoManager::Render()
 		glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
 		shader_merge.setInt("legacyTex", GL_TEXTURE7 - GL_TEXTURE0);
 		shader_merge.setVec2("legacySize", legacy_width, legacy_height);
-		shader_merge.setInt("forceSHRWidth", bForceSHRWidth);
+		shader_merge.setInt("forceSHRWidth", bForceSHRWidth || bOverlayOverrides);
 
 		glActiveTexture(GL_TEXTURE8);
 		glBindTexture(GL_TEXTURE_2D, shr_texture_id);
@@ -1249,6 +1243,8 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			if (ImGui::SliderInt("Border Color (0xC034)", &memManager->switch_c034, 0, 15))
 				this->ForceBeamFullScreenRender();
 			if (ImGui::Checkbox("Force SHR width in merged mode", &this->bForceSHRWidth))
+				this->ForceBeamFullScreenRender();
+			if (ImGui::Checkbox("No wobble in merged mode", &this->bNoMergedModeWobble))
 				this->ForceBeamFullScreenRender();
 			
 			//eA2MonitorType
@@ -1399,6 +1395,7 @@ nlohmann::json A2VideoManager::SerializeState()
 		{"enable_HGRSPEC1", bUseHGRSPEC1},
 		{"enable_HGRSPEC2", bUseHGRSPEC2},
 		{"force_shr_width_in_merge_mode", bForceSHRWidth},
+		{"no_merged_mode_wobble", bNoMergedModeWobble},
 	};
 	return jsonState;
 }
@@ -1412,6 +1409,7 @@ void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 	bUseHGRSPEC1 = jsonState.value("enable_HGRSPEC1", bUseHGRSPEC1);
 	bUseHGRSPEC2 = jsonState.value("enable_HGRSPEC2", bUseHGRSPEC2);
 	bForceSHRWidth = jsonState.value("force_shr_width_in_merge_mode", bForceSHRWidth);
+	bNoMergedModeWobble = jsonState.value("no_merged_mode_wobble", bNoMergedModeWobble);
 
 	SetBordersWithReinit(jsonState.value("borders_w_cycles", borders_w_cycles),
 						 jsonState.value("borders_h_8scanlines", borders_h_scanlines / 8));
