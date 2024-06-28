@@ -40,12 +40,12 @@ EventRecorder::~EventRecorder()
 void EventRecorder::MakeRAMSnapshot(size_t cycle)
 {
 	(void)cycle; // mark as unused
-	auto _memsize = _A2_MEMORY_SHADOW_END - _A2_MEMORY_SHADOW_BEGIN;
+	auto _memsize = _A2_MEMORY_SHADOW_END;
 	ByteBuffer buffer(RECORDER_TOTALMEMSIZE);
 	// Get the MAIN chunk
-	buffer.copyFrom(MemoryManager::GetInstance()->GetApple2MemPtr(), _A2_MEMORY_SHADOW_BEGIN, _memsize);
+	buffer.copyFrom(MemoryManager::GetInstance()->GetApple2MemPtr(), 0, _memsize);
 	// Get the AUX chunk
-	buffer.copyFrom(MemoryManager::GetInstance()->GetApple2MemAuxPtr(), 0x10000 + _A2_MEMORY_SHADOW_BEGIN, _memsize);
+	buffer.copyFrom(MemoryManager::GetInstance()->GetApple2MemAuxPtr(), 0x10000, _memsize);
 
 	v_memSnapshots.push_back(std::move(buffer));
 }
@@ -54,11 +54,11 @@ void EventRecorder::ApplyRAMSnapshot(size_t snapshot_index)
 {
 	if (snapshot_index > (v_memSnapshots.size() - 1))
 		std::cerr << "ERROR: Requested to apply nonexistent memory snapshot at index " << snapshot_index << std::endl;
-	auto _memsize = _A2_MEMORY_SHADOW_END - _A2_MEMORY_SHADOW_BEGIN;
+	auto _memsize = _A2_MEMORY_SHADOW_END;
 	// Set the MAIN chunk
-	v_memSnapshots.at(snapshot_index).copyTo(MemoryManager::GetInstance()->GetApple2MemPtr(), _A2_MEMORY_SHADOW_BEGIN, _memsize);
+	v_memSnapshots.at(snapshot_index).copyTo(MemoryManager::GetInstance()->GetApple2MemPtr(), 0, _memsize);
 	// Set the AUX chunk
-	v_memSnapshots.at(snapshot_index).copyTo(MemoryManager::GetInstance()->GetApple2MemAuxPtr(), 0x10000 + _A2_MEMORY_SHADOW_BEGIN, _memsize);
+	v_memSnapshots.at(snapshot_index).copyTo(MemoryManager::GetInstance()->GetApple2MemAuxPtr(), 0x10000, _memsize);
 }
 
 void EventRecorder::WriteRecordingFile(std::ofstream& file)
