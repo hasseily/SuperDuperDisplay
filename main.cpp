@@ -817,7 +817,7 @@ int main(int argc, char* argv[])
 					{
 						if (_M8DBG_bRunKarateka)
 						{
-							std::ifstream karatekafile("./recordings/test.vcr", std::ios::binary);
+							std::ifstream karatekafile("./recordings/karateka.vcr", std::ios::binary);
 							if (!karatekafile.is_open()) {
 								_M8DBG_bKaratekaLoadFailed = true;
 							}
@@ -860,7 +860,7 @@ int main(int argc, char* argv[])
 					ImGui::OpenPopup("File Loading Error");
 					if (ImGui::BeginPopupModal("File Loading Error", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 					{
-						ImGui::Text("Failed to open the file ./recordings/test.vcr");
+						ImGui::Text("Failed to open the file ./recordings/karateka.vcr");
 						if (ImGui::Button("OK", ImVec2(120, 0))) {
 							ImGui::CloseCurrentPopup();
 							_M8DBG_bKaratekaLoadFailed = false;
