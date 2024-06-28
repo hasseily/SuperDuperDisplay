@@ -170,7 +170,7 @@ void EventRecorder::RewindReplay()
 int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldStopReplay)
 {
 	using namespace std::chrono;
-	auto targetDuration = duration<double, std::nano>(1977.7778337);	// Duration of an Apple 2 clock cycle (not stretched)
+	auto targetDuration = duration<double, std::nano>(979.926864);	// Duration of an Apple 2 clock cycle (not stretched)
 	auto startTime = high_resolution_clock::now();
 	auto elapsed = high_resolution_clock::now() - startTime;
 
