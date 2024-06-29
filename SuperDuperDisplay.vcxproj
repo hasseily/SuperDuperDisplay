@@ -234,6 +234,9 @@
     <None Include="shaders\a2video_text.frag" />
     <None Include="shaders\basic.frag" />
     <None Include="shaders\basic.vert" />
+    <None Include="shaders\optimized\a2video_beam_legacy_optimized.frag" />
+    <None Include="shaders\optimized\a2video_beam_legacy_optimized_300es.frag" />
+    <None Include="shaders\optimized\a2video_beam_legacy_optimized_410.frag" />
     <None Include="shaders\sdhr_default_330.frag" />
     <None Include="shaders\sdhr_default_330.vert" />
     <None Include="shaders\sdhr_depixelize_330.frag" />

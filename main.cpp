@@ -836,7 +836,7 @@ int main(int argc, char* argv[])
 					}
 					ImGui::Separator();
 					ImGui::Text("Legacy Shader");
-					const char* _legshaders[] = { "0 - Full" };
+					const char* _legshaders[] = { "0 - Full", "1 - Optimized"};
 					static int _legshader_current = 0;
 					if (ImGui::ListBox("##LegacyShader", &_legshader_current, _legshaders, IM_ARRAYSIZE(_legshaders), 4))
 					{

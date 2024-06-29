@@ -883,6 +883,13 @@ bool A2VideoManager::SelectLegacyShader(const int index)
 	case 0:		// full
 		windowsbeam[A2VIDEOBEAM_LEGACY]->SetShaderPrograms(_SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
 		break;
+	case 1:		// full, optimized
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+		windowsbeam[A2VIDEOBEAM_LEGACY]->SetShaderPrograms(_SHADER_A2_VERTEX_DEFAULT, "shaders/optimized/a2video_beam_legacy_optimized.frag");
+#else
+		windowsbeam[A2VIDEOBEAM_LEGACY]->SetShaderPrograms(_SHADER_A2_VERTEX_DEFAULT, "shaders/optimized/a2video_beam_legacy_optimized.frag");
+#endif
+		break;
 	default:
 		return false;
 	}

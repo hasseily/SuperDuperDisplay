@@ -43,7 +43,7 @@ LIBS =
 ## This assumes a GL ES library available in the system, e.g. libGLESv2.so
 
 ifeq ($(UNAME_S), Linux) #LINUX
-	CXXFLAGS += -DIMGUI_IMPL_OPENGL_ES2
+	CXXFLAGS += -DIMGUI_IMPL_OPENGL_ES3
 	LINUX_GL_LIBS = -lGLESv2
 endif
 ## If you're on a Raspberry Pi and want to use the legacy drivers,

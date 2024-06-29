@@ -38,9 +38,10 @@ OpenGLHelper::~OpenGLHelper()
 void OpenGLHelper::set_gl_version()
 {
 	// Decide GL+GLSL versions
-#if defined(IMGUI_IMPL_OPENGL_ES2)
+#if defined(IMGUI_IMPL_OPENGL_ES3)
 	// GL ES 3.0 + GLSL 300 es
     // ImGui only supports 3.0, not 3.1
+#define GL_ES
 	glsl_version = "#version 300 es";
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
@@ -48,6 +49,7 @@ void OpenGLHelper::set_gl_version()
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 #elif defined(__APPLE__)
 	// GL 4.1 Core + GLSL 410
+#undef GL_ES
 	glsl_version = "#version 410";
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -55,6 +57,7 @@ void OpenGLHelper::set_gl_version()
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 #else
 	// GL 4.1 Core + GLSL 410
+#undef GL_ES
 	glsl_version = "#version 410";
 	if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0) != 0)
 		std::cerr << "SDL Error: " << SDL_GetError() << std::endl;
