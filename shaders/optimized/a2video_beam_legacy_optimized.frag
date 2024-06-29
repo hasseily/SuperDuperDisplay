@@ -22,8 +22,8 @@ uniform COMPAT_LOWP sampler2D a2ModesTex3;
 uniform COMPAT_LOWP sampler2D a2ModesTex4;
 uniform COMPAT_HIGHP int specialModesMask;
 uniform COMPAT_HIGHP int monitorColorType;
-COMPAT_MEDP in vec2 vFragPos;
-COMPAT_MEDP out vec4 fragColor;
+in COMPAT_MEDP vec2 vFragPos;
+out COMPAT_MEDP vec4 fragColor;
 void main()
 {
   bool tmpvar_1;
@@ -54,7 +54,7 @@ void main()
     tmpvar_8 = (tmpvar_8 || (1u == tmpvar_7));
     if (tmpvar_8)
     {
-      COMPAT_MEDP mediump vec4 tex_11;
+      COMPAT_MEDP vec4 tex_11;
       uint tmpvar_12;
       tmpvar_12 = (((1u + -(tmpvar_7)) * tmpvar_5.x) + (tmpvar_7 * ((tmpvar_5.x * uint(int((
         float(fragOffset_2.x)
