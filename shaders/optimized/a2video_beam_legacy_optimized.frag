@@ -12,16 +12,16 @@ precision highp int;
 layout(pixel_center_integer) in vec4 gl_FragCoord;
 #endif
 
-COMPAT_HIGHP uniform int ticks;
-COMPAT_HIGHP uniform int hborder;
-COMPAT_HIGHP uniform usampler2D VRAMTEX;
-COMPAT_LOWP uniform sampler2D a2ModesTex0;
-COMPAT_LOWP uniform sampler2D a2ModesTex1;
-COMPAT_LOWP uniform sampler2D a2ModesTex2;
-COMPAT_LOWP uniform sampler2D a2ModesTex3;
-COMPAT_LOWP uniform sampler2D a2ModesTex4;
-COMPAT_HIGHP uniform int specialModesMask;
-COMPAT_HIGHP uniform int monitorColorType;
+uniform COMPAT_HIGHP int ticks;
+uniform COMPAT_HIGHP int hborder;
+uniform COMPAT_HIGHP usampler2D VRAMTEX;
+uniform COMPAT_LOWP sampler2D a2ModesTex0;
+uniform COMPAT_LOWP sampler2D a2ModesTex1;
+uniform COMPAT_LOWP sampler2D a2ModesTex2;
+uniform COMPAT_LOWP sampler2D a2ModesTex3;
+uniform COMPAT_LOWP sampler2D a2ModesTex4;
+uniform COMPAT_HIGHP int specialModesMask;
+uniform COMPAT_HIGHP int monitorColorType;
 COMPAT_MEDP in vec2 vFragPos;
 COMPAT_MEDP out vec4 fragColor;
 void main()
