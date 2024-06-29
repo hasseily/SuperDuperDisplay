@@ -37,8 +37,8 @@ void main()
   uvec4 tmpvar_5;
   tmpvar_5 = texelFetch (VRAMTEX, tmpvar_4, 0);
   uvec2 tmpvar_6;
-  tmpvar_6.x = (uint(mod (tmpvar_3.x, 14u)));
-  tmpvar_6.y = (uint(mod (tmpvar_3.y, 16u)));
+  tmpvar_6.x = tmpvar_3.x % 14u;
+  tmpvar_6.y = tmpvar_3.y % 16u;
   fragOffset_2 = tmpvar_6;
   uint tmpvar_7;
   tmpvar_7 = (tmpvar_5.z & 7u);
@@ -87,8 +87,8 @@ void main()
       {
         tex_11 = texture (a2ModesTex0, (vec2(tmpvar_17 + fragOffset_2) + vec2(0.5, 0.5)) * (1.0/(vec2(textureSize (a2ModesTex0,0)))) );
       }
-float tmpvar_18;
-      tmpvar_18 = (tmpvar_15 * float((int(mod (int((float(ticks) * 0.003225806)), 2)))));
+      float tmpvar_18;
+      tmpvar_18 = tmpvar_15 * mod(float(ticks) * 0.003225806, 2.f);
       tex_11 = (((1.0 + -(tex_11)) * tmpvar_18) + (tex_11 * (1.0 + -(tmpvar_18))));
       if ((0 < monitorColorType))
       {
@@ -316,9 +316,15 @@ fragColor = tmpvar_42;
               if (tmpvar_47.x) tmpvar_46 = vec4(1.0, 0.717647, 0.0, 1.0);
               if (tmpvar_47.y) tmpvar_46 = vec4(1.0, 0.0, 0.5, 1.0);
             }
-fragColor = (tmpvar_46 * float(min (max ((tmpvar_5.x & (1u << uint(
-int((float((uint(mod ((tmpvar_3.x + -(uint((hborder * 14)))), 14u)))) * 0.5))
-))), uint(0)), 1u)));
+            fragColor = tmpvar_46 * float(
+                min(
+                    max(
+                        tmpvar_5.x & (1u << uint(float((tmpvar_3.x - uint(hborder * 14)) % 14u) * 0.5))
+                        , uint(0)
+                    )
+                    , 1u
+                )
+            );
             tmpvar_1 = bool(1);
             tmpvar_9 = bool(1);
             tmpvar_10 = bool(0);
@@ -408,9 +414,25 @@ int((float((uint(mod ((tmpvar_3.x + -(uint((hborder * 14)))), 14u)))) * 0.5))
                 if (tmpvar_58.x) tmpvar_57 = vec4(1.0, 0.717647, 0.0, 1.0);
                 if (tmpvar_58.y) tmpvar_57 = vec4(1.0, 0.0, 0.5, 1.0);
               }
-fragColor = (tmpvar_57 * float(min (max ((((tmpvar_5.x << 7) | (tmpvar_5.y & 127u)) & (1u << (uint(mod (
-(tmpvar_3.x + -(uint((hborder * 14))))
-, 14u))))), uint(0)), 1u)));
+
+                fragColor = (
+                    tmpvar_57 * float(
+                        min(
+                            max(
+                                (
+                                    (
+                                        (tmpvar_5.x << 7) | (tmpvar_5.y & 127u)
+                                    ) & (
+                                        1u << (tmpvar_3.x - uint(hborder * 14) % 14u)
+                                    )
+                                )
+                                , uint(0)
+                            )
+                            , 1u
+                        )
+                    )
+                );
+
               tmpvar_1 = bool(1);
               tmpvar_9 = bool(1);
               tmpvar_10 = bool(0);
@@ -445,11 +467,11 @@ fragColor = (tmpvar_57 * float(min (max ((((tmpvar_5.x << 7) | (tmpvar_5.y & 127
                 int tmpvar_64;
                 tmpvar_64 = int(
 	                ( 
-                      1 + mod(int(float(tmpvar_63) * 0.1428571), 2)
+                      1 + (int(float(tmpvar_63) * 0.1428571) % 2)
 	                ) + 
 	                min (
 		              max (
-			            int(mod(tmpvar_63, 7u) - mod(tmpvar_63, 4u))
+			            int((tmpvar_63 % 7u) - (tmpvar_63 % 4u))
 		                  , -1
                         ), 0
 	                )
@@ -472,7 +494,23 @@ fragColor = (tmpvar_57 * float(min (max ((((tmpvar_5.x << 7) | (tmpvar_5.y & 127
 }
                 if (isColor_62 == uint(0))
                 {
-                  fragColor = vec4(float(min (max ((((tmpvar_5.x << 7) | (tmpvar_5.y & 127u)) & (1u << (uint(mod (tmpvar_63, 14u))))), uint(0)), 1u)));
+                    fragColor = vec4(
+                        float(
+                            min(
+                                max(
+                                    (
+                                        (
+                                            (tmpvar_5.x << 7) | (tmpvar_5.y & 127u)
+                                        ) & (
+                                            1u << (tmpvar_63 % 14u)
+                                        )
+                                    )
+                                    , uint(0)
+                                )
+                                , 1u
+                            )
+                        )
+                    );
                   tmpvar_1 = bool(1);
                   tmpvar_9 = bool(1);
                   tmpvar_10 = bool(0);
@@ -519,9 +557,26 @@ fragColor = (tmpvar_57 * float(min (max ((((tmpvar_5.x << 7) | (tmpvar_5.y & 127
                 if (tmpvar_70.x) tmpvar_69 = vec4(1.0, 0.717647, 0.0, 1.0);
                 if (tmpvar_70.y) tmpvar_69 = vec4(1.0, 0.0, 0.5, 1.0);
               }
-fragColor = (tmpvar_69 * float(min (max ((((tmpvar_5.x << 7) | (tmpvar_5.y & 127u)) & (1u << (uint(mod (
-(tmpvar_3.x + -(uint((hborder * 14))))
-, 14u))))), uint(0)), 1u)));
+fragColor = (
+    tmpvar_69 * float(
+        min(
+            max(
+                (
+                    (
+                        (tmpvar_5.x << 7) | (tmpvar_5.y & 127u)
+                    ) & (
+                        1u << (
+                                 (tmpvar_3.x - uint(hborder * 14)) % 14u
+                        )
+                    )
+                )
+                , 0u
+            )
+            , 1u
+        )
+    )
+);
+
               tmpvar_1 = bool(1);
               tmpvar_9 = bool(1);
               tmpvar_10 = bool(0);
