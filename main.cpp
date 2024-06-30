@@ -621,10 +621,13 @@ int main(int argc, char* argv[])
 					cycleCounter->isVideoRegionDynamic = false;
 					cycleCounter->SetVideoRegion(VideoRegion_e::NTSC);
 				}
-				vbl_slider_val = cycleCounter->GetScreenCycles();
-				if (ImGui::SliderInt("Set VBL Start", &vbl_slider_val, 0, (int)cycleCounter->GetScreenCycles()))
+				if (!cycleCounter->isVideoRegionDynamic)
 				{
-					cycleCounter->SetVBLStart(vbl_slider_val);
+					vbl_slider_val = cycleCounter->GetScreenCycles();
+					if (ImGui::InputInt("VBL Start Shift", &vbl_slider_val, 1, (CYCLES_TOTAL_PAL-CYCLES_TOTAL_NTSC)/10))
+					{
+						cycleCounter->SetVBLStart(vbl_slider_val);
+					}
 				}
 				ImGui::Separator();
 				if (ImGui::ColorEdit4("Window Color", window_bgcolor)) {
