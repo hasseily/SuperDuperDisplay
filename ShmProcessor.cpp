@@ -30,8 +30,25 @@ ShmProcessor::ShmProcessor()
 #else
 	mem_fd = open("/dev/apple2_events_mem", O_RDWR | O_SYNC);
 	if (mem_fd < 0) {
-		perror("open");
-		throw std::runtime_error("open failed");
+		if (errno == ENOENT) {
+			std::cerr << shm_name << " not found, creating a new one." << std::endl;
+
+			mem_fd = open(shm_name, O_RDWR | O_CREAT | O_SYNC, S_IRUSR | S_IWUSR);
+			if (mem_fd < 0) {
+				perror("open");
+				throw std::runtime_error("open failed");
+			}
+
+			if (ftruncate(mem_fd, 0x10000000) != 0) {
+				perror("ftruncate");
+				close(mem_fd);
+				throw std::runtime_error("ftruncate failed");
+			}
+		}
+		else {
+			perror("open");
+			throw std::runtime_error("open failed");
+		}
 	}
 
 	map_base = mmap(NULL, 0x10000000, PROT_READ, MAP_SHARED, mem_fd, 0x81000000);
