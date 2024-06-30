@@ -19,7 +19,7 @@
 
 class ShmProcessor {
 public:
-	ShmProcessor();
+	ShmProcessor(const char* shm_name = "/dev/mem");
 	~ShmProcessor();
 	void ProcessSHMEvents(bool* bShouldTerminateProcessing);
 	void ProcessSingleEvent(SDHREvent& e);

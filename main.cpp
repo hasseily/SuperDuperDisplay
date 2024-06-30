@@ -136,8 +136,15 @@ void DrawFPSOverlay(A2VideoManager* a2VideoManager)
 // Main code
 int main(int argc, char* argv[])
 {
-	(void)argc;		// mark as unused
-	(void)argv;		// mark as unused
+	const char* shm_name = "/dev/mem";	// NOT for Windows. Windows uses "APPLE2_EVENTS_MMAP"
+	// Check if the --shm flag is provided as a command-line argument
+	for (int i = 1; i < argc; ++i) {
+		if (strcmp(argv[i], "--shm") == 0 && (i + 1) < argc) {
+			shm_name = argv[i + 1];
+			break;
+		}
+	}
+
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
     // when double-clicking the app, change to its working directory
     char *dir = dirname(strdup(argv[0]));
@@ -313,7 +320,7 @@ int main(int argc, char* argv[])
 	// std::thread thread_processor(process_events_thread, &bShouldTerminateProcessing);
     // Only run the SHM processing thread
 
-	ShmProcessor processor;
+	ShmProcessor processor(shm_name);
 	std::thread thread_readshm(&ShmProcessor::ProcessSHMEvents, &processor, &bShouldTerminateProcessing);
 
 

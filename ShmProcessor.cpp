@@ -6,7 +6,7 @@
 #include "MemoryManager.h"
 #include "A2VideoManager.h"
 
-ShmProcessor::ShmProcessor()
+ShmProcessor::ShmProcessor(const char* shm_name)
 	: map_base(nullptr)
 #ifdef _WIN32
 	, mem_fd(NULL)
@@ -28,7 +28,7 @@ ShmProcessor::ShmProcessor()
 		throw std::runtime_error("MapViewOfFile failed");
 	}
 #else
-	mem_fd = open("/dev/mem", O_RDWR | O_SYNC);
+	mem_fd = open(shm_name, O_RDWR | O_SYNC);
 	if (mem_fd < 0) {
 		perror("open");
 		throw std::runtime_error("open failed");
