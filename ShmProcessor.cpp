@@ -28,7 +28,8 @@ ShmProcessor::ShmProcessor()
 		throw std::runtime_error("MapViewOfFile failed");
 	}
 #else
-	mem_fd = open("/dev/apple2_events_mem", O_RDWR | O_SYNC);
+	const char* shm_name = "/dev/apple2_events_mem";
+	mem_fd = open(shm_name, O_RDWR | O_SYNC);
 	if (mem_fd < 0) {
 		if (errno == ENOENT) {
 			std::cerr << shm_name << " not found, creating a new one." << std::endl;
