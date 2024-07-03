@@ -38,6 +38,7 @@
 		BBC43F6B2B98CDE50035071D /* MemoryManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBC43F6A2B98CDE50035071D /* MemoryManager.cpp */; };
 		BBD102082B7CF23A00360B33 /* CycleCounter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBD102072B7CF23A00360B33 /* CycleCounter.cpp */; };
 		BBD102112B829B7C00360B33 /* EventRecorder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */; };
+		BBF6D2C12C358F5000E85E1E /* SoundManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -127,6 +128,8 @@
 		BBD1020F2B829B7C00360B33 /* EventRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EventRecorder.h; sourceTree = "<group>"; };
 		BBD102102B829B7C00360B33 /* ByteBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ByteBuffer.h; sourceTree = "<group>"; };
 		BBD102132B829BAE00360B33 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = "<group>"; };
+		BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SoundManager.cpp; sourceTree = "<group>"; };
+		BBF6D2C02C358F5000E85E1E /* SoundManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SoundManager.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -158,7 +161,6 @@
 				BB96E3F22B66515400A3077C /* imgui_widgets.cpp */,
 				BBC172FA2B6658700044B194 /* imgui.cpp */,
 				BBC172F62B6657BB0044B194 /* ImGuiFileDialog.cpp */,
-				BBC172F82B6657C20044B194 /* MemoryLoader.cpp */,
 				BB8330D72B6645B300071F38 /* Products */,
 				BB96E4082B66544900A3077C /* scripts */,
 				BB8330D82B6645B300071F38 /* SuperDuperDisplay */,
@@ -176,7 +178,6 @@
 		BB8330D82B6645B300071F38 /* SuperDuperDisplay */ = {
 			isa = PBXGroup;
 			children = (
-				BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */,
 				BBB525022B6648A200A65C62 /* A2VideoManager.cpp */,
 				BBB524FC2B6648A100A65C62 /* A2VideoManager.h */,
 				BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */,
@@ -197,6 +198,8 @@
 				BBB525112B6648A200A65C62 /* imgui_memory_editor.h */,
 				BBB525062B6648A200A65C62 /* imgui.ini */,
 				BBB525142B6648A200A65C62 /* main.cpp */,
+				BBC172F82B6657C20044B194 /* MemoryLoader.cpp */,
+				BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */,
 				BBC43F6A2B98CDE50035071D /* MemoryManager.cpp */,
 				BBC43F692B98CDE50035071D /* MemoryManager.h */,
 				BBB5250B2B6648A200A65C62 /* MosaicMesh.cpp */,
@@ -218,6 +221,8 @@
 				BBB525042B6648A200A65C62 /* shader.cpp */,
 				BBB524F82B6648A100A65C62 /* shader.h */,
 				BBB525002B6648A200A65C62 /* shaders */,
+				BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */,
+				BBF6D2C02C358F5000E85E1E /* SoundManager.h */,
 				BBB525052B6648A200A65C62 /* stb_image.h */,
 			);
 			name = SuperDuperDisplay;
@@ -305,6 +310,7 @@
 				BBD102112B829B7C00360B33 /* EventRecorder.cpp in Sources */,
 				BBB525262B6648A200A65C62 /* PostProcessor.cpp in Sources */,
 				BBD102082B7CF23A00360B33 /* CycleCounter.cpp in Sources */,
+				BBF6D2C12C358F5000E85E1E /* SoundManager.cpp in Sources */,
 				BBB525222B6648A200A65C62 /* SDHRWindow.cpp in Sources */,
 				BBC43F6B2B98CDE50035071D /* MemoryManager.cpp in Sources */,
 				BBB525202B6648A200A65C62 /* MosaicMesh.cpp in Sources */,
