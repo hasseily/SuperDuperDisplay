@@ -309,32 +309,6 @@ int main(int argc, char* argv[])
 	}
 	std::cout << "Renderer Ready!" << std::endl;
 
-	try {
-		
-		std::cout << "Starting playback..." << std::endl;
-		soundManager->BeginPlay();
-		
-		std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Play for 500ms
-		
-		std::cout << "Stopping playback..." << std::endl;
-		soundManager->StopPlay();
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Pause for 500ms
-
-		std::cout << "Sound on..." << std::endl;
-		soundManager->SoundOn();
-		soundManager->BeginPlay(); // Ensure playback is ongoing
-		std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Play for 500ms
-		
-		std::cout << "Sound off..." << std::endl;
-		soundManager->StopPlay();
-		soundManager->SoundOff();
-
-		
-	} catch (const std::exception& e) {
-		std::cerr << "Exception: " << e.what() << std::endl;
-	}
-
 	// Run the network thread that will update the internal state as well as the apple 2 memory
 	std::thread thread_server(socket_server_thread, (uint16_t)_SDHR_SERVER_PORT, &bShouldTerminateNetworking);
     // And run the processing thread

@@ -2,6 +2,7 @@
 #include "SDHRNetworking.h"
 #include "MemoryManager.h"
 #include "A2VideoManager.h"
+#include "SoundManager.h"
 #include "SDHRManager.h"
 #include "CycleCounter.h"
 #include "EventRecorder.h"
@@ -89,6 +90,16 @@ void process_single_event(SDHREvent& e)
 	// Update the cycle counting and VBL hit
 	bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == (e.is_iigs ? 1 : 0)));
 	CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
+	
+	/*
+	 *********************************
+	 HANDLE SOUND AND PASSTHROUGH
+	 *********************************
+	 */
+	auto soundMgr = SoundManager::GetInstance();
+	soundMgr->EventReceived((e.addr & 0xFFF0) == 0xC030);
+	
+	
 	if (e.is_iigs && e.m2sel) {
 		// ignore updates from iigs_mode firmware with m2sel high
 		return;
@@ -101,7 +112,7 @@ void process_single_event(SDHREvent& e)
 	auto memMgr = MemoryManager::GetInstance();
 	auto sdhrMgr = SDHRManager::GetInstance();
 	auto a2VideoMgr = A2VideoManager::GetInstance();
-	
+
 	/*
 	 *********************************
 	 HANDLE SIMPLE MEMORY WRITE EVENTS
