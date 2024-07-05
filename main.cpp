@@ -922,6 +922,8 @@ int main(int argc, char* argv[])
     EMSCRIPTEN_MAINLOOP_END;
 #endif
 
+	soundManager->StopPlay();
+
     // Stop all threads
 	bShouldTerminateProcessing = true;
 	terminate_processing_thread();
