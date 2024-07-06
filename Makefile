@@ -22,7 +22,8 @@
 
 EXE = SuperDuperDisplay
 IMGUI_DIR = imgui
-SOURCES = main.cpp OpenGLHelper.cpp MosaicMesh.cpp MemoryManager.cpp SDHRNetworking.cpp SDHRManager.cpp SDHRWindow.cpp A2VideoManager.cpp A2WindowBeam.cpp shader.cpp PostProcessor.cpp CycleCounter.cpp EventRecorder.cpp
+SOURCES = main.cpp OpenGLHelper.cpp MosaicMesh.cpp MemoryManager.cpp SDHRNetworking.cpp SDHRManager.cpp SDHRWindow.cpp
+SOURCES += A2VideoManager.cpp A2WindowBeam.cpp shader.cpp PostProcessor.cpp CycleCounter.cpp EventRecorder.cpp SoundManager.cpp
 SOURCES += extras/MemoryLoader.cpp extras/ImGuiFileDialog.cpp
 SOURCES += glad/glad.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
