@@ -3,6 +3,7 @@
 #include "MemoryManager.h"
 #include "A2VideoManager.h"
 #include "SoundManager.h"
+#include "MockingboardManager.h"
 #include "SDHRManager.h"
 #include "CycleCounter.h"
 #include "EventRecorder.h"
@@ -98,6 +99,8 @@ void process_single_event(SDHREvent& e)
 	 */
 	auto soundMgr = SoundManager::GetInstance();
 	soundMgr->EventReceived((e.addr & 0xFFF0) == 0xC030);
+	auto mockingboardMgr = MockingboardManager::GetInstance();
+	mockingboardMgr->EventReceived(e.addr, e.data);
 	
 	
 	if (e.is_iigs && e.m2sel) {

@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BB006F532C3C2E49008BFFAF /* Ayumi.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB006F4F2C3C2E49008BFFAF /* Ayumi.cpp */; };
+		BB006F542C3C2E49008BFFAF /* MockingboardManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB006F522C3C2E49008BFFAF /* MockingboardManager.cpp */; };
 		BB01620B2B83643D00A3D503 /* assets in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBD102132B829BAE00360B33 /* assets */; };
 		BB96E3E22B664CDB00A3077C /* libSDL2-2.0.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = BB96E3E12B664CDB00A3077C /* libSDL2-2.0.0.dylib */; };
 		BB96E3E32B664CDB00A3077C /* libSDL2-2.0.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BB96E3E12B664CDB00A3077C /* libSDL2-2.0.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
@@ -70,6 +72,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		BB006F4F2C3C2E49008BFFAF /* Ayumi.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Ayumi.cpp; sourceTree = "<group>"; };
+		BB006F502C3C2E49008BFFAF /* MockingboardManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MockingboardManager.h; sourceTree = "<group>"; };
+		BB006F512C3C2E49008BFFAF /* Ayumi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Ayumi.h; sourceTree = "<group>"; };
+		BB006F522C3C2E49008BFFAF /* MockingboardManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MockingboardManager.cpp; sourceTree = "<group>"; };
 		BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MemoryLoader.h; path = extras/MemoryLoader.h; sourceTree = "<group>"; };
 		BB64A7D02C391D580044E05B /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		BB8330D62B6645B300071F38 /* SuperDuperDisplay */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SuperDuperDisplay; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -188,6 +194,8 @@
 				BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */,
 				BBB4E5C02B83ECCE00764C50 /* A2WindowBeam.h */,
 				BBD102132B829BAE00360B33 /* assets */,
+				BB006F4F2C3C2E49008BFFAF /* Ayumi.cpp */,
+				BB006F512C3C2E49008BFFAF /* Ayumi.h */,
 				BBD102102B829B7C00360B33 /* ByteBuffer.h */,
 				BBB5250A2B6648A200A65C62 /* camera.h */,
 				BBB525102B6648A200A65C62 /* common.h */,
@@ -208,6 +216,8 @@
 				BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */,
 				BBC43F6A2B98CDE50035071D /* MemoryManager.cpp */,
 				BBC43F692B98CDE50035071D /* MemoryManager.h */,
+				BB006F522C3C2E49008BFFAF /* MockingboardManager.cpp */,
+				BB006F502C3C2E49008BFFAF /* MockingboardManager.h */,
 				BBB5250B2B6648A200A65C62 /* MosaicMesh.cpp */,
 				BBB524F92B6648A100A65C62 /* MosaicMesh.h */,
 				BBB525072B6648A200A65C62 /* my_imgui_config.h */,
@@ -314,6 +324,7 @@
 				BBC172F72B6657BB0044B194 /* ImGuiFileDialog.cpp in Sources */,
 				BBC172F92B6657C20044B194 /* MemoryLoader.cpp in Sources */,
 				BBD102112B829B7C00360B33 /* EventRecorder.cpp in Sources */,
+				BB006F532C3C2E49008BFFAF /* Ayumi.cpp in Sources */,
 				BBB525262B6648A200A65C62 /* PostProcessor.cpp in Sources */,
 				BBD102082B7CF23A00360B33 /* CycleCounter.cpp in Sources */,
 				BBF6D2C12C358F5000E85E1E /* SoundManager.cpp in Sources */,
@@ -325,6 +336,7 @@
 				BBB5251F2B6648A200A65C62 /* SDHRManager.cpp in Sources */,
 				BBB525242B6648A200A65C62 /* SDHRNetworking.cpp in Sources */,
 				BBB525212B6648A200A65C62 /* OpenGLHelper.cpp in Sources */,
+				BB006F542C3C2E49008BFFAF /* MockingboardManager.cpp in Sources */,
 				BBB5251E2B6648A200A65C62 /* shader.cpp in Sources */,
 				BBB238ED2B8DD3B200DFEE08 /* A2WindowBeam.cpp in Sources */,
 			);
