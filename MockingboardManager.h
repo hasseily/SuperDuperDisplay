@@ -2,8 +2,8 @@
 #define MOCKINGBOARDMANAGER_H
 
 /*
-	This class emulates a mockingboard with dual AY-3-8910 chips
-	We don't care what slot it's in
+	This class emulates one or 2 mockingboards with dual AY-3-8910 chips
+	They're in slot 4 and 5
  */
 #include <stdio.h>
 #include <SDL.h>
@@ -53,7 +53,7 @@ enum A2MBAYRegisters_e
 class MockingboardManager {
 public:
 	~MockingboardManager();
-	void Initialize();
+	void Initialize(bool isDual = false);	// set isDual to have 2 mockingboards
 	void BeginPlay();
 	void StopPlay();
 	bool IsPlaying();
@@ -97,15 +97,14 @@ private:
 	void SetLatchedRegister(Ayumi* ayp, uint8_t value);
 	static void AudioCallback(void* userdata, uint8_t* stream, int len);
 	
+	bool isDual;
 	SDL_AudioSpec audioSpec;
 	SDL_AudioDeviceID audioDevice;
 	uint32_t sampleRate;
 	uint32_t bufferSize;
 	bool isPlaying;
 	
-	Ayumi ay1;
-	Ayumi ay2;
-	
+	Ayumi ay[4];	
 };
 
 #endif // MOCKINGBOARDMANAGER_H

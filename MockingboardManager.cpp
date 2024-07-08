@@ -7,7 +7,10 @@ MockingboardManager* MockingboardManager::s_instance;
 
 MockingboardManager::MockingboardManager(uint32_t sampleRate, uint32_t bufferSize)
 : sampleRate(sampleRate), bufferSize(bufferSize),
-ay1(Ayumi(false, 1750000, sampleRate)), ay2(Ayumi(false, 1750000, sampleRate)) {
+	ay{ Ayumi(false, 1750000, sampleRate),
+		Ayumi(false, 1750000, sampleRate),
+		Ayumi(false, 1750000, sampleRate),
+		Ayumi(false, 1750000, sampleRate) } {
 	if (SDL_Init(SDL_INIT_AUDIO) < 0) {
 		std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
 		throw std::runtime_error("SDL_Init failed");
@@ -16,8 +19,9 @@ ay1(Ayumi(false, 1750000, sampleRate)), ay2(Ayumi(false, 1750000, sampleRate)) {
 	Initialize();
 }
 
-void MockingboardManager::Initialize()
+void MockingboardManager::Initialize(bool _isDual)
 {
+	isDual = _isDual;
 	if (audioDevice == 0)
 	{
 		SDL_zero(audioSpec);
@@ -37,16 +41,17 @@ void MockingboardManager::Initialize()
 		throw std::runtime_error("SDL_OpenAudioDevice failed");
 	}
 	
-	ay1.ResetRegisters();
-	ay2.ResetRegisters();
-	
+	// Reset registers and set panning
 	// The default panning is one AY for each speaker
-	ay1.SetPan(0, 0.0, 0);
-	ay1.SetPan(1, 0.0, 0);
-	ay1.SetPan(2, 0.0, 0);
-	ay2.SetPan(0, 1.0, 0);
-	ay2.SetPan(1, 1.0, 0);
-	ay2.SetPan(2, 1.0, 0);
+	uint8_t ay_ct = (isDual ? 4 : 2);
+	for(uint8_t ayidx = 0; ayidx < ay_ct; ayidx++)
+	{
+		ay[ayidx].ResetRegisters();
+		double pan = (ayidx % 2 == 0 ? 0.0 : 1.0);
+		ay[ayidx].SetPan(0, pan, 0);
+		ay[ayidx].SetPan(1, pan, 0);
+		ay[ayidx].SetPan(2, pan, 0);
+	}
 }
 
 MockingboardManager::~MockingboardManager() {
@@ -74,11 +79,19 @@ void MockingboardManager::AudioCallback(void* userdata, uint8_t* stream, int len
 	std::vector<float> buffer(samples * 2);
 	
 	for (int i = 0; i < samples; ++i) {
-		self->ay1.Process();
-		self->ay2.Process();
-
-		buffer[2 * i] = static_cast<float>(self->ay1.left + self->ay2.left);
-		buffer[2 * i + 1] = static_cast<float>(self->ay1.right + self->ay2.right);
+		uint8_t ay_ct = (self->isDual ? 4 : 2);
+		for(uint8_t ayidx = 0; ayidx < ay_ct; ayidx++)
+		{
+			self->ay[ayidx].Process();
+		}
+		if (self->isDual)
+		{
+			buffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left + self->ay[2].left + self->ay[3].left);
+			buffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right + self->ay[2].right + self->ay[3].right);
+		} else {
+			buffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left);
+			buffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right);
+		}
 	}
 	
 	// Copy the buffer to the stream
@@ -92,7 +105,11 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val)
 		return;
 	
 	// get which ay chip to use
-	Ayumi *ayp = ((addr & 0x80) == 0 ? &ay1 : &ay2);
+	Ayumi *ayp;
+	if ((addr >> 8) == 0xC4)
+		ayp = ((addr & 0x80) == 0 ? &ay[0] : &ay[1]);
+	else
+		ayp = ((addr & 0x80) == 0 ? &ay[2] : &ay[3]);
 	uint8_t low_nibble = addr & 0xF;
 
 	switch (low_nibble) {
@@ -136,10 +153,9 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val)
 
 void MockingboardManager::SetPan(uint8_t ay_idx, uint8_t channel_idx, double pan, bool isEqp)
 {
-	if (ay_idx > 1)
+	if (ay_idx > (isDual ? 3 : 1))
 		return;
-	auto ayp = (ay_idx == 0 ? &ay1 : & ay2);
-	ayp->SetPan(channel_idx, pan, isEqp);
+	ay[ay_idx].SetPan(channel_idx, pan, isEqp);
 }
 
 void MockingboardManager::SetLatchedRegister(Ayumi* ayp, uint8_t value)
@@ -211,9 +227,10 @@ void MockingboardManager::SetLatchedRegister(Ayumi* ayp, uint8_t value)
 
 void MockingboardManager::Util_Reset(uint8_t ay_idx)
 {
-	if (ay_idx > 1)
+	if (ay_idx > 3)
 		return;
-	uint16_t offset = 0xC400 + (ay_idx * 0x80);
+	uint16_t slot = (ay_idx < 2 ? 0xC400 : 0xC500);
+	uint16_t offset = slot + (ay_idx * 0x80);
 	
 	EventReceived(offset+A2MBE_ORB, A2MBC_RESET);
 	EventReceived(offset+A2MBE_ORB, A2MBC_INACTIVE);
@@ -221,9 +238,10 @@ void MockingboardManager::Util_Reset(uint8_t ay_idx)
 
 void MockingboardManager::Util_WriteToRegister(uint8_t ay_idx, uint8_t reg_idx, uint8_t val)
 {
-	if (ay_idx > 1)
+	if (ay_idx > 3)
 		return;
-	uint16_t offset = 0xC400 + (ay_idx * 0x80);
+	uint16_t slot = (ay_idx < 2 ? 0xC400 : 0xC500);
+	uint16_t offset = slot + ((ay_idx % 2) * 0x80);
 	
 	// Latch the register
 	EventReceived(offset+A2MBE_ORA, reg_idx);

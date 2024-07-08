@@ -25,7 +25,7 @@ public:
 	 @param clockRate clock rate of the chip.
 	 @param sampleRate output sample rate
 	 */
-	Ayumi(bool isYM, double clockRate, int sampleRate);
+	Ayumi(bool isYM = false, double clockRate = 1750000, int sampleRate = 44100);
 
 	/** @brief Sets the panning value for the specified sound channel
 	 @param index index of sound channel
