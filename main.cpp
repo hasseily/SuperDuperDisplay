@@ -646,9 +646,12 @@ int main(int argc, char* argv[])
 					}
 				}
 				ImGui::Separator();
+				ImGui::PushItemWidth(140);
 				if (ImGui::ColorEdit4("Window Color", window_bgcolor)) {
 					// std::cerr << "color " << window_bgcolor[0] << std::endl;
 				}
+				ImGui::PopItemWidth();
+
 				ImGui::Checkbox("PostProcessing Window (F2)", &show_postprocessing_window);
 				ImGui::Checkbox("Apple 2 Video Modes Window (F3)", &show_a2video_window);
 				ImGui::Checkbox("M8 Debug Window (F8)", &_M8DBG_bShowF8Window);
