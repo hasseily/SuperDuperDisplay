@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <SDL.h>
 #include "Ayumi.h"
+#include "nlohmann/json.hpp"
 
 const uint32_t MM_SAMPLE_RATE = 44100; 					// Audio sample rate
 const uint32_t MM_BUFFER_SIZE = 1024;
@@ -53,11 +54,14 @@ enum A2MBAYRegisters_e
 class MockingboardManager {
 public:
 	~MockingboardManager();
-	void Initialize(bool isDual = false);	// set isDual to have 2 mockingboards
+	void Initialize();
 	void BeginPlay();
 	void StopPlay();
 	bool IsPlaying();
-	
+	void SetDualMode(bool _isDual) { bIsDual = _isDual; };	// set isDual to have 2 mockingboards
+	void Enable() { bIsEnabled = true; };
+	void Disable() { bIsEnabled = false; };
+
 	// Received a mockingboard event, we don't care if it's C4XX or C5XX
 	// All mockingboard events MUST be write events!
 	void EventReceived(uint16_t addr, uint8_t val);
@@ -81,7 +85,12 @@ public:
 	void Util_WriteAllRegisters(uint8_t ay_idx, uint8_t* val_array);
 	
 	// ====================
-
+	
+	// ImGUI and prefs
+	void DisplayImGuiChunk();
+	nlohmann::json SerializeState();
+	void DeserializeState(const nlohmann::json &jsonState);
+	
 	// public singleton code
 	static MockingboardManager* GetInstance()
 	{
@@ -94,17 +103,25 @@ private:
 	MockingboardManager(uint32_t sampleRate, uint32_t bufferSize);
 	
 	void Process();
+	void UpdateAllPans();
 	void SetLatchedRegister(Ayumi* ayp, uint8_t value);
 	static void AudioCallback(void* userdata, uint8_t* stream, int len);
 	
-	bool isDual;
+	bool bIsDual;
 	SDL_AudioSpec audioSpec;
 	SDL_AudioDeviceID audioDevice;
 	uint32_t sampleRate;
 	uint32_t bufferSize;
-	bool isPlaying;
+	bool bIsEnabled;
+	bool bIsPlaying;
 	
-	Ayumi ay[4];	
+	Ayumi ay[4];
+	float allpans[4][3] = {
+		0.0f, 0.0f, 0.0f,	// AY0 pans left
+		1.0f, 1.0f, 1.0f,	// AY1 pans right
+		0.0f, 0.0f, 0.0f,	// AY2 pans left
+		1.0f, 1.0f, 1.0f,	// AY3 pans right
+	};
 };
 
 #endif // MOCKINGBOARDMANAGER_H

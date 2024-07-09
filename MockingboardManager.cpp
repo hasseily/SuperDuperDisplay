@@ -1,6 +1,7 @@
 #include "MockingboardManager.h"
 #include <iostream>
 #include <vector>
+#include "imgui.h"
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 MockingboardManager* MockingboardManager::s_instance;
@@ -19,9 +20,8 @@ MockingboardManager::MockingboardManager(uint32_t sampleRate, uint32_t bufferSiz
 	Initialize();
 }
 
-void MockingboardManager::Initialize(bool _isDual)
+void MockingboardManager::Initialize()
 {
-	isDual = _isDual;
 	if (audioDevice == 0)
 	{
 		SDL_zero(audioSpec);
@@ -42,16 +42,12 @@ void MockingboardManager::Initialize(bool _isDual)
 	}
 	
 	// Reset registers and set panning
-	// The default panning is one AY for each speaker
-	uint8_t ay_ct = (isDual ? 4 : 2);
-	for(uint8_t ayidx = 0; ayidx < ay_ct; ayidx++)
+	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
 	{
 		ay[ayidx].ResetRegisters();
-		double pan = (ayidx % 2 == 0 ? 0.0 : 1.0);
-		ay[ayidx].SetPan(0, pan, 0);
-		ay[ayidx].SetPan(1, pan, 0);
-		ay[ayidx].SetPan(2, pan, 0);
 	}
+	// The default panning is one AY for each speaker
+	UpdateAllPans();
 }
 
 MockingboardManager::~MockingboardManager() {
@@ -60,17 +56,19 @@ MockingboardManager::~MockingboardManager() {
 }
 
 void MockingboardManager::BeginPlay() {
+	if (!bIsEnabled)
+		return;
 	SDL_PauseAudioDevice(audioDevice, 0); // Start audio playback
-	isPlaying = true;
+	bIsPlaying = true;
 }
 
 void MockingboardManager::StopPlay() {
 	SDL_PauseAudioDevice(audioDevice, 1); // Stop audio playback immediately
-	isPlaying = false;
+	bIsPlaying = false;
 }
 
 bool MockingboardManager::IsPlaying() {
-	return isPlaying;
+	return bIsPlaying;
 }
 
 void MockingboardManager::AudioCallback(void* userdata, uint8_t* stream, int len) {
@@ -79,12 +77,12 @@ void MockingboardManager::AudioCallback(void* userdata, uint8_t* stream, int len
 	std::vector<float> buffer(samples * 2);
 	
 	for (int i = 0; i < samples; ++i) {
-		uint8_t ay_ct = (self->isDual ? 4 : 2);
+		uint8_t ay_ct = (self->bIsDual ? 4 : 2);
 		for(uint8_t ayidx = 0; ayidx < ay_ct; ayidx++)
 		{
 			self->ay[ayidx].Process();
 		}
-		if (self->isDual)
+		if (self->bIsDual)
 		{
 			buffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left + self->ay[2].left + self->ay[3].left);
 			buffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right + self->ay[2].right + self->ay[3].right);
@@ -100,6 +98,8 @@ void MockingboardManager::AudioCallback(void* userdata, uint8_t* stream, int len
 
 void MockingboardManager::EventReceived(uint16_t addr, uint8_t val)
 {
+	if (!bIsEnabled)
+		return;
 	// Only parse 0xC4xx or 0xC5xx events (slots 4 and 5)
 	if (((addr >> 8) != 0xC4) && ((addr >> 8) != 0xC5))
 		return;
@@ -153,9 +153,20 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val)
 
 void MockingboardManager::SetPan(uint8_t ay_idx, uint8_t channel_idx, double pan, bool isEqp)
 {
-	if (ay_idx > (isDual ? 3 : 1))
+	if (ay_idx > 3)
 		return;
 	ay[ay_idx].SetPan(channel_idx, pan, isEqp);
+	allpans[ay_idx][channel_idx] = (float)pan;
+}
+
+void MockingboardManager::UpdateAllPans()
+{
+	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
+	{
+		ay[ayidx].SetPan(0, (double)allpans[ayidx][0], 0);
+		ay[ayidx].SetPan(1, (double)allpans[ayidx][1], 0);
+		ay[ayidx].SetPan(2, (double)allpans[ayidx][2], 0);
+	}
 }
 
 void MockingboardManager::SetLatchedRegister(Ayumi* ayp, uint8_t value)
@@ -259,4 +270,104 @@ void MockingboardManager::Util_WriteAllRegisters(uint8_t ay_idx, uint8_t* val_ar
 	for (uint8_t i=0; i<16; i++) {
 		Util_WriteToRegister(ay_idx, i, val_array[i]);
 	}
+}
+
+///
+///
+/// ImGUI Interface
+///
+///
+
+void MockingboardManager::DisplayImGuiChunk()
+{
+	if (ImGui::CollapsingHeader("[ MOCKINGBOARD ]"))
+	{
+		ImGui::Checkbox("Enable Mockingboard (Slot 4)", &bIsEnabled);
+		ImGui::Checkbox("Dual Mockingboards (Slots 4 and 5)", &bIsDual);
+		
+		ImGui::SeparatorText("[ CHANNEL PANNING ]");
+		if (ImGui::SliderFloat("AY Chip 0, Channel 0", &allpans[0][0], 0, 1, "%.3f", 1))
+			SetPan(0, 0, allpans[0][0], false);
+		if (ImGui::SliderFloat("AY Chip 0, Channel 1", &allpans[0][1], 0, 1, "%.3f", 1))
+			SetPan(0, 0, allpans[0][0], false);
+		if (ImGui::SliderFloat("AY Chip 0, Channel 2", &allpans[0][2], 0, 1, "%.3f", 1))
+			SetPan(0, 0, allpans[0][0], false);
+		if (ImGui::SliderFloat("AY Chip 1, Channel 0", &allpans[1][0], 0, 1, "%.3f", 1))
+			SetPan(0, 0, allpans[0][0], false);
+		if (ImGui::SliderFloat("AY Chip 1, Channel 1", &allpans[1][1], 0, 1, "%.3f", 1))
+			SetPan(0, 0, allpans[0][0], false);
+		if (ImGui::SliderFloat("AY Chip 1, Channel 2", &allpans[1][2], 0, 1, "%.3f", 1))
+			SetPan(0, 0, allpans[0][0], false);
+		if (bIsDual)
+		{
+			if (ImGui::SliderFloat("AY Chip 2, Channel 0", &allpans[2][0], 0, 1, "%.3f", 1))
+				SetPan(0, 0, allpans[0][0], false);
+			if (ImGui::SliderFloat("AY Chip 2, Channel 1", &allpans[2][1], 0, 1, "%.3f", 1))
+				SetPan(0, 0, allpans[0][0], false);
+			if (ImGui::SliderFloat("AY Chip 2, Channel 2", &allpans[2][2], 0, 1, "%.3f", 1))
+				SetPan(0, 0, allpans[0][0], false);
+			if (ImGui::SliderFloat("AY Chip 3, Channel 0", &allpans[3][0], 0, 1, "%.3f", 1))
+				SetPan(0, 0, allpans[0][0], false);
+			if (ImGui::SliderFloat("AY Chip 3, Channel 1", &allpans[3][1], 0, 1, "%.3f", 1))
+				SetPan(0, 0, allpans[0][0], false);
+			if (ImGui::SliderFloat("AY Chip 3, Channel 2", &allpans[3][2], 0, 1, "%.3f", 1))
+				SetPan(0, 0, allpans[0][0], false);
+		}
+		if (ImGui::Button("Reset Pan to Default"))
+		{
+			allpans[0][0] = 0.f;
+			allpans[0][1] = 0.f;
+			allpans[0][2] = 0.f;
+			allpans[1][0] = 1.f;
+			allpans[1][1] = 1.f;
+			allpans[1][2] = 1.f;
+			allpans[2][0] = 0.f;
+			allpans[2][1] = 0.f;
+			allpans[2][2] = 0.f;
+			allpans[3][0] = 1.f;
+			allpans[3][1] = 1.f;
+			allpans[3][2] = 1.f;
+			UpdateAllPans();
+		}
+	}
+}
+
+nlohmann::json MockingboardManager::SerializeState()
+{
+	nlohmann::json jsonState = {
+		{"mockingboard_enabled", bIsEnabled},
+		{"mockingboard_dual", bIsDual},
+		{"pan_ay_0_0", allpans[0][0]},
+		{"pan_ay_0_1", allpans[0][1]},
+		{"pan_ay_0_2", allpans[0][2]},
+		{"pan_ay_1_0", allpans[1][0]},
+		{"pan_ay_1_1", allpans[1][1]},
+		{"pan_ay_1_2", allpans[1][2]},
+		{"pan_ay_2_0", allpans[2][0]},
+		{"pan_ay_2_1", allpans[2][1]},
+		{"pan_ay_2_2", allpans[2][2]},
+		{"pan_ay_3_0", allpans[3][0]},
+		{"pan_ay_3_1", allpans[3][1]},
+		{"pan_ay_3_2", allpans[3][2]},
+	};
+	return jsonState;
+}
+
+void MockingboardManager::DeserializeState(const nlohmann::json &jsonState)
+{
+	bIsEnabled = jsonState.value("mockingboard_enabled", bIsEnabled);
+	bIsDual = jsonState.value("mockingboard_dual", bIsDual);
+	allpans[0][0] = jsonState.value("pan_ay_0_0", allpans[0][0]);
+	allpans[0][1] = jsonState.value("pan_ay_0_1", allpans[0][1]);
+	allpans[0][2] = jsonState.value("pan_ay_0_2", allpans[0][2]);
+	allpans[1][0] = jsonState.value("pan_ay_1_0", allpans[1][0]);
+	allpans[1][1] = jsonState.value("pan_ay_1_1", allpans[1][1]);
+	allpans[1][2] = jsonState.value("pan_ay_1_2", allpans[1][2]);
+	allpans[2][0] = jsonState.value("pan_ay_2_0", allpans[2][0]);
+	allpans[2][1] = jsonState.value("pan_ay_2_1", allpans[2][1]);
+	allpans[2][2] = jsonState.value("pan_ay_2_2", allpans[2][2]);
+	allpans[3][0] = jsonState.value("pan_ay_3_0", allpans[3][0]);
+	allpans[3][1] = jsonState.value("pan_ay_3_1", allpans[3][1]);
+	allpans[3][2] = jsonState.value("pan_ay_3_2", allpans[3][2]);
+	UpdateAllPans();
 }

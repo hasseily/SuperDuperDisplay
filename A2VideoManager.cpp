@@ -17,6 +17,7 @@
 #include "OpenGLHelper.h"
 #include "MemoryManager.h"
 #include "extras/MemoryLoader.h"
+#include "MockingboardManager.h"
 #include "EventRecorder.h"
 #include "GRAddr2XY.h"
 #include "imgui.h"
@@ -281,6 +282,9 @@ void A2VideoManager::Initialize()
 	// clear the text overlay
 	std::memset(overlay_text, 0, sizeof(overlay_text));
 	std::memset(overlay_colors, 0, sizeof(overlay_colors));
+	
+	// Set default border color to green
+	MemoryManager::GetInstance()->switch_c034 = 12;
 
 	bIsReady = true;
 }
@@ -1362,6 +1366,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 					this->ForceBeamFullScreenRender();
 				}
 			}
+			MockingboardManager::GetInstance()->DisplayImGuiChunk();
 		}
 		ImGui::End();
 	}

@@ -33,6 +33,7 @@
 #include "OpenGLHelper.h"
 #include "CycleCounter.h"
 #include "SoundManager.h"
+#include "MockingboardManager.h"
 #include "extras/MemoryLoader.h"
 #include "extras/ImGuiFileDialog.h"
 #include "PostProcessor.h"
@@ -57,7 +58,7 @@ static char fps_str_buf[40];
 
 bool _M8DBG_bDisableVideoRender = false;
 bool _M8DBG_bDisablePPRender = false;
-bool _M8DBG_bDisplayFPSOnScreen = true;
+bool _M8DBG_bDisplayFPSOnScreen = false;
 float _M8DBG_average_fps_window = 1.f;	// in seconds
 bool _M8DBG_bShowF8Window = true;
 bool _M8DBG_bRunKarateka = false;
@@ -106,7 +107,6 @@ void set_vsync(bool _on)
 static void DisplaySplashScreen(A2VideoManager *&a2VideoManager, MemoryManager *&memManager) {
 	if (MemoryLoadSHR("assets/logo.shr"))
 	{
-		memManager->switch_c034 = 12;
 		memManager->SetSoftSwitch(A2SoftSwitch_e::A2SS_SHR, true);
 	}
 	// Run a refresh to show the first screen
@@ -131,6 +131,15 @@ void DrawFPSOverlay(A2VideoManager* a2VideoManager)
 		a2VideoManager->EraseOverlayRange(20, 0, 0);
 		a2VideoManager->EraseOverlayRange(20, 0, 1);
 	}
+}
+
+// Function to update the display size in ImGui when switching fullscreen
+// Otherwise ImGui doesn't know that it's been fullscreen'ed
+void UpdateImGuiDisplaySize(SDL_Window* window) {
+	int display_w, display_h;
+	SDL_GetWindowSize(window, &display_w, &display_h);
+	ImGuiIO& io = ImGui::GetIO();
+	io.DisplaySize = ImVec2((float)display_w, (float)display_h);
 }
 
 // Main code
@@ -301,6 +310,7 @@ int main(int argc, char* argv[])
 	auto eventRecorder = EventRecorder::GetInstance();
 	auto cycleCounter = CycleCounter::GetInstance();
 	auto soundManager = SoundManager::GetInstance();
+	auto mockingboardManager = MockingboardManager::GetInstance();
 
 	std::cout << "Renderer Initializing..." << std::endl;
 	while (!a2VideoManager->IsReady())
@@ -347,6 +357,9 @@ int main(int argc, char* argv[])
 		}
 		if (settingsState.contains("Apple 2 Video")) {
 			a2VideoManager->DeserializeState(settingsState["Apple 2 Video"]);
+		}
+		if (settingsState.contains("Mockingboard")) {
+			mockingboardManager->DeserializeState(settingsState["Mockingboard"]);
 		}
 		if (settingsState.contains("Main")) {
 			int _wx, _wy, _ww, _wh;
@@ -489,6 +502,7 @@ int main(int argc, char* argv[])
 					event.key.keysym.sym == SDLK_F11) {
 					bIsFullscreen = !bIsFullscreen; // Toggle state
 					SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+					UpdateImGuiDisplaySize(window);
 					ResetFPSCalculations(a2VideoManager);
 				}
 				// Camera movement!
@@ -938,6 +952,7 @@ int main(int argc, char* argv[])
 		SDL_GetWindowSize(window, &_ww, &_wh);
 		settingsState["Post Processor"] = postProcessor->SerializeState();
 		settingsState["Apple 2 Video"] = a2VideoManager->SerializeState();
+		settingsState["Mockingboard"] = mockingboardManager->SerializeState();
 		settingsState["Main"] = {
 			{"display index", SDL_GetWindowDisplayIndex(window)},
 			{"window x", _wx},
