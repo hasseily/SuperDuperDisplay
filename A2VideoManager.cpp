@@ -17,6 +17,7 @@
 #include "OpenGLHelper.h"
 #include "MemoryManager.h"
 #include "extras/MemoryLoader.h"
+#include "SoundManager.h"
 #include "MockingboardManager.h"
 #include "EventRecorder.h"
 #include "GRAddr2XY.h"
@@ -1366,6 +1367,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 					this->ForceBeamFullScreenRender();
 				}
 			}
+			SoundManager::GetInstance()->DisplayImGuiChunk();
 			MockingboardManager::GetInstance()->DisplayImGuiChunk();
 		}
 		ImGui::End();
