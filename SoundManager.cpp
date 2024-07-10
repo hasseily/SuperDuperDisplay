@@ -91,6 +91,8 @@ bool SoundManager::IsPlaying() {
 inline void SoundManager::ToggleSoundState() {
 	// std::lock_guard<std::mutex> lock(bufferMutex);
 	bIsSoundOn = !bIsSoundOn;
+	if (bIsSoundOn)
+		speakerPhaseEventCount = 0;		// reset the speaker phase when we turn on
 }
 
 void SoundManager::EventReceived(bool isC03x) {
@@ -101,15 +103,15 @@ void SoundManager::EventReceived(bool isC03x) {
 	float sampleTotal = sampleAverage * sampleEventCount;
 	if (bIsSoundOn)
 	{
-		if (speakerPhaseEventCount < (SM_EVENTS_PER_SPEAKER_PHASE/2))
+		//if (speakerPhaseEventCount < (SM_EVENTS_PER_SPEAKER_PHASE/2))
 			sampleAverage = (sampleTotal + 128) / (sampleEventCount + 1);	// High of the square wave
-		else
-			sampleAverage = (sampleTotal - 127) / (sampleEventCount + 1);	// Low of the square wave
+		//else
+		//	sampleAverage = (sampleTotal - 127) / (sampleEventCount + 1);	// Low of the square wave
+		speakerPhaseEventCount = (speakerPhaseEventCount + 1) % SM_EVENTS_PER_SPEAKER_PHASE;
 	} else {
 		// add 0 to the array
 		sampleAverage = (sampleTotal + 0) / (sampleEventCount + 1);
 	}
-	speakerPhaseEventCount = (speakerPhaseEventCount + 1) % SM_EVENTS_PER_SPEAKER_PHASE;
 	sampleEventCount++;
 	
 	if (sampleEventCount == eventsPerSample)

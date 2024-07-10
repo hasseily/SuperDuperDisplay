@@ -9,7 +9,7 @@
 const uint32_t SM_SAMPLE_RATE = 44100; 					// Audio sample rate
 const uint32_t SM_BUFFER_SIZE = 256;					// Default buffer size for SDL Audio callback
 const uint32_t SM_RINGBUFFER_SIZE = SM_SAMPLE_RATE * 5;	// Audio buffer size (5 seconds)
-const uint32_t SM_EVENTS_PER_SPEAKER_PHASE = 1000;		// Apple at 1MHz. Speaker at 1KHz
+const uint32_t SM_EVENTS_PER_SPEAKER_PHASE = 1'023;		// Apple at 1MHz. Speaker at 1KHz. NTSC is 1'022'727 and PAL is 1'017'857
 const uint32_t SM_STARTING_DELTA_READWRITE = SM_BUFFER_SIZE * 10;	// Starting difference between the 2 pointers
 const uint32_t SM_DEFAULT_EVENTS_PER_SAMPLE = 23;		// Default count of events per 44.1kHz sample
 
