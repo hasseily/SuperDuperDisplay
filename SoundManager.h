@@ -6,12 +6,16 @@
 #include <mutex>
 #include "nlohmann/json.hpp"
 
+// The RINGBUFFER is a buffer that tracks the cycles of when the speaker clicks (0xC03X)
+// Cycles are stored as int64 since reset of the machine
+
 const uint32_t SM_SAMPLE_RATE = 44100; 					// Audio sample rate
-const uint32_t SM_BUFFER_SIZE = 256;					// Default buffer size for SDL Audio callback
-const uint32_t SM_RINGBUFFER_SIZE = SM_SAMPLE_RATE * 5;	// Audio buffer size (5 seconds)
-const uint32_t SM_EVENTS_PER_SPEAKER_PHASE = 1'023;		// Apple at 1MHz. Speaker at 1KHz. NTSC is 1'022'727 and PAL is 1'017'857
+const uint32_t SM_BUFFER_SIZE = 1024;					// Default buffer size for SDL Audio callback
+const uint32_t SM_RINGBUFFER_SIZE = 1'000'000;			// Audio buffer size - At least 4 seconds of speaker clicks (each 0xC03X is 4 cycles)
 const uint32_t SM_STARTING_DELTA_READWRITE = SM_BUFFER_SIZE * 10;	// Starting difference between the 2 pointers
-const uint32_t SM_DEFAULT_EVENTS_PER_SAMPLE = 23;		// Default count of events per 44.1kHz sample
+const uint32_t SM_DEFAULT_CYCLES_PER_SAMPLE = 231500;	// Default count of events per 44.1kHz sample
+const uint32_t SM_CYCLES_DELAY = 50;					// Delay outgoing sound data by 50 cycles compared to incoming
+const uint32_t SM_CYCLE_MULTIPLIER = 10000;				// Sampling multiplier for cycles
 
 class SoundManager {
 public:
@@ -22,7 +26,6 @@ public:
 	void BeginPlay();
 	void StopPlay();
 	bool IsPlaying();
-	void ToggleSoundState();		// Toggles between silence and 1kHz
 	void EventReceived(bool isC03x=false);	// Received any event -- if isC03x then the event is a 0xC03x
 	
 	// ImGUI and prefs
@@ -47,18 +50,20 @@ private:
 	std::mutex pointerMutex;
 	SDL_AudioSpec audioSpec;
 	SDL_AudioDeviceID audioDevice;
-	uint8_t eventsPerSample;					// Around 23. Increases or decreases based on how quickly reads catch up
+	uint32_t cyclesPerSample;					// Around 23 * SM_CYCLE_MULTIPLIER. Increases or decreases based on how quickly reads catch up
 	uint32_t sampleRate;
 	int bufferSize;
 	bool bIsEnabled = true;						// Did user enable speaker through HDMI?
 	bool bIsPlaying;							// Is the audio playing?
-	bool bIsSoundOn;							// Sound state of the 0xC03x speaker (silence or 1kHz
 	float sampleAverage;
-	uint8_t sampleEventCount;					// up to SM_EVENTS_PER_SAMPLE
-	uint32_t speakerPhaseEventCount;			// up to SM_EVENTS_PER_SPEAKER_PHASE
-	char soundRingbuffer[SM_RINGBUFFER_SIZE];	// 5 seconds of buffer to feed the 44.1kHz audio
+	uint32_t sampleCycleCount;					// Varies around 23 * SM_CYCLE_MULTIPLIER
+	uint32_t cyclesHigh;							// speaker cycles that are on for each sample
+	bool bIsLastHigh;								// Did the last on cycle go positive or negative?
+	float soundRingbuffer[SM_RINGBUFFER_SIZE];// 5 seconds of buffer to feed the 44.1kHz audio
 	uint32_t sb_index_read;						// index in soundRingbuffer where read should start
 	uint32_t sb_index_write;					// index in soundRingbuffer where write should start
+	
+	int lastQueuedSampleCount;
 };
 
 #endif // SOUNDMANAGER_H

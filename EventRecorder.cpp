@@ -171,8 +171,8 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 {
 	using namespace std::chrono;
 	auto targetDuration = duration<double, std::nano>(979.926864);	// Duration of an Apple 2 clock cycle (not stretched)
-	auto startTime = high_resolution_clock::now();
-	auto elapsed = high_resolution_clock::now() - startTime;
+	auto startTime = (std::chrono::time_point<steady_clock, duration<double, std::nano>>)high_resolution_clock::now();
+	auto nextTime = startTime;
 
 	while (!*shouldStopReplay)
 	{
@@ -182,7 +182,12 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 			continue;
 		}
-		SetState(EventRecorderStates_e::PLAYING);
+		if (GetState() != EventRecorderStates_e::PLAYING)
+		{
+			SetState(EventRecorderStates_e::PLAYING);
+			startTime = high_resolution_clock::now();
+			nextTime = startTime;
+		}
 		// Check if the user requested to move to a different area in the recording
 		if (bUserMovedEventSlider)
 		{
@@ -204,7 +209,7 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			}
 		}
 
-		if (currentReplayEvent < v_events.size())
+		if ((v_events.size() > 0) && (currentReplayEvent < v_events.size()))
 		{
 			if (*shouldStopReplay)	// In case a stop was sent while sleeping
 				break;
@@ -213,14 +218,14 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
 			process_single_event(e);
 			currentReplayEvent += 1;
-			// wait 1 clock cycle before adding the next event
-			startTime = high_resolution_clock::now();
+			// wait 1 clock cycle before adding the next event, compensating for drift
+			nextTime += targetDuration;
 			while (true)
 			{
-				elapsed = high_resolution_clock::now() - startTime;
-				if (elapsed >= targetDuration)
+				if (high_resolution_clock::now() >= nextTime)
 					break;
 			}
+			startTime = nextTime;
 		}
 		else {
 			currentReplayEvent = 0;

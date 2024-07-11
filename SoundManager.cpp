@@ -27,10 +27,10 @@ void SoundManager::Initialize()
 	}
 	SDL_zero(audioSpec);
 	audioSpec.freq = sampleRate;
-	audioSpec.format = AUDIO_S8;
+	audioSpec.format = AUDIO_F32;
 	audioSpec.channels = 1;
 	audioSpec.samples = bufferSize;
-	audioSpec.callback = SoundManager::AudioCallback;
+	audioSpec.callback = nullptr;
 	audioSpec.userdata = this;
 	
 	audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
@@ -49,29 +49,24 @@ SoundManager::~SoundManager() {
 
 void SoundManager::AudioCallback(void* userdata, uint8_t* stream, int len) {
 	SoundManager* self = static_cast<SoundManager*>(userdata);
-	std::lock_guard<std::mutex> lock(self->pointerMutex);
 	
-	// copy the part of the ringbuffer that matters and advance the read pointer
-	if ((self->sb_index_read + len) < SM_RINGBUFFER_SIZE)
-	{
-		SDL_memcpy(stream, self->soundRingbuffer+self->sb_index_read, len);
-		self->sb_index_read += len;
-	} else {
-		auto count_over = len - (SM_RINGBUFFER_SIZE - self->sb_index_read);
-		SDL_memcpy(stream, self->soundRingbuffer+self->sb_index_read, len - count_over);
-		SDL_memcpy(stream, self->soundRingbuffer, count_over);
-		self->sb_index_read = count_over;
+	auto* samples = reinterpret_cast<float*>(stream);
+	int sampleCount = len / sizeof(float);
+
+	for (int i = 0; i < sampleCount; ++i) {
+		samples[i] =  self->soundRingbuffer[(i+self->sb_index_read) % SM_RINGBUFFER_SIZE];
 	}
+	self->sb_index_read = (self->sb_index_read + sampleCount) % SM_RINGBUFFER_SIZE;
 }
 
 void SoundManager::BeginPlay() {
 	if (!bIsEnabled)
 		return;
-	sampleEventCount = 0;
-	speakerPhaseEventCount = 0;
+	sampleCycleCount = 0;
 	sampleAverage = 0;
-	eventsPerSample = SM_DEFAULT_EVENTS_PER_SAMPLE;
-	bIsSoundOn = false;		// Always start assuming no sound from the speaker
+	lastQueuedSampleCount = -1;	// not yet known
+	bIsLastHigh = false;
+	cyclesPerSample = SM_DEFAULT_CYCLES_PER_SAMPLE;
 	SDL_memset(soundRingbuffer, 0, SM_RINGBUFFER_SIZE);
 	sb_index_read = 0;
 	sb_index_write = sb_index_read + SM_STARTING_DELTA_READWRITE;
@@ -81,6 +76,7 @@ void SoundManager::BeginPlay() {
 
 void SoundManager::StopPlay() {
 	SDL_PauseAudioDevice(audioDevice, 1); // Stop audio playback immediately
+	SDL_ClearQueuedAudio(audioDevice);
 	bIsPlaying = false;
 }
 
@@ -88,45 +84,64 @@ bool SoundManager::IsPlaying() {
 	return bIsPlaying;
 }
 
-inline void SoundManager::ToggleSoundState() {
-	// std::lock_guard<std::mutex> lock(bufferMutex);
-	bIsSoundOn = !bIsSoundOn;
-	if (bIsSoundOn)
-		speakerPhaseEventCount = 0;		// reset the speaker phase when we turn on
-}
-
 void SoundManager::EventReceived(bool isC03x) {
+	if (!bIsEnabled)
+		return;
 	if (!bIsPlaying)
 		BeginPlay();
 	if (isC03x)
-		ToggleSoundState();
-	float sampleTotal = sampleAverage * sampleEventCount;
-	if (bIsSoundOn)
+		bIsLastHigh = !bIsLastHigh;
+
+	if (bIsLastHigh)
+		cyclesHigh+=SM_CYCLE_MULTIPLIER;
+
+//	ema = SM_ALPHA * isC03x * (bIsLastHigh ? 1.0 : -1.0) + (1.0 - SM_ALPHA) * ema;
+	sampleCycleCount+=SM_CYCLE_MULTIPLIER;
+
+	if (sampleCycleCount >= cyclesPerSample)
 	{
-		//if (speakerPhaseEventCount < (SM_EVENTS_PER_SPEAKER_PHASE/2))
-			sampleAverage = (sampleTotal + 128) / (sampleEventCount + 1);	// High of the square wave
-		//else
-		//	sampleAverage = (sampleTotal - 127) / (sampleEventCount + 1);	// Low of the square wave
-		speakerPhaseEventCount = (speakerPhaseEventCount + 1) % SM_EVENTS_PER_SPEAKER_PHASE;
-	} else {
-		// add 0 to the array
-		sampleAverage = (sampleTotal + 0) / (sampleEventCount + 1);
-	}
-	sampleEventCount++;
-	
-	if (sampleEventCount == eventsPerSample)
-	{
-		soundRingbuffer[sb_index_write] = round(sampleAverage);
-		// std::cerr << "Sample average: " << round(sampleAverage) << std::endl;
-		sampleAverage = 0;
-		sampleEventCount = 0;
+		soundRingbuffer[sb_index_write] = static_cast<float>(cyclesHigh)/static_cast<float>(cyclesPerSample);
 		sb_index_write = (sb_index_write + 1) % SM_RINGBUFFER_SIZE;
+		auto _delta = (sb_index_write+SM_RINGBUFFER_SIZE - sb_index_read) % SM_RINGBUFFER_SIZE;
+		auto len = SM_BUFFER_SIZE;
+		if (_delta >= len)
+		{
+			if ((sb_index_read + len) < SM_RINGBUFFER_SIZE)
+			{
+				SDL_QueueAudio(audioDevice, (const void*)(soundRingbuffer+sb_index_read), len*sizeof(float));
+				sb_index_read += len;
+			} else {
+				auto count_over = len - (SM_RINGBUFFER_SIZE - sb_index_read);
+				SDL_QueueAudio(audioDevice, (const void*)(soundRingbuffer+sb_index_read), (len - count_over)*sizeof(float));
+				SDL_QueueAudio(audioDevice, (const void*)(soundRingbuffer), count_over*sizeof(float));
+				sb_index_read = count_over;
+			}
+			/*
+			auto _queuedSamples = SDL_GetQueuedAudioSize(audioDevice) / sizeof(float);
+			if (lastQueuedSampleCount > 0)
+			{
+				if ((_queuedSamples - lastQueuedSampleCount) > 1024)	// SDL sound isn't fast enough
+					cyclesPerSample = static_cast<uint32_t>(SM_DEFAULT_CYCLES_PER_SAMPLE / (((float)_queuedSamples) / lastQueuedSampleCount));
+			}
+			lastQueuedSampleCount = static_cast<int>(_queuedSamples);
+			//std::cerr << cyclesPerSample << std::endl;
+			 */
+		}
+	
+		// Keep the remainder cycles for next sample
+		sampleCycleCount = sampleCycleCount - cyclesPerSample;
+		cyclesHigh = sampleCycleCount * bIsLastHigh;			// whatever is left should be kept at the state of the speaker
 		
+		/*
 		// Modify eventsPerSample based on how close the reads are from the writes
 		std::lock_guard<std::mutex> lock(pointerMutex);
-		float _delta = (sb_index_write+SM_RINGBUFFER_SIZE - sb_index_read) % SM_RINGBUFFER_SIZE;
+		//float _delta = (sb_index_write+SM_RINGBUFFER_SIZE - sb_index_read) % SM_RINGBUFFER_SIZE;
 		
-		eventsPerSample = SM_DEFAULT_EVENTS_PER_SAMPLE * (_delta / SM_STARTING_DELTA_READWRITE);
+		auto _prevcps = cyclesPerSample;
+		//cyclesPerSample = SM_DEFAULT_EVENTS_PER_SAMPLE * (_delta / SM_STARTING_DELTA_READWRITE);
+		if (_prevcps != cyclesPerSample)
+			std::cerr << "Changed CPS from " << (int)_prevcps << " to " << (int)cyclesPerSample << std::endl;
+		 */
 	}
 }
 
@@ -149,6 +164,8 @@ void SoundManager::DisplayImGuiChunk()
 		}
 		ImGui::SameLine();
 		ImGui::TextDisabled("(!)");
+		ImGui::Text("Cycles per Sample: %.4f", (double)cyclesPerSample / SM_CYCLE_MULTIPLIER);
+		ImGui::Text("Queued Samples: %d", (int)(SDL_GetQueuedAudioSize(audioDevice) / sizeof(float)));
 		if (ImGui::BeginItemTooltip())
 		{
 			ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
@@ -161,7 +178,7 @@ void SoundManager::DisplayImGuiChunk()
 			ImGui::PopTextWrapPos();
 			ImGui::EndTooltip();
 		}
-		if (ImGui::SliderInt("Buffer Size", &bufferSize, 128, 2048))
+		if (ImGui::SliderInt("Buffer Size", &bufferSize, 128, 4096))
 		{
 			bufferSize -= (bufferSize % 128);
 			if (audioSpec.samples != bufferSize)
