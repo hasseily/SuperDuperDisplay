@@ -95,7 +95,6 @@ void SoundManager::EventReceived(bool isC03x) {
 	if (bIsLastHigh)
 		cyclesHigh+=SM_CYCLE_MULTIPLIER;
 
-//	ema = SM_ALPHA * isC03x * (bIsLastHigh ? 1.0 : -1.0) + (1.0 - SM_ALPHA) * ema;
 	sampleCycleCount+=SM_CYCLE_MULTIPLIER;
 
 	if (sampleCycleCount >= cyclesPerSample)
@@ -106,42 +105,29 @@ void SoundManager::EventReceived(bool isC03x) {
 		auto len = SM_BUFFER_SIZE;
 		if (_delta >= len)
 		{
+			// Skip queuing if we're bigger than SM_BUFFER_SIZE*2
+			// Cheap way to avoid getting too far behind and getting a sound delay
+			auto _queuedSamples = SDL_GetQueuedAudioSize(audioDevice) / sizeof(float);
 			if ((sb_index_read + len) < SM_RINGBUFFER_SIZE)
 			{
-				SDL_QueueAudio(audioDevice, (const void*)(soundRingbuffer+sb_index_read), len*sizeof(float));
+				if (_queuedSamples < (SM_BUFFER_SIZE*2))
+					SDL_QueueAudio(audioDevice, (const void*)(soundRingbuffer+sb_index_read), len*sizeof(float));
 				sb_index_read += len;
 			} else {
 				auto count_over = len - (SM_RINGBUFFER_SIZE - sb_index_read);
-				SDL_QueueAudio(audioDevice, (const void*)(soundRingbuffer+sb_index_read), (len - count_over)*sizeof(float));
-				SDL_QueueAudio(audioDevice, (const void*)(soundRingbuffer), count_over*sizeof(float));
+				if (_queuedSamples < (SM_BUFFER_SIZE*2))
+				{
+					SDL_QueueAudio(audioDevice, (const void*)(soundRingbuffer+sb_index_read), (len - count_over)*sizeof(float));
+					SDL_QueueAudio(audioDevice, (const void*)(soundRingbuffer), count_over*sizeof(float));
+				}
 				sb_index_read = count_over;
 			}
-			/*
-			auto _queuedSamples = SDL_GetQueuedAudioSize(audioDevice) / sizeof(float);
-			if (lastQueuedSampleCount > 0)
-			{
-				if ((_queuedSamples - lastQueuedSampleCount) > 1024)	// SDL sound isn't fast enough
-					cyclesPerSample = static_cast<uint32_t>(SM_DEFAULT_CYCLES_PER_SAMPLE / (((float)_queuedSamples) / lastQueuedSampleCount));
-			}
-			lastQueuedSampleCount = static_cast<int>(_queuedSamples);
-			//std::cerr << cyclesPerSample << std::endl;
-			 */
 		}
 	
 		// Keep the remainder cycles for next sample
+		// whatever is left should be kept at the state of the speaker
 		sampleCycleCount = sampleCycleCount - cyclesPerSample;
-		cyclesHigh = sampleCycleCount * bIsLastHigh;			// whatever is left should be kept at the state of the speaker
-		
-		/*
-		// Modify eventsPerSample based on how close the reads are from the writes
-		std::lock_guard<std::mutex> lock(pointerMutex);
-		//float _delta = (sb_index_write+SM_RINGBUFFER_SIZE - sb_index_read) % SM_RINGBUFFER_SIZE;
-		
-		auto _prevcps = cyclesPerSample;
-		//cyclesPerSample = SM_DEFAULT_EVENTS_PER_SAMPLE * (_delta / SM_STARTING_DELTA_READWRITE);
-		if (_prevcps != cyclesPerSample)
-			std::cerr << "Changed CPS from " << (int)_prevcps << " to " << (int)cyclesPerSample << std::endl;
-		 */
+		cyclesHigh = sampleCycleCount * bIsLastHigh;
 	}
 }
 

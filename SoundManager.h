@@ -13,8 +13,7 @@ const uint32_t SM_SAMPLE_RATE = 44100; 					// Audio sample rate
 const uint32_t SM_BUFFER_SIZE = 1024;					// Default buffer size for SDL Audio callback
 const uint32_t SM_RINGBUFFER_SIZE = 1'000'000;			// Audio buffer size - At least 4 seconds of speaker clicks (each 0xC03X is 4 cycles)
 const uint32_t SM_STARTING_DELTA_READWRITE = SM_BUFFER_SIZE * 10;	// Starting difference between the 2 pointers
-const uint32_t SM_DEFAULT_CYCLES_PER_SAMPLE = 231500;	// Default count of events per 44.1kHz sample
-const uint32_t SM_CYCLES_DELAY = 50;					// Delay outgoing sound data by 50 cycles compared to incoming
+const uint32_t SM_DEFAULT_CYCLES_PER_SAMPLE = 231400;	// Default count of cycles per 44.1kHz sample
 const uint32_t SM_CYCLE_MULTIPLIER = 10000;				// Sampling multiplier for cycles
 
 class SoundManager {

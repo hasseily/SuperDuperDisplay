@@ -773,7 +773,7 @@ int main(int argc, char* argv[])
 
 			if (_M8DBG_bShowF8Window)
 			{
-				ImGui::Begin("M8 Debugging", &_M8DBG_bShowF8Window);
+				ImGui::Begin("Special Temporary Debugging", &_M8DBG_bShowF8Window);
 				if (!ImGui::IsWindowCollapsed())
 				{
 					// Retrieve OpenGL version info
