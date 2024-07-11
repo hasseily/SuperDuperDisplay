@@ -6,13 +6,24 @@
 #include <mutex>
 #include "nlohmann/json.hpp"
 
-// The RINGBUFFER is a buffer that tracks the cycles of when the speaker clicks (0xC03X)
-// Cycles are stored as int64 since reset of the machine
+// This singleton class manages the Apple 2 speaker sound
+// All it needs is to be sent EventReceived(bool isC03x=false) on each cycle.
+// Any time the passed in param is true, the speaker is switched low<->high
+// and kept in that position until the next param change.
+
+// Internally it uses a ringbuffer to store samples to send to the audio subsystem.
+// It pushes to the audio subsystem the samples when it reaches enough samples to fill SM_BUFFER_SIZE.
+// If there aren't enough samples, SDL2 automatically inserts silence.
+// If SDL2 isn't capable of processing samples at the speed they're pushed to the audio system,
+// we drop samples once its queue is above SM_BUFFER_SIZE*2.
+
+// TODO: 	Dynamically calculate SM_DEFAULT_CYCLES_PER_SAMPLE based on the Apple 2 region's clock cycle.
+//			It is 1/(region_cycle_length*SM_SAMPLE_RATE) , i.e. 1/(usec/cycle*samples/usec)
 
 const uint32_t SM_SAMPLE_RATE = 44100; 					// Audio sample rate
-const uint32_t SM_BUFFER_SIZE = 1024;					// Default buffer size for SDL Audio callback
+const uint32_t SM_BUFFER_SIZE = 1024;					// Default sample buffer size to send to SDL Audio
 const uint32_t SM_RINGBUFFER_SIZE = 1'000'000;			// Audio buffer size - At least 4 seconds of speaker clicks (each 0xC03X is 4 cycles)
-const uint32_t SM_STARTING_DELTA_READWRITE = SM_BUFFER_SIZE * 10;	// Starting difference between the 2 pointers
+const uint32_t SM_STARTING_DELTA_READWRITE = SM_BUFFER_SIZE * 3;	// Starting difference between the 2 pointers
 const uint32_t SM_DEFAULT_CYCLES_PER_SAMPLE = 231400;	// Default count of cycles per 44.1kHz sample
 const uint32_t SM_CYCLE_MULTIPLIER = 10000;				// Sampling multiplier for cycles
 

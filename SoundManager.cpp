@@ -47,18 +47,6 @@ SoundManager::~SoundManager() {
 	SDL_Quit();
 }
 
-void SoundManager::AudioCallback(void* userdata, uint8_t* stream, int len) {
-	SoundManager* self = static_cast<SoundManager*>(userdata);
-	
-	auto* samples = reinterpret_cast<float*>(stream);
-	int sampleCount = len / sizeof(float);
-
-	for (int i = 0; i < sampleCount; ++i) {
-		samples[i] =  self->soundRingbuffer[(i+self->sb_index_read) % SM_RINGBUFFER_SIZE];
-	}
-	self->sb_index_read = (self->sb_index_read + sampleCount) % SM_RINGBUFFER_SIZE;
-}
-
 void SoundManager::BeginPlay() {
 	if (!bIsEnabled)
 		return;
@@ -108,6 +96,8 @@ void SoundManager::EventReceived(bool isC03x) {
 			// Skip queuing if we're bigger than SM_BUFFER_SIZE*2
 			// Cheap way to avoid getting too far behind and getting a sound delay
 			auto _queuedSamples = SDL_GetQueuedAudioSize(audioDevice) / sizeof(float);
+			// if (_queuedSamples >= (SM_BUFFER_SIZE*2))
+			//	std::cerr << "Dropping sample!" << std::endl;
 			if ((sb_index_read + len) < SM_RINGBUFFER_SIZE)
 			{
 				if (_queuedSamples < (SM_BUFFER_SIZE*2))
