@@ -104,6 +104,9 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val)
 	if (((addr >> 8) != 0xC4) && ((addr >> 8) != 0xC5))
 		return;
 	
+	if (!bIsPlaying)
+		BeginPlay();
+	
 	// get which ay chip to use
 	Ayumi *ayp;
 	if ((addr >> 8) == 0xC4)
@@ -130,11 +133,11 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val)
 					break;
 				case A2MBC_LATCH:
 					ayp->latched_register = ayp->value_ora;
-					// std::cerr << "Latching register: " << (int)ayp->value_ora << std::endl;
+					std::cerr << "Latching register: " << (int)ayp->value_ora << std::endl;
 					break;
 				case A2MBC_WRITE:
 					SetLatchedRegister(ayp, ayp->value_ora);
-					// std::cerr << "Setting Register value: " << (int)ayp->value_ora << std::endl;
+					std::cerr << "Setting Register value: " << (int)ayp->value_ora << std::endl;
 					break;
 				default:
 					break;

@@ -3,6 +3,7 @@
 #include "MemoryManager.h"
 #include "CycleCounter.h"
 #include "A2VideoManager.h"
+#include "MockingboardManager.h"
 #include "imgui.h"
 #include "imgui_internal.h"		// for PushItemFlag
 #include "extras/ImGuiFileDialog.h"
@@ -109,6 +110,47 @@ void EventRecorder::ReadRecordingFile(std::ifstream& file)
 	bHasRecording = true;
 }
 
+void EventRecorder::ReadTextEventsFromFile(std::ifstream& file)
+{
+	ClearRecording();
+	MakeRAMSnapshot(0);	// Just make a snapshot of what is now
+	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
+	
+	std::string line;
+	while (std::getline(file, line)) {
+		if (line.empty() || line[0] == '#') {
+			continue; // Skip empty lines or lines starting with '#'
+		}
+		
+		std::stringstream ss(line);
+		std::string count_str, is_iigs_str, m2b0_str, m2sel_str, rw_str, addr_str, data_str;
+		
+		std::getline(ss, count_str, ',');
+		std::getline(ss, is_iigs_str, ',');
+		std::getline(ss, m2b0_str, ',');
+		std::getline(ss, m2sel_str, ',');
+		std::getline(ss, rw_str, ',');
+		std::getline(ss, addr_str, ',');
+		std::getline(ss, data_str, ',');
+		
+		auto count = std::stoul(count_str);
+		bool is_iigs = std::stoi(is_iigs_str);
+		bool m2b0 = std::stoi(m2b0_str);
+		bool m2sel = std::stoi(m2sel_str);
+		bool rw = std::stoi(rw_str);
+		uint16_t addr = std::stoul(addr_str, nullptr, 16);
+		uint8_t data = std::stoul(data_str, nullptr, 16);
+		
+		SDHREvent event(is_iigs, m2b0, m2sel, rw, addr, data);
+		for (size_t i = 0; i < count; ++i) {
+			v_events.push_back(event);
+		}
+	}
+
+	std::cout << "Read " << v_events.size() << " text events from file" << std::endl;
+	bHasRecording = true;
+}
+
 void EventRecorder::WriteEvent(const SDHREvent& event, std::ofstream& file) {
 	// Serialize and write each member of SDHREvent to the file
 	file.write(reinterpret_cast<const char*>(&event.is_iigs), sizeof(event.is_iigs));
@@ -140,6 +182,7 @@ void EventRecorder::StopReplay()
 		if (thread_replay.joinable())
 			thread_replay.join();
 	}
+	MockingboardManager::GetInstance()->StopPlay();
 }
 
 void EventRecorder::StartReplay()
@@ -151,6 +194,7 @@ void EventRecorder::StartReplay()
 	bShouldStopReplay = false;
 	SetState(EventRecorderStates_e::PLAYING);
 	ApplyRAMSnapshot(0);
+	MockingboardManager::GetInstance()->BeginPlay();
 	thread_replay = std::thread(&EventRecorder::replay_events_thread, this,
 		&bShouldPauseReplay, &bShouldStopReplay);
 }
@@ -158,6 +202,10 @@ void EventRecorder::StartReplay()
 void EventRecorder::PauseReplay(bool pause)
 {
 	bShouldPauseReplay = pause;
+	if (pause)
+		MockingboardManager::GetInstance()->StopPlay();
+	else
+		MockingboardManager::GetInstance()->BeginPlay();
 }
 
 void EventRecorder::RewindReplay()
@@ -280,6 +328,15 @@ void EventRecorder::LoadRecording()
 	ImGuiFileDialog::Instance()->OpenDialog("ChooseRecordingLoad", "Load Recording File", ".vcr,", config);
 }
 
+void EventRecorder::LoadTextEventsFromFile()
+{
+	SetState(EventRecorderStates_e::STOPPED);
+	IGFD::FileDialogConfig config;
+	config.path = "./";
+	ImGui::SetNextWindowSize(ImVec2(800, 400));
+	ImGuiFileDialog::Instance()->OpenDialog("ChooseTextEventsFileLoad", "Load Text Events File", ".csv,", config);
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Public methods
 //////////////////////////////////////////////////////////////////////////
@@ -330,6 +387,11 @@ void EventRecorder::DisplayImGuiWindow(bool* p_open)
 			else
 				SetState(EventRecorderStates_e::DISABLED);
 		}
+		if (bHasRecording == false)
+		{
+			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f); // Reduce button opacity
+			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true); // Disable button (and make it unclickable)
+		}
 		bUserMovedEventSlider = ImGui::SliderInt("Event Timeline", reinterpret_cast<int*>(&currentReplayEvent), 0, (int)v_events.size());
 		if (thread_replay.joinable())
 		{
@@ -353,11 +415,23 @@ void EventRecorder::DisplayImGuiWindow(bool* p_open)
 		ImGui::SameLine();
 		if (ImGui::Button("Rewind##Recording"))
 			this->RewindReplay();
+		if (bHasRecording == false)
+		{
+			ImGui::PopItemFlag();
+			ImGui::PopStyleVar();
+		}
 		ImGui::Separator();
 
 		if (ImGui::Button("Load##Recording"))
 		{
 			this->LoadRecording();
+		}
+		ImGui::SameLine();
+		ImGui::Dummy(ImVec2(50.0f, 0.0f));
+		ImGui::SameLine();
+		if (ImGui::Button("Load CSV##Recording"))
+		{
+			this->LoadTextEventsFromFile();
 		}
 		ImGui::SameLine();
 		ImGui::Dummy(ImVec2(50.0f, 0.0f));
@@ -388,6 +462,34 @@ void EventRecorder::DisplayImGuiWindow(bool* p_open)
 					{
 						ReadRecordingFile(file);
 
+					}
+					catch (std::ifstream::failure& e)
+					{
+						m_lastErrorString = e.what();
+						bImGuiOpenModal = true;
+						ImGui::OpenPopup("Recorder Error Modal");
+					}
+					file.close();
+				}
+				else {
+					m_lastErrorString = "Error opening file";
+					bImGuiOpenModal = true;
+					ImGui::OpenPopup("Recorder Error Modal");
+				}
+			}
+			ImGuiFileDialog::Instance()->Close();
+		}
+		
+		// Display the load csv file dialog
+		if (ImGuiFileDialog::Instance()->Display("ChooseTextEventsFileLoad")) {
+			// Check if a file was selected
+			if (ImGuiFileDialog::Instance()->IsOk()) {
+				std::ifstream file(ImGuiFileDialog::Instance()->GetFilePathName().c_str());
+				if (file.is_open()) {
+					try
+					{
+						ReadTextEventsFromFile(file);
+						
 					}
 					catch (std::ifstream::failure& e)
 					{

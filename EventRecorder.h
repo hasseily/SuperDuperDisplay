@@ -52,7 +52,10 @@ public:
 	}
 	~EventRecorder();
 
+	// This method reads a binary recording file previously saved using SaveRecording()
 	void ReadRecordingFile(std::ifstream& file);
+	// This method reads a text event file, generally used for debugging
+	void ReadTextEventsFromFile(std::ifstream& file);
 	void StopReplay();
 	void StartReplay();
 
@@ -65,6 +68,7 @@ private:
 	void ClearRecording();
 	void SaveRecording();
 	void LoadRecording();
+	void LoadTextEventsFromFile();
 	
 	// replay
 	void PauseReplay(bool pause);

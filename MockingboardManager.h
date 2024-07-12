@@ -28,8 +28,8 @@ enum A2MBCodes_e
 {
 	A2MBC_RESET = 0,			// Used generally on init only
 	A2MBC_INACTIVE = 4,			// Always used after any of the other codes is used
-	A2MBC_LATCH = 6,			// Set register number (i.e. "latch" a register)
-	A2MBC_WRITE = 7,			// Write data to the latched register
+	A2MBC_LATCH = 7,			// Set register number (i.e. "latch" a register)
+	A2MBC_WRITE = 6,			// Write data to the latched register
 	A2MBC_TOTAL_COUNT
 };
 
