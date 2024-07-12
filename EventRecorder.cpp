@@ -332,7 +332,7 @@ void EventRecorder::LoadTextEventsFromFile()
 {
 	SetState(EventRecorderStates_e::STOPPED);
 	IGFD::FileDialogConfig config;
-	config.path = "./";
+	config.path = "./recordings/";
 	ImGui::SetNextWindowSize(ImVec2(800, 400));
 	ImGuiFileDialog::Instance()->OpenDialog("ChooseTextEventsFileLoad", "Load Text Events File", ".csv,", config);
 }

@@ -107,6 +107,7 @@ void Ayumi::SetPan(int index, double pan, bool isEqp) {
 		channels[index].pan_left = 1 - pan;
 		channels[index].pan_right = pan;
 	}
+	//UpdateMixer();
 }
 
 void Ayumi::SetTone(int index, int period) {
