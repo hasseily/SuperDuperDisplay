@@ -133,11 +133,11 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val)
 					break;
 				case A2MBC_LATCH:
 					ayp->latched_register = ayp->value_ora;
-					std::cerr << "Latching register: " << (int)ayp->value_ora << std::endl;
+					// std::cerr << "Latching register: " << (int)ayp->value_ora << std::endl;
 					break;
 				case A2MBC_WRITE:
 					SetLatchedRegister(ayp, ayp->value_ora);
-					std::cerr << "Setting Register value: " << (int)ayp->value_ora << std::endl;
+					// std::cerr << "Setting Register value: " << (int)ayp->value_ora << std::endl;
 					break;
 				default:
 					break;
@@ -319,18 +319,18 @@ void MockingboardManager::DisplayImGuiChunk()
 		}
 		if (ImGui::Button("Reset Pan to Default"))
 		{
-			allpans[0][0] = 0.f;
-			allpans[0][1] = 0.f;
-			allpans[0][2] = 0.f;
-			allpans[1][0] = 1.f;
-			allpans[1][1] = 1.f;
-			allpans[1][2] = 1.f;
-			allpans[2][0] = 0.f;
-			allpans[2][1] = 0.f;
-			allpans[2][2] = 0.f;
-			allpans[3][0] = 1.f;
-			allpans[3][1] = 1.f;
-			allpans[3][2] = 1.f;
+			allpans[0][0] = 0.3f;
+			allpans[0][1] = 0.3f;
+			allpans[0][2] = 0.3f;
+			allpans[1][0] = 0.7f;
+			allpans[1][1] = 0.7f;
+			allpans[1][2] = 0.7f;
+			allpans[2][0] = 0.2f;
+			allpans[2][1] = 0.2f;
+			allpans[2][2] = 0.2f;
+			allpans[3][0] = 0.8f;
+			allpans[3][1] = 0.8f;
+			allpans[3][2] = 0.8f;
 			UpdateAllPans();
 		}
 	}

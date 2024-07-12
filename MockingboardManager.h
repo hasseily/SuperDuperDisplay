@@ -112,7 +112,7 @@ private:
 	SDL_AudioDeviceID audioDevice;
 	uint32_t sampleRate;
 	uint32_t bufferSize;
-	bool bIsEnabled;
+	bool bIsEnabled = true;
 	bool bIsPlaying;
 	
 	Ayumi ay[4];
