@@ -21,11 +21,10 @@
 //			It is 1/(region_cycle_length*SM_SAMPLE_RATE) , i.e. 1/(usec/cycle*samples/usec)
 
 const uint32_t SM_SAMPLE_RATE = 44100; 					// Audio sample rate
-const uint32_t SM_BUFFER_SIZE = 1024;					// Default sample buffer size to send to SDL Audio
-const uint32_t SM_RINGBUFFER_SIZE = 1'000'000;			// Audio buffer size - At least 4 seconds of speaker clicks (each 0xC03X is 4 cycles)
-const uint32_t SM_STARTING_DELTA_READWRITE = SM_BUFFER_SIZE * 3;	// Starting difference between the 2 pointers
-const uint32_t SM_DEFAULT_CYCLES_PER_SAMPLE = 231400;	// Default count of cycles per 44.1kHz sample
-const uint32_t SM_CYCLE_MULTIPLIER = 10000;				// Sampling multiplier for cycles
+const uint32_t SM_BUFFER_SIZE = 1024;					// SDL_Audio buffer size.
+const uint32_t SM_BUFFER_DRIFT_LIMIT_SIZE = 8192;		// Size to start trying to reduce the drift. At least 4096
+const float SM_CYCLES_PER_SAMPLE = 23.14f;				// Count of cycles per 44.1kHz sample
+const uint32_t SM_BEEPER_BUFFER_SIZE = 256;				// number of beeper samples to buffer before sending to SDL_Audio
 
 class SoundManager {
 public:
@@ -54,26 +53,19 @@ private:
 	static SoundManager* s_instance;
 	SoundManager(uint32_t sampleRate, uint32_t bufferSize);
 	
-	static void AudioCallback(void* userdata, uint8_t* stream, int len);
 	void QueueAudio();
 	
-	std::mutex pointerMutex;
 	SDL_AudioSpec audioSpec;
 	SDL_AudioDeviceID audioDevice;
-	uint32_t cyclesPerSample;					// Around 23 * SM_CYCLE_MULTIPLIER. Increases or decreases based on how quickly reads catch up
-	uint32_t sampleRate;
-	int bufferSize;
+	uint32_t cyclesPerSample;					// Around 23.14. Changes between NTSC and PAL
+	uint32_t sampleRate;						// SDL_Audio sample rate
+	int bufferSize;								// SDL_Audio buffer size
 	bool bIsEnabled = true;						// Did user enable speaker through HDMI?
 	bool bIsPlaying;							// Is the audio playing?
-	float sampleAverage;
-	uint32_t sampleCycleCount;					// Varies around 23 * SM_CYCLE_MULTIPLIER
-	uint32_t cyclesHigh;							// speaker cycles that are on for each sample
-	bool bIsLastHigh;								// Did the last on cycle go positive or negative?
-	float soundRingbuffer[SM_RINGBUFFER_SIZE];// 5 seconds of buffer to feed the 44.1kHz audio
-	uint32_t sb_index_read;						// index in soundRingbuffer where read should start
-	uint32_t sb_index_write;					// index in soundRingbuffer where write should start
 	
-	int lastQueuedSampleCount;
+	uint32_t beeper_samples_idx = 0;
+	uint32_t beeper_samples_zero_ct = 0;		// count of successive 0 samples
+	float beeper_samples[SM_BEEPER_BUFFER_SIZE];
 };
 
 #endif // SOUNDMANAGER_H

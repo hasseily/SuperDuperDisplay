@@ -1,9 +1,13 @@
 #include "SoundManager.h"
 #include "imgui.h"
 #include <iostream>
+#define CHIPS_IMPL
+#include "beeper.h"
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 SoundManager* SoundManager::s_instance;
+
+beeper_t beeper;
 
 // const int TONE_FREQUENCY = 1023; // Apple //e used a ~1 kHz tone
 
@@ -40,6 +44,8 @@ void SoundManager::Initialize()
 		SDL_Quit();
 		throw std::runtime_error("SDL_OpenAudioDevice failed");
 	}
+	beeper_desc_t bdesc = {23.14 * SM_SAMPLE_RATE, SM_SAMPLE_RATE, 1.0f};
+	beeper_init(&beeper, &bdesc);
 }
 
 SoundManager::~SoundManager() {
@@ -50,19 +56,16 @@ SoundManager::~SoundManager() {
 void SoundManager::BeginPlay() {
 	if (!bIsEnabled)
 		return;
-	sampleCycleCount = 0;
-	sampleAverage = 0;
-	lastQueuedSampleCount = -1;	// not yet known
-	bIsLastHigh = false;
-	cyclesPerSample = SM_DEFAULT_CYCLES_PER_SAMPLE;
-	SDL_memset(soundRingbuffer, 0, SM_RINGBUFFER_SIZE);
-	sb_index_read = 0;
-	sb_index_write = sb_index_read + SM_STARTING_DELTA_READWRITE;
+	beeper_reset(&beeper);
+	beeper_samples_idx = 0;
+	beeper_samples_zero_ct = 0;
 	SDL_PauseAudioDevice(audioDevice, 0); // Start audio playback
 	bIsPlaying = true;
 }
 
 void SoundManager::StopPlay() {
+	// flush the last sounds
+	std::memset(beeper_samples, beeper_samples_idx, SM_BEEPER_BUFFER_SIZE);
 	SDL_PauseAudioDevice(audioDevice, 1); // Stop audio playback immediately
 	SDL_ClearQueuedAudio(audioDevice);
 	bIsPlaying = false;
@@ -78,46 +81,33 @@ void SoundManager::EventReceived(bool isC03x) {
 	if (!bIsPlaying)
 		BeginPlay();
 	if (isC03x)
-		bIsLastHigh = !bIsLastHigh;
-
-	if (bIsLastHigh)
-		cyclesHigh+=SM_CYCLE_MULTIPLIER;
-
-	sampleCycleCount+=SM_CYCLE_MULTIPLIER;
-
-	if (sampleCycleCount >= cyclesPerSample)
 	{
-		soundRingbuffer[sb_index_write] = static_cast<float>(cyclesHigh)/static_cast<float>(cyclesPerSample);
-		sb_index_write = (sb_index_write + 1) % SM_RINGBUFFER_SIZE;
-		auto _delta = (sb_index_write+SM_RINGBUFFER_SIZE - sb_index_read) % SM_RINGBUFFER_SIZE;
-		auto len = SM_BUFFER_SIZE;
-		if (_delta >= len)
+		beeper_toggle(&beeper);
+	}
+	if (beeper_tick(&beeper))
+	{
+		beeper_samples[beeper_samples_idx] = beeper.sample;
+		++beeper_samples_idx;
+		beeper.sample == 0 ? ++beeper_samples_zero_ct : beeper_samples_zero_ct = 0;
+		if (beeper_samples_idx == SM_BEEPER_BUFFER_SIZE)
 		{
-			// Skip queuing if we're bigger than SM_BUFFER_SIZE*2
-			// Cheap way to avoid getting too far behind and getting a sound delay
-			auto _queuedSamples = SDL_GetQueuedAudioSize(audioDevice) / sizeof(float);
-			// if (_queuedSamples >= (SM_BUFFER_SIZE*2))
-			//	std::cerr << "Dropping sample!" << std::endl;
-			if ((sb_index_read + len) < SM_RINGBUFFER_SIZE)
+			// Drift removal code
+			// Here we check if we've got more than the buffer size in the queue, which means
+			// we're going to soon have a noticeable lag. We check if the queue is full of zeros
+			// and we clear it completely. As long as SM_BUFFER_DRIFT_LIMIT_SIZE >= 4096, which is gets to about 11Hz,
+			// it is certain that we are not "within a sound" (because no human can hear < 12Hz). So this
+			// is really a silent time, which we can use to remove the drift.
+			auto sdl_queue_size = SDL_GetQueuedAudioSize(audioDevice);
+			if ((sdl_queue_size >= SM_BUFFER_DRIFT_LIMIT_SIZE) && (sdl_queue_size < beeper_samples_zero_ct))
 			{
-				if (_queuedSamples < (SM_BUFFER_SIZE*2))
-					SDL_QueueAudio(audioDevice, (const void*)(soundRingbuffer+sb_index_read), len*sizeof(float));
-				sb_index_read += len;
-			} else {
-				auto count_over = len - (SM_RINGBUFFER_SIZE - sb_index_read);
-				if (_queuedSamples < (SM_BUFFER_SIZE*2))
-				{
-					SDL_QueueAudio(audioDevice, (const void*)(soundRingbuffer+sb_index_read), (len - count_over)*sizeof(float));
-					SDL_QueueAudio(audioDevice, (const void*)(soundRingbuffer), count_over*sizeof(float));
-				}
-				sb_index_read = count_over;
+				SDL_ClearQueuedAudio(audioDevice);
+				beeper_samples_zero_ct = 0;
 			}
+			
+			// Just queue the SM_BEEPER_BUFFER_SIZE array
+			SDL_QueueAudio(audioDevice, (const void*)(beeper_samples), SM_BEEPER_BUFFER_SIZE*sizeof(float));
+			beeper_samples_idx = 0;
 		}
-	
-		// Keep the remainder cycles for next sample
-		// whatever is left should be kept at the state of the speaker
-		sampleCycleCount = sampleCycleCount - cyclesPerSample;
-		cyclesHigh = sampleCycleCount * bIsLastHigh;
 	}
 }
 
@@ -140,7 +130,6 @@ void SoundManager::DisplayImGuiChunk()
 		}
 		ImGui::SameLine();
 		ImGui::TextDisabled("(!)");
-		ImGui::Text("Cycles per Sample: %.4f", (double)cyclesPerSample / SM_CYCLE_MULTIPLIER);
 		ImGui::Text("Queued Samples: %d", (int)(SDL_GetQueuedAudioSize(audioDevice) / sizeof(float)));
 		if (ImGui::BeginItemTooltip())
 		{
@@ -154,15 +143,7 @@ void SoundManager::DisplayImGuiChunk()
 			ImGui::PopTextWrapPos();
 			ImGui::EndTooltip();
 		}
-		if (ImGui::SliderInt("Buffer Size", &bufferSize, 128, 4096))
-		{
-			bufferSize -= (bufferSize % 128);
-			if (audioSpec.samples != bufferSize)
-				Initialize();
-			if (bIsEnabled)
-				BeginPlay();
-		}
-		ImGui::SetItemTooltip("A bigger buffer can add latency but is more CPU efficient. Ideally a power of 2.");
+		ImGui::SliderFloat("Volume", &beeper.volume, 0.f, 1.f);
 	}
 }
 
