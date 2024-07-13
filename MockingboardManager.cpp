@@ -40,14 +40,6 @@ void MockingboardManager::Initialize()
 		SDL_Quit();
 		throw std::runtime_error("SDL_OpenAudioDevice failed");
 	}
-	
-	// Reset registers and set panning
-	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
-	{
-		ay[ayidx].ResetRegisters();
-	}
-	// The default panning is one AY for each speaker
-	UpdateAllPans();
 }
 
 MockingboardManager::~MockingboardManager() {
@@ -58,6 +50,13 @@ MockingboardManager::~MockingboardManager() {
 void MockingboardManager::BeginPlay() {
 	if (!bIsEnabled)
 		return;
+	// Reset registers and set panning
+	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
+	{
+		ay[ayidx].ResetRegisters();
+	}
+	// The default panning is one AY for each speaker
+	UpdateAllPans();
 	SDL_PauseAudioDevice(audioDevice, 0); // Start audio playback
 	bIsPlaying = true;
 	mb_event_count = 0;
@@ -65,6 +64,7 @@ void MockingboardManager::BeginPlay() {
 
 void MockingboardManager::StopPlay() {
 	SDL_PauseAudioDevice(audioDevice, 1); // Stop audio playback immediately
+	SDL_ClearQueuedAudio(audioDevice);
 	bIsPlaying = false;
 }
 
