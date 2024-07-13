@@ -151,7 +151,7 @@ nlohmann::json SoundManager::SerializeState()
 {
 	nlohmann::json jsonState = {
 		{"sound_enabled", bIsEnabled},
-		{"sound_buffer_size", bufferSize},
+		{"sound_volume", beeper.volume}
 	};
 	return jsonState;
 }
@@ -159,7 +159,5 @@ nlohmann::json SoundManager::SerializeState()
 void SoundManager::DeserializeState(const nlohmann::json &jsonState)
 {
 	bIsEnabled = jsonState.value("sound_enabled", bIsEnabled);
-	bufferSize = jsonState.value("sound_buffer_size", bufferSize);
-	if (audioSpec.samples != bufferSize)
-		Initialize();
+	beeper.volume = jsonState.value("sound_volume", beeper.volume);
 }
