@@ -60,6 +60,7 @@ void MockingboardManager::BeginPlay() {
 		return;
 	SDL_PauseAudioDevice(audioDevice, 0); // Start audio playback
 	bIsPlaying = true;
+	mb_event_count = 0;
 }
 
 void MockingboardManager::StopPlay() {
@@ -106,7 +107,9 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val)
 	
 	if (!bIsPlaying)
 		BeginPlay();
-	
+
+	++mb_event_count;
+
 	// get which ay chip to use
 	Ayumi *ayp;
 	if ((addr >> 8) == 0xC4)
@@ -289,6 +292,9 @@ void MockingboardManager::DisplayImGuiChunk()
 		if (ImGui::Checkbox("Dual Mockingboards (Slots 4 and 5)", &bIsDual))
 			bIsEnabled = true;
 		
+		if (bIsEnabled)
+			ImGui::Text("Mockingboard Events: %d", mb_event_count);
+
 		ImGui::SeparatorText("[ CHANNEL PANNING ]");
 		if (ImGui::SliderFloat("AY Chip 0 Channel 0", &allpans[0][0], 0, 1, "%.3f", 1))
 			SetPan(0, 0, allpans[0][0], false);

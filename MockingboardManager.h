@@ -107,13 +107,14 @@ private:
 	void SetLatchedRegister(Ayumi* ayp, uint8_t value);
 	static void AudioCallback(void* userdata, uint8_t* stream, int len);
 	
-	bool bIsDual;
 	SDL_AudioSpec audioSpec;
 	SDL_AudioDeviceID audioDevice;
 	uint32_t sampleRate;
 	uint32_t bufferSize;
 	bool bIsEnabled = true;
+	bool bIsDual = true;
 	bool bIsPlaying;
+	int mb_event_count = 0;
 	
 	Ayumi ay[4];
 	float allpans[4][3] = {
