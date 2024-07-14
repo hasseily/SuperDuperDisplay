@@ -68,7 +68,7 @@ void SoundManager::BeginPlay() {
 
 void SoundManager::StopPlay() {
 	// flush the last sounds
-	std::memset(beeper_samples, beeper_samples_idx, SM_BEEPER_BUFFER_SIZE);
+	std::memset(beeper_samples + beeper_samples_idx, 0, SM_BEEPER_BUFFER_SIZE - beeper_samples_idx);
 	bool is_queue_empty = false;
 	while (!is_queue_empty) {
 		if (SDL_GetQueuedAudioSize(audioDevice) == 0) {
