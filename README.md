@@ -1,6 +1,6 @@
 # SuperDuperDisplay
-Display engine for the Apple 2 network bus card
+Display engine for the Apple 2 network bus card "Appletini"
 
 # TODO
-- When VSYNC is on in the RaspberryPi sometimes draws a black frame, even when FPS can be much higher than 60.
-- Optimize the shaders.
+- Switch to the new USB protocol using the Appletini FPGA
+- Implement support for the Mockingboard 6522s' interrupts
