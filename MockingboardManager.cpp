@@ -71,6 +71,13 @@ void MockingboardManager::StopPlay() {
 		}
 		SDL_Delay(5);
 	}
+	// set amplitude to 0
+	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
+	{
+		ay[ayidx].SetVolume(0, 0);
+		ay[ayidx].SetVolume(1, 0);
+		ay[ayidx].SetVolume(2, 0);
+	}
 	SDL_PauseAudioDevice(audioDevice, 1);
 	bIsPlaying = false;
 }
