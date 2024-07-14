@@ -40,6 +40,7 @@ void MockingboardManager::Initialize()
 		SDL_Quit();
 		throw std::runtime_error("SDL_OpenAudioDevice failed");
 	}
+	bIsPlaying = false;
 }
 
 MockingboardManager::~MockingboardManager() {
@@ -63,8 +64,14 @@ void MockingboardManager::BeginPlay() {
 }
 
 void MockingboardManager::StopPlay() {
-	SDL_PauseAudioDevice(audioDevice, 1); // Stop audio playback immediately
-	SDL_ClearQueuedAudio(audioDevice);
+	bool is_queue_empty = false;
+	while (!is_queue_empty) {
+		if (SDL_GetQueuedAudioSize(audioDevice) == 0) {
+			is_queue_empty = true;
+		}
+		SDL_Delay(5);
+	}
+	SDL_PauseAudioDevice(audioDevice, 1);
 	bIsPlaying = false;
 }
 

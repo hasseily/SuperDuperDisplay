@@ -97,18 +97,6 @@ void process_single_event(SDHREvent& e)
 	 HANDLE SOUND AND PASSTHROUGH
 	 *********************************
 	 */
-	/*
-	static size_t cycles_all = 0, cycle_last_buzz = 0, cycles_buzz = 0;
-	cycles_all++;
-	if ((e.addr & 0xFFF0) == 0xC030)
-	{
-		cycle_last_buzz = cycles_all;
-		cycles_buzz++;
-	}
-	if ((cycle_last_buzz +8) > cycles_all)
-		std::cout << std::dec << cycles_all << " " << cycle_last_buzz << " " << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
-	 */
-	
 	auto soundMgr = SoundManager::GetInstance();
 	soundMgr->EventReceived((e.addr & 0xFFF0) == 0xC030);
 	auto mockingboardMgr = MockingboardManager::GetInstance();

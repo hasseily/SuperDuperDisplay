@@ -44,6 +44,9 @@ void SoundManager::Initialize()
 		SDL_Quit();
 		throw std::runtime_error("SDL_OpenAudioDevice failed");
 	}
+	bIsPlaying = false;
+	beeper_samples_idx = 0;
+	beeper_samples_zero_ct = 0;
 	beeper_desc_t bdesc = {23.14 * SM_SAMPLE_RATE, SM_SAMPLE_RATE, 1.0f};
 	beeper_init(&beeper, &bdesc);
 }
@@ -66,8 +69,14 @@ void SoundManager::BeginPlay() {
 void SoundManager::StopPlay() {
 	// flush the last sounds
 	std::memset(beeper_samples, beeper_samples_idx, SM_BEEPER_BUFFER_SIZE);
-	SDL_PauseAudioDevice(audioDevice, 1); // Stop audio playback immediately
-	SDL_ClearQueuedAudio(audioDevice);
+	bool is_queue_empty = false;
+	while (!is_queue_empty) {
+		if (SDL_GetQueuedAudioSize(audioDevice) == 0) {
+			is_queue_empty = true;
+		}
+		SDL_Delay(5);
+	}
+	SDL_PauseAudioDevice(audioDevice, 1);
 	bIsPlaying = false;
 }
 
