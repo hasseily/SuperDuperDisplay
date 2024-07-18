@@ -939,14 +939,14 @@ int main(int argc, char* argv[])
     EMSCRIPTEN_MAINLOOP_END;
 #endif
 
-	soundManager->StopPlay();
-
     // Stop all threads
 	bShouldTerminateProcessing = true;
 	terminate_processing_thread();
 	thread_processor.join();
     bShouldTerminateNetworking = true;
     thread_server.join();
+
+	soundManager->StopPlay();
 
 	// Serialize settings and save them
 	{
