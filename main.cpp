@@ -142,6 +142,12 @@ void UpdateImGuiDisplaySize(SDL_Window* window) {
 	io.DisplaySize = ImVec2((float)display_w, (float)display_h);
 }
 
+static void SetFullScreen(A2VideoManager *a2VideoManager, bool &bIsFullscreen) {
+	SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN : 0);
+	UpdateImGuiDisplaySize(window);
+	ResetFPSCalculations(a2VideoManager);
+}
+
 // Main code
 int main(int argc, char* argv[])
 {
@@ -401,7 +407,7 @@ int main(int argc, char* argv[])
 					SDL_SetWindowPosition(window, _wx, _wy);
 				SDL_SetWindowSize(window, _ww, _wh);
 			}
-			SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+			SetFullScreen(a2VideoManager, bIsFullscreen);
 		}
 	} else {
 		std::cerr << "No saved Settings.json file" << std::endl;
@@ -501,9 +507,7 @@ int main(int argc, char* argv[])
 				else if ((event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) ||
 					event.key.keysym.sym == SDLK_F11) {
 					bIsFullscreen = !bIsFullscreen; // Toggle state
-					SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-					UpdateImGuiDisplaySize(window);
-					ResetFPSCalculations(a2VideoManager);
+					SetFullScreen(a2VideoManager, bIsFullscreen);
 				}
 				// Camera movement!
 				if (!io.WantCaptureKeyboard) {
@@ -561,9 +565,16 @@ int main(int argc, char* argv[])
 		if (!_M8DBG_bDisablePPRender)
 			postProcessor->Render(window, out_tex_id);
 
-		if (show_F1_window)
+		if (!show_F1_window)
 		{
 			// Disable mouse if unused after cursorHideDelay
+			if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
+				SDL_ShowCursor(SDL_DISABLE);
+			else
+				SDL_ShowCursor(SDL_ENABLE);
+		} else {
+			// Disable mouse if unused after cursorHideDelay
+			// Here ImGui is displayed.
 			// ImGui overrides SDL_ShowCursor(), so we use ImGui's methods
 			// We could tell ImGui not to override it, but it really doesn't matter
 			if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
@@ -657,7 +668,7 @@ int main(int argc, char* argv[])
 				ImGui::Checkbox("M8 Debug Window (F8)", &_M8DBG_bShowF8Window);
 				if (ImGui::Checkbox("Fullscreen (F11 or Alt-Enter)", &bIsFullscreen))
 				{
-					SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+					SetFullScreen(a2VideoManager, bIsFullscreen);
 				}
 				if (ImGui::Checkbox("VSYNC", &g_swapInterval))
 				{
