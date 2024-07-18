@@ -1008,6 +1008,7 @@ int main(int argc, char* argv[])
     bShouldTerminateNetworking = true;
     thread_server.join();
 
+	eventRecorder->StopReplay();
 	soundManager->StopPlay();
 
 	// Serialize settings and save them
