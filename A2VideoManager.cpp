@@ -1072,6 +1072,7 @@ GLuint A2VideoManager::Render()
 	// Now determine how we should merge both legacy and shr
 	if (vrams_read->mode == A2Mode_e::MERGED)
 	{
+		AIGPScoped("VideoManager", "A2Merged");
 		// Both are active in this frame, we need to do the merge
 
 		// first render Legacy in its viewport
@@ -1140,6 +1141,7 @@ GLuint A2VideoManager::Render()
 	// ============================= LEGACY MODE RENDER ==============================
 	// ===============================================================================
 	else if (vrams_read->mode == A2Mode_e::LEGACY) {
+		AIGPScoped("VideoManager", "A2Legacy");
 		// Only legacy is active, just bind the correct output for the postprocessor
 		output_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
 		output_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
@@ -1169,6 +1171,7 @@ GLuint A2VideoManager::Render()
 	// =============================== SHR MODE RENDER ===============================
 	// ===============================================================================
 	else if (vrams_read->mode == A2Mode_e::SHR) {
+		AIGPScoped("VideoManager", "A2SHR");
 		// Only SHR is active, just bind the correct output for the postprocessor
 		output_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
 		output_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();

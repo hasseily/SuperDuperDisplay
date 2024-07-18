@@ -85,7 +85,6 @@
 		BB68B4CB2C4590EE00F96269 /* iagpConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = iagpConfig.h; sourceTree = "<group>"; };
 		BB68B4CC2C4590EE00F96269 /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		BB68B4CD2C4590EE00F96269 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		BB68B4D02C45918B00F96269 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		BB68B4D12C45918B00F96269 /* iagp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = iagp.cpp; sourceTree = "<group>"; };
 		BB68B4D22C45918B00F96269 /* iagp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iagp.h; sourceTree = "<group>"; };
 		BB68B4D32C45918B00F96269 /* iagpConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iagpConfig.h; sourceTree = "<group>"; };
@@ -185,7 +184,6 @@
 		BB68B4D62C45918B00F96269 /* InAppGpuProfiler */ = {
 			isa = PBXGroup;
 			children = (
-				BB68B4D02C45918B00F96269 /* .gitignore */,
 				BB68B4D12C45918B00F96269 /* iagp.cpp */,
 				BB68B4D22C45918B00F96269 /* iagp.h */,
 				BB68B4D32C45918B00F96269 /* iagpConfig.h */,

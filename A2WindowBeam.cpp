@@ -85,6 +85,7 @@ GLuint A2WindowBeam::GetOutputTextureId()
 
 GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 {
+	AIGPScoped("A2WindowBeam", "Render");
 	// std::cerr << "Rendering " << (int)video_mode << " - " << shouldUpdateDataInGPU << std::endl;
 	// std::cerr << "border w " << border_width_cycles << " - h " << border_height_scanlines << std::endl;
 	if (!shader.isReady)
@@ -93,52 +94,63 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		return UINT32_MAX;
 
 	GLenum glerr;
-	if (VRAMTEX == UINT_MAX)
-		glGenTextures(1, &VRAMTEX);
-
-	if (VAO == UINT_MAX)
+	
 	{
-		glGenVertexArrays(1, &VAO);
-		glGenBuffers(1, &VBO);
-	}
+		AIGPScoped("A2WindowBeam", "Generate");
+		if (VRAMTEX == UINT_MAX)
+			glGenTextures(1, &VRAMTEX);
 
-	if (FBO == UINT_MAX)
-	{
-		glGenFramebuffers(1, &FBO);
-		glGenTextures(1, &output_texture_id);
+		if (VAO == UINT_MAX)
+		{
+			glGenVertexArrays(1, &VAO);
+			glGenBuffers(1, &VBO);
+		}
+
+		if (FBO == UINT_MAX)
+		{
+			glGenFramebuffers(1, &FBO);
+			glGenTextures(1, &output_texture_id);
+			glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+			glActiveTexture(_TEXUNIT_POSTPROCESS);
+			glBindTexture(GL_TEXTURE_2D, output_texture_id);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_count.x, screen_count.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, 0);
+		}
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-		glActiveTexture(_TEXUNIT_POSTPROCESS);
-		glBindTexture(GL_TEXTURE_2D, output_texture_id);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_count.x, screen_count.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, 0);
+		glClearColor(0.f, 0.f, 0.f, 0.f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL render A2VideoManager error: " << glerr << std::endl;
+		}
+		// std::cerr << "VRAMTEX " << VRAMTEX << " VAO " << VAO << " FBO " << FBO << std::endl;
 	}
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-	glClearColor(0.f, 0.f, 0.f, 0.f);
-	glClear(GL_COLOR_BUFFER_BIT);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL render A2VideoManager error: " << glerr << std::endl;
-	}
-	// std::cerr << "VRAMTEX " << VRAMTEX << " VAO " << VAO << " FBO " << FBO << std::endl;
 
-	shader.use();
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
-		return UINT32_MAX;
+	{
+		AIGPScoped("A2WindowBeam", "shader.use");
+		shader.use();
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
+			return UINT32_MAX;
+		}
 	}
 	
-	glBindVertexArray(VAO);
+	{
+		AIGPScoped("A2WindowBeam", "bind VAO");
+		glBindVertexArray(VAO);
+	}
 
 	// Always reload the vertices
 	// because compatibility with GL-ES on the rPi
 	{
+		AIGPScoped("A2WindowBeam", "Load Vertices");
 		// load data into vertex buffers
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(A2BeamVertex), &vertices[0], GL_STATIC_DRAW);
@@ -158,74 +170,80 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		shader.setInt("vborder", (int)border_height_scanlines);
 	}
 
-	// Associate the texture VRAMTEX in TEXUNIT_DATABUFFER with the buffer
-	// This is the apple 2's memory which is mapped to a "texture"
-	// Always update that buffer in the GPU
-	if (shouldUpdateDataInGPU)
 	{
-		uint32_t cycles_w_with_border = 40 + (2 * border_width_cycles);
+		AIGPScoped("A2WindowBeam", "UpdateDataInGPU");
+		// Associate the texture VRAMTEX in TEXUNIT_DATABUFFER with the buffer
+		// This is the apple 2's memory which is mapped to a "texture"
+		// Always update that buffer in the GPU
+		if (shouldUpdateDataInGPU)
+		{
+			uint32_t cycles_w_with_border = 40 + (2 * border_width_cycles);
+			glActiveTexture(_TEXUNIT_DATABUFFER);
+			glBindTexture(GL_TEXTURE_2D, VRAMTEX);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+			if (vramTextureExists)	// it exists, do a glTexSubImage2D() update
+			{
+				switch (video_mode) {
+				case A2VIDEOBEAM_SHR:
+					// Adjust the unpack alignment for textures with arbitrary widths
+					glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_w_with_border * 4), 200 + (2 * border_height_scanlines), GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+					glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+					break;
+				default:
+					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_w_with_border, 192 + (2 * border_height_scanlines), GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+					break;
+				}
+			}
+			else {	// texture doesn't exist, create it with glTexImage2D()
+				switch (video_mode) {
+				case A2VIDEOBEAM_SHR:
+					// Adjust the unpack alignment for textures with arbitrary widths
+					glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, _COLORBYTESOFFSET + (cycles_w_with_border * 4), 200 + (2 * border_height_scanlines), 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+					glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+					break;
+				default:
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_w_with_border, 192 + (2 * border_height_scanlines), 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+					break;
+				}
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				vramTextureExists = true;
+			}
+			glActiveTexture(GL_TEXTURE0);
+			
+			if ((glerr = glGetError()) != GL_NO_ERROR) {
+				std::cerr << "A2WindowBeam::Update error: " << glerr << std::endl;
+			}
+		}
+	}
+
+	{
+		AIGPScoped("A2WindowBeam", "Shader");
+		shader.setInt("ticks", SDL_GetTicks());
+		shader.setInt("specialModesMask", specialModesMask);
+		shader.setInt("monitorColorType", monitorColorType);
+
+		// point the uniform at the VRAM texture
 		glActiveTexture(_TEXUNIT_DATABUFFER);
 		glBindTexture(GL_TEXTURE_2D, VRAMTEX);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-		if (vramTextureExists)	// it exists, do a glTexSubImage2D() update
-		{
-			switch (video_mode) {
-			case A2VIDEOBEAM_SHR:
-				// Adjust the unpack alignment for textures with arbitrary widths
-				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_w_with_border * 4), 200 + (2 * border_height_scanlines), GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
-				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-				break;
-			default:
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_w_with_border, 192 + (2 * border_height_scanlines), GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
-				break;
-			}
-		}
-		else {	// texture doesn't exist, create it with glTexImage2D()
-			switch (video_mode) {
-			case A2VIDEOBEAM_SHR:
-				// Adjust the unpack alignment for textures with arbitrary widths
-				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, _COLORBYTESOFFSET + (cycles_w_with_border * 4), 200 + (2 * border_height_scanlines), 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
-				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-				break;
-			default:
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_w_with_border, 192 + (2 * border_height_scanlines), 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
-				break;
-			}
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			vramTextureExists = true;
-		}
+		shader.setInt("VRAMTEX", _TEXUNIT_DATABUFFER - GL_TEXTURE0);
+		
+		// And set all the modes textures that the shader will use
+		// 2 font textures + lgr, hgr, dhgr
+		shader.setInt("a2ModesTex0", _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0);	// D/TEXT font regular
+		shader.setInt("a2ModesTex1", _TEXUNIT_IMAGE_ASSETS_START + 1 - GL_TEXTURE0);	// D/TEXT font alternate
+		shader.setInt("a2ModesTex2", _TEXUNIT_IMAGE_ASSETS_START + 2 - GL_TEXTURE0);	// D/LGR
+		shader.setInt("a2ModesTex3", _TEXUNIT_IMAGE_ASSETS_START + 3 - GL_TEXTURE0);	// HGR
+		shader.setInt("a2ModesTex4", _TEXUNIT_IMAGE_ASSETS_START + 4 - GL_TEXTURE0);	// DHGR
+		
+		glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
+		glBindTexture(GL_TEXTURE_2D, 0);
 		glActiveTexture(GL_TEXTURE0);
 	}
-
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "A2WindowBeam::Update error: " << glerr << std::endl;
-	}
-
-	shader.setInt("ticks", SDL_GetTicks());
-	shader.setInt("specialModesMask", specialModesMask);
-	shader.setInt("monitorColorType", monitorColorType);
-
-	// point the uniform at the VRAM texture
-	glActiveTexture(_TEXUNIT_DATABUFFER);
-	glBindTexture(GL_TEXTURE_2D, VRAMTEX);
-	shader.setInt("VRAMTEX", _TEXUNIT_DATABUFFER - GL_TEXTURE0);
-	
-	// And set all the modes textures that the shader will use
-	// 2 font textures + lgr, hgr, dhgr
-	shader.setInt("a2ModesTex0", _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0);	// D/TEXT font regular
-	shader.setInt("a2ModesTex1", _TEXUNIT_IMAGE_ASSETS_START + 1 - GL_TEXTURE0);	// D/TEXT font alternate
-	shader.setInt("a2ModesTex2", _TEXUNIT_IMAGE_ASSETS_START + 2 - GL_TEXTURE0);	// D/LGR
-	shader.setInt("a2ModesTex3", _TEXUNIT_IMAGE_ASSETS_START + 3 - GL_TEXTURE0);	// HGR
-	shader.setInt("a2ModesTex4", _TEXUNIT_IMAGE_ASSETS_START + 4 - GL_TEXTURE0);	// DHGR
-	
-	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glActiveTexture(GL_TEXTURE0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2WindowBeam render error: " << glerr << std::endl;
 	}

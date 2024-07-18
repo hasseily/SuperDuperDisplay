@@ -5,7 +5,6 @@
 #define IMGUI_USER_CONFIG "../my_imgui_config.h"
 
 #include "common.h"
-#include "InAppGpuProfiler/iagp.h"
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_opengl3.h"
@@ -275,7 +274,7 @@ int main(int argc, char* argv[])
 	// Add the font with the configuration
 	io.Fonts->AddFontDefault();
 	//static auto imgui_font_small = io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 10.0f);
-	static auto imgui_font_large = io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 20.0f);
+	//static auto imgui_font_large = io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 20.0f);
 
     // Our state
 	static MemoryEditor mem_edit_a2e;
@@ -601,22 +600,12 @@ int main(int argc, char* argv[])
 					ImGui_ImplSDL2_NewFrame();
 					ImGui::NewFrame();
 
-					// Get the current window size
-					ImVec2 window_pos = ImVec2(0, 0);
-					ImVec2 window_size = ImGui::GetIO().DisplaySize;
-
-					// Calculate the coordinates to cover the full screen
-					ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Top-left
-					ImVec2 uv_max = ImVec2(1.0f, 1.0f); // Bottom-right
-
-					// Get the foreground draw list to render on top of everything else
-					ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
-
 					if (ImGui::BeginMainMenuBar()) {
+						AIGPScoped("ImGUI", "Menu Bar");
 						auto& io = ImGui::GetIO();
 						ImGui::Text("Dear ImgGui %s | average %.3f ms/frame (%.1f FPS)", IMGUI_VERSION, 1000.0f / io.Framerate, io.Framerate);
 						ImGui::Spacing();
-						ImGui::MenuItem("ImGui", nullptr, &show_MainUI_window);
+						ImGui::MenuItem("SDD", nullptr, &show_MainUI_window);
 						ImGui::Spacing();
 						ImGui::MenuItem("A2 Video (F3)", nullptr, &show_a2video_window);
 						ImGui::Spacing();
@@ -635,6 +624,7 @@ int main(int argc, char* argv[])
 						ImGui::ShowDemoWindow(&show_demo_window);
 
 					if (show_profiler_flame_graph) {
+						AIGPScoped("ImGUI", "Flame Graph");
 						iagp::InAppGpuProfiler::Instance()->DrawFlamGraph(  //
 																		  "In App Gpu Profiler Flame Graph",
 																		  &show_profiler_flame_graph);
@@ -646,7 +636,7 @@ int main(int argc, char* argv[])
 						if (!ImGui::IsWindowCollapsed())
 						{
 							ImGui::PushItemWidth(110);
-							ImGui::Text("Press F1 at any time to toggle the GUI");
+							ImGui::Text("Press F1 at any time to toggle the GUI menu");
 							ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 							ImGui::Text("Worst Frame rate %.3f ms/frame", 1000.0f / fps_worst);
 							int _vw, _vh;
@@ -702,10 +692,12 @@ int main(int argc, char* argv[])
 							}
 							ImGui::PopItemWidth();
 
+							/*
 							ImGui::Checkbox("PostProcessing Window (F2)", &show_postprocessing_window);
 							ImGui::Checkbox("Apple 2 Video Modes Window (F3)", &show_a2video_window);
-							ImGui::Checkbox("M8 Debug Window (F8)", &_M8DBG_bShowF8Window);
+							ImGui::Checkbox("Temp Debug Window (F8)", &_M8DBG_bShowF8Window);
 							ImGui::Checkbox("Profiler Flame Graph", &show_profiler_flame_graph);
+							 */
 							if (ImGui::Checkbox("Fullscreen (F11 or Alt-Enter)", &bIsFullscreen))
 							{
 								SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);

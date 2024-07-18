@@ -29,6 +29,8 @@
 #include "ConcurrentQueue.h"
 #include "ByteBuffer.h"
 
+#include "InAppGpuProfiler/iagp.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_STATIC
 #pragma warning(push, 0) // disables all warnings
