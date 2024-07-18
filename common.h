@@ -9,7 +9,9 @@
 #include <stdio.h>
 
 #include "glad/glad.h"
+#pragma warning(push, 0) // disables all warnings
 #include <SDL.h>
+#pragma warning(pop)
 #include "nlohmann/json.hpp"
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)

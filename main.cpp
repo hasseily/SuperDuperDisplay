@@ -4,13 +4,13 @@
 
 #define IMGUI_USER_CONFIG "../my_imgui_config.h"
 
+#include "common.h"
+#include "InAppGpuProfiler/iagp.h"
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_memory_editor.h"
-#pragma warning(push, 0) // disables all warnings
-#include <SDL.h>
-#pragma warning(pop)
+
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
 #ifdef __EMSCRIPTEN__
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <thread>
 
-#include "common.h"
 #include "shader.h"
 #include "camera.h"
 #include "MosaicMesh.h"
@@ -288,9 +287,11 @@ int main(int argc, char* argv[])
 	static bool bShouldTerminateNetworking = false;
 	static bool bShouldTerminateProcessing = false;
 	static bool bIsFullscreen = false;
+	bool showImGui = true;
     bool show_demo_window = false;
+	bool show_profiler_flame_graph = false;
     bool show_metrics_window = false;
-	bool show_F1_window = false;
+	bool show_MainUI_window = false;
 	bool show_texture_window = false;
 	bool show_a2video_window = true;
 	bool show_postprocessing_window = false;
@@ -383,7 +384,7 @@ int main(int argc, char* argv[])
 				cycleCounter->isVideoRegionDynamic = false;
 				cycleCounter->SetVideoRegion(vbl_region == 1 ? VideoRegion_e::PAL : VideoRegion_e::NTSC);
 			}
-			show_F1_window = _sm.value("show F1 window", show_F1_window);
+			show_MainUI_window = _sm.value("show Main UI window", show_MainUI_window);
 			show_a2video_window = _sm.value("show Apple 2 Video window", show_a2video_window);
 			show_postprocessing_window = _sm.value("show Post Processor window", show_postprocessing_window);
 			show_recorder_window = _sm.value("show Recorder window", show_recorder_window);
@@ -417,523 +418,592 @@ int main(int argc, char* argv[])
 	if (_M8DBG_bDisplayFPSOnScreen)
 		DrawFPSOverlay(a2VideoManager);
 	
+	iagp::InAppGpuProfiler::Instance()->sIsActive = true;
     while (!done)
 #endif
     {
-		// Check if we should reboot
-		if (a2VideoManager->bShouldReboot)
 		{
-			std::cerr << "Reset detected" << std::endl;
-			a2VideoManager->bShouldReboot = false;
-			a2VideoManager->ResetComputer();
-		}
-
-		// Beam renderer does not use VSYNC. It synchronizes to the Apple 2's VBL.
-//		if (!(a2VideoManager->ShouldRender() || sdhrManager->IsSdhrEnabled()))
-//			continue;
-
-        dt_LAST = dt_NOW;
-        dt_NOW = SDL_GetPerformanceCounter();
-		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
-
-		if (!eventRecorder->IsInReplayMode())
-			eventRecorder->StartReplay();
-
-        // Poll and handle events (inputs, window resize, etc.)
-        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-        // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-        // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-        // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        SDL_Event event;
-		while (SDL_PollEvent(&event))
-        {
-            ImGui_ImplSDL2_ProcessEvent(&event);
-            switch (event.type) {
-            case SDL_QUIT:
-				done = true;
-                break;
-            case SDL_WINDOWEVENT:
-			{
-				if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-					int width = event.window.data1;
-					int height = event.window.data2;
-					glViewport(0, 0, width, height);
+			// Profiling
+			AIGPNewFrame("GPU Frame", "GPU Frame");  // a main Zone is always needed
+			
+			{	// AIGP Frame
+				// Check if we should reboot
+				if (a2VideoManager->bShouldReboot)
+				{
+					std::cerr << "Reset detected" << std::endl;
+					a2VideoManager->bShouldReboot = false;
+					a2VideoManager->ResetComputer();
 				}
-				if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
-					done = true;
-			}
-                break;
-            case SDL_MOUSEMOTION:
-				lastMouseMoveTime = SDL_GetTicks();
-                if (event.motion.state & SDL_BUTTON_RMASK && !io.WantCaptureMouse) {
-                    // Move the camera when the right mouse button is pressed while moving the mouse
-                    sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
-                }
-                break;
-            case SDL_MOUSEWHEEL:
-				if (!io.WantCaptureMouse) {
-					sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
-				}
-                break;
-            case SDL_KEYDOWN:
-			{
-				if (event.key.keysym.sym == SDLK_c) {  // Quit on Ctrl-c
-					auto state = SDL_GetKeyboardState(NULL);
-					if (state[SDL_SCANCODE_LCTRL]) {
+
+				// Beam renderer does not use VSYNC. It synchronizes to the Apple 2's VBL.
+		//		if (!(a2VideoManager->ShouldRender() || sdhrManager->IsSdhrEnabled()))
+		//			continue;
+
+				dt_LAST = dt_NOW;
+				dt_NOW = SDL_GetPerformanceCounter();
+				deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
+
+				if (!eventRecorder->IsInReplayMode())
+					eventRecorder->StartReplay();
+
+				// Poll and handle events (inputs, window resize, etc.)
+				// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+				// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
+				// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
+				// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+				SDL_Event event;
+				while (SDL_PollEvent(&event))
+				{
+					ImGui_ImplSDL2_ProcessEvent(&event);
+					switch (event.type) {
+					case SDL_QUIT:
 						done = true;
 						break;
-					}
-				}
-				else if (event.key.keysym.sym == SDLK_F1) {  // Toggle debug window with F1
-					show_F1_window = !show_F1_window;
-					ResetFPSCalculations(a2VideoManager);
-				}
-				else if (event.key.keysym.sym == SDLK_F2) {
-					show_postprocessing_window = !show_postprocessing_window;
-				}
-				else if (event.key.keysym.sym == SDLK_F3) {
-					show_a2video_window = !show_a2video_window;
-				}
-				else if (event.key.keysym.sym == SDLK_F8) {
-					_M8DBG_bShowF8Window = !_M8DBG_bShowF8Window;
-				}
-				// Handle fullscreen toggle for Alt+Enter or F11
-				else if ((event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) ||
-					event.key.keysym.sym == SDLK_F11) {
-					bIsFullscreen = !bIsFullscreen; // Toggle state
-					SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-					UpdateImGuiDisplaySize(window);
-					ResetFPSCalculations(a2VideoManager);
-				}
-				// Camera movement!
-				if (!io.WantCaptureKeyboard) {
-					switch (event.key.keysym.sym)
+					case SDL_WINDOWEVENT:
 					{
-					case SDLK_w:
-						sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
+						if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+							int width = event.window.data1;
+							int height = event.window.data2;
+							glViewport(0, 0, width, height);
+						}
+						if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
+							done = true;
+					}
 						break;
-					case SDLK_s:
-						sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
+					case SDL_MOUSEMOTION:
+						lastMouseMoveTime = SDL_GetTicks();
+						if (event.motion.state & SDL_BUTTON_RMASK && !io.WantCaptureMouse) {
+							// Move the camera when the right mouse button is pressed while moving the mouse
+							sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
+						}
 						break;
-					case SDLK_a:
-						sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
+					case SDL_MOUSEWHEEL:
+						if (!io.WantCaptureMouse) {
+							sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
+						}
 						break;
-					case SDLK_d:
-						sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
-						break;
-					case SDLK_q:
-						sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
-						break;
-					case SDLK_z:
-						sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
+					case SDL_KEYDOWN:
+					{
+						if (event.key.keysym.sym == SDLK_c) {  // Quit on Ctrl-c
+							auto state = SDL_GetKeyboardState(NULL);
+							if (state[SDL_SCANCODE_LCTRL]) {
+								done = true;
+								break;
+							}
+						}
+						else if (event.key.keysym.sym == SDLK_F1) {  // Toggle ImGUI with F1
+							showImGui = !showImGui;
+							ResetFPSCalculations(a2VideoManager);
+						}
+						else if (event.key.keysym.sym == SDLK_F2) {
+							show_postprocessing_window = !show_postprocessing_window;
+						}
+						else if (event.key.keysym.sym == SDLK_F3) {
+							show_a2video_window = !show_a2video_window;
+						}
+						else if (event.key.keysym.sym == SDLK_F8) {
+							_M8DBG_bShowF8Window = !_M8DBG_bShowF8Window;
+						}
+						// Handle fullscreen toggle for Alt+Enter or F11
+						else if ((event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) ||
+							event.key.keysym.sym == SDLK_F11) {
+							bIsFullscreen = !bIsFullscreen; // Toggle state
+							SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+							UpdateImGuiDisplaySize(window);
+							ResetFPSCalculations(a2VideoManager);
+						}
+						// Camera movement!
+						if (!io.WantCaptureKeyboard) {
+							switch (event.key.keysym.sym)
+							{
+							case SDLK_w:
+								sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
+								break;
+							case SDLK_s:
+								sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
+								break;
+							case SDLK_a:
+								sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
+								break;
+							case SDLK_d:
+								sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
+								break;
+							case SDLK_q:
+								sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
+								break;
+							case SDLK_z:
+								sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
+								break;
+							default:
+								break;
+							};
+						}
+					}
 						break;
 					default:
 						break;
-					};
-				}
-			}
-                break;
-            default:
-                break;
-            }   // switch event.type
-        }   // while SDL_PollEvent
+					}   // switch event.type
+				}   // while SDL_PollEvent
 
-		if (!_M8DBG_bDisableVideoRender)
-		{
-			if (sdhrManager->IsSdhrEnabled())
-				out_tex_id = sdhrManager->Render();
-			else
-				out_tex_id = a2VideoManager->Render();
-		}
-
-		if (out_tex_id == UINT32_MAX)
-			std::cerr << "ERROR: NO RENDERER OUTPUT!" << std::endl;
-		
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		
-		glClearColor(
-			window_bgcolor[0], 
-			window_bgcolor[1], 
-			window_bgcolor[2],
-			window_bgcolor[3]);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		if (!_M8DBG_bDisablePPRender)
-			postProcessor->Render(window, out_tex_id);
-
-		if (show_F1_window)
-		{
-			// Disable mouse if unused after cursorHideDelay
-			// ImGui overrides SDL_ShowCursor(), so we use ImGui's methods
-			// We could tell ImGui not to override it, but it really doesn't matter
-			if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
-				ImGui::SetMouseCursor(ImGuiMouseCursor_None);
-			else
-				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-
-			// Start the Dear ImGui frame
-			ImGui_ImplOpenGL3_NewFrame();
-			ImGui_ImplSDL2_NewFrame();
-			ImGui::NewFrame();
-
-			// Get the current window size
-			ImVec2 window_pos = ImVec2(0, 0);
-			ImVec2 window_size = ImGui::GetIO().DisplaySize;
-
-			// Calculate the coordinates to cover the full screen
-			ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Top-left
-			ImVec2 uv_max = ImVec2(1.0f, 1.0f); // Bottom-right
-
-			// Get the foreground draw list to render on top of everything else
-			ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
-
-
-			// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-			if (show_demo_window)
-				ImGui::ShowDemoWindow(&show_demo_window);
-
-			ImGui::Begin("Super Duper Display", &show_F1_window);
-			if (!ImGui::IsWindowCollapsed())
-			{
-				ImGui::PushItemWidth(110);
-				ImGui::Text("Press F1 at any time to toggle the GUI");
-				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-				ImGui::Text("Worst Frame rate %.3f ms/frame", 1000.0f / fps_worst);
-				int _vw, _vh;
-				SDL_GL_GetDrawableSize(window, &_vw, &_vh);
-				ImGui::Text("Drawable Size: %d x %d", _vw, _vh);
-				ImGui::Text("A2 Screen Size: %d x %d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);
-				ImGui::Separator();
-				ImGui::Text("Packet Pool Count: %lu", get_packet_pool_count());
-				ImGui::Text("Max Incoming Packet Queue: %lu", get_max_incoming_packets());
-				ImGui::Text("Network Processing Time: %llu ns", get_duration_network_processing_ns());
-				ImGui::Text("Packets Processing Time: %llu ns", get_duration_packet_processing_ns());
-				ImGui::Separator();
-				ImGui::Text("Region: ");  ImGui::SameLine();
-				if (cycleCounter->isVideoRegionDynamic)
-					vbl_region = 0;
-				else
-					vbl_region = (cycleCounter->GetVideoRegion() == VideoRegion_e::PAL ? 1 : 2);
-				if (ImGui::RadioButton("Auto##REGION", &vbl_region, 0))
 				{
-					cycleCounter->isVideoRegionDynamic = true;
-				}
-				if (vbl_region == 0)
-				{
-					ImGui::SameLine();
-					(cycleCounter->GetVideoRegion() == VideoRegion_e::PAL
-						? ImGui::Text(" (P)")
-						: ImGui::Text(" (N)"));
-				}
-				ImGui::SameLine();
-				if (ImGui::RadioButton("PAL##REGION", &vbl_region, 1))
-				{
-					cycleCounter->isVideoRegionDynamic = false;
-					cycleCounter->SetVideoRegion(VideoRegion_e::PAL);
-				}
-				ImGui::SameLine();
-				if (ImGui::RadioButton("NTSC##REGION", &vbl_region, 2))
-				{
-					cycleCounter->isVideoRegionDynamic = false;
-					cycleCounter->SetVideoRegion(VideoRegion_e::NTSC);
-				}
-				if (!cycleCounter->isVideoRegionDynamic)
-				{
-					vbl_slider_val = cycleCounter->GetScreenCycles();
-					if (ImGui::InputInt("VBL Start Shift", &vbl_slider_val, 1, (CYCLES_TOTAL_PAL-CYCLES_TOTAL_NTSC)/10))
+					AIGPScoped("VideoManager", "Video Render");
+					// Load up the first screen in SHR, with green border color
+					if (!_M8DBG_bDisableVideoRender)
 					{
-						cycleCounter->SetVBLStart(vbl_slider_val);
+						if (sdhrManager->IsSdhrEnabled())
+							out_tex_id = sdhrManager->Render();
+						else
+							out_tex_id = a2VideoManager->Render();
 					}
 				}
-				ImGui::Separator();
-				ImGui::PushItemWidth(140);
-				if (ImGui::ColorEdit4("Window Color", window_bgcolor)) {
-					// std::cerr << "color " << window_bgcolor[0] << std::endl;
-				}
-				ImGui::PopItemWidth();
 
-				ImGui::Checkbox("PostProcessing Window (F2)", &show_postprocessing_window);
-				ImGui::Checkbox("Apple 2 Video Modes Window (F3)", &show_a2video_window);
-				ImGui::Checkbox("M8 Debug Window (F8)", &_M8DBG_bShowF8Window);
-				if (ImGui::Checkbox("Fullscreen (F11 or Alt-Enter)", &bIsFullscreen))
+				if (out_tex_id == UINT32_MAX)
+					std::cerr << "ERROR: NO RENDERER OUTPUT!" << std::endl;
+				
 				{
-					SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+					AIGPScoped("OpenGL", "glBindFramebuffer");
+					glBindFramebuffer(GL_FRAMEBUFFER, 0);
 				}
-				if (ImGui::Checkbox("VSYNC", &g_swapInterval))
+				
 				{
-					set_vsync(g_swapInterval);
-					ResetFPSCalculations(a2VideoManager);
+					AIGPScoped("OpenGL", "glClearColor");
+					glClearColor(
+								 window_bgcolor[0],
+								 window_bgcolor[1],
+								 window_bgcolor[2],
+								 window_bgcolor[3]);
 				}
-				if (g_swapInterval)
+
 				{
-					ImGui::SameLine();
-					ImGui::Text("On");
-					if (g_adaptiveVsync)
-					{
-						ImGui::SameLine();
-						ImGui::Text("(Adaptive)");
+					AIGPScoped("OpenGL", "glClear");
+					glClear(GL_COLOR_BUFFER_BIT);
+				}
+
+				if (!_M8DBG_bDisablePPRender)
+				{
+					AIGPScoped("PostProcessor", "PP Render");
+					postProcessor->Render(window, out_tex_id);
+				}
+				
+				if (showImGui)
+				{
+					AIGPScoped("ImGUI", "showImGui");
+					// Disable mouse if unused after cursorHideDelay
+					// ImGui overrides SDL_ShowCursor(), so we use ImGui's methods
+					// We could tell ImGui not to override it, but it really doesn't matter
+					if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
+						ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+					else
+						ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+
+					// Start the Dear ImGui frame
+					ImGui_ImplOpenGL3_NewFrame();
+					ImGui_ImplSDL2_NewFrame();
+					ImGui::NewFrame();
+
+					// Get the current window size
+					ImVec2 window_pos = ImVec2(0, 0);
+					ImVec2 window_size = ImGui::GetIO().DisplaySize;
+
+					// Calculate the coordinates to cover the full screen
+					ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Top-left
+					ImVec2 uv_max = ImVec2(1.0f, 1.0f); // Bottom-right
+
+					// Get the foreground draw list to render on top of everything else
+					ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
+
+					if (ImGui::BeginMainMenuBar()) {
+						auto& io = ImGui::GetIO();
+						ImGui::Text("Dear ImgGui %s | average %.3f ms/frame (%.1f FPS)", IMGUI_VERSION, 1000.0f / io.Framerate, io.Framerate);
+						ImGui::Spacing();
+						ImGui::MenuItem("ImGui", nullptr, &show_MainUI_window);
+						ImGui::Spacing();
+						ImGui::MenuItem("A2 Video (F3)", nullptr, &show_a2video_window);
+						ImGui::Spacing();
+						ImGui::MenuItem("Post Processor (F2)", nullptr, &show_postprocessing_window);
+						ImGui::Spacing();
+						ImGui::MenuItem("Temp Debug (F8)", nullptr, &_M8DBG_bShowF8Window);
+						ImGui::Spacing();
+						ImGui::MenuItem("Recorder", nullptr, &show_recorder_window);
+						ImGui::Spacing();
+						ImGui::MenuItem("Flame Graph", nullptr, &show_profiler_flame_graph);
+						ImGui::EndMainMenuBar();
 					}
-				}
-				ImGui::Separator();
-				if (ImGui::Button("Reset")) {
-					a2VideoManager->ResetComputer();
-					DisplaySplashScreen(a2VideoManager, memManager);
-				}
-				if (ImGui::Button("Quit App (Ctrl-c)"))
-					done = true;
-				if (ImGui::CollapsingHeader("Other Windows"))
-				{
-					ImGui::Checkbox("Event Recorder Window", &show_recorder_window);
-					ImGui::Checkbox("Textures Window", &show_texture_window);
-					ImGui::Checkbox("Apple //e Memory Window", &mem_edit_a2e.Open);
-					ImGui::Checkbox("ImGui Metrics Window", &show_metrics_window);
-					// ImGui::Checkbox("ImGui Demo Window", &show_demo_window);
-				}
-				if (ImGui::CollapsingHeader("SDHR"))
-				{
-					auto _c = sdhrManager->camera;
-					auto _pos = _c.Position;
-					ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
-					ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
-					ImGui::Checkbox("Untextured Geometry", &sdhrManager->bDebugNoTextures);         // Show textures toggle
-					ImGui::Checkbox("Perspective Projection", &sdhrManager->bUsePerspective);       // Change projection type
-					ImGui::Checkbox("SDHR Upload Region Memory Window", &mem_edit_upload.Open);
-				}
-				ImGui::PopItemWidth();
-			}
-			ImGui::End();
-			
-			// Show the postprocessing window
-			if (show_postprocessing_window)
-				postProcessor->DisplayImGuiWindow(&show_postprocessing_window);
 
-			// Show the a2VideoManager window
-			if (show_a2video_window)
-				a2VideoManager->DisplayImGuiWindow(&show_a2video_window);
+					// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+					if (show_demo_window)
+						ImGui::ShowDemoWindow(&show_demo_window);
 
-			// The VCR event recorder
-			if (show_recorder_window)
-				eventRecorder->DisplayImGuiWindow(&show_recorder_window);
-
-			// Show the metrics window
-			if (show_metrics_window)
-				ImGui::ShowMetricsWindow(&show_metrics_window);
-
-			// Show the Apple //e memory
-			if (mem_edit_a2e.Open)
-			{
-				mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", memManager->GetApple2MemPtr(), 2 * _A2_MEMORY_SHADOW_END);
-			}
-
-			// Show the upload data region memory
-			if (mem_edit_upload.Open)
-			{
-				mem_edit_upload.DrawWindow("Memory Editor: Upload memory", memManager->GetApple2MemPtr(), 2 * _A2_MEMORY_SHADOW_END);
-			}
-
-			// Show the 16 textures loaded (which are always bound to GL_TEXTURE2 -> GL_TEXTURE18)
-			if (show_texture_window)
-			{
-				ImGui::Begin("Texture Viewer", &show_texture_window);
-				ImVec2 avail_size = ImGui::GetContentRegionAvail();
-				ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES + 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
-				GLint _w, _h;
-				if (_slotnum < _SDHR_MAX_TEXTURES)
-				{
-					glBindTexture(GL_TEXTURE_2D, glhelper->get_texture_id_at_slot(_slotnum));
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
-					ImGui::Text("Texture ID: %d (%d x %d)", (int)glhelper->get_texture_id_at_slot(_slotnum), _w, _h);
-					ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum),
-						ImVec2(avail_size.x, avail_size.y - 30), ImVec2(0, 0), ImVec2(1, 1));
-				}
-				else if (_slotnum == _SDHR_MAX_TEXTURES)
-				{
-					glBindTexture(GL_TEXTURE_2D, a2VideoManager->GetOutputTextureId());
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
-					ImGui::Text("Output Texture ID: %d (%d x %d)", (int)a2VideoManager->GetOutputTextureId(), _w, _h);
-					ImGui::Image((void*)a2VideoManager->GetOutputTextureId(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
-				}
-				else if (_slotnum == _SDHR_MAX_TEXTURES + 1)
-				{
-					glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
-					GLint target_tex_id = 0;
-					glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, target_tex_id);
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
-					ImGui::Text("_PP_INPUT_TEXTURE_UNIT: %d (%d x %d)", target_tex_id, _w, _h);
-					ImGui::Image((void*)target_tex_id, avail_size, ImVec2(0, 0), ImVec2(1, 1));
-				}
-				glBindTexture(GL_TEXTURE_2D, 0);
-				ImGui::End();
-			}
-
-			if (_M8DBG_bShowF8Window)
-			{
-				ImGui::Begin("Special Temporary Debugging", &_M8DBG_bShowF8Window);
-				if (!ImGui::IsWindowCollapsed())
-				{
-					// Retrieve OpenGL version info
-					const GLubyte* renderer = glGetString(GL_RENDERER);
-					const GLubyte* version = glGetString(GL_VERSION);
-					GLint major, minor;
-					glGetIntegerv(GL_MAJOR_VERSION, &major);
-					glGetIntegerv(GL_MINOR_VERSION, &minor);
-					GLint accelerated = 0;
-					SDL_GL_GetAttribute(SDL_GL_ACCELERATED_VISUAL, &accelerated);
-					ImGui::Text("Renderer: %s", renderer);
-					ImGui::Text("OpenGL version: %s", version);
-					ImGui::Text("Major version: %d", major);
-					ImGui::Text("Minor version: %d", minor);
-					ImGui::Text("Hardware Acceleration: %s", accelerated ? "Enabled" : "Disabled");
-					ImGui::Separator();
-					ImGui::PushItemWidth(80);
-					ImGui::InputInt("Width", &_M8DBG_windowWidth, 10, 100); ImGui::SameLine();
-					ImGui::InputInt("Height", &_M8DBG_windowHeight, 10, 100); ImGui::SameLine();
-					if (ImGui::Button("Apply"))
-					{
-						SDL_SetWindowSize(window, _M8DBG_windowWidth, _M8DBG_windowHeight);
+					if (show_profiler_flame_graph) {
+						iagp::InAppGpuProfiler::Instance()->DrawFlamGraph(  //
+																		  "In App Gpu Profiler Flame Graph",
+																		  &show_profiler_flame_graph);
 					}
-					ImGui::Separator();
-					ImGui::PopItemWidth();
-					ImGui::PushItemWidth(110);
-					if (ImGui::Checkbox("Display FPS on screen", &_M8DBG_bDisplayFPSOnScreen))
-					{
-						ResetFPSCalculations(a2VideoManager);
-						DrawFPSOverlay(a2VideoManager);
-					}
-					ImGui::SliderFloat("Average FPS range (s)", &_M8DBG_average_fps_window, 0.1f, 10.f, "%.1f");
-					if (ImGui::Button("Reset FPS numbers"))
-						ResetFPSCalculations(a2VideoManager);
-					ImGui::Separator();
-					if (ImGui::Checkbox("Disable Apple 2 Video render", &_M8DBG_bDisableVideoRender))
-						ResetFPSCalculations(a2VideoManager);
-					if (ImGui::Checkbox("Disable PostProcessing render", &_M8DBG_bDisablePPRender))
-						ResetFPSCalculations(a2VideoManager);
-					if (ImGui::Checkbox("Force render even if VRAM unchanged", &a2VideoManager->bAlwaysRenderBuffer))
-						ResetFPSCalculations(a2VideoManager);
-					if (ImGui::Checkbox("VSYNC##M8", &g_swapInterval))
-					{
-						set_vsync(g_swapInterval);
-						ResetFPSCalculations(a2VideoManager);
-					}
-					if (g_swapInterval)
-					{
-						ImGui::SameLine();
-						ImGui::Text("On");
-						if (g_adaptiveVsync)
+					
+					if (show_MainUI_window) {
+						AIGPScoped("ImGUI", "Main ImGui Window");
+						ImGui::Begin("Super Duper Display", &show_MainUI_window);
+						if (!ImGui::IsWindowCollapsed())
 						{
+							ImGui::PushItemWidth(110);
+							ImGui::Text("Press F1 at any time to toggle the GUI");
+							ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+							ImGui::Text("Worst Frame rate %.3f ms/frame", 1000.0f / fps_worst);
+							int _vw, _vh;
+							SDL_GL_GetDrawableSize(window, &_vw, &_vh);
+							ImGui::Text("Drawable Size: %d x %d", _vw, _vh);
+							ImGui::Text("A2 Screen Size: %d x %d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);
+							ImGui::Separator();
+							ImGui::Text("Packet Pool Count: %lu", get_packet_pool_count());
+							ImGui::Text("Max Incoming Packet Queue: %lu", get_max_incoming_packets());
+							ImGui::Text("Network Processing Time: %llu ns", get_duration_network_processing_ns());
+							ImGui::Text("Packets Processing Time: %llu ns", get_duration_packet_processing_ns());
+							ImGui::Separator();
+							ImGui::Text("Region: ");  ImGui::SameLine();
+							if (cycleCounter->isVideoRegionDynamic)
+								vbl_region = 0;
+							else
+								vbl_region = (cycleCounter->GetVideoRegion() == VideoRegion_e::PAL ? 1 : 2);
+							if (ImGui::RadioButton("Auto##REGION", &vbl_region, 0))
+							{
+								cycleCounter->isVideoRegionDynamic = true;
+							}
+							if (vbl_region == 0)
+							{
+								ImGui::SameLine();
+								(cycleCounter->GetVideoRegion() == VideoRegion_e::PAL
+									? ImGui::Text(" (P)")
+									: ImGui::Text(" (N)"));
+							}
 							ImGui::SameLine();
-							ImGui::Text("(Adaptive)");
+							if (ImGui::RadioButton("PAL##REGION", &vbl_region, 1))
+							{
+								cycleCounter->isVideoRegionDynamic = false;
+								cycleCounter->SetVideoRegion(VideoRegion_e::PAL);
+							}
+							ImGui::SameLine();
+							if (ImGui::RadioButton("NTSC##REGION", &vbl_region, 2))
+							{
+								cycleCounter->isVideoRegionDynamic = false;
+								cycleCounter->SetVideoRegion(VideoRegion_e::NTSC);
+							}
+							if (!cycleCounter->isVideoRegionDynamic)
+							{
+								vbl_slider_val = cycleCounter->GetScreenCycles();
+								if (ImGui::InputInt("VBL Start Shift", &vbl_slider_val, 1, (CYCLES_TOTAL_PAL-CYCLES_TOTAL_NTSC)/10))
+								{
+									cycleCounter->SetVBLStart(vbl_slider_val);
+								}
+							}
+							ImGui::Separator();
+							ImGui::PushItemWidth(140);
+							if (ImGui::ColorEdit4("Window Color", window_bgcolor)) {
+								// std::cerr << "color " << window_bgcolor[0] << std::endl;
+							}
+							ImGui::PopItemWidth();
+
+							ImGui::Checkbox("PostProcessing Window (F2)", &show_postprocessing_window);
+							ImGui::Checkbox("Apple 2 Video Modes Window (F3)", &show_a2video_window);
+							ImGui::Checkbox("M8 Debug Window (F8)", &_M8DBG_bShowF8Window);
+							ImGui::Checkbox("Profiler Flame Graph", &show_profiler_flame_graph);
+							if (ImGui::Checkbox("Fullscreen (F11 or Alt-Enter)", &bIsFullscreen))
+							{
+								SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+							}
+							if (ImGui::Checkbox("VSYNC", &g_swapInterval))
+							{
+								set_vsync(g_swapInterval);
+								ResetFPSCalculations(a2VideoManager);
+							}
+							if (g_swapInterval)
+							{
+								ImGui::SameLine();
+								ImGui::Text("On");
+								if (g_adaptiveVsync)
+								{
+									ImGui::SameLine();
+									ImGui::Text("(Adaptive)");
+								}
+							}
+							ImGui::Separator();
+							if (ImGui::Button("Reset")) {
+								a2VideoManager->ResetComputer();
+								DisplaySplashScreen(a2VideoManager, memManager);
+							}
+							if (ImGui::Button("Quit App (Ctrl-c)"))
+								done = true;
+							if (ImGui::CollapsingHeader("Other Windows"))
+							{
+								ImGui::Checkbox("Event Recorder Window", &show_recorder_window);
+								ImGui::Checkbox("Textures Window", &show_texture_window);
+								ImGui::Checkbox("Apple //e Memory Window", &mem_edit_a2e.Open);
+								ImGui::Checkbox("ImGui Metrics Window", &show_metrics_window);
+								// ImGui::Checkbox("ImGui Demo Window", &show_demo_window);
+							}
+							if (ImGui::CollapsingHeader("SDHR"))
+							{
+								auto _c = sdhrManager->camera;
+								auto _pos = _c.Position;
+								ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
+								ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
+								ImGui::Checkbox("Untextured Geometry", &sdhrManager->bDebugNoTextures);         // Show textures toggle
+								ImGui::Checkbox("Perspective Projection", &sdhrManager->bUsePerspective);       // Change projection type
+								ImGui::Checkbox("SDHR Upload Region Memory Window", &mem_edit_upload.Open);
+							}
+							ImGui::PopItemWidth();
 						}
+						ImGui::End();
 					}
-					static bool _m8ssSHR = memManager->IsSoftSwitch(A2SS_SHR);
-					if (ImGui::Checkbox("A2SS_SHR##M8", &_m8ssSHR)) {
-						memManager->SetSoftSwitch(A2SS_SHR, _m8ssSHR);
-						ResetFPSCalculations(a2VideoManager);
-					}
-					if (ImGui::Checkbox("Run Karateka Demo", &_M8DBG_bRunKarateka))
+
+					// Show the postprocessing window
+					if (show_postprocessing_window)
 					{
-						if (_M8DBG_bRunKarateka)
+						AIGPScoped("ImGUI", "PP Window");
+						postProcessor->DisplayImGuiWindow(&show_postprocessing_window);
+					}
+
+					// Show the a2VideoManager window
+					if (show_a2video_window)
+					{
+						AIGPScoped("ImGUI", "A2Video Window");
+						a2VideoManager->DisplayImGuiWindow(&show_a2video_window);
+					}
+
+					// The VCR event recorder
+					if (show_recorder_window)
+						eventRecorder->DisplayImGuiWindow(&show_recorder_window);
+
+					// Show the metrics window
+					if (show_metrics_window)
+						ImGui::ShowMetricsWindow(&show_metrics_window);
+
+					// Show the Apple //e memory
+					if (mem_edit_a2e.Open)
+					{
+						mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", memManager->GetApple2MemPtr(), 2 * _A2_MEMORY_SHADOW_END);
+					}
+
+					// Show the upload data region memory
+					if (mem_edit_upload.Open)
+					{
+						mem_edit_upload.DrawWindow("Memory Editor: Upload memory", memManager->GetApple2MemPtr(), 2 * _A2_MEMORY_SHADOW_END);
+					}
+
+					// Show the 16 textures loaded (which are always bound to GL_TEXTURE2 -> GL_TEXTURE18)
+					if (show_texture_window)
+					{
+						ImGui::Begin("Texture Viewer", &show_texture_window);
+						ImVec2 avail_size = ImGui::GetContentRegionAvail();
+						ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES + 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
+						GLint _w, _h;
+						if (_slotnum < _SDHR_MAX_TEXTURES)
 						{
-							std::ifstream karatekafile("./recordings/karateka.vcr", std::ios::binary);
-							if (!karatekafile.is_open()) {
-								_M8DBG_bKaratekaLoadFailed = true;
+							glBindTexture(GL_TEXTURE_2D, glhelper->get_texture_id_at_slot(_slotnum));
+							glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
+							glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
+							ImGui::Text("Texture ID: %d (%d x %d)", (int)glhelper->get_texture_id_at_slot(_slotnum), _w, _h);
+							ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum),
+								ImVec2(avail_size.x, avail_size.y - 30), ImVec2(0, 0), ImVec2(1, 1));
+						}
+						else if (_slotnum == _SDHR_MAX_TEXTURES)
+						{
+							glBindTexture(GL_TEXTURE_2D, a2VideoManager->GetOutputTextureId());
+							glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
+							glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
+							ImGui::Text("Output Texture ID: %d (%d x %d)", (int)a2VideoManager->GetOutputTextureId(), _w, _h);
+							ImGui::Image((void*)a2VideoManager->GetOutputTextureId(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+						}
+						else if (_slotnum == _SDHR_MAX_TEXTURES + 1)
+						{
+							glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
+							GLint target_tex_id = 0;
+							glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
+							glActiveTexture(GL_TEXTURE0);
+							glBindTexture(GL_TEXTURE_2D, target_tex_id);
+							glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
+							glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
+							ImGui::Text("_PP_INPUT_TEXTURE_UNIT: %d (%d x %d)", target_tex_id, _w, _h);
+							ImGui::Image((void*)target_tex_id, avail_size, ImVec2(0, 0), ImVec2(1, 1));
+						}
+						glBindTexture(GL_TEXTURE_2D, 0);
+						ImGui::End();
+					}
+
+					if (_M8DBG_bShowF8Window)
+					{
+						AIGPScoped("ImGUI", "F8 Window");
+						ImGui::Begin("Special Temporary Debugging", &_M8DBG_bShowF8Window);
+						if (!ImGui::IsWindowCollapsed())
+						{
+							// Retrieve OpenGL version info
+							const GLubyte* renderer = glGetString(GL_RENDERER);
+							const GLubyte* version = glGetString(GL_VERSION);
+							GLint major, minor;
+							glGetIntegerv(GL_MAJOR_VERSION, &major);
+							glGetIntegerv(GL_MINOR_VERSION, &minor);
+							GLint accelerated = 0;
+							SDL_GL_GetAttribute(SDL_GL_ACCELERATED_VISUAL, &accelerated);
+							ImGui::Text("Renderer: %s", renderer);
+							ImGui::Text("OpenGL version: %s", version);
+							ImGui::Text("Major version: %d", major);
+							ImGui::Text("Minor version: %d", minor);
+							ImGui::Text("Hardware Acceleration: %s", accelerated ? "Enabled" : "Disabled");
+							ImGui::Separator();
+							ImGui::PushItemWidth(80);
+							ImGui::InputInt("Width", &_M8DBG_windowWidth, 10, 100); ImGui::SameLine();
+							ImGui::InputInt("Height", &_M8DBG_windowHeight, 10, 100); ImGui::SameLine();
+							if (ImGui::Button("Apply"))
+							{
+								SDL_SetWindowSize(window, _M8DBG_windowWidth, _M8DBG_windowHeight);
 							}
-							else {
-								eventRecorder->ReadRecordingFile(karatekafile);
-								eventRecorder->StartReplay();
-								memManager->SetSoftSwitch(A2SS_SHR, false);
-								_m8ssSHR = false;
-								memManager->SetSoftSwitch(A2SS_TEXT, false);
-								memManager->SetSoftSwitch(A2SS_HIRES, true);
+							ImGui::Separator();
+							ImGui::PopItemWidth();
+							ImGui::PushItemWidth(110);
+							if (ImGui::Checkbox("Display FPS on screen", &_M8DBG_bDisplayFPSOnScreen))
+							{
+								ResetFPSCalculations(a2VideoManager);
+								DrawFPSOverlay(a2VideoManager);
+							}
+							ImGui::SliderFloat("Average FPS range (s)", &_M8DBG_average_fps_window, 0.1f, 10.f, "%.1f");
+							if (ImGui::Button("Reset FPS numbers"))
+								ResetFPSCalculations(a2VideoManager);
+							ImGui::Separator();
+							if (ImGui::Checkbox("Disable Apple 2 Video render", &_M8DBG_bDisableVideoRender))
+								ResetFPSCalculations(a2VideoManager);
+							if (ImGui::Checkbox("Disable PostProcessing render", &_M8DBG_bDisablePPRender))
+								ResetFPSCalculations(a2VideoManager);
+							if (ImGui::Checkbox("Force render even if VRAM unchanged", &a2VideoManager->bAlwaysRenderBuffer))
+								ResetFPSCalculations(a2VideoManager);
+							if (ImGui::Checkbox("VSYNC##M8", &g_swapInterval))
+							{
+								set_vsync(g_swapInterval);
+								ResetFPSCalculations(a2VideoManager);
+							}
+							if (g_swapInterval)
+							{
+								ImGui::SameLine();
+								ImGui::Text("On");
+								if (g_adaptiveVsync)
+								{
+									ImGui::SameLine();
+									ImGui::Text("(Adaptive)");
+								}
+							}
+							static bool _m8ssSHR = memManager->IsSoftSwitch(A2SS_SHR);
+							if (ImGui::Checkbox("A2SS_SHR##M8", &_m8ssSHR)) {
+								memManager->SetSoftSwitch(A2SS_SHR, _m8ssSHR);
+								ResetFPSCalculations(a2VideoManager);
+							}
+							if (ImGui::Checkbox("Run Karateka Demo", &_M8DBG_bRunKarateka))
+							{
+								if (_M8DBG_bRunKarateka)
+								{
+									std::ifstream karatekafile("./recordings/karateka.vcr", std::ios::binary);
+									if (!karatekafile.is_open()) {
+										_M8DBG_bKaratekaLoadFailed = true;
+									}
+									else {
+										eventRecorder->ReadRecordingFile(karatekafile);
+										eventRecorder->StartReplay();
+										memManager->SetSoftSwitch(A2SS_SHR, false);
+										_m8ssSHR = false;
+										memManager->SetSoftSwitch(A2SS_TEXT, false);
+										memManager->SetSoftSwitch(A2SS_HIRES, true);
+									}
+								}
+								else {
+									eventRecorder->StopReplay();
+								}
+							}
+							ImGui::Separator();
+							ImGui::Text("Legacy Shader");
+							const char* _legshaders[] = { "0 - Full" };
+							static int _legshader_current = 0;
+							if (ImGui::ListBox("##LegacyShader", &_legshader_current, _legshaders, IM_ARRAYSIZE(_legshaders), 4))
+							{
+								a2VideoManager->SelectLegacyShader(_legshader_current);
+								ResetFPSCalculations(a2VideoManager);
+							}
+							ImGui::Text("SHR Shader");
+							const char* _shrshaders[] = { "0 - Full" };
+							static int _shrshader_current = 0;
+							if (ImGui::ListBox("##SHRShader", &_shrshader_current, _shrshaders, IM_ARRAYSIZE(_shrshaders), 3))
+							{
+								a2VideoManager->SelectSHRShader(_shrshader_current);
+								ResetFPSCalculations(a2VideoManager);
+							}
+							ImGui::PopItemWidth();
+
+						}
+
+						if (_M8DBG_bKaratekaLoadFailed)
+						{
+							ImGui::OpenPopup("File Loading Error");
+							if (ImGui::BeginPopupModal("File Loading Error", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+							{
+								ImGui::Text("Failed to open the file ./recordings/karateka.vcr");
+								if (ImGui::Button("OK", ImVec2(120, 0))) {
+									ImGui::CloseCurrentPopup();
+									_M8DBG_bKaratekaLoadFailed = false;
+									_M8DBG_bRunKarateka = false;
+								}
+								ImGui::EndPopup();
 							}
 						}
-						else {
-							eventRecorder->StopReplay();
-						}
+						ImGui::End();
 					}
-					ImGui::Separator();
-					ImGui::Text("Legacy Shader");
-					const char* _legshaders[] = { "0 - Full" };
-					static int _legshader_current = 0;
-					if (ImGui::ListBox("##LegacyShader", &_legshader_current, _legshaders, IM_ARRAYSIZE(_legshaders), 4))
-					{
-						a2VideoManager->SelectLegacyShader(_legshader_current);
-						ResetFPSCalculations(a2VideoManager);
-					}
-					ImGui::Text("SHR Shader");
-					const char* _shrshaders[] = { "0 - Full" };
-					static int _shrshader_current = 0;
-					if (ImGui::ListBox("##SHRShader", &_shrshader_current, _shrshaders, IM_ARRAYSIZE(_shrshaders), 3))
-					{
-						a2VideoManager->SelectSHRShader(_shrshader_current);
-						ResetFPSCalculations(a2VideoManager);
-					}
-					ImGui::PopItemWidth();
 
-				}
+					// Rendering
+					{
+						AIGPScoped("ImGUI", "Render");
+						ImGui::Render();
+					}
 
-				if (_M8DBG_bKaratekaLoadFailed)
+					{
+						AIGPScoped("ImGUI", "OpenGL3_RenderDrawData");
+						ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+					}
+				}	// show F1 window
+
 				{
-					ImGui::OpenPopup("File Loading Error");
-					if (ImGui::BeginPopupModal("File Loading Error", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-					{
-						ImGui::Text("Failed to open the file ./recordings/karateka.vcr");
-						if (ImGui::Button("OK", ImVec2(120, 0))) {
-							ImGui::CloseCurrentPopup();
-							_M8DBG_bKaratekaLoadFailed = false;
-							_M8DBG_bRunKarateka = false;
-						}
-						ImGui::EndPopup();
-					}
+					AIGPScoped("SDL", "GL_SwapWindow");
+					SDL_GL_SwapWindow(window);
 				}
-				ImGui::End();
-			}
-
-			// Rendering
-			ImGui::Render();
-
-			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-		}	// show F1 window
-
-		SDL_GL_SwapWindow(window);
-
-		// FPS overlay - Calculate frame rates
-		fps_frame_count++;
-		uint32_t currentTime = SDL_GetTicks();
-		uint32_t elapsedTime = currentTime - fps_start_time;
-		// Calculate frame rate every second
-		if (elapsedTime > (_M8DBG_average_fps_window * 1000))
-		{
-			float fps = fps_frame_count / (elapsedTime / 1000.0f);
-			if ((fps_worst > fps) && (fps > 0))
-				fps_worst = fps;
-
-			//if (false)
-			if (_M8DBG_bDisplayFPSOnScreen)
+			} // AIGP Frame
+			
+			// FPS overlay - Calculate frame rates
+			fps_frame_count++;
+			uint32_t currentTime = SDL_GetTicks();
+			uint32_t elapsedTime = currentTime - fps_start_time;
+			// Calculate frame rate every second
+			if (elapsedTime > (_M8DBG_average_fps_window * 1000))
 			{
-				snprintf(fps_str_buf, 10,  "%.0f ", fps);
-				a2VideoManager->EraseOverlayRange(6, 13, 0);
-				a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b11010010, 13, 0);
-				snprintf(fps_str_buf, 10, "%.0f ", fps_worst);
-				a2VideoManager->EraseOverlayRange(6, 13, 1);
-				a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b10010010, 13, 1);
+				float fps = fps_frame_count / (elapsedTime / 1000.0f);
+				if ((fps_worst > fps) && (fps > 0))
+					fps_worst = fps;
+
+				//if (false)
+				if (_M8DBG_bDisplayFPSOnScreen)
+				{
+					snprintf(fps_str_buf, 10,  "%.0f ", fps);
+					a2VideoManager->EraseOverlayRange(6, 13, 0);
+					a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b11010010, 13, 0);
+					snprintf(fps_str_buf, 10, "%.0f ", fps_worst);
+					a2VideoManager->EraseOverlayRange(6, 13, 1);
+					a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b10010010, 13, 1);
+				}
+
+
+				// Reset for next calculation
+				fps_start_time = currentTime;
+				fps_frame_count = 0;
 			}
-
-
-			// Reset for next calculation
-			fps_start_time = currentTime;
-			fps_frame_count = 0;
 		}
 
+		AIGPCollect;  // collect all measure queries out of Main Frame
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL end of render error: " << glerr << std::endl;
 		}
-
     }
 #ifdef __EMSCRIPTEN__
     EMSCRIPTEN_MAINLOOP_END;
@@ -966,7 +1036,7 @@ int main(int argc, char* argv[])
 			{"vsync", g_swapInterval},
 			{"videoregion", vbl_region},
 			{"window background color", window_bgcolor},
-			{"show F1 window", show_F1_window},
+			{"show Main UI window", show_MainUI_window},
 			{"show Apple 2 Video window", show_a2video_window},
 			{"show Post Processor window", show_postprocessing_window},
 			{"show Recorder window", show_recorder_window},

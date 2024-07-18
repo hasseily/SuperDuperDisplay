@@ -9,6 +9,8 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
+#include "InAppGpuProfiler/iagp.h"
+
 // below because "The declaration of a static data member in its class definition is not a definition"
 PostProcessor* PostProcessor::s_instance;
 
@@ -231,31 +233,39 @@ void PostProcessor::SelectShader()
 
 void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 {
-	SDL_GL_GetDrawableSize(window, &viewportWidth, &viewportHeight);
-
-	GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
-	// Don't let the viewport have odd values. It creates artifacts when scaling
-	if (viewportWidth % 2 == 1)
-		viewportWidth -= 1;
-	if (viewportHeight % 2 == 1)
-		viewportHeight -= 1;
-	glViewport(0, 0, viewportWidth, viewportHeight);
 	GLenum glerr;
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error PP 0: " << glerr << std::endl;
+	GLint last_bound_texture = 0;
+	GLint last_viewport[4];
+	
+	{
+		AIGPScoped("PostProcessor", "Viewport");
+		SDL_GL_GetDrawableSize(window, &viewportWidth, &viewportHeight);
+
+		glGetIntegerv(GL_VIEWPORT, last_viewport);
+		// Don't let the viewport have odd values. It creates artifacts when scaling
+		if (viewportWidth % 2 == 1)
+			viewportWidth -= 1;
+		if (viewportHeight % 2 == 1)
+			viewportHeight -= 1;
+		glViewport(0, 0, viewportWidth, viewportHeight);
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP 0: " << glerr << std::endl;
+		}
 	}
 	
-	// Bind the texture we're given to our _POSTPROCESSOR_INPUT_TEXTURE
-	// And get its actual size.
-	glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
-	GLint last_bound_texture = 0;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_bound_texture);
-	glBindTexture(GL_TEXTURE_2D, inputTextureId);
-	prev_texWidth = texWidth;
-	prev_texHeight = texHeight;
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
-	glActiveTexture(GL_TEXTURE0);	// Target the main SDL window
+	{
+		AIGPScoped("PostProcessor", "Bind");
+		// Bind the texture we're given to our _POSTPROCESSOR_INPUT_TEXTURE
+		// And get its actual size.
+		glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_bound_texture);
+		glBindTexture(GL_TEXTURE_2D, inputTextureId);
+		prev_texWidth = texWidth;
+		prev_texHeight = texHeight;
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texHeight);
+		glActiveTexture(GL_TEXTURE0);	// Target the main SDL window
+	}
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 1: " << glerr << std::endl;
@@ -321,40 +331,49 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 		std::cerr << "OpenGL error PP 2: " << glerr << std::endl;
 	}
 
-	// Setup fullscreen quad VAO and VBO
-	if (quadVAO == UINT_MAX)
 	{
-		glGenVertexArrays(1, &quadVAO);
-		glGenBuffers(1, &quadVBO);
+		AIGPScoped("PostProcessor", "VAO-VBO");
+		// Setup fullscreen quad VAO and VBO
+		if (quadVAO == UINT_MAX)
+		{
+			glGenVertexArrays(1, &quadVAO);
+			glGenBuffers(1, &quadVBO);
+		}
+		
+		// Now always send in the vertices because it all may have been resized upstream
+		glBindVertexArray(quadVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+
+		// Position attribute
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)0);
+
+		// Texture coordinate attribute
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)(2 * sizeof(GLfloat)));
 	}
-	
-	// Now always send in the vertices because it all may have been resized upstream
-	glBindVertexArray(quadVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-
-	// Position attribute
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)0);
-
-	// Texture coordinate attribute
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)(2 * sizeof(GLfloat)));
 
 
-	// Render the fullscreen quad
-	// Target the main SDL2 window
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glBindVertexArray(0);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error PP 3: " << glerr << std::endl;
+	{
+		AIGPScoped("PostProcessor", "Render Quad");
+		// Render the fullscreen quad
+		// Target the main SDL2 window
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glBindVertexArray(0);
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP 3: " << glerr << std::endl;
+		}
 	}
-	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
-	// revert the texture assignment
-	glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
-	glBindTexture(GL_TEXTURE_2D, last_bound_texture);
-	glActiveTexture(GL_TEXTURE0);
+	{
+		AIGPScoped("PostProcessor", "Revert");
+		glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
+		// revert the texture assignment
+		glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
+		glBindTexture(GL_TEXTURE_2D, last_bound_texture);
+		glActiveTexture(GL_TEXTURE0);
+	}
 	++frame_count;
 }
 

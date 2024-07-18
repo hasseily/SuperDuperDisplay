@@ -10,6 +10,7 @@
 		BB006F532C3C2E49008BFFAF /* Ayumi.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB006F4F2C3C2E49008BFFAF /* Ayumi.cpp */; };
 		BB006F542C3C2E49008BFFAF /* MockingboardManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB006F522C3C2E49008BFFAF /* MockingboardManager.cpp */; };
 		BB01620B2B83643D00A3D503 /* assets in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBD102132B829BAE00360B33 /* assets */; };
+		BB68B4CF2C4590EE00F96269 /* iagp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB68B4C92C4590EE00F96269 /* iagp.cpp */; };
 		BB96E3E22B664CDB00A3077C /* libSDL2-2.0.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = BB96E3E12B664CDB00A3077C /* libSDL2-2.0.0.dylib */; };
 		BB96E3E32B664CDB00A3077C /* libSDL2-2.0.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BB96E3E12B664CDB00A3077C /* libSDL2-2.0.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = BB96E3EA2B6650BA00A3077C /* libz.tbd */; };
@@ -79,6 +80,17 @@
 		BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MemoryLoader.h; path = extras/MemoryLoader.h; sourceTree = "<group>"; };
 		BB64A7D02C391D580044E05B /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		BB68B4C72C4248C400F96269 /* beeper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = beeper.h; sourceTree = "<group>"; };
+		BB68B4C92C4590EE00F96269 /* iagp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = iagp.cpp; sourceTree = "<group>"; };
+		BB68B4CA2C4590EE00F96269 /* iagp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = iagp.h; sourceTree = "<group>"; };
+		BB68B4CB2C4590EE00F96269 /* iagpConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = iagpConfig.h; sourceTree = "<group>"; };
+		BB68B4CC2C4590EE00F96269 /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		BB68B4CD2C4590EE00F96269 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		BB68B4D02C45918B00F96269 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+		BB68B4D12C45918B00F96269 /* iagp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = iagp.cpp; sourceTree = "<group>"; };
+		BB68B4D22C45918B00F96269 /* iagp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iagp.h; sourceTree = "<group>"; };
+		BB68B4D32C45918B00F96269 /* iagpConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iagpConfig.h; sourceTree = "<group>"; };
+		BB68B4D42C45918B00F96269 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		BB68B4D52C45918B00F96269 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		BB8330D62B6645B300071F38 /* SuperDuperDisplay */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SuperDuperDisplay; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB96E3E12B664CDB00A3077C /* libSDL2-2.0.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libSDL2-2.0.0.dylib"; path = "../../../../../opt/homebrew/Cellar/sdl2/2.28.5/lib/libSDL2-2.0.0.dylib"; sourceTree = "<group>"; };
 		BB96E3EA2B6650BA00A3077C /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
@@ -158,9 +170,35 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		BB68B4CE2C4590EE00F96269 /* InAppGpuProfiler */ = {
+			isa = PBXGroup;
+			children = (
+				BB68B4C92C4590EE00F96269 /* iagp.cpp */,
+				BB68B4CA2C4590EE00F96269 /* iagp.h */,
+				BB68B4CB2C4590EE00F96269 /* iagpConfig.h */,
+				BB68B4CC2C4590EE00F96269 /* LICENSE */,
+				BB68B4CD2C4590EE00F96269 /* README.md */,
+			);
+			path = InAppGpuProfiler;
+			sourceTree = "<group>";
+		};
+		BB68B4D62C45918B00F96269 /* InAppGpuProfiler */ = {
+			isa = PBXGroup;
+			children = (
+				BB68B4D02C45918B00F96269 /* .gitignore */,
+				BB68B4D12C45918B00F96269 /* iagp.cpp */,
+				BB68B4D22C45918B00F96269 /* iagp.h */,
+				BB68B4D32C45918B00F96269 /* iagpConfig.h */,
+				BB68B4D42C45918B00F96269 /* LICENSE */,
+				BB68B4D52C45918B00F96269 /* README.md */,
+			);
+			path = InAppGpuProfiler;
+			sourceTree = "<group>";
+		};
 		BB8330CD2B6645B300071F38 = {
 			isa = PBXGroup;
 			children = (
+				BB68B4CE2C4590EE00F96269 /* InAppGpuProfiler */,
 				BBB525272B664A7D00A65C62 /* Frameworks */,
 				BBC172F42B6657710044B194 /* glad.cpp */,
 				BB96E3EC2B66513700A3077C /* imgui_demo.cpp */,
@@ -212,6 +250,7 @@
 				BBB525032B6648A200A65C62 /* GRAddr2XY.h */,
 				BBB525112B6648A200A65C62 /* imgui_memory_editor.h */,
 				BBB525062B6648A200A65C62 /* imgui.ini */,
+				BB68B4D62C45918B00F96269 /* InAppGpuProfiler */,
 				BBB525142B6648A200A65C62 /* main.cpp */,
 				BB64A7D02C391D580044E05B /* Makefile */,
 				BBC172F82B6657C20044B194 /* MemoryLoader.cpp */,
@@ -317,6 +356,7 @@
 			files = (
 				BBC172F52B6657710044B194 /* glad.cpp in Sources */,
 				BBC172F32B6657640044B194 /* imgui_impl_opengl3.cpp in Sources */,
+				BB68B4CF2C4590EE00F96269 /* iagp.cpp in Sources */,
 				BBC172FD2B6658AD0044B194 /* imgui_impl_sdl2.cpp in Sources */,
 				BBC172FB2B6658700044B194 /* imgui.cpp in Sources */,
 				BBC172EE2B6657470044B194 /* imgui_draw.cpp in Sources */,
