@@ -358,6 +358,9 @@ int main(int argc, char* argv[])
 		if (settingsState.contains("Apple 2 Video")) {
 			a2VideoManager->DeserializeState(settingsState["Apple 2 Video"]);
 		}
+		if (settingsState.contains("Sound")) {
+			soundManager->DeserializeState(settingsState["Sound"]);
+		}
 		if (settingsState.contains("Mockingboard")) {
 			mockingboardManager->DeserializeState(settingsState["Mockingboard"]);
 		}
@@ -956,6 +959,7 @@ int main(int argc, char* argv[])
 		SDL_GetWindowSize(window, &_ww, &_wh);
 		settingsState["Post Processor"] = postProcessor->SerializeState();
 		settingsState["Apple 2 Video"] = a2VideoManager->SerializeState();
+		settingsState["Sound"] = soundManager->SerializeState();
 		settingsState["Mockingboard"] = mockingboardManager->SerializeState();
 		settingsState["Main"] = {
 			{"display index", SDL_GetWindowDisplayIndex(window)},
