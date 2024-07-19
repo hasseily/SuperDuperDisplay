@@ -63,6 +63,7 @@ float _M8DBG_average_fps_window = 1.f;	// in seconds
 bool _M8DBG_bShowF8Window = true;
 bool _M8DBG_bRunKarateka = false;
 bool _M8DBG_bKaratekaLoadFailed = false;
+bool _m8ssSHR = false;
 int _M8DBG_windowWidth = 800;
 int _M8DBG_windowHeight = 600;
 
@@ -135,6 +136,27 @@ void DrawFPSOverlay(A2VideoManager* a2VideoManager)
 static void SetFullScreen(A2VideoManager *a2VideoManager, bool &bIsFullscreen) {
 	SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN : 0);
 	ResetFPSCalculations(a2VideoManager);
+}
+
+static void ResetA2SS(A2VideoManager *&a2VideoManager, MemoryManager *&memManager) {
+	memManager->SetSoftSwitch(A2SS_TEXT, true);
+	memManager->SetSoftSwitch(A2SS_80STORE, false);
+	memManager->SetSoftSwitch(A2SS_RAMRD, false);
+	memManager->SetSoftSwitch(A2SS_RAMWRT, false);
+	memManager->SetSoftSwitch(A2SS_80COL, false);
+	memManager->SetSoftSwitch(A2SS_ALTCHARSET, false);
+	memManager->SetSoftSwitch(A2SS_INTCXROM, false);
+	memManager->SetSoftSwitch(A2SS_SLOTC3ROM, false);
+	memManager->SetSoftSwitch(A2SS_MIXED, false);
+	memManager->SetSoftSwitch(A2SS_PAGE2, false);
+	memManager->SetSoftSwitch(A2SS_HIRES, false);
+	memManager->SetSoftSwitch(A2SS_DHGR, false);
+	memManager->SetSoftSwitch(A2SS_DHGRMONO, false);
+	memManager->SetSoftSwitch(A2SS_SHR, false);
+	memManager->SetSoftSwitch(A2SS_GREYSCALE, false);
+	a2VideoManager->bUseDHGRCOL140Mixed = false;
+	a2VideoManager->bUseHGRSPEC1 = false;
+	a2VideoManager->bUseHGRSPEC2 = false;
 }
 
 // Main code
@@ -794,6 +816,18 @@ int main(int argc, char* argv[])
 					if (ImGui::Button("Reset FPS numbers"))
 						ResetFPSCalculations(a2VideoManager);
 					ImGui::Separator();
+					if (ImGui::Button("Reset A2SS")) {
+						ResetA2SS(a2VideoManager, memManager);
+						a2VideoManager->ForceBeamFullScreenRender();
+					}
+					ImGui::SameLine();
+					_m8ssSHR = memManager->IsSoftSwitch(A2SS_SHR);
+					if (ImGui::Checkbox("A2SS_SHR##M8", &_m8ssSHR)) {
+						memManager->SetSoftSwitch(A2SS_SHR, _m8ssSHR);
+						ResetFPSCalculations(a2VideoManager);
+						a2VideoManager->ForceBeamFullScreenRender();
+					}
+					ImGui::Separator();
 					/*
 					if (ImGui::Checkbox("Disable Apple 2 Video render", &_M8DBG_bDisableVideoRender))
 						ResetFPSCalculations(a2VideoManager);
@@ -822,12 +856,7 @@ int main(int argc, char* argv[])
 						a2VideoManager->ForceBeamFullScreenRender();
 					ImGui::SameLine();
 					ImGui::Text("Frame ID: %d", a2VideoManager->GetVRAMReadId());
-					static bool _m8ssSHR = memManager->IsSoftSwitch(A2SS_SHR);
-					if (ImGui::Checkbox("A2SS_SHR##M8", &_m8ssSHR)) {
-						memManager->SetSoftSwitch(A2SS_SHR, _m8ssSHR);
-						ResetFPSCalculations(a2VideoManager);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
+					ImGui::SeparatorText("[ SAMPLES ]");
 					if (ImGui::Checkbox("Run Karateka Demo", &_M8DBG_bRunKarateka))
 					{
 						if (_M8DBG_bRunKarateka)
@@ -837,18 +866,41 @@ int main(int argc, char* argv[])
 								_M8DBG_bKaratekaLoadFailed = true;
 							}
 							else {
+								ResetA2SS(a2VideoManager, memManager);
 								memManager->SetSoftSwitch(A2SS_SHR, false);
 								eventRecorder->ReadRecordingFile(karatekafile);
 								eventRecorder->StartReplay();
-								_m8ssSHR = false;
 								memManager->SetSoftSwitch(A2SS_TEXT, false);
 								memManager->SetSoftSwitch(A2SS_HIRES, true);
+								a2VideoManager->ForceBeamFullScreenRender();
 							}
 						}
 						else {
 							eventRecorder->StopReplay();
 						}
 						ResetFPSCalculations(a2VideoManager);
+						a2VideoManager->ForceBeamFullScreenRender();
+					}
+					if (ImGui::Button("DHGR Col 140 Mixed"))
+					{
+						ResetA2SS(a2VideoManager, memManager);
+						memManager->SetSoftSwitch(A2SS_SHR, false);
+						memManager->SetSoftSwitch(A2SS_TEXT, false);
+						memManager->SetSoftSwitch(A2SS_80COL, true);
+						memManager->SetSoftSwitch(A2SS_HIRES, true);
+						memManager->SetSoftSwitch(A2SS_DHGR, true);
+						a2VideoManager->bUseDHGRCOL140Mixed = true;
+						MemoryLoadDHR("scripts/extasie2_140mix.dhr");
+						a2VideoManager->ForceBeamFullScreenRender();
+					}
+					if (ImGui::Button("HGR SPEC1"))
+					{
+						ResetA2SS(a2VideoManager, memManager);
+						memManager->SetSoftSwitch(A2SS_SHR, false);
+						memManager->SetSoftSwitch(A2SS_TEXT, false);
+						memManager->SetSoftSwitch(A2SS_HIRES, true);
+						a2VideoManager->bUseHGRSPEC1 = true;
+						MemoryLoadHGR("scripts/arcticfox.hgr");
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					ImGui::Separator();
