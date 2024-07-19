@@ -157,6 +157,7 @@ static void ResetA2SS(A2VideoManager *&a2VideoManager, MemoryManager *&memManage
 	a2VideoManager->bUseDHGRCOL140Mixed = false;
 	a2VideoManager->bUseHGRSPEC1 = false;
 	a2VideoManager->bUseHGRSPEC2 = false;
+	a2VideoManager->bDEMOMergedMode = false;
 }
 
 // Main code
@@ -810,7 +811,7 @@ int main(int argc, char* argv[])
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					ImGui::Dummy(ImVec2(20, 1)); ImGui::SameLine();
-					if (ImGui::Checkbox("Without Sine Wobble", &a2VideoManager->bNoOverlayWobble))
+					if (ImGui::Checkbox("Without Sine Wobble", &a2VideoManager->bNoMergedModeWobble))
 						a2VideoManager->ForceBeamFullScreenRender();
 					ImGui::SliderFloat("Average FPS range (s)", &_M8DBG_average_fps_window, 0.1f, 10.f, "%.1f");
 					if (ImGui::Button("Reset FPS numbers"))
@@ -903,6 +904,18 @@ int main(int argc, char* argv[])
 						MemoryLoadHGR("scripts/arcticfox.hgr");
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
+					if (ImGui::Button("Wobbly"))
+					{
+						ResetA2SS(a2VideoManager, memManager);
+						memManager->SetSoftSwitch(A2SS_SHR, true);
+						MemoryLoadSHR("scripts/paintworks.shr");
+						std::ifstream legacydemo("./scripts/tomahawk2_hgr.bin", std::ios::binary);
+						legacydemo.seekg(0, std::ios::beg); // Go back to the start of the file
+						legacydemo.read(reinterpret_cast<char*>(MemoryManager::GetInstance()->GetApple2MemPtr()), 0x4000);
+						a2VideoManager->bDEMOMergedMode = true;
+						a2VideoManager->ForceBeamFullScreenRender();
+					}
+					/*
 					ImGui::Separator();
 					ImGui::Text("Legacy Shader");
 					const char* _legshaders[] = { "0 - Full" };
@@ -923,6 +936,7 @@ int main(int argc, char* argv[])
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					ImGui::PopItemWidth();
+					 */
 
 				}
 

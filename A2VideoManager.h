@@ -134,7 +134,7 @@ public:
 	bool bAlwaysRenderBuffer = false;		// If true, forces a rerender even if the VRAM hasn't changed
 	bool bForceSHRWidth = false;			// forces the legacy to have the SHR width
 	bool bNoMergedModeWobble = false;		// Don't pixel shift the sine wobble if both SHR and Legacy are on screen
-	bool bNoOverlayWobble = false;			// override wobble and width in merged mode
+	bool bDEMOMergedMode = false;			// DEMO to show merged mode
 
 	// Enable manually setting a DHGR mode that mixes 140 width 16-col and 560 width b/w
 	// It was available in certain RGB cards like the Apple and Chat Mauve RGB cards
