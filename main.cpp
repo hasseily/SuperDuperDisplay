@@ -787,7 +787,7 @@ int main(int argc, char* argv[])
 						DrawFPSOverlay(a2VideoManager);
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
-					ImGui::Spacing(); ImGui::Spacing(); ImGui::SameLine();
+					ImGui::Dummy(ImVec2(20, 1)); ImGui::SameLine();
 					if (ImGui::Checkbox("Without Sine Wobble", &a2VideoManager->bNoOverlayWobble))
 						a2VideoManager->ForceBeamFullScreenRender();
 					ImGui::SliderFloat("Average FPS range (s)", &_M8DBG_average_fps_window, 0.1f, 10.f, "%.1f");
@@ -837,9 +837,9 @@ int main(int argc, char* argv[])
 								_M8DBG_bKaratekaLoadFailed = true;
 							}
 							else {
+								memManager->SetSoftSwitch(A2SS_SHR, false);
 								eventRecorder->ReadRecordingFile(karatekafile);
 								eventRecorder->StartReplay();
-								memManager->SetSoftSwitch(A2SS_SHR, false);
 								_m8ssSHR = false;
 								memManager->SetSoftSwitch(A2SS_TEXT, false);
 								memManager->SetSoftSwitch(A2SS_HIRES, true);
@@ -848,6 +848,8 @@ int main(int argc, char* argv[])
 						else {
 							eventRecorder->StopReplay();
 						}
+						ResetFPSCalculations(a2VideoManager);
+						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					ImGui::Separator();
 					ImGui::Text("Legacy Shader");
