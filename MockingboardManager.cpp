@@ -22,6 +22,12 @@ MockingboardManager::MockingboardManager(uint32_t sampleRate, uint32_t bufferSiz
 
 void MockingboardManager::Initialize()
 {
+	// Reset registers
+	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
+	{
+		ay[ayidx].ResetRegisters();
+	}
+	
 	if (audioDevice == 0)
 	{
 		SDL_zero(audioSpec);
