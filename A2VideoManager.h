@@ -133,8 +133,9 @@ public:
 
 	bool bAlwaysRenderBuffer = false;		// If true, forces a rerender even if the VRAM hasn't changed
 	bool bForceSHRWidth = false;			// forces the legacy to have the SHR width
-	bool bNoMergedModeWobble = false;	// Don't pixel shift the sine wobble if both SHR and Legacy are on screen
-	
+	bool bNoMergedModeWobble = false;		// Don't pixel shift the sine wobble if both SHR and Legacy are on screen
+	bool bNoOverlayWobble = false;			// override wobble and width in merged mode
+
 	// Enable manually setting a DHGR mode that mixes 140 width 16-col and 560 width b/w
 	// It was available in certain RGB cards like the Apple and Chat Mauve RGB cards
 	// It could be set in software using a combination of soft switches but due to potential
@@ -297,7 +298,6 @@ private:
 	uint8_t overlay_colors[40*24];
 	uint8_t overlay_lines[24];
 	bool bWasSHRBeforeOverlay = false;
-	bool bOverlayOverrides = false;	// override wobble and width in merged mode
 	void UpdateOverlayLine(uint32_t y);
 };
 #endif // A2VIDEOMANAGER_H

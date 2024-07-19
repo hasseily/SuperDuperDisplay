@@ -785,21 +785,28 @@ int main(int argc, char* argv[])
 					{
 						ResetFPSCalculations(a2VideoManager);
 						DrawFPSOverlay(a2VideoManager);
+						a2VideoManager->ForceBeamFullScreenRender();
 					}
+					ImGui::Spacing(); ImGui::Spacing(); ImGui::SameLine();
+					if (ImGui::Checkbox("Without Sine Wobble", &a2VideoManager->bNoOverlayWobble))
+						a2VideoManager->ForceBeamFullScreenRender();
 					ImGui::SliderFloat("Average FPS range (s)", &_M8DBG_average_fps_window, 0.1f, 10.f, "%.1f");
 					if (ImGui::Button("Reset FPS numbers"))
 						ResetFPSCalculations(a2VideoManager);
 					ImGui::Separator();
+					/*
 					if (ImGui::Checkbox("Disable Apple 2 Video render", &_M8DBG_bDisableVideoRender))
 						ResetFPSCalculations(a2VideoManager);
 					if (ImGui::Checkbox("Disable PostProcessing render", &_M8DBG_bDisablePPRender))
 						ResetFPSCalculations(a2VideoManager);
 					if (ImGui::Checkbox("Force render even if VRAM unchanged", &a2VideoManager->bAlwaysRenderBuffer))
 						ResetFPSCalculations(a2VideoManager);
+					 */
 					if (ImGui::Checkbox("VSYNC##M8", &g_swapInterval))
 					{
 						set_vsync(g_swapInterval);
 						ResetFPSCalculations(a2VideoManager);
+						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					if (g_swapInterval)
 					{
@@ -811,10 +818,15 @@ int main(int argc, char* argv[])
 							ImGui::Text("(Adaptive)");
 						}
 					}
+					if (ImGui::Button("Run Vertical Refresh"))
+						a2VideoManager->ForceBeamFullScreenRender();
+					ImGui::SameLine();
+					ImGui::Text("Frame ID: %d", a2VideoManager->GetVRAMReadId());
 					static bool _m8ssSHR = memManager->IsSoftSwitch(A2SS_SHR);
 					if (ImGui::Checkbox("A2SS_SHR##M8", &_m8ssSHR)) {
 						memManager->SetSoftSwitch(A2SS_SHR, _m8ssSHR);
 						ResetFPSCalculations(a2VideoManager);
+						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					if (ImGui::Checkbox("Run Karateka Demo", &_M8DBG_bRunKarateka))
 					{
@@ -845,6 +857,7 @@ int main(int argc, char* argv[])
 					{
 						a2VideoManager->SelectLegacyShader(_legshader_current);
 						ResetFPSCalculations(a2VideoManager);
+						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					ImGui::Text("SHR Shader");
 					const char* _shrshaders[] = { "0 - Full" };
@@ -853,6 +866,7 @@ int main(int argc, char* argv[])
 					{
 						a2VideoManager->SelectSHRShader(_shrshader_current);
 						ResetFPSCalculations(a2VideoManager);
+						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					ImGui::PopItemWidth();
 

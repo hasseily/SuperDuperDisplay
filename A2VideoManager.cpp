@@ -501,7 +501,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	// Check for text overlay in this position
 	if ((_y < COUNT_SC_CONTENT) && (overlay_lines[_y / 8] == 1))
 	{
-		bOverlayOverrides = true;	// Never wobble if there's an overlay
 		if (_x == 0)
 		{
 			bWasSHRBeforeOverlay = memMgr->IsSoftSwitch(A2SS_SHR);
@@ -561,7 +560,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			// Finally set the offset
 			// NOTE: We add 10.f to the offset so that the shader can know which mode to apply
 			//		 If it's negative, it's SHR. Positive, legacy.
-			if (bNoMergedModeWobble || bOverlayOverrides)
+			if (bNoMergedModeWobble || bNoOverlayWobble)
 			{
 				vrams_write->offset_buffer[_TR_ANY_Y] = (_curr_mode == A2Mode_e::LEGACY ? -10.f : 10.f);
 			}
@@ -1109,7 +1108,7 @@ GLuint A2VideoManager::Render()
 		glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
 		shader_merge.setInt("legacyTex", GL_TEXTURE7 - GL_TEXTURE0);
 		shader_merge.setVec2("legacySize", legacy_width, legacy_height);
-		shader_merge.setInt("forceSHRWidth", bForceSHRWidth || bOverlayOverrides);
+		shader_merge.setInt("forceSHRWidth", bForceSHRWidth || bNoOverlayWobble);
 
 		glActiveTexture(GL_TEXTURE8);
 		glBindTexture(GL_TEXTURE_2D, shr_texture_id);
@@ -1254,6 +1253,8 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			if (ImGui::Checkbox("Force SHR width in merged mode", &this->bForceSHRWidth))
 				this->ForceBeamFullScreenRender();
 			if (ImGui::Checkbox("No wobble in merged mode", &this->bNoMergedModeWobble))
+				this->ForceBeamFullScreenRender();
+			if (ImGui::Checkbox("No wobble in overlay", &this->bNoOverlayWobble))
 				this->ForceBeamFullScreenRender();
 			
 			//eA2MonitorType
@@ -1407,6 +1408,7 @@ nlohmann::json A2VideoManager::SerializeState()
 		{"enable_HGRSPEC2", bUseHGRSPEC2},
 		{"force_shr_width_in_merge_mode", bForceSHRWidth},
 		{"no_merged_mode_wobble", bNoMergedModeWobble},
+		{"no_overlay_wobble", bNoOverlayWobble},
 	};
 	return jsonState;
 }
@@ -1421,6 +1423,7 @@ void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 	bUseHGRSPEC2 = jsonState.value("enable_HGRSPEC2", bUseHGRSPEC2);
 	bForceSHRWidth = jsonState.value("force_shr_width_in_merge_mode", bForceSHRWidth);
 	bNoMergedModeWobble = jsonState.value("no_merged_mode_wobble", bNoMergedModeWobble);
+	bNoOverlayWobble = jsonState.value("no_overlay_wobble", bNoOverlayWobble);
 
 	SetBordersWithReinit(jsonState.value("borders_w_cycles", borders_w_cycles),
 						 jsonState.value("borders_h_8scanlines", borders_h_scanlines / 8));
