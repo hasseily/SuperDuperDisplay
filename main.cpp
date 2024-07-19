@@ -118,7 +118,6 @@ void ResetFPSCalculations(A2VideoManager* a2VideoManager)
 	fps_worst = 100000.f;
 	fps_frame_count = 0;
 	fps_start_time = SDL_GetTicks();
-	a2VideoManager->ForceBeamFullScreenRender();
 }
 
 void DrawFPSOverlay(A2VideoManager* a2VideoManager)
@@ -133,13 +132,9 @@ void DrawFPSOverlay(A2VideoManager* a2VideoManager)
 	}
 }
 
-// Function to update the display size in ImGui when switching fullscreen
-// Otherwise ImGui doesn't know that it's been fullscreen'ed
-void UpdateImGuiDisplaySize(SDL_Window* window) {
-	int display_w, display_h;
-	SDL_GetWindowSize(window, &display_w, &display_h);
-	ImGuiIO& io = ImGui::GetIO();
-	io.DisplaySize = ImVec2((float)display_w, (float)display_h);
+static void SetFullScreen(A2VideoManager *a2VideoManager, bool &bIsFullscreen) {
+	SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN : 0);
+	ResetFPSCalculations(a2VideoManager);
 }
 
 // Main code
@@ -276,7 +271,7 @@ int main(int argc, char* argv[])
 	// Add the font with the configuration
 	io.Fonts->AddFontDefault();
 	//static auto imgui_font_small = io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 10.0f);
-	static auto imgui_font_large = io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 20.0f);
+	// static auto imgui_font_large = io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 20.0f);
 
     // Our state
 	static MemoryEditor mem_edit_a2e;
@@ -404,7 +399,6 @@ int main(int argc, char* argv[])
 					SDL_SetWindowPosition(window, _wx, _wy);
 				SDL_SetWindowSize(window, _ww, _wh);
 			}
-			SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 		}
 	} else {
 		std::cerr << "No saved Settings.json file" << std::endl;
@@ -413,6 +407,7 @@ int main(int argc, char* argv[])
 	std::cout << "Previous state loaded!" << std::endl;
 
 	// Load up the first screen in SHR, with green border color
+	SetFullScreen(a2VideoManager, bIsFullscreen);
 	DisplaySplashScreen(a2VideoManager, memManager);
 
 	SDL_GetWindowSize(window, &_M8DBG_windowWidth, &_M8DBG_windowHeight);
@@ -431,6 +426,7 @@ int main(int argc, char* argv[])
 			a2VideoManager->ResetComputer();
 		}
 
+		auto _bWasFullscreen = bIsFullscreen;
 		// Beam renderer does not use VSYNC. It synchronizes to the Apple 2's VBL.
 //		if (!(a2VideoManager->ShouldRender() || sdhrManager->IsSdhrEnabled()))
 //			continue;
@@ -504,9 +500,6 @@ int main(int argc, char* argv[])
 				else if ((event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) ||
 					event.key.keysym.sym == SDLK_F11) {
 					bIsFullscreen = !bIsFullscreen; // Toggle state
-					SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-					UpdateImGuiDisplaySize(window);
-					ResetFPSCalculations(a2VideoManager);
 				}
 				// Camera movement!
 				if (!io.WantCaptureKeyboard) {
@@ -579,18 +572,6 @@ int main(int argc, char* argv[])
 			ImGui_ImplSDL2_NewFrame();
 			ImGui::NewFrame();
 
-			// Get the current window size
-			ImVec2 window_pos = ImVec2(0, 0);
-			ImVec2 window_size = ImGui::GetIO().DisplaySize;
-
-			// Calculate the coordinates to cover the full screen
-			ImVec2 uv_min = ImVec2(0.0f, 0.0f); // Top-left
-			ImVec2 uv_max = ImVec2(1.0f, 1.0f); // Bottom-right
-
-			// Get the foreground draw list to render on top of everything else
-			ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
-
-
 			// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 			if (show_demo_window)
 				ImGui::ShowDemoWindow(&show_demo_window);
@@ -657,11 +638,8 @@ int main(int argc, char* argv[])
 
 				ImGui::Checkbox("PostProcessing Window (F2)", &show_postprocessing_window);
 				ImGui::Checkbox("Apple 2 Video Modes Window (F3)", &show_a2video_window);
-				ImGui::Checkbox("M8 Debug Window (F8)", &_M8DBG_bShowF8Window);
-				if (ImGui::Checkbox("Fullscreen (F11 or Alt-Enter)", &bIsFullscreen))
-				{
-					SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-				}
+				ImGui::Checkbox("KFest Window (F8)", &_M8DBG_bShowF8Window);
+				ImGui::Checkbox("Fullscreen (F11 or Alt-Enter)", &bIsFullscreen);
 				if (ImGui::Checkbox("VSYNC", &g_swapInterval))
 				{
 					set_vsync(g_swapInterval);
@@ -776,7 +754,7 @@ int main(int argc, char* argv[])
 
 			if (_M8DBG_bShowF8Window)
 			{
-				ImGui::Begin("Special Temporary Debugging", &_M8DBG_bShowF8Window);
+				ImGui::Begin("KFest 2024", &_M8DBG_bShowF8Window);
 				if (!ImGui::IsWindowCollapsed())
 				{
 					// Retrieve OpenGL version info
@@ -937,6 +915,11 @@ int main(int argc, char* argv[])
 			std::cerr << "OpenGL end of render error: " << glerr << std::endl;
 		}
 
+		if (_bWasFullscreen != bIsFullscreen)
+		{
+			// Update full screen status before the next frame
+			SetFullScreen(a2VideoManager, bIsFullscreen);
+		}
     }
 #ifdef __EMSCRIPTEN__
     EMSCRIPTEN_MAINLOOP_END;
