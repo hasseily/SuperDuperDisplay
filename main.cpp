@@ -891,7 +891,7 @@ int main(int argc, char* argv[])
 						memManager->SetSoftSwitch(A2SS_HIRES, true);
 						memManager->SetSoftSwitch(A2SS_DHGR, true);
 						a2VideoManager->bUseDHGRCOL140Mixed = true;
-						MemoryLoadDHR("scripts/extasie2_140mix.dhr");
+						MemoryLoadDHR("scripts/extasie0_140mix.dhr");
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					if (ImGui::Button("HGR SPEC1"))
