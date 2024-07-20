@@ -580,16 +580,14 @@ int main(int argc, char* argv[])
 		if (!_M8DBG_bDisablePPRender)
 			postProcessor->Render(window, out_tex_id);
 
+		// Disable mouse if unused after cursorHideDelay
+		if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
+			SDL_ShowCursor(SDL_DISABLE);
+		else
+			SDL_ShowCursor(SDL_ENABLE);
+
 		if (show_F1_window)
 		{
-			// Disable mouse if unused after cursorHideDelay
-			// ImGui overrides SDL_ShowCursor(), so we use ImGui's methods
-			// We could tell ImGui not to override it, but it really doesn't matter
-			if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
-				ImGui::SetMouseCursor(ImGuiMouseCursor_None);
-			else
-				ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
-
 			// Start the Dear ImGui frame
 			ImGui_ImplOpenGL3_NewFrame();
 			ImGui_ImplSDL2_NewFrame();
@@ -904,7 +902,7 @@ int main(int argc, char* argv[])
 						MemoryLoadHGR("scripts/arcticfox.hgr");
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
-					if (ImGui::Button("Wobbly"))
+					if (ImGui::Button("\"LEGASHR\" Wobbly"))
 					{
 						ResetA2SS(a2VideoManager, memManager);
 						memManager->SetSoftSwitch(A2SS_SHR, true);
