@@ -254,6 +254,12 @@ private:
 	BeamRenderVRAMs* vrams_write;	// the write buffer
 	BeamRenderVRAMs* vrams_read;	// the read buffer
 
+	// Font ROMs array
+	// The font files must be 256 characters, each 14x16px. 16 rows and 16 columns.
+	std::vector<std::string> font_roms_array;
+	int font_rom_regular_idx = 0;
+	int font_rom_alternate_idx = 1;
+
 	Shader shader_merge = Shader();
 
 	VideoRegion_e current_region = VideoRegion_e::NTSC;

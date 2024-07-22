@@ -104,6 +104,8 @@ static uint16_t g_RAM_HGROffsets[] = {
 	0x03D0, 0x07D0, 0x0BD0, 0x0FD0, 0x13D0, 0x17D0, 0x1BD0, 0x1FD0
 };
 
+static std::string fontpath = "assets/Apple2eFont14x16";
+
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
 
@@ -256,6 +258,20 @@ void A2VideoManager::Initialize()
 		image_assets[i].tex_id = oglHelper->get_texture_id_at_slot(i);
 	}
 
+	// Get the font roms
+	try {
+		font_roms_array.clear();
+		for (const auto & entry : std::filesystem::directory_iterator(fontpath)) {
+			if (entry.is_regular_file()) {
+				font_roms_array.push_back(entry.path().filename().string());
+			}
+		}
+		std::sort(font_roms_array.begin(), font_roms_array.end());
+	} catch (const std::filesystem::filesystem_error& e) {
+		std::cerr << "Error accessing directory: " << e.what() << std::endl;
+		exit;
+	}
+	
 	// Initialize windows
 	windowsbeam[A2VIDEOBEAM_LEGACY] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_LEGACY, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
 	windowsbeam[A2VIDEOBEAM_SHR] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_SHR, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_SHR_FRAGMENT);
@@ -1035,10 +1051,10 @@ GLuint A2VideoManager::Render()
 
 		// image asset 0: The apple 2e US font
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START);
-		image_assets[0].AssignByFilename(this, "assets/Apple2eFont14x16 - Regular.png");
+		image_assets[0].AssignByFilename(this, std::string(fontpath).append("/").append(font_roms_array[font_rom_regular_idx]).c_str());
 		// image asset 1: The alternate font
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 1);
-		image_assets[1].AssignByFilename(this, "assets/Apple2eFont14x16 - Alternate.png");
+		image_assets[1].AssignByFilename(this, std::string(fontpath).append("/").append(font_roms_array[font_rom_alternate_idx]).c_str());
 		// image asset 2: LGR texture (overkill for color, useful for dithered b/w)
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 2);
 		image_assets[2].AssignByFilename(this, "assets/Texture_composite_lgr.png");
@@ -1293,6 +1309,25 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			ImGui::Checkbox("VRAM SHR Memory Window", &mem_edit_vram_shr.Open);
 			ImGui::Checkbox("VRAM Offset Buffer", &mem_edit_offset_buffer.Open);
 			
+			if (ImGui::CollapsingHeader("[ CHARACTER ROMS ]"))
+			{
+				ImGui::PushItemWidth(160);
+				std::vector<const char*> items;
+				for (const auto& filename : font_roms_array) {
+					items.push_back(filename.c_str());
+				}
+				if (ImGui::ListBox("##CharRomRegular", &font_rom_regular_idx, items.data(), (int)items.size(), 4))
+				{
+					bShouldInitializeRender = true;
+				}
+				ImGui::SameLine();
+				if (ImGui::ListBox("##CharRomAlternate", &font_rom_alternate_idx, items.data(), (int)items.size(), 4))
+				{
+					bShouldInitializeRender = true;
+				}
+				ImGui::PopItemWidth();
+			}
+			
 			if (ImGui::CollapsingHeader("[ SOFT SWITCHES ]"))
 			{
 				bool ssValue0 = memManager->IsSoftSwitch(A2SS_80STORE);
@@ -1409,6 +1444,8 @@ nlohmann::json A2VideoManager::SerializeState()
 		{"enable_HGRSPEC2", bUseHGRSPEC2},
 		{"force_shr_width_in_merge_mode", bForceSHRWidth},
 		{"no_merged_mode_wobble", bNoMergedModeWobble},
+		{"font_rom_regular_index", font_rom_regular_idx},
+		{"font_rom_slternate_index", font_rom_alternate_idx},
 	};
 	return jsonState;
 }
@@ -1423,6 +1460,8 @@ void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 	bUseHGRSPEC2 = jsonState.value("enable_HGRSPEC2", bUseHGRSPEC2);
 	bForceSHRWidth = jsonState.value("force_shr_width_in_merge_mode", bForceSHRWidth);
 	bNoMergedModeWobble = jsonState.value("no_merged_mode_wobble", bNoMergedModeWobble);
+	font_rom_regular_idx = jsonState.value("font_rom_regular_index", font_rom_regular_idx);
+	font_rom_alternate_idx = jsonState.value("font_rom_slternate_index", font_rom_alternate_idx);
 
 	SetBordersWithReinit(jsonState.value("borders_w_cycles", borders_w_cycles),
 						 jsonState.value("borders_h_8scanlines", borders_h_scanlines / 8));
