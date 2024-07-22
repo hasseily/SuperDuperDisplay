@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <algorithm>
+#include <system_error>
 #include <map>
 #include "SDL.h"
 #include <SDL_opengl.h>
@@ -265,6 +266,12 @@ void A2VideoManager::Initialize()
 			if (entry.is_regular_file()) {
 				font_roms_array.push_back(entry.path().filename().string());
 			}
+		}
+		if (font_roms_array.empty()) {
+			throw std::filesystem::filesystem_error(
+				"No Font ROM textures found!",
+				std::make_error_code(std::errc::no_such_file_or_directory)
+			);
 		}
 		std::sort(font_roms_array.begin(), font_roms_array.end());
 	} catch (const std::filesystem::filesystem_error& e) {
@@ -1051,6 +1058,10 @@ GLuint A2VideoManager::Render()
 
 		// image asset 0: The apple 2e US font
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START);
+		if (font_rom_regular_idx >= font_roms_array.size())
+			font_rom_regular_idx = 0;
+		if (font_rom_regular_idx >= font_roms_array.size())
+			font_rom_alternate_idx = (int)font_roms_array.size() - 1;
 		image_assets[0].AssignByFilename(this, std::string(fontpath).append("/").append(font_roms_array[font_rom_regular_idx]).c_str());
 		// image asset 1: The alternate font
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 1);
