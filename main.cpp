@@ -11,10 +11,6 @@
 #pragma warning(push, 0) // disables all warnings
 #include <SDL.h>
 #pragma warning(pop)
-// This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
-#ifdef __EMSCRIPTEN__
-#include "../libs/emscripten/emscripten_mainloop_stub.h"
-#endif
 
 #include <cstring>
 #include <cstdio>
@@ -38,6 +34,7 @@
 #include "extras/ImGuiFileDialog.h"
 #include "PostProcessor.h"
 #include "EventRecorder.h"
+#include "MainMenu.h"
 
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
 #include <unistd.h>
@@ -47,8 +44,11 @@
 static uint32_t fbWidth = 0;
 static uint32_t fbHeight = 0;
 static bool g_swapInterval = true;  // VSYNC
-static bool g_adaptiveVsync = true;	
+static bool g_adaptiveVsync = true;
+float window_bgcolor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
+
 static SDL_Window* window;
+static MainMenu* menu = nullptr;
 
 // For FPS calculations
 static float fps_worst = 1000000.f;
@@ -91,7 +91,19 @@ bool initialize_glad() {
 	return true;
 }
 
-void set_vsync(bool _on)
+void Main_ResetFPSCalculations()
+{
+	fps_worst = 100000.f;
+	fps_frame_count = 0;
+	fps_start_time = SDL_GetTicks();
+}
+
+int Main_GetVsync()
+{
+	return SDL_GL_GetSwapInterval();
+}
+
+void Main_SetVsync(bool _on)
 {
 	// If vsync requested, try to make it adaptive vsync first
 	if (_on)
@@ -103,26 +115,23 @@ void set_vsync(bool _on)
 	}
 	else
 		g_swapInterval = (SDL_GL_SetSwapInterval(0) != 0);		// no VSYNC
+	
+	Main_ResetFPSCalculations();
 }
 
-static void DisplaySplashScreen(A2VideoManager *&a2VideoManager, MemoryManager *&memManager) {
+void Main_DisplaySplashScreen()
+{
 	if (MemoryLoadSHR("assets/logo.shr"))
 	{
-		memManager->SetSoftSwitch(A2SoftSwitch_e::A2SS_SHR, true);
+		MemoryManager::GetInstance()->SetSoftSwitch(A2SoftSwitch_e::A2SS_SHR, true);
 	}
 	// Run a refresh to show the first screen
-	a2VideoManager->ForceBeamFullScreenRender();
+	A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 }
 
-void ResetFPSCalculations(A2VideoManager* a2VideoManager)
+void Main_DrawFPSOverlay()
 {
-	fps_worst = 100000.f;
-	fps_frame_count = 0;
-	fps_start_time = SDL_GetTicks();
-}
-
-void DrawFPSOverlay(A2VideoManager* a2VideoManager)
-{
+	auto a2VideoManager = A2VideoManager::GetInstance();
 	if (_M8DBG_bDisplayFPSOnScreen)
 	{
 		a2VideoManager->DrawOverlayString("AVERAGE FPS: ", 13, 0b11010010, 0, 0);
@@ -133,12 +142,65 @@ void DrawFPSOverlay(A2VideoManager* a2VideoManager)
 	}
 }
 
-static void SetFullScreen(A2VideoManager *a2VideoManager, bool &bIsFullscreen) {
-	SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN : 0);
-	ResetFPSCalculations(a2VideoManager);
+// True for both SDL_WINDOW_FULLSCREEN and SDL_WINDOW_FULLSCREEN_DESKTOP
+bool Main_IsFullScreen() {
+	// Assume non-resizable windows are fullscreen
+	auto _flags = SDL_GetWindowFlags(window);
+	if ((_flags & SDL_WINDOW_RESIZABLE) == 0)
+		return true;
+	return (_flags & SDL_WINDOW_FULLSCREEN);
 }
 
-static void ResetA2SS(A2VideoManager *&a2VideoManager, MemoryManager *&memManager) {
+void Main_SetFullScreen(bool bIsFullscreen) {
+	// Don't do anything if it's already in the requested state.
+	if (Main_IsFullScreen() == bIsFullscreen)
+		return;
+	// Do nothing if it's Apple. Let the user maximize via the OSX UI
+	// Because if the user sets fullscreen via the OSX UI we won't know,
+	// and later setting fullscreen completely messes up SDL2
+#ifdef __APPLE__
+	return;
+#endif
+	auto _flags = SDL_GetWindowFlags(window);
+	// Don't do anything if the window isn't resizable
+	if ((_flags & SDL_WINDOW_RESIZABLE) == 0)
+		return;
+	SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN : 0);
+	Main_ResetFPSCalculations();
+}
+
+bool Main_IsImGuiOn()
+{
+	return (menu != nullptr);
+}
+
+void Main_GetBGColor(float outColor[4]) {
+	for (int i = 0; i < 4; ++i) {
+		outColor[i] = window_bgcolor[i];
+	}
+}
+
+void Main_SetBGColor(const float newColor[4]) {
+	for (int i = 0; i < 4; ++i) {
+		window_bgcolor[i] = newColor[i];
+	}
+}
+
+static void Main_ToggleImGui(SDL_GLContext gl_context)
+{
+	if (menu == nullptr) {
+		menu = new MainMenu(gl_context, window);
+	} else if (menu != nullptr) {
+		delete menu;
+		menu = nullptr;
+	}
+	Main_ResetFPSCalculations();
+}
+
+static void ResetA2SS() {
+	auto a2VideoManager = A2VideoManager::GetInstance();
+	auto memManager = MemoryManager::GetInstance();
+
 	memManager->SetSoftSwitch(A2SS_TEXT, true);
 	memManager->SetSoftSwitch(A2SS_80STORE, false);
 	memManager->SetSoftSwitch(A2SS_RAMRD, false);
@@ -219,6 +281,8 @@ int main(int argc, char* argv[])
 	}
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
+	// Here we can do specific things for the Raspberry Pi
+	// and other low power devices for increasing FPS, such as
 	// switch display mode to 1200x1000
 #endif
 
@@ -226,21 +290,6 @@ int main(int argc, char* argv[])
 		displayMode.w, displayMode.h, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
-
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    //ImGui::StyleColorsLight();
-
-    // Setup Platform/Renderer backends
-    ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
-    ImGui_ImplOpenGL3_Init(glhelper->get_glsl_version()->c_str());
 
     // Initialize GLAD
     if (!initialize_glad()) {
@@ -274,28 +323,6 @@ int main(int argc, char* argv[])
 		std::cerr << "OpenGL glEnable error: " << glerr << std::endl;
 	}
 
-    // Load Fonts
-    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-    // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
-    // - Read 'docs/FONTS.md' for more instructions and details.
-    // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See Makefile.emscripten for details.
-    //io.Fonts->AddFontDefault();
-    //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
-    //IM_ASSERT(font != nullptr);
-
-	// Add the font with the configuration
-	io.Fonts->AddFontDefault();
-	//static auto imgui_font_small = io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 10.0f);
-	// static auto imgui_font_large = io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 20.0f);
-
     // Our state
 	static MemoryEditor mem_edit_a2e;
 	static MemoryEditor mem_edit_upload;
@@ -305,10 +332,8 @@ int main(int argc, char* argv[])
 
 	static bool bShouldTerminateNetworking = false;
 	static bool bShouldTerminateProcessing = false;
-	static bool bIsFullscreen = false;
     bool show_demo_window = false;
     bool show_metrics_window = false;
-	bool show_F1_window = false;
 	bool show_texture_window = false;
 	bool show_a2video_window = true;
 	bool show_postprocessing_window = false;
@@ -316,7 +341,6 @@ int main(int argc, char* argv[])
 	int _slotnum = 0;
 	int vbl_region = 2;		// Default to NTSC. 0 is auto, 1 is PAL, 2 is NTSC
 	int vbl_slider_val;
-	float window_bgcolor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 
 	// Get the instances of all singletons before creating threads
 	// This ensures thread safety
@@ -347,7 +371,7 @@ int main(int argc, char* argv[])
     uint64_t dt_LAST = 0;
 	float deltaTime = 0.f;
 
-	set_vsync(g_swapInterval);
+	Main_SetVsync(g_swapInterval);
 
 	uint32_t lastMouseMoveTime = SDL_GetTicks();
 	const uint32_t cursorHideDelay = 3000; // After this delay, the mouse cursor disappears
@@ -356,13 +380,6 @@ int main(int argc, char* argv[])
     bool done = false;
 	GLuint out_tex_id = 0;
 	
-#ifdef __EMSCRIPTEN__
-    // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
-    // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
-    io.IniFilename = nullptr;
-    EMSCRIPTEN_MAINLOOP_BEGIN
-#else
-
 	// Get the saved states from previous runs
 	std::cout << "Loading previous state..." << std::endl;
 	nlohmann::json settingsState;
@@ -393,8 +410,8 @@ int main(int argc, char* argv[])
 			_ww = _sm.value("window width", _ww);
 			_wh = _sm.value("window height", _wh);
 			g_swapInterval = _sm.value("vsync", g_swapInterval);
-			set_vsync(g_swapInterval);
-			bIsFullscreen = _sm.value("fullscreen", bIsFullscreen);
+			Main_SetVsync(g_swapInterval);
+			Main_SetFullScreen(_sm.value("fullscreen", false));
 			vbl_region = _sm.value("videoregion", vbl_region);
 			if (vbl_region == 0)
 			{
@@ -404,7 +421,8 @@ int main(int argc, char* argv[])
 				cycleCounter->isVideoRegionDynamic = false;
 				cycleCounter->SetVideoRegion(vbl_region == 1 ? VideoRegion_e::PAL : VideoRegion_e::NTSC);
 			}
-			show_F1_window = _sm.value("show F1 window", show_F1_window);
+			if (_sm.value("show F1 window", true))
+				Main_ToggleImGui(gl_context);
 			show_a2video_window = _sm.value("show Apple 2 Video window", show_a2video_window);
 			show_postprocessing_window = _sm.value("show Post Processor window", show_postprocessing_window);
 			show_recorder_window = _sm.value("show Recorder window", show_recorder_window);
@@ -430,17 +448,15 @@ int main(int argc, char* argv[])
 	std::cout << "Previous state loaded!" << std::endl;
 
 	// Load up the first screen in SHR, with green border color
-	SetFullScreen(a2VideoManager, bIsFullscreen);
-	DisplaySplashScreen(a2VideoManager, memManager);
+	Main_DisplaySplashScreen();
 
 	SDL_GetWindowSize(window, &_M8DBG_windowWidth, &_M8DBG_windowHeight);
 
 	if (_M8DBG_bDisplayFPSOnScreen)
-		DrawFPSOverlay(a2VideoManager);
-	
+		Main_DrawFPSOverlay();
+		
     while (!done)
-#endif
-    {
+	{
 		// Check if we should reboot
 		if (a2VideoManager->bShouldReboot)
 		{
@@ -449,11 +465,6 @@ int main(int argc, char* argv[])
 			a2VideoManager->ResetComputer();
 		}
 
-		auto _bWasFullscreen = bIsFullscreen;
-		// Beam renderer does not use VSYNC. It synchronizes to the Apple 2's VBL.
-//		if (!(a2VideoManager->ShouldRender() || sdhrManager->IsSdhrEnabled()))
-//			continue;
-
         dt_LAST = dt_NOW;
         dt_NOW = SDL_GetPerformanceCounter();
 		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
@@ -461,15 +472,15 @@ int main(int argc, char* argv[])
 		if (!eventRecorder->IsInReplayMode())
 			eventRecorder->StartReplay();
 
-        // Poll and handle events (inputs, window resize, etc.)
-        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-        // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-        // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-        // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         SDL_Event event;
 		while (SDL_PollEvent(&event))
         {
-            ImGui_ImplSDL2_ProcessEvent(&event);
+			if (Main_IsImGuiOn())
+			{
+				// handled in imgui
+				if (menu->HandleEvent(event))
+					continue;
+			}
             switch (event.type) {
             case SDL_QUIT:
 				done = true;
@@ -487,28 +498,24 @@ int main(int argc, char* argv[])
                 break;
             case SDL_MOUSEMOTION:
 				lastMouseMoveTime = SDL_GetTicks();
-                if (event.motion.state & SDL_BUTTON_RMASK && !io.WantCaptureMouse) {
+                if (event.motion.state & SDL_BUTTON_RMASK) {
                     // Move the camera when the right mouse button is pressed while moving the mouse
                     sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
                 }
                 break;
             case SDL_MOUSEWHEEL:
-				if (!io.WantCaptureMouse) {
-					sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
-				}
+				sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
                 break;
             case SDL_KEYDOWN:
 			{
 				if (event.key.keysym.sym == SDLK_c) {  // Quit on Ctrl-c
-					auto state = SDL_GetKeyboardState(NULL);
-					if (state[SDL_SCANCODE_LCTRL]) {
+					if (SDL_GetModState() & KMOD_CTRL) {
 						done = true;
 						break;
 					}
 				}
-				else if (event.key.keysym.sym == SDLK_F1) {  // Toggle debug window with F1
-					show_F1_window = !show_F1_window;
-					ResetFPSCalculations(a2VideoManager);
+				else if (event.key.keysym.sym == SDLK_F1) {  // Toggle ImGUI with F1
+					Main_ToggleImGui(gl_context);
 				}
 				else if (event.key.keysym.sym == SDLK_F2) {
 					show_postprocessing_window = !show_postprocessing_window;
@@ -519,42 +526,40 @@ int main(int argc, char* argv[])
 				else if (event.key.keysym.sym == SDLK_F8) {
 					_M8DBG_bShowF8Window = !_M8DBG_bShowF8Window;
 				}
-				// Handle fullscreen toggle for Alt+Enter or F11
-				else if ((event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) ||
-					event.key.keysym.sym == SDLK_F11) {
-					bIsFullscreen = !bIsFullscreen; // Toggle state
+				// Handle fullscreen toggle for Alt+Enter
+				else if (event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) {
+					Main_SetFullScreen(!Main_IsFullScreen());
 				}
 				// Camera movement!
-				if (!io.WantCaptureKeyboard) {
-					switch (event.key.keysym.sym)
-					{
-					case SDLK_w:
-						sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
-						break;
-					case SDLK_s:
-						sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
-						break;
-					case SDLK_a:
-						sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
-						break;
-					case SDLK_d:
-						sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
-						break;
-					case SDLK_q:
-						sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
-						break;
-					case SDLK_z:
-						sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
-						break;
-					default:
-						break;
-					};
-				}
+				switch (event.key.keysym.sym)
+				{
+				case SDLK_w:
+					sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
+					break;
+				case SDLK_s:
+					sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
+					break;
+				case SDLK_a:
+					sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
+					break;
+				case SDLK_d:
+					sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
+					break;
+				case SDLK_q:
+					sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
+					break;
+				case SDLK_z:
+					sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
+					break;
+				default:
+					break;
+				};
 			}
                 break;
             default:
                 break;
             }   // switch event.type
+			
         }   // while SDL_PollEvent
 
 		if (!_M8DBG_bDisableVideoRender)
@@ -581,18 +586,19 @@ int main(int argc, char* argv[])
 			postProcessor->Render(window, out_tex_id);
 
 		// Disable mouse if unused after cursorHideDelay
+		// It's possible that the cursor won't get disabled when in windowed mode
+		// (MacOS doesn't allow this, for example)
 		if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
 			SDL_ShowCursor(SDL_DISABLE);
 		else
 			SDL_ShowCursor(SDL_ENABLE);
-
-		if (show_F1_window)
+		
+		if (Main_IsImGuiOn())
+			menu->Render();
+		
+		/*
+		if (false)
 		{
-			// Start the Dear ImGui frame
-			ImGui_ImplOpenGL3_NewFrame();
-			ImGui_ImplSDL2_NewFrame();
-			ImGui::NewFrame();
-
 			// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 			if (show_demo_window)
 				ImGui::ShowDemoWindow(&show_demo_window);
@@ -664,7 +670,7 @@ int main(int argc, char* argv[])
 				if (ImGui::Checkbox("VSYNC", &g_swapInterval))
 				{
 					set_vsync(g_swapInterval);
-					ResetFPSCalculations(a2VideoManager);
+					Main_ResetFPSCalculations();
 				}
 				if (g_swapInterval)
 				{
@@ -679,7 +685,7 @@ int main(int argc, char* argv[])
 				ImGui::Separator();
 				if (ImGui::Button("Reset")) {
 					a2VideoManager->ResetComputer();
-					DisplaySplashScreen(a2VideoManager, memManager);
+					Main_DisplaySplashScreen();
 				}
 				if (ImGui::Button("Quit App (Ctrl-c)"))
 					done = true;
@@ -804,8 +810,8 @@ int main(int argc, char* argv[])
 					ImGui::PushItemWidth(110);
 					if (ImGui::Checkbox("Display FPS on screen", &_M8DBG_bDisplayFPSOnScreen))
 					{
-						ResetFPSCalculations(a2VideoManager);
-						DrawFPSOverlay(a2VideoManager);
+						Main_ResetFPSCalculations();
+						Main_DrawFPSOverlay();
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					ImGui::Dummy(ImVec2(20, 1)); ImGui::SameLine();
@@ -813,32 +819,32 @@ int main(int argc, char* argv[])
 						a2VideoManager->ForceBeamFullScreenRender();
 					ImGui::SliderFloat("Average FPS range (s)", &_M8DBG_average_fps_window, 0.1f, 10.f, "%.1f");
 					if (ImGui::Button("Reset FPS numbers"))
-						ResetFPSCalculations(a2VideoManager);
+						Main_ResetFPSCalculations();
 					ImGui::Separator();
 					if (ImGui::Button("Reset A2SS")) {
-						ResetA2SS(a2VideoManager, memManager);
+						ResetA2SS();
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					ImGui::SameLine();
 					_m8ssSHR = memManager->IsSoftSwitch(A2SS_SHR);
 					if (ImGui::Checkbox("A2SS_SHR##M8", &_m8ssSHR)) {
 						memManager->SetSoftSwitch(A2SS_SHR, _m8ssSHR);
-						ResetFPSCalculations(a2VideoManager);
+						Main_ResetFPSCalculations();
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					ImGui::Separator();
-					/*
+					
 					if (ImGui::Checkbox("Disable Apple 2 Video render", &_M8DBG_bDisableVideoRender))
 						ResetFPSCalculations(a2VideoManager);
 					if (ImGui::Checkbox("Disable PostProcessing render", &_M8DBG_bDisablePPRender))
 						ResetFPSCalculations(a2VideoManager);
 					if (ImGui::Checkbox("Force render even if VRAM unchanged", &a2VideoManager->bAlwaysRenderBuffer))
 						ResetFPSCalculations(a2VideoManager);
-					 */
+					 
 					if (ImGui::Checkbox("VSYNC##M8", &g_swapInterval))
 					{
 						set_vsync(g_swapInterval);
-						ResetFPSCalculations(a2VideoManager);
+						Main_ResetFPSCalculations();
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					if (g_swapInterval)
@@ -865,7 +871,7 @@ int main(int argc, char* argv[])
 								_M8DBG_bKaratekaLoadFailed = true;
 							}
 							else {
-								ResetA2SS(a2VideoManager, memManager);
+								ResetA2SS();
 								memManager->SetSoftSwitch(A2SS_SHR, false);
 								eventRecorder->ReadRecordingFile(karatekafile);
 								eventRecorder->StartReplay();
@@ -877,12 +883,12 @@ int main(int argc, char* argv[])
 						else {
 							eventRecorder->StopReplay();
 						}
-						ResetFPSCalculations(a2VideoManager);
+						Main_ResetFPSCalculations();
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					if (ImGui::Button("DHGR Col 140 Mixed"))
 					{
-						ResetA2SS(a2VideoManager, memManager);
+						ResetA2SS();
 						memManager->SetSoftSwitch(A2SS_SHR, false);
 						memManager->SetSoftSwitch(A2SS_TEXT, false);
 						memManager->SetSoftSwitch(A2SS_80COL, true);
@@ -894,7 +900,7 @@ int main(int argc, char* argv[])
 					}
 					if (ImGui::Button("HGR SPEC1"))
 					{
-						ResetA2SS(a2VideoManager, memManager);
+						ResetA2SS();
 						memManager->SetSoftSwitch(A2SS_SHR, false);
 						memManager->SetSoftSwitch(A2SS_TEXT, false);
 						memManager->SetSoftSwitch(A2SS_HIRES, true);
@@ -904,7 +910,7 @@ int main(int argc, char* argv[])
 					}
 					if (ImGui::Button("\"LEGASHR\" Wobbly"))
 					{
-						ResetA2SS(a2VideoManager, memManager);
+						ResetA2SS();
 						memManager->SetSoftSwitch(A2SS_SHR, true);
 						MemoryLoadSHR("scripts/paintworks.shr");
 						std::ifstream legacydemo("./scripts/tomahawk2_hgr.bin", std::ios::binary);
@@ -913,7 +919,7 @@ int main(int argc, char* argv[])
 						a2VideoManager->bDEMOMergedMode = true;
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
-					/*
+					
 					ImGui::Separator();
 					ImGui::Text("Legacy Shader");
 					const char* _legshaders[] = { "0 - Full" };
@@ -934,7 +940,7 @@ int main(int argc, char* argv[])
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					ImGui::PopItemWidth();
-					 */
+					 
 
 				}
 
@@ -960,6 +966,7 @@ int main(int argc, char* argv[])
 
 			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		}	// show F1 window
+		*/
 
 		SDL_GL_SwapWindow(window);
 
@@ -994,16 +1001,7 @@ int main(int argc, char* argv[])
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL end of render error: " << glerr << std::endl;
 		}
-
-		if (_bWasFullscreen != bIsFullscreen)
-		{
-			// Update full screen status before the next frame
-			SetFullScreen(a2VideoManager, bIsFullscreen);
-		}
     }
-#ifdef __EMSCRIPTEN__
-    EMSCRIPTEN_MAINLOOP_END;
-#endif
 
     // Stop all threads
 	bShouldTerminateProcessing = true;
@@ -1030,11 +1028,11 @@ int main(int argc, char* argv[])
 			{"window y", _wy},
 			{"window width", _ww},
 			{"window height", _wh},
-			{"fullscreen", bIsFullscreen},
+			{"fullscreen", Main_IsFullScreen()},
 			{"vsync", g_swapInterval},
 			{"videoregion", vbl_region},
 			{"window background color", window_bgcolor},
-			{"show F1 window", show_F1_window},
+			{"show F1 window", Main_IsImGuiOn()},
 			{"show Apple 2 Video window", show_a2video_window},
 			{"show Post Processor window", show_postprocessing_window},
 			{"show Recorder window", show_recorder_window},
@@ -1051,10 +1049,8 @@ int main(int argc, char* argv[])
 	}
 	
     // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-    ImGui::DestroyContext();
-
+	delete menu;
+	
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
     SDL_Quit();
