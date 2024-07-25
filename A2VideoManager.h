@@ -148,12 +148,17 @@ public:
 	
 	int eA2MonitorType = A2_MON_COLOR;
 
+	MemoryEditor mem_edit_vram_legacy;
+	MemoryEditor mem_edit_vram_shr;
+	MemoryEditor mem_edit_offset_buffer;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
 	//////////////////////////////////////////////////////////////////////////
 
 	bool IsReady();		// true after full initialization
+	void DisplayCharRomsImGuiChunk();
+	void DisplayImGuiExtraWindows();
 	void DisplayImGuiWindow(bool* p_open);
 	void ToggleA2Video(bool value);
 
@@ -241,9 +246,6 @@ private:
 	bool bImguiWindowIsOpen = false;
 	bool bImguiMemLoadAuxBank = false;
 	int iImguiMemLoadPosition = 0;
-	MemoryEditor mem_edit_vram_legacy;
-	MemoryEditor mem_edit_vram_shr;
-	MemoryEditor mem_edit_offset_buffer;
 	
 	// beam render state variables
 	bool bBeamIsActive = false;				// Is the beam active?

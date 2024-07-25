@@ -1256,11 +1256,61 @@ void A2VideoManager::DeactivateBeam()
 ///
 ///
 
+void A2VideoManager::DisplayCharRomsImGuiChunk()
+{
+	if (ImGui::BeginMenu("Regular"))
+	{
+		for (int i = 0; i < font_roms_array.size(); ++i)
+		{
+			if (ImGui::MenuItem(font_roms_array[i].c_str(), "", i==font_rom_regular_idx))
+			{
+				font_rom_regular_idx = i;
+				bShouldInitializeRender = true;
+			}
+		}
+		ImGui::EndMenu();
+	}
+	if (ImGui::BeginMenu("Alternate"))
+	{
+		for (int i = 0; i < font_roms_array.size(); ++i)
+		{
+			if (ImGui::MenuItem(font_roms_array[i].c_str(), "", i==font_rom_alternate_idx))
+			{
+				font_rom_alternate_idx = i;
+				bShouldInitializeRender = true;
+			}
+		}
+		ImGui::EndMenu();
+	}
+}
+
+void A2VideoManager::DisplayImGuiExtraWindows()
+{
+	// Show the VRAM legacy window
+	if (mem_edit_vram_legacy.Open)
+	{
+		mem_edit_vram_legacy.DrawWindow("Memory Editor: Beam VRAM Legacy", this->GetLegacyVRAMWritePtr(), this->GetVramSizeLegacy());
+	}
+	
+	// Show the VRAM SHR window
+	if (mem_edit_vram_shr.Open)
+	{
+		mem_edit_vram_shr.DrawWindow("Memory Editor: Beam VRAM SHR", this->GetSHRVRAMWritePtr(), this->GetVramSizeSHR());
+	}
+	
+	// Show the merge offset window
+	if (mem_edit_offset_buffer.Open)
+	{
+		mem_edit_offset_buffer.DrawWindow("Memory Editor: Offset Buffer", (void*)this->GetOffsetBufferReadPtr(), this->GetVramHeightSHR());
+	}
+}
+
 void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 {
 	bImguiWindowIsOpen = p_open;
 	if (p_open)
 	{
+		ImGui::SetNextWindowSizeConstraints(ImVec2(400, 400), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("Apple 2 Video Manager", p_open);
 		if (!ImGui::IsWindowCollapsed())
 		{
@@ -1315,11 +1365,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank))
 				this->ForceBeamFullScreenRender();
 			
-			ImGui::SeparatorText("[ VRAM WINDOWS ]");
-			ImGui::Checkbox("VRAM Legacy Memory Window", &mem_edit_vram_legacy.Open);
-			ImGui::Checkbox("VRAM SHR Memory Window", &mem_edit_vram_shr.Open);
-			ImGui::Checkbox("VRAM Offset Buffer", &mem_edit_offset_buffer.Open);
-			
+			/*
 			if (ImGui::CollapsingHeader("[ CHARACTER ROMS ]"))
 			{
 				ImGui::PushItemWidth(160);
@@ -1338,6 +1384,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 				}
 				ImGui::PopItemWidth();
 			}
+			 */
 			
 			if (ImGui::CollapsingHeader("[ SOFT SWITCHES ]"))
 			{
@@ -1417,28 +1464,8 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 					this->ForceBeamFullScreenRender();
 				}
 			}
-			SoundManager::GetInstance()->DisplayImGuiChunk();
-			MockingboardManager::GetInstance()->DisplayImGuiChunk();
 		}
 		ImGui::End();
-	}
-
-	// Show the VRAM legacy window
-	if (mem_edit_vram_legacy.Open)
-	{
-		mem_edit_vram_legacy.DrawWindow("Memory Editor: Beam VRAM Legacy", this->GetLegacyVRAMWritePtr(), this->GetVramSizeLegacy());
-	}
-	
-	// Show the VRAM SHR window
-	if (mem_edit_vram_shr.Open)
-	{
-		mem_edit_vram_shr.DrawWindow("Memory Editor: Beam VRAM SHR", this->GetSHRVRAMWritePtr(), this->GetVramSizeSHR());
-	}
-	
-	// Show the merge offset window
-	if (mem_edit_offset_buffer.Open)
-	{
-		mem_edit_offset_buffer.DrawWindow("Memory Editor: Offset Buffer", (void*)this->GetOffsetBufferReadPtr(), this->GetVramHeightSHR());
 	}
 }
 
