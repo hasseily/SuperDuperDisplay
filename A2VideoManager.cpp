@@ -337,6 +337,7 @@ void A2VideoManager::ResetComputer()
     if (bIsRebooting == true)
         return;
     bIsRebooting = true;
+	SerializeState();
 	MemoryManager::GetInstance()->Initialize();
 	SoundManager::GetInstance()->Initialize();
 	MockingboardManager::GetInstance()->Initialize();
@@ -1284,6 +1285,29 @@ void A2VideoManager::DisplayCharRomsImGuiChunk()
 	}
 }
 
+void A2VideoManager::DisplayImGuiLoadFileWindow(bool* p_open)
+{
+	bImguiLoadFileWindowIsOpen = p_open;
+	if (p_open) {
+		ImGui::SetNextWindowSizeConstraints(ImVec2(300, 100), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::Begin("Load File into Memory", p_open);
+		if (!ImGui::IsWindowCollapsed())
+		{
+			ImGui::Text("Load Memory Start: ");
+			ImGui::SameLine();
+			ImGui::PushItemWidth(120);
+			ImGui::InputInt("##mem_load", &iImguiMemLoadPosition, 1, 1024, ImGuiInputTextFlags_CharsHexadecimal);
+			ImGui::PopItemWidth();
+			iImguiMemLoadPosition = std::clamp(iImguiMemLoadPosition, 0, 0xFFFF);
+			ImGui::Checkbox("Aux Bank", &bImguiMemLoadAuxBank);
+			ImGui::SameLine(); ImGui::Text("   "); ImGui::SameLine();
+			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank))
+				this->ForceBeamFullScreenRender();
+		}
+		ImGui::End();
+	}
+}
+
 void A2VideoManager::DisplayImGuiExtraWindows()
 {
 	// Show the VRAM legacy window
@@ -1354,116 +1378,6 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			if (ImGui::Checkbox("HGR SPEC2", &bUseHGRSPEC2))
 				this->ForceBeamFullScreenRender();
 			ImGui::SetItemTooltip("A HGR mode that makes 00100 be white, found in the EVE card");
-			
-			ImGui::SeparatorText("[ LOAD FILE INTO MEMORY ]");
-			ImGui::Text("Load Memory Start: ");
-			ImGui::SameLine();
-			ImGui::InputInt("##mem_load", &iImguiMemLoadPosition, 1, 1024, ImGuiInputTextFlags_CharsHexadecimal);
-			iImguiMemLoadPosition = std::clamp(iImguiMemLoadPosition, 0, 0xFFFF);
-			ImGui::Checkbox("Aux Bank", &bImguiMemLoadAuxBank);
-			ImGui::SameLine(); ImGui::Text("   "); ImGui::SameLine();
-			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank))
-				this->ForceBeamFullScreenRender();
-			
-			/*
-			if (ImGui::CollapsingHeader("[ CHARACTER ROMS ]"))
-			{
-				ImGui::PushItemWidth(160);
-				std::vector<const char*> items;
-				for (const auto& filename : font_roms_array) {
-					items.push_back(filename.c_str());
-				}
-				if (ImGui::ListBox("##CharRomRegular", &font_rom_regular_idx, items.data(), (int)items.size(), 4))
-				{
-					bShouldInitializeRender = true;
-				}
-				ImGui::SameLine();
-				if (ImGui::ListBox("##CharRomAlternate", &font_rom_alternate_idx, items.data(), (int)items.size(), 4))
-				{
-					bShouldInitializeRender = true;
-				}
-				ImGui::PopItemWidth();
-			}
-			 */
-			
-			if (ImGui::CollapsingHeader("[ SOFT SWITCHES ]"))
-			{
-				bool ssValue0 = memManager->IsSoftSwitch(A2SS_80STORE);
-				if (ImGui::Checkbox("A2SS_80STORE", &ssValue0)) {
-					memManager->SetSoftSwitch(A2SS_80STORE, ssValue0);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue1 = memManager->IsSoftSwitch(A2SS_RAMRD);
-				if (ImGui::Checkbox("A2SS_RAMRD", &ssValue1)) {
-					memManager->SetSoftSwitch(A2SS_RAMRD, ssValue1);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue2 = memManager->IsSoftSwitch(A2SS_RAMWRT);
-				if (ImGui::Checkbox("A2SS_RAMWRT", &ssValue2)) {
-					memManager->SetSoftSwitch(A2SS_RAMWRT, ssValue2);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue3 = memManager->IsSoftSwitch(A2SS_80COL);
-				if (ImGui::Checkbox("A2SS_80COL", &ssValue3)) {
-					memManager->SetSoftSwitch(A2SS_80COL, ssValue3);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue4 = memManager->IsSoftSwitch(A2SS_ALTCHARSET);
-				if (ImGui::Checkbox("A2SS_ALTCHARSET", &ssValue4)) {
-					memManager->SetSoftSwitch(A2SS_ALTCHARSET, ssValue4);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue5 = memManager->IsSoftSwitch(A2SS_INTCXROM);
-				if (ImGui::Checkbox("A2SS_INTCXROM", &ssValue5)) {
-					memManager->SetSoftSwitch(A2SS_INTCXROM, ssValue5);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue6 = memManager->IsSoftSwitch(A2SS_SLOTC3ROM);
-				if (ImGui::Checkbox("A2SS_SLOTC3ROM", &ssValue6)) {
-					memManager->SetSoftSwitch(A2SS_SLOTC3ROM, ssValue6);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue7 = memManager->IsSoftSwitch(A2SS_TEXT);
-				if (ImGui::Checkbox("A2SS_TEXT", &ssValue7)) {
-					memManager->SetSoftSwitch(A2SS_TEXT, ssValue7);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue8 = memManager->IsSoftSwitch(A2SS_MIXED);
-				if (ImGui::Checkbox("A2SS_MIXED", &ssValue8)) {
-					memManager->SetSoftSwitch(A2SS_MIXED, ssValue8);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue9 = memManager->IsSoftSwitch(A2SS_PAGE2);
-				if (ImGui::Checkbox("A2SS_PAGE2", &ssValue9)) {
-					memManager->SetSoftSwitch(A2SS_PAGE2, ssValue9);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue10 = memManager->IsSoftSwitch(A2SS_HIRES);
-				if (ImGui::Checkbox("A2SS_HIRES", &ssValue10)) {
-					memManager->SetSoftSwitch(A2SS_HIRES, ssValue10);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue11 = memManager->IsSoftSwitch(A2SS_DHGR);
-				if (ImGui::Checkbox("A2SS_DHGR", &ssValue11)) {
-					memManager->SetSoftSwitch(A2SS_DHGR, ssValue11);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue12 = memManager->IsSoftSwitch(A2SS_DHGRMONO);
-				if (ImGui::Checkbox("A2SS_DHGRMONO", &ssValue12)) {
-					memManager->SetSoftSwitch(A2SS_DHGRMONO, ssValue12);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue13 = memManager->IsSoftSwitch(A2SS_SHR);
-				if (ImGui::Checkbox("A2SS_SHR", &ssValue13)) {
-					memManager->SetSoftSwitch(A2SS_SHR, ssValue13);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue14 = memManager->IsSoftSwitch(A2SS_GREYSCALE);
-				if (ImGui::Checkbox("A2SS_GREYSCALE", &ssValue14)) {
-					memManager->SetSoftSwitch(A2SS_GREYSCALE, ssValue14);
-					this->ForceBeamFullScreenRender();
-				}
-			}
 		}
 		ImGui::End();
 	}

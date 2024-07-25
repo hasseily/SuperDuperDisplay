@@ -13,6 +13,7 @@
 #include "MockingboardManager.h"
 #include "PostProcessor.h"
 #include "EventRecorder.h"
+#include "SDHRManager.h"
 #include "extras/MemoryLoader.h"
 #include "extras/ImGuiFileDialog.h"
 
@@ -27,6 +28,9 @@ extern void Main_SetVsync(bool _on);
 extern void Main_DisplaySplashScreen();
 extern void Main_GetBGColor(float outColor[4]);
 extern void Main_SetBGColor(const float newColor[4]);
+extern void Main_ResetA2SS();
+extern bool Main_IsFPSOverlay();
+extern void Main_SetFPSOverlay(bool isFPSOverlay);
 
 class MainMenu::Gui {
 public:
@@ -41,9 +45,15 @@ public:
 	bool bShowTextureWindow = false;
 	bool bShowA2VideoWindow = false;
 	bool bShowPPWindow = false;
+	bool bShowSSWindow = false;
+	bool bShowEventRecorderWindow = false;
+	bool bShowLoadFileWindow = false;
 	
-	MemoryEditor mem_edit_a2e;
+	bool bSampleRunKarateka = false;
 
+	MemoryEditor mem_edit_a2e;
+	MemoryEditor mem_edit_sdhr_upload;
+	
 	Gui() {}
 };
 
@@ -74,6 +84,7 @@ MainMenu::MainMenu(SDL_GLContext gl_context, SDL_Window* window)
 	io.MouseDrawCursor = false;
 	
 	pGui->mem_edit_a2e.Open = false;
+	pGui->mem_edit_sdhr_upload.Open = false;
 }
 
 MainMenu::~MainMenu() {
@@ -184,7 +195,9 @@ void MainMenu::Render() {
 		ImGui::Text("     ");
 		ImGui::PushFont(pGui->fontDefault);
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
-		ImGui::Text("Avg %.3f ms/f (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+		ImGui::Text("FrameID: %d, Avg %.3f ms/f (%.1f FPS)",
+					A2VideoManager::GetInstance()->GetVRAMReadId(),
+					1000.0f / io.Framerate, io.Framerate);
 		ImGui::PopFont();
 		
 		ImGui::EndMainMenuBar();
@@ -256,10 +269,108 @@ void MainMenu::Render() {
 		
 		if (pGui->bShowA2VideoWindow)
 			A2VideoManager::GetInstance()->DisplayImGuiWindow(&pGui->bShowA2VideoWindow);
+		if (pGui->bShowLoadFileWindow)
+			A2VideoManager::GetInstance()->DisplayImGuiLoadFileWindow(&pGui->bShowLoadFileWindow);
 		if (pGui->bShowPPWindow)
 			PostProcessor::GetInstance()->DisplayImGuiWindow(&pGui->bShowPPWindow);
+		if (pGui->bShowEventRecorderWindow)
+			EventRecorder::GetInstance()->DisplayImGuiWindow(&pGui->bShowEventRecorderWindow);
+
+		if (pGui->bShowSSWindow) {
+			ImGui::SetNextWindowSizeConstraints(ImVec2(170, 410), ImVec2(FLT_MAX, FLT_MAX));
+			ImGui::Begin("Soft Switches", &pGui->bShowSSWindow);
+			auto a2VideoManager = A2VideoManager::GetInstance();
+			auto memManager = MemoryManager::GetInstance();
+			bool ssValue0 = memManager->IsSoftSwitch(A2SS_80STORE);
+			if (ImGui::Checkbox("A2SS_80STORE", &ssValue0)) {
+				memManager->SetSoftSwitch(A2SS_80STORE, ssValue0);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			bool ssValue1 = memManager->IsSoftSwitch(A2SS_RAMRD);
+			if (ImGui::Checkbox("A2SS_RAMRD", &ssValue1)) {
+				memManager->SetSoftSwitch(A2SS_RAMRD, ssValue1);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			bool ssValue2 = memManager->IsSoftSwitch(A2SS_RAMWRT);
+			if (ImGui::Checkbox("A2SS_RAMWRT", &ssValue2)) {
+				memManager->SetSoftSwitch(A2SS_RAMWRT, ssValue2);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			bool ssValue3 = memManager->IsSoftSwitch(A2SS_80COL);
+			if (ImGui::Checkbox("A2SS_80COL", &ssValue3)) {
+				memManager->SetSoftSwitch(A2SS_80COL, ssValue3);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			bool ssValue4 = memManager->IsSoftSwitch(A2SS_ALTCHARSET);
+			if (ImGui::Checkbox("A2SS_ALTCHARSET", &ssValue4)) {
+				memManager->SetSoftSwitch(A2SS_ALTCHARSET, ssValue4);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			bool ssValue5 = memManager->IsSoftSwitch(A2SS_INTCXROM);
+			if (ImGui::Checkbox("A2SS_INTCXROM", &ssValue5)) {
+				memManager->SetSoftSwitch(A2SS_INTCXROM, ssValue5);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			bool ssValue6 = memManager->IsSoftSwitch(A2SS_SLOTC3ROM);
+			if (ImGui::Checkbox("A2SS_SLOTC3ROM", &ssValue6)) {
+				memManager->SetSoftSwitch(A2SS_SLOTC3ROM, ssValue6);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			bool ssValue7 = memManager->IsSoftSwitch(A2SS_TEXT);
+			if (ImGui::Checkbox("A2SS_TEXT", &ssValue7)) {
+				memManager->SetSoftSwitch(A2SS_TEXT, ssValue7);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			bool ssValue8 = memManager->IsSoftSwitch(A2SS_MIXED);
+			if (ImGui::Checkbox("A2SS_MIXED", &ssValue8)) {
+				memManager->SetSoftSwitch(A2SS_MIXED, ssValue8);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			bool ssValue9 = memManager->IsSoftSwitch(A2SS_PAGE2);
+			if (ImGui::Checkbox("A2SS_PAGE2", &ssValue9)) {
+				memManager->SetSoftSwitch(A2SS_PAGE2, ssValue9);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			bool ssValue10 = memManager->IsSoftSwitch(A2SS_HIRES);
+			if (ImGui::Checkbox("A2SS_HIRES", &ssValue10)) {
+				memManager->SetSoftSwitch(A2SS_HIRES, ssValue10);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			bool ssValue11 = memManager->IsSoftSwitch(A2SS_DHGR);
+			if (ImGui::Checkbox("A2SS_DHGR", &ssValue11)) {
+				memManager->SetSoftSwitch(A2SS_DHGR, ssValue11);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			bool ssValue12 = memManager->IsSoftSwitch(A2SS_DHGRMONO);
+			if (ImGui::Checkbox("A2SS_DHGRMONO", &ssValue12)) {
+				memManager->SetSoftSwitch(A2SS_DHGRMONO, ssValue12);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			bool ssValue13 = memManager->IsSoftSwitch(A2SS_SHR);
+			if (ImGui::Checkbox("A2SS_SHR", &ssValue13)) {
+				memManager->SetSoftSwitch(A2SS_SHR, ssValue13);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			bool ssValue14 = memManager->IsSoftSwitch(A2SS_GREYSCALE);
+			if (ImGui::Checkbox("A2SS_GREYSCALE", &ssValue14)) {
+				memManager->SetSoftSwitch(A2SS_GREYSCALE, ssValue14);
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			ImGui::Separator();
+			if (ImGui::Button("Reset Soft Switches")) {
+				Main_ResetA2SS();
+				a2VideoManager->ForceBeamFullScreenRender();
+			}
+			ImGui::End();
+		}
 		
 		A2VideoManager::GetInstance()->DisplayImGuiExtraWindows();
+		
+		if (pGui->mem_edit_sdhr_upload.Open)
+		{
+			auto memManager = MemoryManager::GetInstance();
+			pGui->mem_edit_sdhr_upload.DrawWindow("Memory Editor: SDHR Upload Region", memManager->GetApple2MemPtr(), 2 * _A2_MEMORY_SHADOW_END);
+		}
 	}
 	
 	ImGui::Render();
@@ -269,8 +380,8 @@ void MainMenu::Render() {
 
 void MainMenu::ShowSDDMenu() {
 #ifndef __APPLE__
-	if (ImGui::MenuItem("Fullscreen", "Alt+Enter")) {
-		HandleFullscreen();
+	if (ImGui::MenuItem("Fullscreen", "Alt+Enter", Main_IsFullScreen())) {
+		Main_SetFullScreen(!Main_IsFullScreen());
 	}
 #endif
 	if (ImGui::BeginMenu("Fullscreen Resolution")) {
@@ -290,6 +401,16 @@ void MainMenu::ShowSDDMenu() {
 		Main_SetVsync(bMMVsync);
 		iMMVsync = Main_GetVsync();
 	}
+	if (bMMVsync)
+	{
+		ImGui::SameLine();
+		ImGui::Text("On");
+		if (iMMVsync)
+		{
+			ImGui::SameLine();
+			ImGui::Text("(Adaptive)");
+		}
+	}
 	if (ImGui::BeginMenu("Background Color")) {
 		float windowBGColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 		Main_GetBGColor(windowBGColor);
@@ -300,7 +421,9 @@ void MainMenu::ShowSDDMenu() {
 	}
 	ImGui::Separator();
 	if (ImGui::MenuItem("Reset SDD")) {
+		auto switch_c034 = MemoryManager::GetInstance()->switch_c034;
 		A2VideoManager::GetInstance()->ResetComputer();
+		MemoryManager::GetInstance()->switch_c034 = switch_c034;
 		Main_DisplaySplashScreen();
 	}
 	ImGui::Separator();
@@ -367,9 +490,11 @@ void MainMenu::ShowVideoMenu() {
 	ImGui::MenuItem("Apple 2 Video Settings", "F2", &pGui->bShowA2VideoWindow);
 	ImGui::MenuItem("Post Processor Settings", "F3", &pGui->bShowPPWindow);
 	ImGui::Separator();
+	if (ImGui::MenuItem("On-Screen FPS", "F8", Main_IsFPSOverlay())) {
+		Main_SetFPSOverlay(!Main_IsFPSOverlay());
+	}
 	if (ImGui::MenuItem("Run Vertical Refresh"))
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
-	ImGui::MenuItem("Textures Viewer", "", &pGui->bShowTextureWindow);
 }
 
 void MainMenu::ShowSoundMenu() {
@@ -384,42 +509,81 @@ void MainMenu::ShowSoundMenu() {
 }
 
 void MainMenu::ShowSamplesMenu() {
-	ImGui::MenuItem("Run Karateka Demo");
-	ImGui::MenuItem("DHGR Col140Mixed");
-	ImGui::MenuItem("HGR SPEC1");
-	ImGui::MenuItem("SHR+Legacy");
+	auto memManager = MemoryManager::GetInstance();
+	auto a2VideoManager = A2VideoManager::GetInstance();
+	auto eventRecorder = EventRecorder::GetInstance();
+
+	if (ImGui::MenuItem("Run Karateka Demo", "", &pGui->bSampleRunKarateka)) {
+		if (pGui->bSampleRunKarateka) {
+			std::ifstream karatekafile("./recordings/karateka.vcr", std::ios::binary);
+			Main_ResetA2SS();
+			memManager->SetSoftSwitch(A2SS_SHR, false);
+			eventRecorder->ReadRecordingFile(karatekafile);
+			eventRecorder->StartReplay();
+			memManager->SetSoftSwitch(A2SS_TEXT, false);
+			memManager->SetSoftSwitch(A2SS_HIRES, true);
+			a2VideoManager->ForceBeamFullScreenRender();
+		} else {
+			eventRecorder->StopReplay();
+		}
+		Main_ResetFPSCalculations();
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("DHGR Col140Mixed")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, false);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_80COL, true);
+		memManager->SetSoftSwitch(A2SS_HIRES, true);
+		memManager->SetSoftSwitch(A2SS_DHGR, true);
+		a2VideoManager->bUseDHGRCOL140Mixed = true;
+		MemoryLoadDHR("scripts/extasie0_140mix.dhr");
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("HGR SPEC1")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, false);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_HIRES, true);
+		a2VideoManager->bUseHGRSPEC1 = true;
+		MemoryLoadHGR("scripts/arcticfox.hgr");
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("SHR+Legacy")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, true);
+		MemoryLoadSHR("scripts/paintworks.shr");
+		std::ifstream legacydemo("./scripts/tomahawk2_hgr.bin", std::ios::binary);
+		legacydemo.seekg(0, std::ios::beg); // Go back to the start of the file
+		legacydemo.read(reinterpret_cast<char*>(MemoryManager::GetInstance()->GetApple2MemPtr()), 0x4000);
+		a2VideoManager->bDEMOMergedMode = true;
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
 }
 
 void MainMenu::ShowDeveloperMenu() {
 	auto a2VideoManager = A2VideoManager::GetInstance();
-	ImGui::MenuItem("Event Recorder");
-	ImGui::MenuItem("FPS Overlay");
-	ImGui::MenuItem("Load File Into Memory");
-	if (ImGui::BeginMenu("Soft Switches")) {
-		ImGui::MenuItem("SS Window");
-		ImGui::MenuItem("Reset");
-		ImGui::EndMenu();
-	}
-	ImGui::MenuItem("Run Vertical Refresh");
+	if (ImGui::MenuItem("Run Vertical Refresh"))
+		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	ImGui::MenuItem("Load File Into Memory", "", &pGui->bShowLoadFileWindow);
 	ImGui::Separator();
-	if (ImGui::BeginMenu("VRAM Windows")) {
+	ImGui::MenuItem("Soft Switches", "", &pGui->bShowSSWindow);
+	ImGui::MenuItem("Event Recorder", "", &pGui->bShowEventRecorderWindow);
+	if (ImGui::BeginMenu("VRAMs")) {
 		ImGui::MenuItem("Legacy", "", &a2VideoManager->mem_edit_vram_legacy.Open);
 		ImGui::MenuItem("SHR", "", &a2VideoManager->mem_edit_vram_shr.Open);
 		ImGui::MenuItem("Offset Buffer", "", &a2VideoManager->mem_edit_offset_buffer.Open);
 		ImGui::EndMenu();
 	}
-	ImGui::MenuItem("SDD Textures Window");
+	ImGui::MenuItem("SDD Textures", "", &pGui->bShowTextureWindow);
 	ImGui::Separator();
 	if (ImGui::BeginMenu("SDHR")) {
-		ImGui::MenuItem("Untextured Geometry");
-		ImGui::MenuItem("Perspective Projection");
-		ImGui::MenuItem("Upload Region Memory Window");
+		auto sdhrManager = SDHRManager::GetInstance();
+		ImGui::MenuItem("Untextured Geometry", "", &sdhrManager->bDebugNoTextures);
+		ImGui::MenuItem("Perspective Projection", "", &sdhrManager->bUsePerspective);
+		ImGui::MenuItem("Upload Region Memory Window", "", &pGui->mem_edit_sdhr_upload.Open);
 		ImGui::EndMenu();
 	}
-}
-
-void MainMenu::HandleFullscreen() {
-	Main_SetFullScreen(!Main_IsFullScreen());
 }
 
 void MainMenu::HandleQuit() {

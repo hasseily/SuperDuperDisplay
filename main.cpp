@@ -58,7 +58,7 @@ static char fps_str_buf[40];
 
 bool _M8DBG_bDisableVideoRender = false;
 bool _M8DBG_bDisablePPRender = false;
-bool _M8DBG_bDisplayFPSOnScreen = false;
+bool bDisplayFPSOnScreen = false;
 float _M8DBG_average_fps_window = 1.f;	// in seconds
 bool _M8DBG_bShowF8Window = true;
 bool _M8DBG_bRunKarateka = false;
@@ -132,13 +132,26 @@ void Main_DisplaySplashScreen()
 void Main_DrawFPSOverlay()
 {
 	auto a2VideoManager = A2VideoManager::GetInstance();
-	if (_M8DBG_bDisplayFPSOnScreen)
+	if (bDisplayFPSOnScreen)
 	{
 		a2VideoManager->DrawOverlayString("AVERAGE FPS: ", 13, 0b11010010, 0, 0);
 		a2VideoManager->DrawOverlayString("WORST FPS: ", 11, 0b11010010, 2, 1);
 	} else {
 		a2VideoManager->EraseOverlayRange(20, 0, 0);
 		a2VideoManager->EraseOverlayRange(20, 0, 1);
+	}
+	a2VideoManager->ForceBeamFullScreenRender();
+}
+
+bool Main_IsFPSOverlay() {
+	return bDisplayFPSOnScreen;
+}
+
+void Main_SetFPSOverlay(bool isFPSOverlay) {
+	if (bDisplayFPSOnScreen != isFPSOverlay)
+	{
+		bDisplayFPSOnScreen = isFPSOverlay;
+		Main_DrawFPSOverlay();
 	}
 }
 
@@ -197,7 +210,7 @@ static void Main_ToggleImGui(SDL_GLContext gl_context)
 	Main_ResetFPSCalculations();
 }
 
-static void ResetA2SS() {
+void Main_ResetA2SS() {
 	auto a2VideoManager = A2VideoManager::GetInstance();
 	auto memManager = MemoryManager::GetInstance();
 
@@ -452,7 +465,7 @@ int main(int argc, char* argv[])
 
 	SDL_GetWindowSize(window, &_M8DBG_windowWidth, &_M8DBG_windowHeight);
 
-	if (_M8DBG_bDisplayFPSOnScreen)
+	if (bDisplayFPSOnScreen)
 		Main_DrawFPSOverlay();
 		
     while (!done)
@@ -517,14 +530,8 @@ int main(int argc, char* argv[])
 				else if (event.key.keysym.sym == SDLK_F1) {  // Toggle ImGUI with F1
 					Main_ToggleImGui(gl_context);
 				}
-				else if (event.key.keysym.sym == SDLK_F2) {
-					show_postprocessing_window = !show_postprocessing_window;
-				}
-				else if (event.key.keysym.sym == SDLK_F3) {
-					show_a2video_window = !show_a2video_window;
-				}
 				else if (event.key.keysym.sym == SDLK_F8) {
-					_M8DBG_bShowF8Window = !_M8DBG_bShowF8Window;
+					Main_SetFPSOverlay(!Main_IsFPSOverlay());
 				}
 				// Handle fullscreen toggle for Alt+Enter
 				else if (event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) {
@@ -808,7 +815,7 @@ int main(int argc, char* argv[])
 					ImGui::Separator();
 					ImGui::PopItemWidth();
 					ImGui::PushItemWidth(110);
-					if (ImGui::Checkbox("Display FPS on screen", &_M8DBG_bDisplayFPSOnScreen))
+					if (ImGui::Checkbox("Display FPS on screen", &bDisplayFPSOnScreen))
 					{
 						Main_ResetFPSCalculations();
 						Main_DrawFPSOverlay();
@@ -822,7 +829,7 @@ int main(int argc, char* argv[])
 						Main_ResetFPSCalculations();
 					ImGui::Separator();
 					if (ImGui::Button("Reset A2SS")) {
-						ResetA2SS();
+						Main_ResetA2SS();
 						a2VideoManager->ForceBeamFullScreenRender();
 					}
 					ImGui::SameLine();
@@ -871,7 +878,7 @@ int main(int argc, char* argv[])
 								_M8DBG_bKaratekaLoadFailed = true;
 							}
 							else {
-								ResetA2SS();
+								Main_ResetA2SS();
 								memManager->SetSoftSwitch(A2SS_SHR, false);
 								eventRecorder->ReadRecordingFile(karatekafile);
 								eventRecorder->StartReplay();
@@ -888,7 +895,7 @@ int main(int argc, char* argv[])
 					}
 					if (ImGui::Button("DHGR Col 140 Mixed"))
 					{
-						ResetA2SS();
+						Main_ResetA2SS();
 						memManager->SetSoftSwitch(A2SS_SHR, false);
 						memManager->SetSoftSwitch(A2SS_TEXT, false);
 						memManager->SetSoftSwitch(A2SS_80COL, true);
@@ -900,7 +907,7 @@ int main(int argc, char* argv[])
 					}
 					if (ImGui::Button("HGR SPEC1"))
 					{
-						ResetA2SS();
+						Main_ResetA2SS();
 						memManager->SetSoftSwitch(A2SS_SHR, false);
 						memManager->SetSoftSwitch(A2SS_TEXT, false);
 						memManager->SetSoftSwitch(A2SS_HIRES, true);
@@ -910,7 +917,7 @@ int main(int argc, char* argv[])
 					}
 					if (ImGui::Button("\"LEGASHR\" Wobbly"))
 					{
-						ResetA2SS();
+						Main_ResetA2SS();
 						memManager->SetSoftSwitch(A2SS_SHR, true);
 						MemoryLoadSHR("scripts/paintworks.shr");
 						std::ifstream legacydemo("./scripts/tomahawk2_hgr.bin", std::ios::binary);
@@ -982,7 +989,7 @@ int main(int argc, char* argv[])
 				fps_worst = fps;
 
 			//if (false)
-			if (_M8DBG_bDisplayFPSOnScreen)
+			if (bDisplayFPSOnScreen)
 			{
 				snprintf(fps_str_buf, 10,  "%.0f ", fps);
 				a2VideoManager->EraseOverlayRange(6, 13, 0);

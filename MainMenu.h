@@ -18,7 +18,6 @@ private:
 	void ShowSamplesMenu();
 	void ShowDeveloperMenu();
 	
-	void HandleFullscreen();
 	void HandleQuit();
 	
 	SDL_GLContext gl_context_;

@@ -158,6 +158,7 @@ public:
 
 	bool IsReady();		// true after full initialization
 	void DisplayCharRomsImGuiChunk();
+	void DisplayImGuiLoadFileWindow(bool* p_open);
 	void DisplayImGuiExtraWindows();
 	void DisplayImGuiWindow(bool* p_open);
 	void ToggleA2Video(bool value);
@@ -244,6 +245,7 @@ private:
 
 	// imgui vars
 	bool bImguiWindowIsOpen = false;
+	bool bImguiLoadFileWindowIsOpen = false;
 	bool bImguiMemLoadAuxBank = false;
 	int iImguiMemLoadPosition = 0;
 	
