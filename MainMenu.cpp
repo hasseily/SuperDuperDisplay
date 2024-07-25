@@ -48,6 +48,7 @@ public:
 	bool bShowSSWindow = false;
 	bool bShowEventRecorderWindow = false;
 	bool bShowLoadFileWindow = false;
+	bool bShowImGuiMetricsWindow = false;
 	
 	bool bSampleRunKarateka = false;
 
@@ -371,6 +372,9 @@ void MainMenu::Render() {
 			auto memManager = MemoryManager::GetInstance();
 			pGui->mem_edit_sdhr_upload.DrawWindow("Memory Editor: SDHR Upload Region", memManager->GetApple2MemPtr(), 2 * _A2_MEMORY_SHADOW_END);
 		}
+		
+		if (pGui->bShowImGuiMetricsWindow)
+			ImGui::ShowMetricsWindow(&pGui->bShowImGuiMetricsWindow);
 	}
 	
 	ImGui::Render();
@@ -584,6 +588,8 @@ void MainMenu::ShowDeveloperMenu() {
 		ImGui::MenuItem("Upload Region Memory Window", "", &pGui->mem_edit_sdhr_upload.Open);
 		ImGui::EndMenu();
 	}
+	ImGui::Separator();
+	ImGui::MenuItem("ImGui Metrics Window", "", &pGui->bShowImGuiMetricsWindow);
 }
 
 void MainMenu::HandleQuit() {

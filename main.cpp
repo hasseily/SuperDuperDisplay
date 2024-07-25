@@ -603,6 +603,7 @@ int main(int argc, char* argv[])
 		if (Main_IsImGuiOn())
 			menu->Render();
 		
+		// TODO: THINGS THAT HAVEN'T YET BEEN REFACTORED INTO MENU
 		/*
 		if (false)
 		{
@@ -614,7 +615,6 @@ int main(int argc, char* argv[])
 			if (!ImGui::IsWindowCollapsed())
 			{
 				ImGui::PushItemWidth(110);
-				ImGui::Text("Press F1 at any time to toggle the GUI");
 				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 				ImGui::Text("Worst Frame rate %.3f ms/frame", 1000.0f / fps_worst);
 				int _vw, _vh;
@@ -622,169 +622,15 @@ int main(int argc, char* argv[])
 				ImGui::Text("Drawable Size: %d x %d", _vw, _vh);
 				ImGui::Text("A2 Screen Size: %d x %d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);
 				ImGui::Separator();
-				ImGui::Text("Packet Pool Count: %lu", get_packet_pool_count());
-				ImGui::Text("Max Incoming Packet Queue: %lu", get_max_incoming_packets());
-				ImGui::Text("Network Processing Time: %llu ns", get_duration_network_processing_ns());
-				ImGui::Text("Packets Processing Time: %llu ns", get_duration_packet_processing_ns());
-				ImGui::Separator();
-				ImGui::Text("Region: ");  ImGui::SameLine();
-				if (cycleCounter->isVideoRegionDynamic)
-					vbl_region = 0;
-				else
-					vbl_region = (cycleCounter->GetVideoRegion() == VideoRegion_e::PAL ? 1 : 2);
-				if (ImGui::RadioButton("Auto##REGION", &vbl_region, 0))
-				{
-					cycleCounter->isVideoRegionDynamic = true;
-				}
-				if (vbl_region == 0)
-				{
-					ImGui::SameLine();
-					(cycleCounter->GetVideoRegion() == VideoRegion_e::PAL
-						? ImGui::Text(" (P)")
-						: ImGui::Text(" (N)"));
-				}
-				ImGui::SameLine();
-				if (ImGui::RadioButton("PAL##REGION", &vbl_region, 1))
-				{
-					cycleCounter->isVideoRegionDynamic = false;
-					cycleCounter->SetVideoRegion(VideoRegion_e::PAL);
-				}
-				ImGui::SameLine();
-				if (ImGui::RadioButton("NTSC##REGION", &vbl_region, 2))
-				{
-					cycleCounter->isVideoRegionDynamic = false;
-					cycleCounter->SetVideoRegion(VideoRegion_e::NTSC);
-				}
-				if (!cycleCounter->isVideoRegionDynamic)
-				{
-					vbl_slider_val = cycleCounter->GetScreenCycles();
-					if (ImGui::InputInt("VBL Start Shift", &vbl_slider_val, 1, (CYCLES_TOTAL_PAL-CYCLES_TOTAL_NTSC)/10))
-					{
-						cycleCounter->SetVBLStart(vbl_slider_val);
-					}
-				}
-				ImGui::Separator();
-				ImGui::PushItemWidth(140);
-				if (ImGui::ColorEdit4("Window Color", window_bgcolor)) {
-					// std::cerr << "color " << window_bgcolor[0] << std::endl;
-				}
-				ImGui::PopItemWidth();
-
-				ImGui::Checkbox("PostProcessing Window (F2)", &show_postprocessing_window);
-				ImGui::Checkbox("Apple 2 Video Modes Window (F3)", &show_a2video_window);
-				ImGui::Checkbox("KFest Window (F8)", &_M8DBG_bShowF8Window);
-				ImGui::Checkbox("Fullscreen (F11 or Alt-Enter)", &bIsFullscreen);
-				if (ImGui::Checkbox("VSYNC", &g_swapInterval))
-				{
-					set_vsync(g_swapInterval);
-					Main_ResetFPSCalculations();
-				}
-				if (g_swapInterval)
-				{
-					ImGui::SameLine();
-					ImGui::Text("On");
-					if (g_adaptiveVsync)
-					{
-						ImGui::SameLine();
-						ImGui::Text("(Adaptive)");
-					}
-				}
-				ImGui::Separator();
-				if (ImGui::Button("Reset")) {
-					a2VideoManager->ResetComputer();
-					Main_DisplaySplashScreen();
-				}
-				if (ImGui::Button("Quit App (Ctrl-c)"))
-					done = true;
-				if (ImGui::CollapsingHeader("Other Windows"))
-				{
-					ImGui::Checkbox("Event Recorder Window", &show_recorder_window);
-					ImGui::Checkbox("Textures Window", &show_texture_window);
-					ImGui::Checkbox("Apple //e Memory Window", &mem_edit_a2e.Open);
-					ImGui::Checkbox("ImGui Metrics Window", &show_metrics_window);
-					// ImGui::Checkbox("ImGui Demo Window", &show_demo_window);
-				}
 				if (ImGui::CollapsingHeader("SDHR"))
 				{
 					auto _c = sdhrManager->camera;
 					auto _pos = _c.Position;
 					ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
-					ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);
-					ImGui::Checkbox("Untextured Geometry", &sdhrManager->bDebugNoTextures);         // Show textures toggle
-					ImGui::Checkbox("Perspective Projection", &sdhrManager->bUsePerspective);       // Change projection type
-					ImGui::Checkbox("SDHR Upload Region Memory Window", &mem_edit_upload.Open);
-				}
+					ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);				}
 				ImGui::PopItemWidth();
 			}
 			ImGui::End();
-			
-			// Show the postprocessing window
-			if (show_postprocessing_window)
-				postProcessor->DisplayImGuiWindow(&show_postprocessing_window);
-
-			// Show the a2VideoManager window
-			if (show_a2video_window)
-				a2VideoManager->DisplayImGuiWindow(&show_a2video_window);
-
-			// The VCR event recorder
-			if (show_recorder_window)
-				eventRecorder->DisplayImGuiWindow(&show_recorder_window);
-
-			// Show the metrics window
-			if (show_metrics_window)
-				ImGui::ShowMetricsWindow(&show_metrics_window);
-
-			// Show the Apple //e memory
-			if (mem_edit_a2e.Open)
-			{
-				mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", memManager->GetApple2MemPtr(), 2 * _A2_MEMORY_SHADOW_END);
-			}
-
-			// Show the upload data region memory
-			if (mem_edit_upload.Open)
-			{
-				mem_edit_upload.DrawWindow("Memory Editor: Upload memory", memManager->GetApple2MemPtr(), 2 * _A2_MEMORY_SHADOW_END);
-			}
-
-			// Show the 16 textures loaded (which are always bound to GL_TEXTURE2 -> GL_TEXTURE18)
-			if (show_texture_window)
-			{
-				ImGui::Begin("Texture Viewer", &show_texture_window);
-				ImVec2 avail_size = ImGui::GetContentRegionAvail();
-				ImGui::SliderInt("Texture Slot Number", &_slotnum, 0, _SDHR_MAX_TEXTURES + 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
-				GLint _w, _h;
-				if (_slotnum < _SDHR_MAX_TEXTURES)
-				{
-					glBindTexture(GL_TEXTURE_2D, glhelper->get_texture_id_at_slot(_slotnum));
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
-					ImGui::Text("Texture ID: %d (%d x %d)", (int)glhelper->get_texture_id_at_slot(_slotnum), _w, _h);
-					ImGui::Image((void*)glhelper->get_texture_id_at_slot(_slotnum),
-						ImVec2(avail_size.x, avail_size.y - 30), ImVec2(0, 0), ImVec2(1, 1));
-				}
-				else if (_slotnum == _SDHR_MAX_TEXTURES)
-				{
-					glBindTexture(GL_TEXTURE_2D, a2VideoManager->GetOutputTextureId());
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
-					ImGui::Text("Output Texture ID: %d (%d x %d)", (int)a2VideoManager->GetOutputTextureId(), _w, _h);
-					ImGui::Image((void*)a2VideoManager->GetOutputTextureId(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
-				}
-				else if (_slotnum == _SDHR_MAX_TEXTURES + 1)
-				{
-					glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
-					GLint target_tex_id = 0;
-					glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, target_tex_id);
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
-					glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
-					ImGui::Text("_PP_INPUT_TEXTURE_UNIT: %d (%d x %d)", target_tex_id, _w, _h);
-					ImGui::Image((void*)target_tex_id, avail_size, ImVec2(0, 0), ImVec2(1, 1));
-				}
-				glBindTexture(GL_TEXTURE_2D, 0);
-				ImGui::End();
-			}
 
 			if (_M8DBG_bShowF8Window)
 			{
@@ -804,129 +650,6 @@ int main(int argc, char* argv[])
 					ImGui::Text("Major version: %d", major);
 					ImGui::Text("Minor version: %d", minor);
 					ImGui::Text("Hardware Acceleration: %s", accelerated ? "Enabled" : "Disabled");
-					ImGui::Separator();
-					ImGui::PushItemWidth(80);
-					ImGui::InputInt("Width", &_M8DBG_windowWidth, 10, 100); ImGui::SameLine();
-					ImGui::InputInt("Height", &_M8DBG_windowHeight, 10, 100); ImGui::SameLine();
-					if (ImGui::Button("Apply"))
-					{
-						SDL_SetWindowSize(window, _M8DBG_windowWidth, _M8DBG_windowHeight);
-					}
-					ImGui::Separator();
-					ImGui::PopItemWidth();
-					ImGui::PushItemWidth(110);
-					if (ImGui::Checkbox("Display FPS on screen", &bDisplayFPSOnScreen))
-					{
-						Main_ResetFPSCalculations();
-						Main_DrawFPSOverlay();
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					ImGui::Dummy(ImVec2(20, 1)); ImGui::SameLine();
-					if (ImGui::Checkbox("Without Sine Wobble", &a2VideoManager->bNoMergedModeWobble))
-						a2VideoManager->ForceBeamFullScreenRender();
-					ImGui::SliderFloat("Average FPS range (s)", &_M8DBG_average_fps_window, 0.1f, 10.f, "%.1f");
-					if (ImGui::Button("Reset FPS numbers"))
-						Main_ResetFPSCalculations();
-					ImGui::Separator();
-					if (ImGui::Button("Reset A2SS")) {
-						Main_ResetA2SS();
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					ImGui::SameLine();
-					_m8ssSHR = memManager->IsSoftSwitch(A2SS_SHR);
-					if (ImGui::Checkbox("A2SS_SHR##M8", &_m8ssSHR)) {
-						memManager->SetSoftSwitch(A2SS_SHR, _m8ssSHR);
-						Main_ResetFPSCalculations();
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					ImGui::Separator();
-					
-					if (ImGui::Checkbox("Disable Apple 2 Video render", &_M8DBG_bDisableVideoRender))
-						ResetFPSCalculations(a2VideoManager);
-					if (ImGui::Checkbox("Disable PostProcessing render", &_M8DBG_bDisablePPRender))
-						ResetFPSCalculations(a2VideoManager);
-					if (ImGui::Checkbox("Force render even if VRAM unchanged", &a2VideoManager->bAlwaysRenderBuffer))
-						ResetFPSCalculations(a2VideoManager);
-					 
-					if (ImGui::Checkbox("VSYNC##M8", &g_swapInterval))
-					{
-						set_vsync(g_swapInterval);
-						Main_ResetFPSCalculations();
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					if (g_swapInterval)
-					{
-						ImGui::SameLine();
-						ImGui::Text("On");
-						if (g_adaptiveVsync)
-						{
-							ImGui::SameLine();
-							ImGui::Text("(Adaptive)");
-						}
-					}
-					if (ImGui::Button("Run Vertical Refresh"))
-						a2VideoManager->ForceBeamFullScreenRender();
-					ImGui::SameLine();
-					ImGui::Text("Frame ID: %d", a2VideoManager->GetVRAMReadId());
-					ImGui::SeparatorText("[ SAMPLES ]");
-					if (ImGui::Checkbox("Run Karateka Demo", &_M8DBG_bRunKarateka))
-					{
-						if (_M8DBG_bRunKarateka)
-						{
-							std::ifstream karatekafile("./recordings/karateka.vcr", std::ios::binary);
-							if (!karatekafile.is_open()) {
-								_M8DBG_bKaratekaLoadFailed = true;
-							}
-							else {
-								Main_ResetA2SS();
-								memManager->SetSoftSwitch(A2SS_SHR, false);
-								eventRecorder->ReadRecordingFile(karatekafile);
-								eventRecorder->StartReplay();
-								memManager->SetSoftSwitch(A2SS_TEXT, false);
-								memManager->SetSoftSwitch(A2SS_HIRES, true);
-								a2VideoManager->ForceBeamFullScreenRender();
-							}
-						}
-						else {
-							eventRecorder->StopReplay();
-						}
-						Main_ResetFPSCalculations();
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					if (ImGui::Button("DHGR Col 140 Mixed"))
-					{
-						Main_ResetA2SS();
-						memManager->SetSoftSwitch(A2SS_SHR, false);
-						memManager->SetSoftSwitch(A2SS_TEXT, false);
-						memManager->SetSoftSwitch(A2SS_80COL, true);
-						memManager->SetSoftSwitch(A2SS_HIRES, true);
-						memManager->SetSoftSwitch(A2SS_DHGR, true);
-						a2VideoManager->bUseDHGRCOL140Mixed = true;
-						MemoryLoadDHR("scripts/extasie0_140mix.dhr");
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					if (ImGui::Button("HGR SPEC1"))
-					{
-						Main_ResetA2SS();
-						memManager->SetSoftSwitch(A2SS_SHR, false);
-						memManager->SetSoftSwitch(A2SS_TEXT, false);
-						memManager->SetSoftSwitch(A2SS_HIRES, true);
-						a2VideoManager->bUseHGRSPEC1 = true;
-						MemoryLoadHGR("scripts/arcticfox.hgr");
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					if (ImGui::Button("\"LEGASHR\" Wobbly"))
-					{
-						Main_ResetA2SS();
-						memManager->SetSoftSwitch(A2SS_SHR, true);
-						MemoryLoadSHR("scripts/paintworks.shr");
-						std::ifstream legacydemo("./scripts/tomahawk2_hgr.bin", std::ios::binary);
-						legacydemo.seekg(0, std::ios::beg); // Go back to the start of the file
-						legacydemo.read(reinterpret_cast<char*>(MemoryManager::GetInstance()->GetApple2MemPtr()), 0x4000);
-						a2VideoManager->bDEMOMergedMode = true;
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					
 					ImGui::Separator();
 					ImGui::Text("Legacy Shader");
 					const char* _legshaders[] = { "0 - Full" };
@@ -951,20 +674,6 @@ int main(int argc, char* argv[])
 
 				}
 
-				if (_M8DBG_bKaratekaLoadFailed)
-				{
-					ImGui::OpenPopup("File Loading Error");
-					if (ImGui::BeginPopupModal("File Loading Error", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-					{
-						ImGui::Text("Failed to open the file ./recordings/karateka.vcr");
-						if (ImGui::Button("OK", ImVec2(120, 0))) {
-							ImGui::CloseCurrentPopup();
-							_M8DBG_bKaratekaLoadFailed = false;
-							_M8DBG_bRunKarateka = false;
-						}
-						ImGui::EndPopup();
-					}
-				}
 				ImGui::End();
 			}
 
