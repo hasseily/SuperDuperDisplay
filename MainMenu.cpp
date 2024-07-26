@@ -527,6 +527,65 @@ void MainMenu::ShowSamplesMenu() {
 	auto a2VideoManager = A2VideoManager::GetInstance();
 	auto eventRecorder = EventRecorder::GetInstance();
 
+	if (ImGui::MenuItem("Text & HGR")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, false);
+		memManager->SetSoftSwitch(A2SS_TEXT, true);
+		memManager->SetSoftSwitch(A2SS_HIRES, false);
+		MemoryLoad("scripts/tomahawk2_hgr.bin", 0, false);
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("DHGR")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, false);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_80COL, true);
+		memManager->SetSoftSwitch(A2SS_HIRES, true);
+		memManager->SetSoftSwitch(A2SS_DHGR, true);
+		memManager->SetSoftSwitch(A2SS_MIXED, true);
+		MemoryLoad("scripts/e0_ultima2_dhgr.bin", 0, false);
+		MemoryLoad("scripts/e1_ultima2_dhgr.bin", 0, true);
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("GS Snapshot")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, true);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_HIRES, true);
+		MemoryLoad("scripts/bank_e0_0_bfff.bin", 0, false);
+		MemoryLoad("scripts/bank_e1_0_bfff.bin", 0, true);
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("HGR SPEC1")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, false);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_HIRES, true);
+		a2VideoManager->bUseHGRSPEC1 = true;
+		MemoryLoadHGR("scripts/arcticfox.hgr");
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("DHGR Col140Mixed")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, false);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_80COL, true);
+		memManager->SetSoftSwitch(A2SS_HIRES, true);
+		memManager->SetSoftSwitch(A2SS_DHGR, true);
+		a2VideoManager->bUseDHGRCOL140Mixed = true;
+		MemoryLoadDHR("scripts/extasie0_140mix.dhr");
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("SHR+Legacy")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, true);
+		MemoryLoadSHR("scripts/paintworks.shr");
+		std::ifstream legacydemo("./scripts/tomahawk2_hgr.bin", std::ios::binary);
+		legacydemo.seekg(0, std::ios::beg); // Go back to the start of the file
+		legacydemo.read(reinterpret_cast<char*>(MemoryManager::GetInstance()->GetApple2MemPtr()), 0x4000);
+		a2VideoManager->bDEMOMergedMode = true;
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
 	if (ImGui::MenuItem("Run Karateka Demo", "", &pGui->bSampleRunKarateka)) {
 		if (pGui->bSampleRunKarateka) {
 			std::ifstream karatekafile("./recordings/karateka.vcr", std::ios::binary);
@@ -541,36 +600,6 @@ void MainMenu::ShowSamplesMenu() {
 			eventRecorder->StopReplay();
 		}
 		Main_ResetFPSCalculations();
-		a2VideoManager->ForceBeamFullScreenRender();
-	}
-	if (ImGui::MenuItem("DHGR Col140Mixed")) {
-		Main_ResetA2SS();
-		memManager->SetSoftSwitch(A2SS_SHR, false);
-		memManager->SetSoftSwitch(A2SS_TEXT, false);
-		memManager->SetSoftSwitch(A2SS_80COL, true);
-		memManager->SetSoftSwitch(A2SS_HIRES, true);
-		memManager->SetSoftSwitch(A2SS_DHGR, true);
-		a2VideoManager->bUseDHGRCOL140Mixed = true;
-		MemoryLoadDHR("scripts/extasie0_140mix.dhr");
-		a2VideoManager->ForceBeamFullScreenRender();
-	}
-	if (ImGui::MenuItem("HGR SPEC1")) {
-		Main_ResetA2SS();
-		memManager->SetSoftSwitch(A2SS_SHR, false);
-		memManager->SetSoftSwitch(A2SS_TEXT, false);
-		memManager->SetSoftSwitch(A2SS_HIRES, true);
-		a2VideoManager->bUseHGRSPEC1 = true;
-		MemoryLoadHGR("scripts/arcticfox.hgr");
-		a2VideoManager->ForceBeamFullScreenRender();
-	}
-	if (ImGui::MenuItem("SHR+Legacy")) {
-		Main_ResetA2SS();
-		memManager->SetSoftSwitch(A2SS_SHR, true);
-		MemoryLoadSHR("scripts/paintworks.shr");
-		std::ifstream legacydemo("./scripts/tomahawk2_hgr.bin", std::ios::binary);
-		legacydemo.seekg(0, std::ios::beg); // Go back to the start of the file
-		legacydemo.read(reinterpret_cast<char*>(MemoryManager::GetInstance()->GetApple2MemPtr()), 0x4000);
-		a2VideoManager->bDEMOMergedMode = true;
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
 }

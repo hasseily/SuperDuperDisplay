@@ -12,13 +12,39 @@
 #include "../MemoryManager.h"
 #include "ImGuiFileDialog.h"
 
-bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
+bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank) {
 	bool res = false;
+	
 	uint8_t* pMem;
 	if (bAuxBank)
 		pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + position;
 	else
 		pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + position;
+	
+	std::ifstream file(filePath, std::ios::binary);
+	if (file) {
+		// Move to the end to get the file size
+		file.seekg(0, std::ios::end);
+		size_t fileSize = file.tellg();
+		
+		if (fileSize > 0 && (position + fileSize) <= (_A2_MEMORY_SHADOW_END)) {
+			file.seekg(0, std::ios::beg); // Go back to the start of the file
+			file.read(reinterpret_cast<char*>(pMem), fileSize);
+			res = true;
+		} else {
+			// Handle the error: file is too big or other issues
+			std::cerr << "Error: File is too large or other issue." << std::endl;
+		}
+		file.close();
+	} else {
+		// Handle the error: file could not be opened
+		std::cerr << "Error: Unable to open file." << std::endl;
+	}
+	return res;
+}
+
+bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
+	bool res = false;
 	if (ImGui::Button("Load File"))
 	{
 		ImGui::SetNextWindowSize(ImVec2(800, 400));
@@ -49,25 +75,7 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
 			}
 			// If a file is selected, read and load it into the array
 			if (filePath[0] != '\0') {
-				std::ifstream file(filePath, std::ios::binary);
-				if (file) {
-					// Move to the end to get the file size
-					file.seekg(0, std::ios::end);
-					size_t fileSize = file.tellg();
-					
-					if (fileSize > 0 && (position + fileSize) <= (_A2_MEMORY_SHADOW_END)) {
-						file.seekg(0, std::ios::beg); // Go back to the start of the file
-						file.read(reinterpret_cast<char*>(pMem), fileSize);
-						res = true;
-					} else {
-						// Handle the error: file is too big or other issues
-						std::cerr << "Error: File is too large or other issue." << std::endl;
-					}
-					file.close();
-				} else {
-					// Handle the error: file could not be opened
-					std::cerr << "Error: Unable to open file." << std::endl;
-				}
+				res = MemoryLoad(filePath, position, bAuxBank);
 				
 				// Reset filePath for next operation
 				filePath[0] = '\0';
@@ -79,7 +87,7 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
 	return res;
 }
 
-bool MemoryLoadHGR(std::string filePath) {
+bool MemoryLoadHGR(const std::string &filePath) {
 	bool res = false;
 	uint8_t* pMem;
 	pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x2000;
@@ -101,7 +109,7 @@ bool MemoryLoadHGR(std::string filePath) {
 	return res;
 }
 
-bool MemoryLoadDHR(std::string filePath) {
+bool MemoryLoadDHR(const std::string &filePath) {
 	bool res = false;
 	uint8_t* pMem;
 	std::ifstream file(filePath, std::ios::binary);
@@ -126,7 +134,7 @@ bool MemoryLoadDHR(std::string filePath) {
 	return res;
 }
 
-bool MemoryLoadSHR(std::string filePath) {
+bool MemoryLoadSHR(const std::string &filePath) {
 	bool res = false;
 	uint8_t* pMem;
 	pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + 0x2000;
