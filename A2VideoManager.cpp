@@ -1139,7 +1139,7 @@ GLuint A2VideoManager::Render()
 		glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
 		shader_merge.setInt("legacyTex", GL_TEXTURE7 - GL_TEXTURE0);
 		shader_merge.setVec2("legacySize", legacy_width, legacy_height);
-		shader_merge.setInt("forceSHRWidth", bForceSHRWidth || bNoMergedModeWobble);
+		shader_merge.setInt("forceSHRWidth", bForceSHRWidth);
 
 		glActiveTexture(GL_TEXTURE8);
 		glBindTexture(GL_TEXTURE_2D, shr_texture_id);

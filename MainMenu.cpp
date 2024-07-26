@@ -118,6 +118,10 @@ bool MainMenu::HandleEvent(SDL_Event& event) {
 					pGui->bShowPPWindow = !pGui->bShowPPWindow;
 					eventIsHandledInImGui = true;
 					break;
+				case SDLK_F9:
+					pGui->bShowSSWindow = !pGui->bShowSSWindow;
+					eventIsHandledInImGui = true;
+					break;
 				default:
 					break;
 			};
@@ -496,6 +500,12 @@ void MainMenu::ShowVideoMenu() {
 	ImGui::Separator();
 	if (ImGui::MenuItem("On-Screen FPS", "F8", Main_IsFPSOverlay())) {
 		Main_SetFPSOverlay(!Main_IsFPSOverlay());
+		Main_ResetFPSCalculations();
+		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("Reset FPS", "")) {
+		Main_ResetFPSCalculations();
+		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
 	if (ImGui::MenuItem("Run Vertical Refresh"))
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
@@ -571,7 +581,7 @@ void MainMenu::ShowDeveloperMenu() {
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	ImGui::MenuItem("Load File Into Memory", "", &pGui->bShowLoadFileWindow);
 	ImGui::Separator();
-	ImGui::MenuItem("Soft Switches", "", &pGui->bShowSSWindow);
+	ImGui::MenuItem("Soft Switches", "F9", &pGui->bShowSSWindow);
 	ImGui::MenuItem("Event Recorder", "", &pGui->bShowEventRecorderWindow);
 	if (ImGui::BeginMenu("VRAMs")) {
 		ImGui::MenuItem("Legacy", "", &a2VideoManager->mem_edit_vram_legacy.Open);
