@@ -307,8 +307,8 @@ void A2VideoManager::Initialize()
 	std::memset(overlay_text, 0, sizeof(overlay_text));
 	std::memset(overlay_colors, 0, sizeof(overlay_colors));
 	
-	// Set default border color to green
-	MemoryManager::GetInstance()->switch_c034 = 12;
+	// Set default border color
+	MemoryManager::GetInstance()->switch_c034 = 13;
 
 	bIsReady = true;
 }
@@ -1369,15 +1369,15 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			}
 			
 			ImGui::SeparatorText("[ EXTRA MODES ]");
+			if (ImGui::Checkbox("HGR SPEC1", &bUseHGRSPEC1))
+				this->ForceBeamFullScreenRender();
+			ImGui::SetItemTooltip("A HGR mode that makes 11011 be black, found in the EVE RGB card");
+			if (ImGui::Checkbox("HGR SPEC2", &bUseHGRSPEC2))
+				this->ForceBeamFullScreenRender();
+			ImGui::SetItemTooltip("A HGR mode that makes 00100 be white, found in the EVE RGB card");
 			if (ImGui::Checkbox("DHGR COL140 Mixed", &bUseDHGRCOL140Mixed))
 				this->ForceBeamFullScreenRender();
 			ImGui::SetItemTooltip("A DHGR mode that mixes 16 colors and b/w, found in certain RGB cards");
-			if (ImGui::Checkbox("HGR SPEC1", &bUseHGRSPEC1))
-				this->ForceBeamFullScreenRender();
-			ImGui::SetItemTooltip("A HGR mode that makes 11011 be black, found in the EVE card");
-			if (ImGui::Checkbox("HGR SPEC2", &bUseHGRSPEC2))
-				this->ForceBeamFullScreenRender();
-			ImGui::SetItemTooltip("A HGR mode that makes 00100 be white, found in the EVE card");
 		}
 		ImGui::End();
 	}

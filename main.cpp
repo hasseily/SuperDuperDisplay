@@ -533,6 +533,9 @@ int main(int argc, char* argv[])
 				else if (event.key.keysym.sym == SDLK_F8) {
 					Main_SetFPSOverlay(!Main_IsFPSOverlay());
 				}
+				else if (event.key.keysym.sym == SDLK_F10) {
+					a2VideoManager->ForceBeamFullScreenRender();
+				}
 				// Handle fullscreen toggle for Alt+Enter
 				else if (event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) {
 					Main_SetFullScreen(!Main_IsFullScreen());

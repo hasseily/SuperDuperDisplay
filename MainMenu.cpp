@@ -507,8 +507,6 @@ void MainMenu::ShowVideoMenu() {
 		Main_ResetFPSCalculations();
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
-	if (ImGui::MenuItem("Run Vertical Refresh"))
-		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 }
 
 void MainMenu::ShowSoundMenu() {
@@ -584,6 +582,8 @@ void MainMenu::ShowSamplesMenu() {
 		legacydemo.seekg(0, std::ios::beg); // Go back to the start of the file
 		legacydemo.read(reinterpret_cast<char*>(MemoryManager::GetInstance()->GetApple2MemPtr()), 0x4000);
 		a2VideoManager->bDEMOMergedMode = true;
+		a2VideoManager->bForceSHRWidth = true;
+		a2VideoManager->bNoMergedModeWobble = true;
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
 	if (ImGui::MenuItem("Run Karateka Demo", "", &pGui->bSampleRunKarateka)) {
@@ -606,7 +606,7 @@ void MainMenu::ShowSamplesMenu() {
 
 void MainMenu::ShowDeveloperMenu() {
 	auto a2VideoManager = A2VideoManager::GetInstance();
-	if (ImGui::MenuItem("Run Vertical Refresh"))
+	if (ImGui::MenuItem("Run Vertical Refresh", "F10"))
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	ImGui::MenuItem("Load File Into Memory", "", &pGui->bShowLoadFileWindow);
 	ImGui::Separator();
