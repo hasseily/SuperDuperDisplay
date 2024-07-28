@@ -214,6 +214,15 @@ A2VideoManager::~A2VideoManager()
 			delete[] vrams_array[i].vram_shr;
 		if (vrams_array[i].offset_buffer != nullptr)
 			delete[] vrams_array[i].offset_buffer;
+		
+		if (vrams_array[i].vram_forced_text1 != nullptr)
+			delete[] vrams_array[i].vram_forced_text1;
+		if (vrams_array[i].vram_forced_text2 != nullptr)
+			delete[] vrams_array[i].vram_forced_text2;
+		if (vrams_array[i].vram_forced_hgr1 != nullptr)
+			delete[] vrams_array[i].vram_forced_hgr1;
+		if (vrams_array[i].vram_forced_hgr2 != nullptr)
+			delete[] vrams_array[i].vram_forced_hgr2;
 	}
 	delete[] vrams_array;
 
@@ -247,6 +256,24 @@ void A2VideoManager::Initialize()
 		memset(vrams_array[i].vram_legacy, 0, GetVramSizeLegacy());
 		memset(vrams_array[i].vram_shr, 0, GetVramSizeSHR());
 		memset(vrams_array[i].offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
+		
+		// the debugging special vrams
+		if (vrams_array[i].vram_forced_text1 != nullptr)
+			delete[] vrams_array[i].vram_forced_text1;
+		if (vrams_array[i].vram_forced_text2 != nullptr)
+			delete[] vrams_array[i].vram_forced_text2;
+		if (vrams_array[i].vram_forced_hgr1 != nullptr)
+			delete[] vrams_array[i].vram_forced_hgr1;
+		if (vrams_array[i].vram_forced_hgr2 != nullptr)
+			delete[] vrams_array[i].vram_forced_hgr2;
+		vrams_array[i].vram_forced_text1 = new uint8_t[40 * 192 * 4];
+		vrams_array[i].vram_forced_text2 = new uint8_t[40 * 192 * 4];
+		vrams_array[i].vram_forced_hgr1 = new uint8_t[40 * 192 * 4];
+		vrams_array[i].vram_forced_hgr2 = new uint8_t[40 * 192 * 4];
+		memset(vrams_array[i].vram_forced_text1, 0, 40 * 192 * 4);
+		memset(vrams_array[i].vram_forced_text2, 0, 40 * 192 * 4);
+		memset(vrams_array[i].vram_forced_hgr1, 0, 40 * 192 * 4);
+		memset(vrams_array[i].vram_forced_hgr2, 0, 40 * 192 * 4);
 	}
 	vrams_write = &vrams_array[0];
 	vrams_read = &vrams_array[1];
@@ -284,6 +311,17 @@ void A2VideoManager::Initialize()
 	windowsbeam[A2VIDEOBEAM_SHR] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_SHR, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_SHR_FRAGMENT);
 	windowsbeam[A2VIDEOBEAM_LEGACY]->SetBorder(borders_w_cycles, borders_h_scanlines);
 	windowsbeam[A2VIDEOBEAM_SHR]->SetBorder(borders_w_cycles, borders_h_scanlines);
+	
+	windowsbeam[A2VIDEOBEAM_FORCED_TEXT1] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_FORCED_TEXT1, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
+	windowsbeam[A2VIDEOBEAM_FORCED_TEXT2] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_FORCED_TEXT2, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
+	windowsbeam[A2VIDEOBEAM_FORCED_HGR1] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_FORCED_HGR1, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
+	windowsbeam[A2VIDEOBEAM_FORCED_HGR2] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_FORCED_HGR2, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
+	windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->SetBorder(0, 0);
+	windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->SetBorder(0, 0);
+	windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->SetBorder(0, 0);
+	windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->SetBorder(0, 0);
+
+
 
 	// The merged framebuffer will have a size equal to the SHR buffer (including borders)
 	fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
@@ -811,18 +849,19 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		// 4 bytes in VRAM for each beam byte
 		uint8_t* byteStartPtr = vrams_write->vram_legacy +
 			(GetVramWidthLegacy() * _TR_ANY_Y + _TR_ANY_X) * 4;
-
+		uint32_t startMem;
+		
 		// Determine where in memory we should get the data from, and get it
 		if ((flags & 0b111) < 4)	// D/TEXT AND D/LGR
 		{
-			uint32_t startMem = _A2VIDEO_TEXT1_START;
+			startMem = _A2VIDEO_TEXT1_START;
 			if (((flags & 0b111) < 3) && isPage2)		// check for page 2 (DLGR doesn't have it)
 				startMem = _A2VIDEO_TEXT2_START;
 			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
 			byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
 		}
 		else {		// D/HIRES
-			uint32_t startMem = _A2VIDEO_HGR1_START;
+			startMem = _A2VIDEO_HGR1_START;
 			if (isPage2)
 				startMem = _A2VIDEO_HGR2_START;
 			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
@@ -830,6 +869,44 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		}
 		byteStartPtr[2] = flags;
 		byteStartPtr[3] = colors;
+		
+		// Generate the debug VRAMs if necessary
+		if (bRenderTEXT1)
+		{
+			byteStartPtr = vrams_write->vram_forced_text1 + (40 * _y + _x - CYCLES_SC_HBL) * 4;
+			startMem = _A2VIDEO_TEXT1_START;
+			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[2] = (flags & 0b1111'1000) | 0;	// force TEXT
+			byteStartPtr[3] = colors;
+		}
+		if (bRenderTEXT2)
+		{
+			byteStartPtr = vrams_write->vram_forced_text2 + (40 * _y + _x - CYCLES_SC_HBL) * 4;
+			startMem = _A2VIDEO_TEXT2_START;
+			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[2] = (flags & 0b1111'1000) | 0;	// force TEXT
+			byteStartPtr[3] = colors;
+		}
+		if (bRenderHGR1)
+		{
+			byteStartPtr = vrams_write->vram_forced_hgr1 + (40 * _y + _x - CYCLES_SC_HBL) * 4;
+			startMem = _A2VIDEO_HGR1_START;
+			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[2] = (flags & 0b1111'1000) | 4;	// force HGR
+			byteStartPtr[3] = colors;
+		}
+		if (bRenderHGR2)
+		{
+			byteStartPtr = vrams_write->vram_forced_hgr2 + (40 * _y + _x - CYCLES_SC_HBL) * 4;
+			startMem = _A2VIDEO_HGR2_START;
+			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[2] = (flags & 0b1111'1000) | 4;	// force HGR
+			byteStartPtr[3] = colors;
+		}
 	}
 		break;
 	default:
@@ -1232,6 +1309,28 @@ GLuint A2VideoManager::Render()
 	// all done, the texture for this Apple 2 beam cycle frame is rendered
 	rendered_frame_idx = vrams_read->frame_idx;
 	vrams_read->bWasRendered = true;
+	
+	// Render the debugging textures as necessary
+	if (bRenderTEXT1) {
+		glViewport(0, 0, 280*2, 192*2);
+		windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->Render(true);
+	}
+	if (bRenderTEXT2) {
+		glViewport(0, 0, 280*2, 192*2);
+		windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->Render(true);
+	}
+	if (bRenderHGR1) {
+		glViewport(0, 0, 280*2, 192*2);
+		windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->Render(true);
+	}
+	if (bRenderHGR2) {
+		glViewport(0, 0, 280*2, 192*2);
+		windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->Render(true);
+	}
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "A2VideoManager debugging textures render error: " << glerr << std::endl;
+	}
+
 	return output_texture_id;
 }
 
@@ -1327,6 +1426,46 @@ void A2VideoManager::DisplayImGuiExtraWindows()
 	{
 		mem_edit_offset_buffer.DrawWindow("Memory Editor: Offset Buffer", (void*)this->GetOffsetBufferReadPtr(), this->GetVramHeightSHR());
 	}
+	
+	// Show extra render windows
+	if (bRenderTEXT1)
+	{
+		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->GetOutputTextureId();
+		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::Begin("TEXT1 Viewer", &bRenderTEXT1);
+		if (texid != UINT_MAX)
+			ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		else
+			this->ForceBeamFullScreenRender();
+		ImGui::End();
+	}
+	if (bRenderTEXT2)
+	{
+		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->GetOutputTextureId();
+		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::Begin("TEXT2 Viewer", &bRenderTEXT2);
+		if (texid != UINT_MAX)
+			ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::End();
+	}
+	if (bRenderHGR1)
+	{
+		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->GetOutputTextureId();
+		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::Begin("HGR1 Viewer", &bRenderHGR1);
+		if (texid != UINT_MAX)
+			ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::End();
+	}
+	if (bRenderHGR2)
+	{
+		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->GetOutputTextureId();
+		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::Begin("HGR2 Viewer", &bRenderHGR2);
+		if (texid != UINT_MAX)
+			ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::End();
+	}
 }
 
 void A2VideoManager::DisplayImGuiWindow(bool* p_open)
@@ -1363,8 +1502,9 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			const char* monitorTypes[] = { "Color", "White", "Green", "Amber" };
 			if (ImGui::Combo("Monitor Type", &this->eA2MonitorType, monitorTypes, IM_ARRAYSIZE(monitorTypes)))
 			{
-				windowsbeam[A2VIDEOBEAM_LEGACY]->monitorColorType = eA2MonitorType;
-				windowsbeam[A2VIDEOBEAM_SHR]->monitorColorType = eA2MonitorType;
+				for (auto i=0; i<A2VIDEOBEAM_TOTAL_COUNT; ++i) {
+					windowsbeam[i]->monitorColorType = eA2MonitorType;
+				}
 				this->ForceBeamFullScreenRender();
 			}
 			

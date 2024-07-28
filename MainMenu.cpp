@@ -245,7 +245,7 @@ void MainMenu::Render() {
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
 				ImGui::Text("Texture ID: %d (%d x %d)", (int)glhelper->get_texture_id_at_slot(pGui->iTextureSlotIdx), _w, _h);
-				ImGui::Image((void*)glhelper->get_texture_id_at_slot(pGui->iTextureSlotIdx),
+				ImGui::Image(reinterpret_cast<void*>(glhelper->get_texture_id_at_slot(pGui->iTextureSlotIdx)),
 							 ImVec2(avail_size.x, avail_size.y - 30), ImVec2(0, 0), ImVec2(1, 1));
 			}
 			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES)
@@ -254,7 +254,7 @@ void MainMenu::Render() {
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
 				ImGui::Text("Output Texture ID: %d (%d x %d)", (int)a2VideoManager->GetOutputTextureId(), _w, _h);
-				ImGui::Image((void*)a2VideoManager->GetOutputTextureId(), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+				ImGui::Image(reinterpret_cast<void*>(a2VideoManager->GetOutputTextureId()), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
 			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 1)
 			{
@@ -266,7 +266,7 @@ void MainMenu::Render() {
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
 				ImGui::Text("_PP_INPUT_TEXTURE_UNIT: %d (%d x %d)", target_tex_id, _w, _h);
-				ImGui::Image((void*)target_tex_id, avail_size, ImVec2(0, 0), ImVec2(1, 1));
+				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
 			glBindTexture(GL_TEXTURE_2D, 0);
 			ImGui::End();
@@ -612,6 +612,13 @@ void MainMenu::ShowDeveloperMenu() {
 	ImGui::Separator();
 	ImGui::MenuItem("Soft Switches", "F9", &pGui->bShowSSWindow);
 	ImGui::MenuItem("Event Recorder", "", &pGui->bShowEventRecorderWindow);
+	if (ImGui::BeginMenu("Graphics Modes Windows")) {
+		ImGui::MenuItem("TEXT1", "", &a2VideoManager->bRenderTEXT1);
+		ImGui::MenuItem("TEXT2", "", &a2VideoManager->bRenderTEXT2);
+		ImGui::MenuItem("HGR1", "", &a2VideoManager->bRenderHGR1);
+		ImGui::MenuItem("HGR2", "", &a2VideoManager->bRenderHGR2);
+		ImGui::EndMenu();
+	}
 	if (ImGui::BeginMenu("VRAMs")) {
 		ImGui::MenuItem("Legacy", "", &a2VideoManager->mem_edit_vram_legacy.Open);
 		ImGui::MenuItem("SHR", "", &a2VideoManager->mem_edit_vram_shr.Open);

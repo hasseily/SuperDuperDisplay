@@ -176,6 +176,18 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_w_with_border * 4), 200 + (2 * border_height_scanlines), GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				break;
+			case A2VIDEOBEAM_FORCED_TEXT1:
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 40, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetTEXT1VRAMReadPtr());
+				break;
+			case A2VIDEOBEAM_FORCED_TEXT2:
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 40, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetTEXT2VRAMReadPtr());
+				break;
+			case A2VIDEOBEAM_FORCED_HGR1:
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 40, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetHGR1VRAMReadPtr());
+				break;
+			case A2VIDEOBEAM_FORCED_HGR2:
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 40, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetHGR2VRAMReadPtr());
+				break;
 			default:
 				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_w_with_border, 192 + (2 * border_height_scanlines), GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
@@ -188,6 +200,18 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, _COLORBYTESOFFSET + (cycles_w_with_border * 4), 200 + (2 * border_height_scanlines), 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+				break;
+			case A2VIDEOBEAM_FORCED_TEXT1:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetTEXT1VRAMReadPtr());
+				break;
+			case A2VIDEOBEAM_FORCED_TEXT2:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetTEXT2VRAMReadPtr());
+				break;
+			case A2VIDEOBEAM_FORCED_HGR1:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetHGR1VRAMReadPtr());
+				break;
+			case A2VIDEOBEAM_FORCED_HGR2:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetHGR2VRAMReadPtr());
 				break;
 			default:
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_w_with_border, 192 + (2 * border_height_scanlines), 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());

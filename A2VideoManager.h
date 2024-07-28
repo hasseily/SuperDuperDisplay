@@ -115,6 +115,10 @@ public:
 		A2Mode_e mode = A2Mode_e::NONE;
 		uint8_t* vram_legacy = nullptr;
 		uint8_t* vram_shr = nullptr;
+		uint8_t* vram_forced_text1 = nullptr;	// these force specific modes for debugging
+		uint8_t* vram_forced_text2 = nullptr;
+		uint8_t* vram_forced_hgr1 = nullptr;
+		uint8_t* vram_forced_hgr2 = nullptr;
 		GLfloat* offset_buffer = nullptr;
 	};
 
@@ -151,6 +155,12 @@ public:
 	MemoryEditor mem_edit_vram_legacy;
 	MemoryEditor mem_edit_vram_shr;
 	MemoryEditor mem_edit_offset_buffer;
+	// Developer flags for specifically rendering certain legacy modes
+	// Those will be shown in ImGUI windows
+	bool bRenderTEXT1 = false;
+	bool bRenderTEXT2 = false;
+	bool bRenderHGR1 = false;
+	bool bRenderHGR2 = false;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
@@ -181,6 +191,10 @@ public:
 	const uint32_t GetVRAMReadId() { return vrams_read->id; };
 	const uint8_t* GetLegacyVRAMReadPtr() { return vrams_read->vram_legacy; };
 	const uint8_t* GetSHRVRAMReadPtr() { return vrams_read->vram_shr; };
+	const uint8_t* GetTEXT1VRAMReadPtr() { return vrams_read->vram_forced_text1; };
+	const uint8_t* GetTEXT2VRAMReadPtr() { return vrams_read->vram_forced_text2; };
+	const uint8_t* GetHGR1VRAMReadPtr() { return vrams_read->vram_forced_hgr1; };
+	const uint8_t* GetHGR2VRAMReadPtr() { return vrams_read->vram_forced_hgr2; };
 	const GLfloat* GetOffsetBufferReadPtr() { return vrams_read->offset_buffer; };
 	uint8_t* GetLegacyVRAMWritePtr() { return vrams_write->vram_legacy; };
 	uint8_t* GetSHRVRAMWritePtr() { return vrams_write->vram_shr; };
