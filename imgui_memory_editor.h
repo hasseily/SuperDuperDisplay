@@ -86,6 +86,7 @@ struct MemoryEditor
 	bool            OptShowDataPreview;                         // = false  // display a footer previewing the decimal/binary/hex/float representation of the currently selected bytes.
 	bool            OptShowHexII;                               // = false  // display values in HexII representation instead of regular hexadecimal: hide null/zero bytes, ascii values as ".X".
 	bool            OptShowAscii;                               // = true   // display ASCII representation on the right side.
+	int				OptHighlightFnSeconds;						// = 1		// User function highlight fade in seconds
 	bool            OptGreyOutZeroes;                           // = true   // display null/zero bytes using the TextDisabled color.
 	bool            OptUpperCaseHex;                            // = true   // display hexadecimal values as "FF" instead of "ff".
 	int             OptMidColsCount;                            // = 8      // set to 0 to disable extra spacing between every mid-cols.
@@ -94,7 +95,7 @@ struct MemoryEditor
 	ImU32           HighlightColor;                             //          // background color of highlighted bytes.
 	ImU8            (*ReadFn)(const ImU8* data, size_t off);    // = 0      // optional handler to read bytes.
 	void            (*WriteFn)(ImU8* data, size_t off, ImU8 d); // = 0      // optional handler to write bytes.
-	bool            (*HighlightFn)(const ImU8* data, size_t off);//= 0      // optional handler to return Highlight property (to support non-contiguous highlighting).
+	float            (*HighlightFn)(const ImU8* data, size_t off, ImU8 cutoffSeconds);	//= 0 // optional handler to return custom Highlight amount
 	
 	// [Internal State]
 	bool            ContentsWidthChanged;
@@ -118,6 +119,7 @@ struct MemoryEditor
 		OptShowDataPreview = false;
 		OptShowHexII = false;
 		OptShowAscii = true;
+		OptHighlightFnSeconds = 1;
 		OptGreyOutZeroes = true;
 		OptUpperCaseHex = true;
 		OptMidColsCount = 8;
@@ -288,13 +290,12 @@ struct MemoryEditor
 					
 					// Draw highlight
 					bool is_highlight_from_user_range = (addr >= HighlightMin && addr < HighlightMax);
-					bool is_highlight_from_user_func = (HighlightFn && HighlightFn(mem_data, addr));
 					bool is_highlight_from_preview = (addr >= DataPreviewAddr && addr < DataPreviewAddr + preview_data_type_size);
-					if (is_highlight_from_user_range || is_highlight_from_user_func || is_highlight_from_preview)
+					if (is_highlight_from_user_range || is_highlight_from_preview)
 					{
 						ImVec2 pos = ImGui::GetCursorScreenPos();
 						float highlight_width = s.GlyphWidth * 2;
-						bool is_next_byte_highlighted = (addr + 1 < mem_size) && ((HighlightMax != (size_t)-1 && addr + 1 < HighlightMax) || (HighlightFn && HighlightFn(mem_data, addr + 1)));
+						bool is_next_byte_highlighted = (addr + 1 < mem_size) && ((HighlightMax != (size_t)-1 && addr + 1 < HighlightMax));
 						if (is_next_byte_highlighted || (n + 1 == Cols))
 						{
 							highlight_width = s.HexCellWidth;
@@ -304,6 +305,19 @@ struct MemoryEditor
 						draw_list->AddRectFilled(pos, ImVec2(pos.x + highlight_width, pos.y + s.LineHeight), HighlightColor);
 					}
 					
+					// user function highlight
+					if (HighlightFn)
+					{
+						float f_highlight_from_user_func = HighlightFn(mem_data, addr, OptHighlightFnSeconds);
+						if (f_highlight_from_user_func > 0)
+						{
+							auto HColorUser = IM_COL32(static_cast<uint8_t>(255.0 * f_highlight_from_user_func), 0, 0, 255);
+							ImVec2 pos = ImGui::GetCursorScreenPos();
+							float highlight_width = s.GlyphWidth * 2;
+							draw_list->AddRectFilled(pos, ImVec2(pos.x + highlight_width, pos.y + s.LineHeight), HColorUser);
+						}
+					}
+
 					if (DataEditingAddr == addr)
 					{
 						// Display text input on current byte
@@ -469,6 +483,8 @@ struct MemoryEditor
 			if (ImGui::Checkbox("Show Ascii", &OptShowAscii)) { ContentsWidthChanged = true; }
 			ImGui::Checkbox("Grey out zeroes", &OptGreyOutZeroes);
 			ImGui::Checkbox("Uppercase Hex", &OptUpperCaseHex);
+			if (HighlightFn)
+				ImGui::SliderInt("Change Highlight Fade Seconds", &OptHighlightFnSeconds, 0, 10);
 			
 			ImGui::EndPopup();
 		}

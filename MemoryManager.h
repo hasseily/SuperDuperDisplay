@@ -66,6 +66,9 @@ enum A2SoftSwitch_e
 	A2SS_GREYSCALE = 0b100000000000000,
 };
 
+// For highlighting in the UI memory last written to. De-highlights after cutoffSeconds
+float Memory_HighlightWriteFunction(const uint8_t* data, size_t offset, uint8_t cutoffSeconds = 1);
+
 class MemoryManager
 {
 public:
@@ -77,13 +80,14 @@ public:
 	uint8_t* GetApple2MemPtr();	// Gets the Apple 2 main memory pointer
 	uint8_t* GetApple2MemAuxPtr();	// Gets the Apple 2 aux memory pointer
 	
+	size_t GetMemWriteTimestamp(size_t offset) {
+		if (offset >= (_A2_MEMORY_SHADOW_END * 2))
+			return 0;
+		return a2mem_lastUpdate[offset];
+	};
+	
 	// Use this method to set a byte. It will choose which bank based on current softswitches
 	void WriteToMemory(uint16_t addr, uint8_t val, bool m2b0, bool is_iigs);
-
-	// Use these methods to set raw individual bytes directly
-	// There are NO BOUNDS CHECKS on setting memory! Use at own risk!
-	inline void SetApple2Mem(uint32_t addr, uint8_t val) { a2mem[addr] = val; };
-	inline void SetApple2MemAux(uint16_t addr, uint8_t val) { a2mem[_A2_MEMORY_SHADOW_END + addr] = val; };
 
 	inline bool IsSoftSwitch(A2SoftSwitch_e ss) { return (a2SoftSwitches & ss); };
 	void SetSoftSwitch(A2SoftSwitch_e ss, bool state);
@@ -118,13 +122,15 @@ private:
 	static MemoryManager* s_instance;
 	MemoryManager()
 	{
-		a2mem = new uint8_t[_A2_MEMORY_SHADOW_END * 2];	// anything below _A2_MEMORY_SHADOW_BEGIN is unused
-
-		if (a2mem == NULL)
+		auto _memsize = _A2_MEMORY_SHADOW_END * 2;		// anything below _A2_MEMORY_SHADOW_BEGIN is unused
+		a2mem = new uint8_t[_memsize];
+		a2mem_lastUpdate = new size_t[_memsize];
+		if (a2mem == NULL || a2mem_lastUpdate == NULL)
 		{
 			std::cerr << "FATAL ERROR: COULD NOT ALLOCATE Apple 2 MEMORY" << std::endl;
 			exit(1);
 		}
+		
 		Initialize();
 	}
 
@@ -132,13 +138,13 @@ private:
 	// Internal methods
 	//////////////////////////////////////////////////////////////////////////
 
-
 	//////////////////////////////////////////////////////////////////////////
 	// Internal data
 	//////////////////////////////////////////////////////////////////////////
 
-	uint8_t* a2mem;		// The current shadowed Apple 2 memory
-	uint16_t a2SoftSwitches;			// Soft switches states
+	uint8_t* a2mem;					// The current shadowed Apple 2 memory
+	size_t* a2mem_lastUpdate;		// timestamp of last update of each Apple 2 memory byte
+	uint16_t a2SoftSwitches;	// Soft switches states
 };
 
 #endif	// MEMORYMANAGER_H

@@ -85,6 +85,7 @@ MainMenu::MainMenu(SDL_GLContext gl_context, SDL_Window* window)
 	io.MouseDrawCursor = false;
 	
 	pGui->mem_edit_a2e.Open = false;
+	pGui->mem_edit_a2e.HighlightFn = Memory_HighlightWriteFunction;
 	pGui->mem_edit_sdhr_upload.Open = false;
 }
 

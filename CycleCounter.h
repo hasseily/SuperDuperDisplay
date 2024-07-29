@@ -35,6 +35,8 @@ public:
 	void SetVideoRegion(VideoRegion_e region);
 	void Reset();
 	
+	// Gets the timestamp of the current cycle, in usec since init
+	const size_t GetCycleTimestamp() { return m_tstamp_cycle; };
 	// Gets the scanline (0-191 or 0-199 for SHR when not VBLANK)
 	const uint32_t GetScanline();
 	// Gets the Byte's X Position (0-39 or 0-159 for SHR)
@@ -63,7 +65,11 @@ private:
 		Initialize();
 	}
 	
+	size_t GetCurrentTimeInMicroseconds();
+	
 	uint32_t m_prev_vbl_start = 0;	// debug to know when we think vbl started previously
+	size_t m_tstamp_init = 0;		// tstamp at initalization, as microseconds since epoch
+	size_t m_tstamp_cycle = 0;		// current tstamp of cycle, as microseconds since m_tstamp_init
 
 };
 
