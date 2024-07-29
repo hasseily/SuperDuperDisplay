@@ -1428,15 +1428,15 @@ void A2VideoManager::DisplayImGuiExtraWindows()
 	}
 	
 	// Show extra render windows
+	// The extra windows may not have been rendered yet so we may need to force a re-render
 	if (bRenderTEXT1)
 	{
 		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->GetOutputTextureId();
 		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("TEXT1 Viewer", &bRenderTEXT1);
-		if (texid != UINT_MAX)
-			ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
-		else
+		if (texid == UINT_MAX)
 			this->ForceBeamFullScreenRender();
+		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
 		ImGui::End();
 	}
 	if (bRenderTEXT2)
@@ -1444,8 +1444,9 @@ void A2VideoManager::DisplayImGuiExtraWindows()
 		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->GetOutputTextureId();
 		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("TEXT2 Viewer", &bRenderTEXT2);
-		if (texid != UINT_MAX)
-			ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		if (texid == UINT_MAX)
+			this->ForceBeamFullScreenRender();
+		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
 		ImGui::End();
 	}
 	if (bRenderHGR1)
@@ -1453,8 +1454,9 @@ void A2VideoManager::DisplayImGuiExtraWindows()
 		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->GetOutputTextureId();
 		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("HGR1 Viewer", &bRenderHGR1);
-		if (texid != UINT_MAX)
-			ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		if (texid == UINT_MAX)
+			this->ForceBeamFullScreenRender();
+		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
 		ImGui::End();
 	}
 	if (bRenderHGR2)
@@ -1462,8 +1464,9 @@ void A2VideoManager::DisplayImGuiExtraWindows()
 		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->GetOutputTextureId();
 		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("HGR2 Viewer", &bRenderHGR2);
-		if (texid != UINT_MAX)
-			ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		if (texid == UINT_MAX)
+			this->ForceBeamFullScreenRender();
+		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
 		ImGui::End();
 	}
 }
