@@ -484,7 +484,7 @@ struct MemoryEditor
 			ImGui::Checkbox("Grey out zeroes", &OptGreyOutZeroes);
 			ImGui::Checkbox("Uppercase Hex", &OptUpperCaseHex);
 			if (HighlightFn)
-				ImGui::SliderInt("Change Highlight Fade Seconds", &OptHighlightFnSeconds, 0, 10);
+				ImGui::SliderInt("Change Highlight Fade Seconds", &OptHighlightFnSeconds, 0, 30);
 			
 			ImGui::EndPopup();
 		}
