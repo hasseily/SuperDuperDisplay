@@ -49,6 +49,7 @@ public:
 	bool bShowEventRecorderWindow = false;
 	bool bShowLoadFileWindow = false;
 	bool bShowImGuiMetricsWindow = false;
+	bool bShowMemoryHeatMap = false;
 	
 	bool bSampleRunKarateka = false;
 
@@ -229,6 +230,64 @@ void MainMenu::Render() {
 		if (pGui->mem_edit_a2e.Open)
 		{
 			pGui->mem_edit_a2e.DrawWindow("Memory Editor: Apple 2 Memory (0000-C000 x2)", MemoryManager::GetInstance()->GetApple2MemPtr(), 2 * _A2_MEMORY_SHADOW_END);
+		}
+		if (pGui->bShowMemoryHeatMap)
+		{
+			if (ImGui::Begin("Memory Heat Map", &pGui->bShowMemoryHeatMap)) {
+				auto drawList = ImGui::GetWindowDrawList();
+				ImVec2 oPos = ImGui::GetCursorScreenPos();	// origin, i.e. "layouting position" where items are submitted
+				ImColor yellowColor(1.0f, 1.0f, 0.0f, 1.0f);
+				float mmultw = 1.f;							// width of each pixel represneting a byte
+				float mmulth = 3.f;							// height of each pixel representing a byte
+				float memDrawW = 256 * mmultw;
+				float memDrawH = 256 * mmulth;
+
+				// Draw the mem rectangles
+				float memY = 30.f;		// Y top margin for mem rectangles
+				float labelsW = 30.f;	// X left margin that will have the labels
+				ImVec2 mainRectMin = ImVec2(oPos.x + labelsW, oPos.y + memY);
+				ImVec2 mainRectMax = ImVec2(mainRectMin.x + memDrawW + 2.f, mainRectMin.y + memDrawH + 2.f);
+				drawList->AddRect(mainRectMin, mainRectMax, yellowColor);
+				ImVec2 auxRectMin = ImVec2(mainRectMax.x + labelsW, mainRectMin.y);
+				ImVec2 auxRectMax = ImVec2(mainRectMax.x + labelsW + memDrawW + 2.f, mainRectMax.y);
+				drawList->AddRect(auxRectMin, auxRectMax, yellowColor);
+				
+				// Draw the mem rectangles titles
+				ImGui::PushFont(pGui->fontLarge);
+				ImVec2 mainLabelPos = ImVec2(CalcCenteredTextX("MAIN MEMORY", mainRectMin.x, mainRectMax.x), mainRectMin.y - 20.f);
+				drawList->AddText(mainLabelPos, yellowColor, "MAIN MEMORY");
+				ImVec2 auxLabelPos = ImVec2(CalcCenteredTextX("AUX MEMORY", auxRectMin.x, auxRectMax.x), auxRectMin.y - 20.f);
+				drawList->AddText(auxLabelPos, yellowColor, "AUX MEMORY");
+				ImGui::PopFont();
+				
+				// Labels on the left
+				const int labelsHex[] = { 0x0, 0x800, 0x1000, 0x2000, 0x4000, 0x6000, 0x8000, 0xA000, 0xC000 };
+				char bufLabels[10];
+				for (int i = 0; i < sizeof(labelsHex) / sizeof(labelsHex[0]); ++i)
+				{
+					snprintf(bufLabels, sizeof(bufLabels), "%04X", labelsHex[i]);
+					float yDelta = (float)labelsHex[i] * mmulth / 0x100;
+					drawList->AddText(ImVec2(oPos.x, mainRectMin.y + yDelta), yellowColor, bufLabels);
+				}
+				
+				// And finally draw the heat map!
+				auto currT = CycleCounter::GetInstance()->GetCycleTimestamp();
+				auto memMgr = MemoryManager::GetInstance();
+				for (auto j=0; j < 2; ++j) {
+					for (auto i=0; i < _A2_MEMORY_SHADOW_END; ++i) {
+						auto tdiff = currT - memMgr->GetMemWriteTimestamp(i + j*_A2_MEMORY_SHADOW_END);
+						if (tdiff < (pGui->mem_edit_a2e.OptHighlightFnSeconds * 1'000'000)) {
+							auto writeColor = ImColor(1.f - ((float)tdiff / (pGui->mem_edit_a2e.OptHighlightFnSeconds * 1'000'000)), 0.f, 0.f, 1.f);
+							auto rectMin = (j == 0 ? mainRectMin : auxRectMin);
+							auto pMin = ImVec2(rectMin.x + 1 + (i % 0x100) * mmultw, rectMin.y + 1 + (i / 0x100) * mmulth);
+							auto pMax = ImVec2(pMin.x + mmultw, pMin.y + (mmulth - 1.f));
+							drawList->AddRectFilled(pMin, pMax, writeColor);
+						}
+					}
+				}
+			}
+			ImGui::End();
+			
 		}
 		// Show the 16 textures loaded (which are always bound to GL_TEXTURE2 -> GL_TEXTURE18)
 		if (pGui->bShowTextureWindow)
@@ -493,6 +552,7 @@ void MainMenu::ShowMotherboardMenu() {
 	}
 
 	ImGui::MenuItem("Apple //e Memory", "", &pGui->mem_edit_a2e.Open);
+	ImGui::MenuItem("Apple //e Memory Heat Map", "", &pGui->bShowMemoryHeatMap);
 }
 
 void MainMenu::ShowVideoMenu() {
@@ -645,3 +705,12 @@ void MainMenu::HandleQuit() {
 	exit(0);
 }
 
+// UTILITY
+
+float MainMenu::CalcCenteredTextX(const char* text, float minX, float maxX)
+{
+	ImVec2 textSize = ImGui::CalcTextSize(text);
+	float centerX = (minX + maxX) / 2.0f;
+	float textStartPosX = centerX - (textSize.x / 2.0f);
+	return textStartPosX;
+}

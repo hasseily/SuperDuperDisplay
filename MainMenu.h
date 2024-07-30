@@ -20,6 +20,9 @@ private:
 	
 	void HandleQuit();
 	
+	// utility
+	float CalcCenteredTextX(const char* text, float minX, float maxX);
+	
 	SDL_GLContext gl_context_;
 	SDL_Window* window_;
 	
