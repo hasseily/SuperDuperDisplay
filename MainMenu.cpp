@@ -216,7 +216,9 @@ void MainMenu::Render() {
 			ImGui::Text("Super Duper Display");
 			ImGui::Separator();
 			ImGui::Text("Version: 0.5.0");
-			ImGui::Text("Author: Rikkles, Elltwo");  // Author name
+			ImGui::Text("Software: Henri \"Rikkles\" Asseily");
+			ImGui::Text("Firmware: John \"Elltwo\" Flanagan");
+			ImGui::Text("Appletini design by Elltwo");
 			ImGui::Separator();
 			
 			ImGui::TextWrapped("SuperDuperDisplay is a hybrid emulation frontend for Appletini, the Apple 2 Bus Card.");
@@ -233,10 +235,12 @@ void MainMenu::Render() {
 		}
 		if (pGui->bShowMemoryHeatMap)
 		{
-			if (ImGui::Begin("Memory Heat Map", &pGui->bShowMemoryHeatMap)) {
+			ImGui::SetNextWindowSize(ImVec2(624,862));
+			if (ImGui::Begin("Memory Heat Map", &pGui->bShowMemoryHeatMap, ImGuiWindowFlags_NoResize)) {
 				auto drawList = ImGui::GetWindowDrawList();
 				ImVec2 oPos = ImGui::GetCursorScreenPos();	// origin, i.e. "layouting position" where items are submitted
 				ImColor yellowColor(1.0f, 1.0f, 0.0f, 1.0f);
+				ImColor memLinesColor(1.0f, 1.0f, 0.0f, 0.5f);
 				float mmultw = 1.f;							// width of each pixel represneting a byte
 				float mmulth = 3.f;							// height of each pixel representing a byte
 				float memDrawW = 256 * mmultw;
@@ -260,17 +264,7 @@ void MainMenu::Render() {
 				drawList->AddText(auxLabelPos, yellowColor, "AUX MEMORY");
 				ImGui::PopFont();
 				
-				// Labels on the left
-				const int labelsHex[] = { 0x0, 0x800, 0x1000, 0x2000, 0x4000, 0x6000, 0x8000, 0xA000, 0xC000 };
-				char bufLabels[10];
-				for (int i = 0; i < sizeof(labelsHex) / sizeof(labelsHex[0]); ++i)
-				{
-					snprintf(bufLabels, sizeof(bufLabels), "%04X", labelsHex[i]);
-					float yDelta = (float)labelsHex[i] * mmulth / 0x100;
-					drawList->AddText(ImVec2(oPos.x, mainRectMin.y + yDelta), yellowColor, bufLabels);
-				}
-				
-				// And finally draw the heat map!
+				// Draw the heat map
 				auto currT = CycleCounter::GetInstance()->GetCycleTimestamp();
 				auto memMgr = MemoryManager::GetInstance();
 				for (auto j=0; j < 2; ++j) {
@@ -284,6 +278,18 @@ void MainMenu::Render() {
 							drawList->AddRectFilled(pMin, pMax, writeColor);
 						}
 					}
+				}
+				
+				// Labels on the left and memory chunk lines
+				const int labelsHex[] = { 0x0, 0x400, 0x800, 0xC00, 0x2000, 0x4000, 0x6000, 0x8000, 0xA000, 0xC000, 0xD000, 0xE000 };
+				auto ctLabels = sizeof(labelsHex) / sizeof(labelsHex[0]);
+				char bufLabels[ctLabels];
+				for (int i = 0; i < ctLabels; ++i)
+				{
+					snprintf(bufLabels, sizeof(bufLabels), "%04X", labelsHex[i]);
+					float yDelta = (float)labelsHex[i] * mmulth / 0x100;
+					drawList->AddText(ImVec2(oPos.x, mainRectMin.y + yDelta), yellowColor, bufLabels);
+					drawList->AddLine(ImVec2(mainRectMin.x - 20.f, mainRectMin.y + yDelta), ImVec2(auxRectMax.x, mainRectMin.y + yDelta), memLinesColor);
 				}
 			}
 			ImGui::End();
@@ -707,8 +713,7 @@ void MainMenu::HandleQuit() {
 
 // UTILITY
 
-float MainMenu::CalcCenteredTextX(const char* text, float minX, float maxX)
-{
+float MainMenu::CalcCenteredTextX(const char* text, float minX, float maxX) {
 	ImVec2 textSize = ImGui::CalcTextSize(text);
 	float centerX = (minX + maxX) / 2.0f;
 	float textStartPosX = centerX - (textSize.x / 2.0f);

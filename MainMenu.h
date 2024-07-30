@@ -21,8 +21,9 @@ private:
 	void HandleQuit();
 	
 	// utility
+	// FIXME: Put these in the custom imgui .h?
 	float CalcCenteredTextX(const char* text, float minX, float maxX);
-	
+
 	SDL_GLContext gl_context_;
 	SDL_Window* window_;
 	
