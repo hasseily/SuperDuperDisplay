@@ -397,8 +397,10 @@ void EventRecorder::DisplayImGuiWindow(bool* p_open)
 		bUserMovedEventSlider = ImGui::SliderInt("Event Timeline", reinterpret_cast<int*>(&currentReplayEvent), 0, (int)v_events.size());
 		if (bIsInReplayMode)
 		{
-			if (ImGui::SliderInt("X Slowdown", &slowdownMultiplier, 1, 1000))
+			if (ImGui::InputInt("X Slowdown", &slowdownMultiplier))
 			{
+				if (slowdownMultiplier < 0)
+					slowdownMultiplier = 0;
 				// make sure targetDuration is updated
 				this->PauseReplay(true);
 				this->PauseReplay(false);
