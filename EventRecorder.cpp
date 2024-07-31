@@ -219,8 +219,9 @@ void EventRecorder::RewindReplay()
 int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldStopReplay)
 {
 	using namespace std::chrono;
-	auto targetDuration = duration<double, std::nano>(slowdownMultiplier * 979.926864);	// Duration of an Apple 2 clock cycle (not stretched)
-	auto startTime = (std::chrono::time_point<steady_clock, duration<double, std::nano>>)high_resolution_clock::now();
+	// Duration of an Apple 2 clock cycle (not stretched)
+	auto targetDuration = duration_cast<high_resolution_clock::duration>(duration<double, std::nano>(slowdownMultiplier * 979.926864));
+	auto startTime = std::chrono::high_resolution_clock::now();
 	auto nextTime = startTime;
 
 	while (!*shouldStopReplay)
@@ -234,7 +235,6 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 		if (GetState() != EventRecorderStates_e::PLAYING)
 		{
 			SetState(EventRecorderStates_e::PLAYING);
-			targetDuration = duration<double, std::nano>(slowdownMultiplier * 979.926864);
 			startTime = high_resolution_clock::now();
 			nextTime = startTime;
 		}
