@@ -93,6 +93,18 @@
     <ClCompile Include="MemoryManager.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="Ayumi.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="MainMenu.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="MockingboardManager.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundManager.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -188,6 +200,18 @@
     <ClInclude Include="MemoryManager.h">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="Ayumi.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="beeper.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MockingboardManager.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundManager.h">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
@@ -247,6 +271,9 @@
     <None Include="shaders\a2video_beam_merge.frag">
       <Filter>shaders</Filter>
     </None>
+    <None Include="shaders\a2video_postprocess2.glsl">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="assets\Apple2eFont7x16 - Alternate.png">
@@ -259,9 +286,6 @@
       <Filter>assets</Filter>
     </Image>
     <Image Include="assets\Apple2eFont14x16 - Regular.png">
-      <Filter>assets</Filter>
-    </Image>
-    <Image Include="assets\Bezel.png">
       <Filter>assets</Filter>
     </Image>
     <Image Include="assets\Texture_composite_complete.png">

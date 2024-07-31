@@ -247,11 +247,6 @@
     <None Include="shaders\sdhr_default_330.vert" />
     <None Include="shaders\sdhr_depixelize_330.frag" />
     <None Include="shaders\sdhr_depixelize_330.vert" />
-    <None Include="shaders\_legacy_test0.frag" />
-    <None Include="shaders\_legacy_test1.frag" />
-    <None Include="shaders\_legacy_test2.frag" />
-    <None Include="shaders\_shr_test0.frag" />
-    <None Include="shaders\_shr_test1.frag" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="shaders\**">
