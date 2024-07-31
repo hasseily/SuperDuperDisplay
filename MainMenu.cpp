@@ -282,7 +282,7 @@ void MainMenu::Render() {
 				
 				// Labels on the left and memory chunk lines
 				const int labelsHex[] = { 0x0, 0x400, 0x800, 0xC00, 0x2000, 0x4000, 0x6000, 0x8000, 0xA000, 0xC000, 0xD000, 0xE000 };
-				auto ctLabels = sizeof(labelsHex) / sizeof(labelsHex[0]);
+				constexpr size_t ctLabels = sizeof(labelsHex) / sizeof(labelsHex[0]);
 				char bufLabels[ctLabels];
 				for (int i = 0; i < ctLabels; ++i)
 				{

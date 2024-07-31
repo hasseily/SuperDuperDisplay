@@ -105,7 +105,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>imgui;imgui\backends;%SDL2_DIR%\include;$(VcpkgCurrentInstalledDir)include\SDL2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard_C>Default</LanguageStandard_C>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -145,6 +145,7 @@
       <AdditionalIncludeDirectories>imgui;imgui\backends;%SDL2_DIR%\include;$(VcpkgCurrentInstalledDir)include\SDL2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -159,6 +160,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="A2WindowBeam.cpp" />
+    <ClCompile Include="Ayumi.cpp" />
     <ClCompile Include="CycleCounter.cpp" />
     <ClCompile Include="EventRecorder.cpp" />
     <ClCompile Include="extras\ImGuiFileDialog.cpp" />
@@ -172,7 +174,9 @@
     <ClCompile Include="imgui\imgui_tables.cpp" />
     <ClCompile Include="imgui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MainMenu.cpp" />
     <ClCompile Include="MemoryManager.cpp" />
+    <ClCompile Include="MockingboardManager.cpp" />
     <ClCompile Include="MosaicMesh.cpp" />
     <ClCompile Include="OpenGLHelper.cpp" />
     <ClCompile Include="PostProcessor.cpp" />
@@ -181,10 +185,13 @@
     <ClCompile Include="SDHRWindow.cpp" />
     <ClCompile Include="A2VideoManager.cpp" />
     <ClCompile Include="shader.cpp" />
+    <ClCompile Include="SoundManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="A2VideoManager.h" />
     <ClInclude Include="A2WindowBeam.h" />
+    <ClInclude Include="Ayumi.h" />
+    <ClInclude Include="beeper.h" />
     <ClInclude Include="ByteBuffer.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="common.h" />
@@ -205,6 +212,7 @@
     <ClInclude Include="imgui\imgui_internal.h" />
     <ClInclude Include="imgui_memory_editor.h" />
     <ClInclude Include="MemoryManager.h" />
+    <ClInclude Include="MockingboardManager.h" />
     <ClInclude Include="MosaicMesh.h" />
     <ClInclude Include="my_imgui_config.h" />
     <ClInclude Include="OpenGLHelper.h" />
@@ -213,6 +221,7 @@
     <ClInclude Include="SDHRNetworking.h" />
     <ClInclude Include="SDHRWindow.h" />
     <ClInclude Include="shader.h" />
+    <ClInclude Include="SoundManager.h" />
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
