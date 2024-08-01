@@ -232,9 +232,22 @@ void MainMenu::Render() {
 			ImGui::Separator();
 			
 			ImGui::TextWrapped("SuperDuperDisplay is a hybrid emulation frontend for Appletini, the Apple 2 Bus Card.");
-			if (ImGui::Button("OK")) {
-				pGui->bShowAboutWindow = false;  // Close the "About" window when the OK button is clicked
-			}
+			ImGui::Separator();
+			ImGui::PushFont(_itemFont);
+			// Retrieve OpenGL version info
+			const GLubyte* renderer = glGetString(GL_RENDERER);
+			const GLubyte* version = glGetString(GL_VERSION);
+			GLint major, minor;
+			glGetIntegerv(GL_MAJOR_VERSION, &major);
+			glGetIntegerv(GL_MINOR_VERSION, &minor);
+			GLint accelerated = 0;
+			SDL_GL_GetAttribute(SDL_GL_ACCELERATED_VISUAL, &accelerated);
+			ImGui::Text("Renderer: %s", renderer);
+			ImGui::Text("OpenGL version: %s", version);
+			ImGui::Text("Major version: %d", major);
+			ImGui::Text("Minor version: %d", minor);
+			ImGui::Text("Hardware Acceleration: %s", accelerated ? "Enabled" : "Disabled");
+			ImGui::PopFont();
 			ImGui::End();
 			ImGui::PopFont();
 		}

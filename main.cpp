@@ -687,20 +687,6 @@ int main(int argc, char* argv[])
 				ImGui::Begin("KFest 2024", &_M8DBG_bShowF8Window);
 				if (!ImGui::IsWindowCollapsed())
 				{
-					// Retrieve OpenGL version info
-					const GLubyte* renderer = glGetString(GL_RENDERER);
-					const GLubyte* version = glGetString(GL_VERSION);
-					GLint major, minor;
-					glGetIntegerv(GL_MAJOR_VERSION, &major);
-					glGetIntegerv(GL_MINOR_VERSION, &minor);
-					GLint accelerated = 0;
-					SDL_GL_GetAttribute(SDL_GL_ACCELERATED_VISUAL, &accelerated);
-					ImGui::Text("Renderer: %s", renderer);
-					ImGui::Text("OpenGL version: %s", version);
-					ImGui::Text("Major version: %d", major);
-					ImGui::Text("Minor version: %d", minor);
-					ImGui::Text("Hardware Acceleration: %s", accelerated ? "Enabled" : "Disabled");
-					ImGui::Separator();
 					ImGui::Text("Legacy Shader");
 					const char* _legshaders[] = { "0 - Full" };
 					static int _legshader_current = 0;
