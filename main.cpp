@@ -159,12 +159,6 @@ void Main_SetFPSOverlay(bool isFPSOverlay) {
 
 // True for both SDL_WINDOW_FULLSCREEN and SDL_WINDOW_FULLSCREEN_DESKTOP
 bool Main_IsFullScreen() {
-#ifdef __LINUX__
-	// Always return true under linux console mode
-	const char* video_driver = SDL_GetCurrentVideoDriver();
-	if (strcmp(video_driver, "KMSDRM") == 0)
-		return true;
-#endif
 	// Assume non-resizable windows are fullscreen
 	auto _flags = SDL_GetWindowFlags(window);
 	if ((_flags & SDL_WINDOW_RESIZABLE) == 0)
@@ -173,7 +167,7 @@ bool Main_IsFullScreen() {
 }
 
 void Main_SetFullScreen(bool bWantFullscreen) {
-#ifdef __LINUX__
+#if defined(__LINUX__)
 	// Only change resolution under linux console mode
 	const char* video_driver = SDL_GetCurrentVideoDriver();
 	if (strcmp(video_driver, "KMSDRM") == 0) {
@@ -187,7 +181,7 @@ void Main_SetFullScreen(bool bWantFullscreen) {
 	// Do nothing if it's Apple. Let the user maximize via the OSX UI
 	// Because if the user sets fullscreen via the OSX UI we won't know,
 	// and later setting fullscreen completely messes up SDL2
-// #ifdef __APPLE__
+// #if defined(__APPLE__)
 //	return;
 // #endif
 	auto _flags = SDL_GetWindowFlags(window);
@@ -318,9 +312,19 @@ int main(int argc, char* argv[])
         | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
         | SDL_WINDOW_SHOWN);
 #endif
+
+	// Special case for Linux console mode, make it fullscreen always
+#if defined(__LINUX__)
+	const char* video_driver = SDL_GetCurrentVideoDriver();
+	if (strcmp(video_driver, "KMSDRM") == 0) {
+		window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
+			| SDL_WINDOW_FULLSCREEN | SDL_WINDOW_ALLOW_HIGHDPI
+			| SDL_WINDOW_SHOWN);
+	}
+#endif
+
 	// Get the actual display size
-	SDL_DisplayMode displayMode;
-	if (SDL_GetCurrentDisplayMode(0, &displayMode) != 0) {
+	if (SDL_GetCurrentDisplayMode(0, &g_fullscreenMode) != 0) {
 		std::cerr << "SDL_GetCurrentDisplayMode Error: " << SDL_GetError() << std::endl;
 		SDL_Quit();
 		return 1;
@@ -333,7 +337,7 @@ int main(int argc, char* argv[])
 #endif
 
     window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		displayMode.w, displayMode.h, window_flags);
+		g_fullscreenMode.w, g_fullscreenMode.h, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
 
@@ -417,7 +421,6 @@ int main(int argc, char* argv[])
     uint64_t dt_LAST = 0;
 	float deltaTime = 0.f;
 
-	SDL_GetCurrentDisplayMode(0, &g_fullscreenMode);
 	Main_SetVsync(g_swapInterval);
 
 	uint32_t lastMouseMoveTime = SDL_GetTicks();
