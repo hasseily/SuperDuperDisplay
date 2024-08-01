@@ -49,6 +49,9 @@ public:
     void setMat3(const std::string &name, const glm::mat3 &mat) const;
     // ------------------------------------------------------------------------
     void setMat4(const std::string &name, const glm::mat4 &mat) const;
+	
+	const std::string GetVertexPath() { return s_vertexPath; }
+	const std::string GetFragmentPath() { return s_fragmentPath; }
 
 private:
 	std::string s_vertexPath;

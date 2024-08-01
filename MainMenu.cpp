@@ -750,6 +750,29 @@ void MainMenu::ShowDeveloperMenu() {
 		ImGui::MenuItem("HGR2", "", &a2VideoManager->bRenderHGR2);
 		ImGui::EndMenu();
 	}
+	/*
+	if (ImGui::BeginMenu("Shaders")) {
+		ImGui::Text("Legacy Shader");
+		const char* _legshaders[] = { "0 - Full",};
+		static int _legshader_current = 0;
+		if (ImGui::ListBox("##LegacyShader", &_legshader_current, _legshaders, IM_ARRAYSIZE(_legshaders), 4))
+		{
+			a2VideoManager->SelectLegacyShader(_legshader_current);
+			Main_ResetFPSCalculations();
+			a2VideoManager->ForceBeamFullScreenRender();
+		}
+		ImGui::Text("SHR Shader");
+		const char* _shrshaders[] = { "0 - Full" };
+		static int _shrshader_current = 0;
+		if (ImGui::ListBox("##SHRShader", &_shrshader_current, _shrshaders, IM_ARRAYSIZE(_shrshaders), 3))
+		{
+			a2VideoManager->SelectSHRShader(_shrshader_current);
+			Main_ResetFPSCalculations();
+			a2VideoManager->ForceBeamFullScreenRender();
+		}
+		ImGui::EndMenu();
+	}
+	 */
 	if (ImGui::BeginMenu("VRAMs")) {
 		ImGui::MenuItem("Legacy", "", &a2VideoManager->mem_edit_vram_legacy.Open);
 		ImGui::MenuItem("SHR", "", &a2VideoManager->mem_edit_vram_shr.Open);

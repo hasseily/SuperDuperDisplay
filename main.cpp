@@ -657,69 +657,6 @@ int main(int argc, char* argv[])
 				SDL_ShowCursor(SDL_ENABLE);
 		}
 
-		// TODO: THINGS THAT HAVEN'T YET BEEN REFACTORED INTO MENU
-		/*
-		if (false)
-		{
-			// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-			if (show_demo_window)
-				ImGui::ShowDemoWindow(&show_demo_window);
-
-			ImGui::Begin("Super Duper Display", &show_F1_window);
-			if (!ImGui::IsWindowCollapsed())
-			{
-				ImGui::PushItemWidth(110);
-				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-				ImGui::Text("Worst Frame rate %.3f ms/frame", 1000.0f / fps_worst);
-				ImGui::Separator();
-				if (ImGui::CollapsingHeader("SDHR"))
-				{
-					auto _c = sdhrManager->camera;
-					auto _pos = _c.Position;
-					ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
-					ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);				}
-				ImGui::PopItemWidth();
-			}
-			ImGui::End();
-
-			if (_M8DBG_bShowF8Window)
-			{
-				ImGui::Begin("KFest 2024", &_M8DBG_bShowF8Window);
-				if (!ImGui::IsWindowCollapsed())
-				{
-					ImGui::Text("Legacy Shader");
-					const char* _legshaders[] = { "0 - Full" };
-					static int _legshader_current = 0;
-					if (ImGui::ListBox("##LegacyShader", &_legshader_current, _legshaders, IM_ARRAYSIZE(_legshaders), 4))
-					{
-						a2VideoManager->SelectLegacyShader(_legshader_current);
-						ResetFPSCalculations(a2VideoManager);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					ImGui::Text("SHR Shader");
-					const char* _shrshaders[] = { "0 - Full" };
-					static int _shrshader_current = 0;
-					if (ImGui::ListBox("##SHRShader", &_shrshader_current, _shrshaders, IM_ARRAYSIZE(_shrshaders), 3))
-					{
-						a2VideoManager->SelectSHRShader(_shrshader_current);
-						ResetFPSCalculations(a2VideoManager);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					ImGui::PopItemWidth();
-					 
-
-				}
-
-				ImGui::End();
-			}
-
-			// Rendering
-			ImGui::Render();
-
-			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-		}	// show F1 window
-		*/
-
 		SDL_GL_SwapWindow(window);
 
 		// FPS overlay - Calculate frame rates
