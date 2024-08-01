@@ -141,6 +141,7 @@ void MainMenu::Render() {
 	ImGui_ImplSDL2_NewFrame(window_);
 	ImGui::NewFrame();
 	
+	auto a2VideoManager = A2VideoManager::GetInstance();
 	ImFont* _menuFont;
 	ImFont* _itemFont;
 	int screen_width, screen_height;
@@ -201,6 +202,10 @@ void MainMenu::Render() {
 		
 		ImGui::Text("     ");
 		ImGui::PushFont(pGui->fontDefault);
+		ImGui::Text("Screen: %dx%d (%dx%d) - ", 
+			a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y,
+			screen_width, screen_height
+		);
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
 		ImGui::Text("FrameID: %d, Avg %.3f ms/f (%.1f FPS)",
 					A2VideoManager::GetInstance()->GetVRAMReadId(),

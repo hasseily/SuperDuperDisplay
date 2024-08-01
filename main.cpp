@@ -164,9 +164,9 @@ bool Main_IsFullScreen() {
 	return (_flags & SDL_WINDOW_FULLSCREEN);
 }
 
-void Main_SetFullScreen(bool bIsFullscreen) {
+void Main_SetFullScreen(bool bWantFullscreen) {
 	// Don't do anything if it's already in the requested state.
-	if (Main_IsFullScreen() == bIsFullscreen)
+	if (Main_IsFullScreen() == bWantFullscreen)
 		return;
 	// Do nothing if it's Apple. Let the user maximize via the OSX UI
 	// Because if the user sets fullscreen via the OSX UI we won't know,
@@ -178,7 +178,15 @@ void Main_SetFullScreen(bool bIsFullscreen) {
 	// Don't do anything if the window isn't resizable
 	if ((_flags & SDL_WINDOW_RESIZABLE) == 0)
 		return;
-	SDL_SetWindowFullscreen(window, bIsFullscreen ? SDL_WINDOW_FULLSCREEN : 0);
+	
+	if (bWantFullscreen)
+	{
+		SDL_DisplayMode displayMode;
+		SDL_GetCurrentDisplayMode(0, &displayMode);
+		SDL_SetWindowDisplayMode(window, &displayMode);
+	}
+	
+	SDL_SetWindowFullscreen(window, bWantFullscreen ? SDL_WINDOW_FULLSCREEN : 0);
 	Main_ResetFPSCalculations();
 }
 
@@ -540,6 +548,11 @@ int main(int argc, char* argv[])
 				else if (event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) {
 					Main_SetFullScreen(!Main_IsFullScreen());
 				}
+				// Make Alt-Tab in full screen revert to window mode
+				else if (event.key.keysym.sym == SDLK_TAB && (event.key.keysym.mod & KMOD_ALT)) {
+					if (Main_IsFullScreen())
+						Main_SetFullScreen(false);
+				}
 				// Camera movement!
 				switch (event.key.keysym.sym)
 				{
@@ -594,18 +607,21 @@ int main(int argc, char* argv[])
 
 		if (!_M8DBG_bDisablePPRender)
 			postProcessor->Render(window, out_tex_id);
-
-		// Disable mouse if unused after cursorHideDelay
-		// It's possible that the cursor won't get disabled when in windowed mode
-		// (MacOS doesn't allow this, for example)
-		if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
-			SDL_ShowCursor(SDL_DISABLE);
-		else
-			SDL_ShowCursor(SDL_ENABLE);
 		
 		if (Main_IsImGuiOn())
+		{
 			menu->Render();
-		
+		}
+		else {
+			// Disable mouse if unused after cursorHideDelay
+			// It's possible that the cursor won't get disabled when in windowed mode
+			// (MacOS doesn't allow this, for example)
+			if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
+				SDL_ShowCursor(SDL_DISABLE);
+			else
+				SDL_ShowCursor(SDL_ENABLE);
+		}
+
 		// TODO: THINGS THAT HAVEN'T YET BEEN REFACTORED INTO MENU
 		/*
 		if (false)
@@ -620,10 +636,6 @@ int main(int argc, char* argv[])
 				ImGui::PushItemWidth(110);
 				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 				ImGui::Text("Worst Frame rate %.3f ms/frame", 1000.0f / fps_worst);
-				int _vw, _vh;
-				SDL_GL_GetDrawableSize(window, &_vw, &_vh);
-				ImGui::Text("Drawable Size: %d x %d", _vw, _vh);
-				ImGui::Text("A2 Screen Size: %d x %d", a2VideoManager->ScreenSize().x, a2VideoManager->ScreenSize().y);
 				ImGui::Separator();
 				if (ImGui::CollapsingHeader("SDHR"))
 				{
@@ -722,15 +734,15 @@ int main(int argc, char* argv[])
 		}
     }
 
+	eventRecorder->StopReplay();
+	soundManager->StopPlay();
+
     // Stop all threads
 	bShouldTerminateProcessing = true;
 	terminate_processing_thread();
 	thread_processor.join();
     bShouldTerminateNetworking = true;
     thread_server.join();
-
-	eventRecorder->StopReplay();
-	soundManager->StopPlay();
 
 	// Serialize settings and save them
 	{
