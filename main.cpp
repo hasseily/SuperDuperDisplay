@@ -180,10 +180,10 @@ void Main_SetFullScreen(bool bWantFullscreen) {
 		return;
 	// Do nothing if it's Apple. Let the user maximize via the OSX UI
 	// Because if the user sets fullscreen via the OSX UI we won't know,
-	// and later setting fullscreen completely messes up SDL2
-// #if defined(__APPLE__)
-//	return;
-// #endif
+	// and later setting fullscreen crashes SDL
+#if defined(__APPLE__)
+	return;
+#endif
 	auto _flags = SDL_GetWindowFlags(window);
 	// Don't do anything if the window isn't resizable
 	if ((_flags & SDL_WINDOW_RESIZABLE) == 0)

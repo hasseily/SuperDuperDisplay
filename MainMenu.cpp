@@ -463,23 +463,24 @@ void MainMenu::Render() {
 
 
 void MainMenu::ShowSDDMenu() {
+	/*
+	 // List video drivers for debugging
+	 if (ImGui::BeginMenu("Video Drivers"))
+	 {
+	 auto _n = SDL_GetNumVideoDrivers();
+	 for (size_t i = 0; i < _n; i++)
+	 {
+	 ImGui::Text(SDL_GetVideoDriver(i));
+	 }
+	 ImGui::EndMenu();
+	 }
+	 */
 #ifndef __APPLE__
+	// For OSX, don't let SDL handle fullscreen. It has the potential to crash if the user
+	// maximizes the window to fullscreen as well. So completely hide all fullscreen options in OSX
 	if (ImGui::MenuItem("Fullscreen", "Alt+Enter", Main_IsFullScreen())) {
 		Main_SetFullScreen(!Main_IsFullScreen());
 	}
-#endif
-	/*
-	// List video drivers for debugging
-	if (ImGui::BeginMenu("Video Drivers"))
-	{
-		auto _n = SDL_GetNumVideoDrivers();
-		for (size_t i = 0; i < _n; i++)
-		{
-			ImGui::Text(SDL_GetVideoDriver(i));
-		}
-		ImGui::EndMenu();
-	}
-	*/
 	if (ImGui::BeginMenu("Fullscreen Resolution")) {
 		// FIXME: Figure out the display index for full screen mode
 		int displayIndex = 0;
@@ -516,6 +517,7 @@ void MainMenu::ShowSDDMenu() {
 		}
 		ImGui::EndMenu();
 	}
+#endif
 	int iMMVsync = Main_GetVsync();
 	bool bMMVsync = (iMMVsync == 0 ? 0 : 1);
 	// std::string _s_vsync = (iMMVsync == -1 ? "VSYNC (Adaptive)" : "VSYNC");
