@@ -18,9 +18,12 @@
 #include "extras/ImGuiFileDialog.h"
 
 #include <iostream>
+#include <vector>
 
 // In main.cpp
 extern void Main_ResetFPSCalculations();
+extern SDL_DisplayMode Main_GetFullScreenMode();
+extern void Main_SetFullScreenMode(SDL_DisplayMode mode);
 extern bool Main_IsFullScreen();
 extern void Main_SetFullScreen(bool bIsFullscreen);
 extern int Main_GetVsync();
@@ -34,9 +37,11 @@ extern void Main_SetFPSOverlay(bool isFPSOverlay);
 
 class MainMenu::Gui {
 public:
-	ImFont* fontDefault;
-	ImFont* fontMedium;
-	ImFont* fontLarge;
+	ImFont* fontDefault = nullptr;
+	ImFont* fontMedium = nullptr;
+	ImFont* fontLarge = nullptr;
+
+	std::vector<SDL_DisplayMode> v_displayModes;
 
 	int iWindowWidth=1200;
 	int iWindowHeight=1000;
@@ -464,11 +469,38 @@ void MainMenu::ShowSDDMenu() {
 	}
 #endif
 	if (ImGui::BeginMenu("Fullscreen Resolution")) {
-		ImGui::InputInt("Width", &pGui->iWindowWidth, 10, 100);
-		ImGui::InputInt("Height", &pGui->iWindowHeight, 10, 100);
-		if (ImGui::Button("Apply"))
+		// FIXME: Figure out the display index for full screen mode
+		int displayIndex = 0;
+		SDL_DisplayMode currentDisplayMode = Main_GetFullScreenMode();
+		int numDisplayModes = SDL_GetNumDisplayModes(displayIndex);
+		SDL_DisplayMode _lastMode;
+		_lastMode.w = _lastMode.h = _lastMode.refresh_rate = 0;
+		char modeDescription[200];
+
+		pGui->v_displayModes.clear();
+		for (int i = 0; i < numDisplayModes; ++i) {
+			SDL_DisplayMode mode;
+			if (SDL_GetDisplayMode(displayIndex, i, &mode) != 0) {
+				std::cerr << "SDL_GetDisplayMode failed: " << SDL_GetError() << std::endl;
+				continue;
+			}
+			// Only store the highest refresh rate modes
+			if (!(_lastMode.w == mode.w && _lastMode.h == mode.h && _lastMode.refresh_rate > mode.refresh_rate))
+			{
+				pGui->v_displayModes.push_back(mode);
+				_lastMode = mode;
+			}
+		}
+		for (int i = 0; i < pGui->v_displayModes.size(); ++i)
 		{
-			SDL_SetWindowSize(window_, pGui->iWindowWidth, pGui->iWindowHeight);
+			auto mode = pGui->v_displayModes[i];
+			snprintf(modeDescription, 199, "%dx%d @ %dHz", mode.w, mode.h, mode.refresh_rate);
+			bool isCurrentMode = (
+				mode.w == currentDisplayMode.w &&
+				mode.h == currentDisplayMode.h &&
+				mode.refresh_rate == currentDisplayMode.refresh_rate);
+			if (ImGui::MenuItem(modeDescription, "", isCurrentMode))
+				Main_SetFullScreenMode(mode);
 		}
 		ImGui::EndMenu();
 	}

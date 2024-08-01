@@ -50,6 +50,8 @@ float window_bgcolor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 static SDL_Window* window;
 static MainMenu* menu = nullptr;
 
+static SDL_DisplayMode g_fullscreenMode;
+
 // For FPS calculations
 static float fps_worst = 1000000.f;
 static uint64_t fps_frame_count = 0;
@@ -180,14 +182,24 @@ void Main_SetFullScreen(bool bWantFullscreen) {
 		return;
 	
 	if (bWantFullscreen)
-	{
-		SDL_DisplayMode displayMode;
-		SDL_GetCurrentDisplayMode(0, &displayMode);
-		SDL_SetWindowDisplayMode(window, &displayMode);
-	}
-	
+		SDL_SetWindowDisplayMode(window, &g_fullscreenMode);
+
 	SDL_SetWindowFullscreen(window, bWantFullscreen ? SDL_WINDOW_FULLSCREEN : 0);
 	Main_ResetFPSCalculations();
+}
+
+SDL_DisplayMode Main_GetFullScreenMode() {
+	return g_fullscreenMode;
+}
+
+void Main_SetFullScreenMode(SDL_DisplayMode mode) {
+	g_fullscreenMode = mode;
+	if (Main_IsFullScreen())
+	{
+		Main_SetFullScreen(false);
+		Main_SetFullScreen(true);
+	}
+
 }
 
 bool Main_IsImGuiOn()
@@ -392,6 +404,7 @@ int main(int argc, char* argv[])
     uint64_t dt_LAST = 0;
 	float deltaTime = 0.f;
 
+	SDL_GetCurrentDisplayMode(0, &g_fullscreenMode);
 	Main_SetVsync(g_swapInterval);
 
 	uint32_t lastMouseMoveTime = SDL_GetTicks();
@@ -432,6 +445,12 @@ int main(int argc, char* argv[])
 			_wh = _sm.value("window height", _wh);
 			g_swapInterval = _sm.value("vsync", g_swapInterval);
 			Main_SetVsync(g_swapInterval);
+			// make sure the requested mode is acceptable
+			SDL_DisplayMode newMode;
+			newMode.w = _sm.value("fullscreen width", g_fullscreenMode.w);
+			newMode.h = _sm.value("fullscreen height", g_fullscreenMode.h);
+			newMode.refresh_rate = _sm.value("fullscreen refresh rate", g_fullscreenMode.refresh_rate);
+			SDL_GetClosestDisplayMode(_displayIndex, &newMode, &g_fullscreenMode);
 			Main_SetFullScreen(_sm.value("fullscreen", false));
 			vbl_region = _sm.value("videoregion", vbl_region);
 			if (vbl_region == 0)
@@ -468,14 +487,14 @@ int main(int argc, char* argv[])
 	
 	std::cout << "Previous state loaded!" << std::endl;
 
+	SDL_GetWindowSize(window, &_M8DBG_windowWidth, &_M8DBG_windowHeight);
+		
 	// Load up the first screen in SHR, with green border color
 	Main_DisplaySplashScreen();
 
-	SDL_GetWindowSize(window, &_M8DBG_windowWidth, &_M8DBG_windowHeight);
-
 	if (bDisplayFPSOnScreen)
 		Main_DrawFPSOverlay();
-		
+
     while (!done)
 	{
 		// Check if we should reboot
@@ -759,6 +778,9 @@ int main(int argc, char* argv[])
 			{"window y", _wy},
 			{"window width", _ww},
 			{"window height", _wh},
+			{"fullscreen width", g_fullscreenMode.w},
+			{"fullscreen height", g_fullscreenMode.h},
+			{"fullscreen refresh rate", g_fullscreenMode.refresh_rate},
 			{"fullscreen", Main_IsFullScreen()},
 			{"vsync", g_swapInterval},
 			{"videoregion", vbl_region},

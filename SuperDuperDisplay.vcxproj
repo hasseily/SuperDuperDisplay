@@ -211,6 +211,7 @@
     <ClInclude Include="imgui\imgui.h" />
     <ClInclude Include="imgui\imgui_internal.h" />
     <ClInclude Include="imgui_memory_editor.h" />
+    <ClInclude Include="MainMenu.h" />
     <ClInclude Include="MemoryManager.h" />
     <ClInclude Include="MockingboardManager.h" />
     <ClInclude Include="MosaicMesh.h" />
