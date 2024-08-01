@@ -468,6 +468,15 @@ void MainMenu::ShowSDDMenu() {
 		Main_SetFullScreen(!Main_IsFullScreen());
 	}
 #endif
+	if (ImGui::BeginMenu("Video Drivers"))
+	{
+		auto _n = SDL_GetNumVideoDrivers();
+		for (size_t i = 0; i < _n; i++)
+		{
+			ImGui::Text(SDL_GetVideoDriver(i));
+		}
+		ImGui::EndMenu();
+	}
 	if (ImGui::BeginMenu("Fullscreen Resolution")) {
 		// FIXME: Figure out the display index for full screen mode
 		int displayIndex = 0;
