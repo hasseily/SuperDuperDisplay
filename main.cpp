@@ -160,11 +160,10 @@ void Main_SetFPSOverlay(bool isFPSOverlay) {
 // True for both SDL_WINDOW_FULLSCREEN and SDL_WINDOW_FULLSCREEN_DESKTOP
 bool Main_IsFullScreen() {
 #ifdef __LINUX__
+	// Always return true under linux console mode
 	const char* video_driver = SDL_GetCurrentVideoDriver();
-	if (strcmp(video_driver, "x11") != 0) {
-		// Running in console mode
+	if (strcmp(video_driver, "KMSDRM") == 0)
 		return true;
-	}
 #endif
 	// Assume non-resizable windows are fullscreen
 	auto _flags = SDL_GetWindowFlags(window);
@@ -174,17 +173,15 @@ bool Main_IsFullScreen() {
 }
 
 void Main_SetFullScreen(bool bWantFullscreen) {
-	// Don't do anything if it's already in the requested state.
-	if (Main_IsFullScreen() == bWantFullscreen)
-		return;
 #ifdef __LINUX__
 	// Do nothing under linux console mode
 	const char* video_driver = SDL_GetCurrentVideoDriver();
-	if (strcmp(video_driver, "x11") != 0) {
-		// Running in console mode
-		return true;
-	}
+	if (strcmp(video_driver, "KMSDRM") == 0)
+		return;
 #endif
+	// Don't do anything if it's already in the requested state.
+	if (Main_IsFullScreen() == bWantFullscreen)
+		return;
 	// Do nothing if it's Apple. Let the user maximize via the OSX UI
 	// Because if the user sets fullscreen via the OSX UI we won't know,
 	// and later setting fullscreen completely messes up SDL2
