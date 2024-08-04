@@ -22,6 +22,12 @@ MockingboardManager::MockingboardManager(uint32_t sampleRate, uint32_t bufferSiz
 
 void MockingboardManager::Initialize()
 {
+	// Reset registers
+	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
+	{
+		ay[ayidx].ResetRegisters();
+	}
+	
 	if (audioDevice == 0)
 	{
 		SDL_zero(audioSpec);
@@ -300,59 +306,56 @@ void MockingboardManager::Util_WriteAllRegisters(uint8_t ay_idx, uint8_t* val_ar
 
 void MockingboardManager::DisplayImGuiChunk()
 {
-	if (ImGui::CollapsingHeader("[ MOCKINGBOARD ]"))
+	ImGui::Checkbox("Enable Mockingboard (Slot 4)", &bIsEnabled);
+	if (ImGui::Checkbox("Dual Mockingboards (Slots 4 and 5)", &bIsDual))
+		bIsEnabled = true;
+	
+	if (bIsEnabled)
+		ImGui::Text("Mockingboard Events: %d", mb_event_count);
+	
+	ImGui::SeparatorText("[ CHANNEL PANNING ]");
+	if (ImGui::SliderFloat("AY Chip 0 Channel 0", &allpans[0][0], 0, 1, "%.3f", 1))
+		SetPan(0, 0, allpans[0][0], false);
+	if (ImGui::SliderFloat("AY Chip 0 Channel 1", &allpans[0][1], 0, 1, "%.3f", 1))
+		SetPan(0, 1, allpans[0][1], false);
+	if (ImGui::SliderFloat("AY Chip 0 Channel 2", &allpans[0][2], 0, 1, "%.3f", 1))
+		SetPan(0, 2, allpans[0][2], false);
+	if (ImGui::SliderFloat("AY Chip 1 Channel 0", &allpans[1][0], 0, 1, "%.3f", 1))
+		SetPan(1, 0, allpans[1][0], false);
+	if (ImGui::SliderFloat("AY Chip 1 Channel 1", &allpans[1][1], 0, 1, "%.3f", 1))
+		SetPan(1, 1, allpans[1][1], false);
+	if (ImGui::SliderFloat("AY Chip 1 Channel 2", &allpans[1][2], 0, 1, "%.3f", 1))
+		SetPan(1, 2, allpans[1][2], false);
+	if (bIsDual)
 	{
-		ImGui::Checkbox("Enable Mockingboard (Slot 4)", &bIsEnabled);
-		if (ImGui::Checkbox("Dual Mockingboards (Slots 4 and 5)", &bIsDual))
-			bIsEnabled = true;
-		
-		if (bIsEnabled)
-			ImGui::Text("Mockingboard Events: %d", mb_event_count);
-
-		ImGui::SeparatorText("[ CHANNEL PANNING ]");
-		if (ImGui::SliderFloat("AY Chip 0 Channel 0", &allpans[0][0], 0, 1, "%.3f", 1))
-			SetPan(0, 0, allpans[0][0], false);
-		if (ImGui::SliderFloat("AY Chip 0 Channel 1", &allpans[0][1], 0, 1, "%.3f", 1))
-			SetPan(0, 1, allpans[0][1], false);
-		if (ImGui::SliderFloat("AY Chip 0 Channel 2", &allpans[0][2], 0, 1, "%.3f", 1))
-			SetPan(0, 2, allpans[0][2], false);
-		if (ImGui::SliderFloat("AY Chip 1 Channel 0", &allpans[1][0], 0, 1, "%.3f", 1))
-			SetPan(1, 0, allpans[1][0], false);
-		if (ImGui::SliderFloat("AY Chip 1 Channel 1", &allpans[1][1], 0, 1, "%.3f", 1))
-			SetPan(1, 1, allpans[1][1], false);
-		if (ImGui::SliderFloat("AY Chip 1 Channel 2", &allpans[1][2], 0, 1, "%.3f", 1))
-			SetPan(1, 2, allpans[1][2], false);
-		if (bIsDual)
-		{
-			if (ImGui::SliderFloat("AY Chip 2 Channel 0", &allpans[2][0], 0, 1, "%.3f", 1))
-				SetPan(2, 0, allpans[2][0], false);
-			if (ImGui::SliderFloat("AY Chip 2 Channel 1", &allpans[2][1], 0, 1, "%.3f", 1))
-				SetPan(2, 1, allpans[2][1], false);
-			if (ImGui::SliderFloat("AY Chip 2 Channel 2", &allpans[2][2], 0, 1, "%.3f", 1))
-				SetPan(2, 2, allpans[2][2], false);
-			if (ImGui::SliderFloat("AY Chip 3 Channel 0", &allpans[3][0], 0, 1, "%.3f", 1))
-				SetPan(3, 0, allpans[3][0], false);
-			if (ImGui::SliderFloat("AY Chip 3 Channel 1", &allpans[3][1], 0, 1, "%.3f", 1))
-				SetPan(3, 1, allpans[3][1], false);
-			if (ImGui::SliderFloat("AY Chip 3 Channel 2", &allpans[3][2], 0, 1, "%.3f", 1))
-				SetPan(3, 2, allpans[3][2], false);
-		}
-		if (ImGui::Button("Reset Pan to Default"))
-		{
-			allpans[0][0] = 0.3f;
-			allpans[0][1] = 0.3f;
-			allpans[0][2] = 0.3f;
-			allpans[1][0] = 0.7f;
-			allpans[1][1] = 0.7f;
-			allpans[1][2] = 0.7f;
-			allpans[2][0] = 0.2f;
-			allpans[2][1] = 0.2f;
-			allpans[2][2] = 0.2f;
-			allpans[3][0] = 0.8f;
-			allpans[3][1] = 0.8f;
-			allpans[3][2] = 0.8f;
-			UpdateAllPans();
-		}
+		if (ImGui::SliderFloat("AY Chip 2 Channel 0", &allpans[2][0], 0, 1, "%.3f", 1))
+			SetPan(2, 0, allpans[2][0], false);
+		if (ImGui::SliderFloat("AY Chip 2 Channel 1", &allpans[2][1], 0, 1, "%.3f", 1))
+			SetPan(2, 1, allpans[2][1], false);
+		if (ImGui::SliderFloat("AY Chip 2 Channel 2", &allpans[2][2], 0, 1, "%.3f", 1))
+			SetPan(2, 2, allpans[2][2], false);
+		if (ImGui::SliderFloat("AY Chip 3 Channel 0", &allpans[3][0], 0, 1, "%.3f", 1))
+			SetPan(3, 0, allpans[3][0], false);
+		if (ImGui::SliderFloat("AY Chip 3 Channel 1", &allpans[3][1], 0, 1, "%.3f", 1))
+			SetPan(3, 1, allpans[3][1], false);
+		if (ImGui::SliderFloat("AY Chip 3 Channel 2", &allpans[3][2], 0, 1, "%.3f", 1))
+			SetPan(3, 2, allpans[3][2], false);
+	}
+	if (ImGui::Button("Reset Pan to Default"))
+	{
+		allpans[0][0] = 0.3f;
+		allpans[0][1] = 0.3f;
+		allpans[0][2] = 0.3f;
+		allpans[1][0] = 0.7f;
+		allpans[1][1] = 0.7f;
+		allpans[1][2] = 0.7f;
+		allpans[2][0] = 0.2f;
+		allpans[2][1] = 0.2f;
+		allpans[2][2] = 0.2f;
+		allpans[3][0] = 0.8f;
+		allpans[3][1] = 0.8f;
+		allpans[3][2] = 0.8f;
+		UpdateAllPans();
 	}
 }
 

@@ -128,32 +128,30 @@ void SoundManager::EventReceived(bool isC03x) {
 
 void SoundManager::DisplayImGuiChunk()
 {
-	if (ImGui::CollapsingHeader("[ SOUND ]"))
+	if (ImGui::Checkbox("Enable HDMI Sound", &bIsEnabled))
 	{
-		if (ImGui::Checkbox("Enable HDMI Sound", &bIsEnabled))
-		{
-			if (bIsEnabled)
-				BeginPlay();
-			else
-				StopPlay();
-		}
-		ImGui::SameLine();
-		ImGui::TextDisabled("(!)");
-		ImGui::Text("Queued Samples: %d", (int)(SDL_GetQueuedAudioSize(audioDevice) / sizeof(float)));
-		if (ImGui::BeginItemTooltip())
-		{
-			ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-			ImGui::TextUnformatted(
-								   "WARNING:\n"
-								   "Do not enable HDMI sound when the Apple 2 is emitting sounds.\n"
-								   "There is a chance that the sound will be reversed, i.e:\n"
-								   "Sound will be on when it should be off, and vice versa.\n"
-								   "So make sure you check this box only when you're certain the Apple 2 is silent.\n");
-			ImGui::PopTextWrapPos();
-			ImGui::EndTooltip();
-		}
-		ImGui::SliderFloat("Volume", &beeper.volume, 0.f, 1.f);
+		if (bIsEnabled)
+			BeginPlay();
+		else
+			StopPlay();
 	}
+	ImGui::SameLine();
+	ImGui::TextDisabled("(!)");
+	if (ImGui::BeginItemTooltip())
+	{
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+		ImGui::TextUnformatted(
+							   "WARNING:\n"
+							   "Do not enable HDMI sound when the Apple 2 is emitting sounds.\n"
+							   "There is a chance that the sound will be reversed, i.e:\n"
+							   "Sound will be on when it should be off, and vice versa.\n"
+							   "So make sure you check this box only when you're certain the Apple 2 is silent.\n");
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
+	ImGui::SliderFloat("Volume", &beeper.volume, 0.f, 1.f);
+	ImGui::Separator();
+	ImGui::Text("Queued Samples: %d", (int)(SDL_GetQueuedAudioSize(audioDevice) / sizeof(float)));
 }
 
 nlohmann::json SoundManager::SerializeState()

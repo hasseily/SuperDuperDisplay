@@ -27,6 +27,7 @@ static size_t m_current_snapshot_cycles = RECORDER_MEM_SNAPSHOT_CYCLES;
 void EventRecorder::Initialize()
 {
 	ClearRecording();
+	slowdownMultiplier = 1;
 }
 
 EventRecorder::~EventRecorder()
@@ -218,8 +219,9 @@ void EventRecorder::RewindReplay()
 int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldStopReplay)
 {
 	using namespace std::chrono;
-	auto targetDuration = duration<double, std::nano>(979.926864);	// Duration of an Apple 2 clock cycle (not stretched)
-	auto startTime = (std::chrono::time_point<steady_clock, duration<double, std::nano>>)high_resolution_clock::now();
+	// Duration of an Apple 2 clock cycle (not stretched)
+	auto targetDuration = duration_cast<high_resolution_clock::duration>(duration<double, std::nano>(slowdownMultiplier * 979.926864));
+	auto startTime = high_resolution_clock::now();
 	auto nextTime = startTime;
 
 	while (!*shouldStopReplay)
@@ -227,7 +229,7 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 		if (*shouldPauseReplay)
 		{
 			SetState(EventRecorderStates_e::PAUSED);
-			std::this_thread::sleep_for(std::chrono::seconds(1));
+			std::this_thread::sleep_for(seconds(1));
 			continue;
 		}
 		if (GetState() != EventRecorderStates_e::PLAYING)
@@ -393,6 +395,17 @@ void EventRecorder::DisplayImGuiWindow(bool* p_open)
 			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true); // Disable button (and make it unclickable)
 		}
 		bUserMovedEventSlider = ImGui::SliderInt("Event Timeline", reinterpret_cast<int*>(&currentReplayEvent), 0, (int)v_events.size());
+		if (bIsInReplayMode)
+		{
+			if (ImGui::InputInt("X Slowdown", &slowdownMultiplier))
+			{
+				if (slowdownMultiplier < 0)
+					slowdownMultiplier = 0;
+				// make sure targetDuration is updated
+				this->PauseReplay(true);
+				this->PauseReplay(false);
+			}
+		}
 		if (thread_replay.joinable())
 		{
 			if (ImGui::Button("Stop##Replay"))

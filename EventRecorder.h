@@ -92,6 +92,7 @@ private:
 	// Replay thread control
 	std::thread thread_replay;
 	int replay_events_thread(bool* shouldPauseReplay, bool* shouldStopReplay);
+	int slowdownMultiplier = 1;		// How much to slow the replay down by
 	bool bShouldPauseReplay = false;
 	bool bShouldStopReplay = false;
 	size_t currentReplayEvent;		// index of the event ready to replay in the vector

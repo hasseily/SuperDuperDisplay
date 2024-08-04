@@ -1,12 +1,19 @@
 #include "MemoryManager.h"
+#include "CycleCounter.h"
 #include <iostream>
 #include <sstream>
 
+float Memory_HighlightWriteFunction(const uint8_t* data, size_t offset, uint8_t cutoffSeconds) {
+	// data pointer is the start of memory
+	auto usecdelta = CycleCounter::GetInstance()->GetCycleTimestamp() - MemoryManager::GetInstance()->GetMemWriteTimestamp(offset);
+	// Return a range between 0 and 1, where 1 is newly updated and 0 is at least 1 second ago
+	if (usecdelta >= 1'000'000 * cutoffSeconds)
+		return 0.f;
+	return (1.f - (static_cast<float>(usecdelta) / (1'000'000 * cutoffSeconds)));
+}
+
 // below because "The declaration of a static data member in its class definition is not a definition"
 MemoryManager* MemoryManager::s_instance;
-uint16_t a2SoftSwitches = A2SS_TEXT;
-uint8_t switch_c022 = 0b11110000;	// white fg, black bg
-uint8_t switch_c034 = 0;
 
 MemoryManager::~MemoryManager()
 {
@@ -379,10 +386,12 @@ void MemoryManager::WriteToMemory(uint16_t addr, uint8_t val, bool m2b0, bool is
 	
 	if (bIsAux)
 	{
-		SetApple2MemAux(addr, val);
+		a2mem[_A2_MEMORY_SHADOW_END + addr] = val;
+		a2mem_lastUpdate[_A2_MEMORY_SHADOW_END + addr] = CycleCounter::GetInstance()->GetCycleTimestamp();
 	}
 	else {
-		SetApple2Mem(addr, val);
+		a2mem[addr] = val;
+		a2mem_lastUpdate[addr] = CycleCounter::GetInstance()->GetCycleTimestamp();
 	}
 }
 

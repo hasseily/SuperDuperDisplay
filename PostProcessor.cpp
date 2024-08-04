@@ -382,6 +382,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 	bImguiWindowIsOpen = p_open;
 	if (p_open)
 	{
+		ImGui::SetNextWindowSizeConstraints(ImVec2(400, 400), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("Post Processing CRT Shader", p_open);
 		// Handle presets. Disable load/save if the chosen button is "Off"
 		ImGui::Text("[ PRESETS ]");

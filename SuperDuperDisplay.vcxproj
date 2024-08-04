@@ -105,7 +105,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>imgui;imgui\backends;%SDL2_DIR%\include;$(VcpkgCurrentInstalledDir)include\SDL2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard_C>Default</LanguageStandard_C>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -145,6 +145,7 @@
       <AdditionalIncludeDirectories>imgui;imgui\backends;%SDL2_DIR%\include;$(VcpkgCurrentInstalledDir)include\SDL2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -174,6 +175,7 @@
     <ClCompile Include="imgui\imgui_widgets.cpp" />
     <ClCompile Include="InAppGpuProfiler\iagp.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MainMenu.cpp" />
     <ClCompile Include="MemoryManager.cpp" />
     <ClCompile Include="MockingboardManager.cpp" />
     <ClCompile Include="MosaicMesh.cpp" />
@@ -210,6 +212,7 @@
     <ClInclude Include="imgui\imgui.h" />
     <ClInclude Include="imgui\imgui_internal.h" />
     <ClInclude Include="imgui_memory_editor.h" />
+    <ClInclude Include="MainMenu.h" />
     <ClInclude Include="InAppGpuProfiler\CustomInAppGpuProfiler.h" />
     <ClInclude Include="InAppGpuProfiler\iagp.h" />
     <ClInclude Include="InAppGpuProfiler\iagpConfig.h" />
@@ -251,11 +254,6 @@
     <None Include="shaders\sdhr_default_330.vert" />
     <None Include="shaders\sdhr_depixelize_330.frag" />
     <None Include="shaders\sdhr_depixelize_330.vert" />
-    <None Include="shaders\_legacy_test0.frag" />
-    <None Include="shaders\_legacy_test1.frag" />
-    <None Include="shaders\_legacy_test2.frag" />
-    <None Include="shaders\_shr_test0.frag" />
-    <None Include="shaders\_shr_test1.frag" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="shaders\**">

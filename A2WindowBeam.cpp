@@ -170,55 +170,77 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 		shader.setInt("vborder", (int)border_height_scanlines);
 	}
 
+	// Associate the texture VRAMTEX in TEXUNIT_DATABUFFER with the buffer
+	// This is the apple 2's memory which is mapped to a "texture"
+	// Always update that buffer in the GPU
+	if (shouldUpdateDataInGPU)
 	{
 		AIGPScoped("A2WindowBeam", "UpdateDataInGPU");
-		// Associate the texture VRAMTEX in TEXUNIT_DATABUFFER with the buffer
-		// This is the apple 2's memory which is mapped to a "texture"
-		// Always update that buffer in the GPU
-		if (shouldUpdateDataInGPU)
+		uint32_t cycles_w_with_border = 40 + (2 * border_width_cycles);
+		glActiveTexture(_TEXUNIT_DATABUFFER);
+		glBindTexture(GL_TEXTURE_2D, VRAMTEX);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+		if (vramTextureExists)	// it exists, do a glTexSubImage2D() update
 		{
-			uint32_t cycles_w_with_border = 40 + (2 * border_width_cycles);
-			glActiveTexture(_TEXUNIT_DATABUFFER);
-			glBindTexture(GL_TEXTURE_2D, VRAMTEX);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-			if (vramTextureExists)	// it exists, do a glTexSubImage2D() update
-			{
-				switch (video_mode) {
-				case A2VIDEOBEAM_SHR:
-					// Adjust the unpack alignment for textures with arbitrary widths
-					glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_w_with_border * 4), 200 + (2 * border_height_scanlines), GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
-					glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-					break;
-				default:
-					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_w_with_border, 192 + (2 * border_height_scanlines), GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
-					break;
-				}
-			}
-			else {	// texture doesn't exist, create it with glTexImage2D()
-				switch (video_mode) {
-				case A2VIDEOBEAM_SHR:
-					// Adjust the unpack alignment for textures with arbitrary widths
-					glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-					glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, _COLORBYTESOFFSET + (cycles_w_with_border * 4), 200 + (2 * border_height_scanlines), 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
-					glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-					break;
-				default:
-					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_w_with_border, 192 + (2 * border_height_scanlines), 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
-					break;
-				}
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-				vramTextureExists = true;
-			}
-			glActiveTexture(GL_TEXTURE0);
-			
-			if ((glerr = glGetError()) != GL_NO_ERROR) {
-				std::cerr << "A2WindowBeam::Update error: " << glerr << std::endl;
+			switch (video_mode) {
+			case A2VIDEOBEAM_SHR:
+				// Adjust the unpack alignment for textures with arbitrary widths
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_w_with_border * 4), 200 + (2 * border_height_scanlines), GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+				break;
+			case A2VIDEOBEAM_FORCED_TEXT1:
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 40, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetTEXT1VRAMReadPtr());
+				break;
+			case A2VIDEOBEAM_FORCED_TEXT2:
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 40, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetTEXT2VRAMReadPtr());
+				break;
+			case A2VIDEOBEAM_FORCED_HGR1:
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 40, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetHGR1VRAMReadPtr());
+				break;
+			case A2VIDEOBEAM_FORCED_HGR2:
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 40, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetHGR2VRAMReadPtr());
+				break;
+			default:
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_w_with_border, 192 + (2 * border_height_scanlines), GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+				break;
 			}
 		}
+		else {	// texture doesn't exist, create it with glTexImage2D()
+			switch (video_mode) {
+			case A2VIDEOBEAM_SHR:
+				// Adjust the unpack alignment for textures with arbitrary widths
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, _COLORBYTESOFFSET + (cycles_w_with_border * 4), 200 + (2 * border_height_scanlines), 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+				break;
+			case A2VIDEOBEAM_FORCED_TEXT1:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetTEXT1VRAMReadPtr());
+				break;
+			case A2VIDEOBEAM_FORCED_TEXT2:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetTEXT2VRAMReadPtr());
+				break;
+			case A2VIDEOBEAM_FORCED_HGR1:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetHGR1VRAMReadPtr());
+				break;
+			case A2VIDEOBEAM_FORCED_HGR2:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetHGR2VRAMReadPtr());
+				break;
+			default:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_w_with_border, 192 + (2 * border_height_scanlines), 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+				break;
+			}
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			vramTextureExists = true;
+		}
+		glActiveTexture(GL_TEXTURE0);
+	}
+
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "A2WindowBeam::Update error: " << glerr << std::endl;
 	}
 
 	{

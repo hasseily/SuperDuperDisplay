@@ -115,6 +115,10 @@ public:
 		A2Mode_e mode = A2Mode_e::NONE;
 		uint8_t* vram_legacy = nullptr;
 		uint8_t* vram_shr = nullptr;
+		uint8_t* vram_forced_text1 = nullptr;	// these force specific modes for debugging
+		uint8_t* vram_forced_text2 = nullptr;
+		uint8_t* vram_forced_hgr1 = nullptr;
+		uint8_t* vram_forced_hgr2 = nullptr;
 		GLfloat* offset_buffer = nullptr;
 	};
 
@@ -133,8 +137,9 @@ public:
 
 	bool bAlwaysRenderBuffer = false;		// If true, forces a rerender even if the VRAM hasn't changed
 	bool bForceSHRWidth = false;			// forces the legacy to have the SHR width
-	bool bNoMergedModeWobble = false;	// Don't pixel shift the sine wobble if both SHR and Legacy are on screen
-	
+	bool bNoMergedModeWobble = false;		// Don't pixel shift the sine wobble if both SHR and Legacy are on screen
+	bool bDEMOMergedMode = false;			// DEMO to show merged mode
+
 	// Enable manually setting a DHGR mode that mixes 140 width 16-col and 560 width b/w
 	// It was available in certain RGB cards like the Apple and Chat Mauve RGB cards
 	// It could be set in software using a combination of soft switches but due to potential
@@ -147,12 +152,24 @@ public:
 	
 	int eA2MonitorType = A2_MON_COLOR;
 
+	MemoryEditor mem_edit_vram_legacy;
+	MemoryEditor mem_edit_vram_shr;
+	MemoryEditor mem_edit_offset_buffer;
+	// Developer flags for specifically rendering certain legacy modes
+	// Those will be shown in ImGUI windows
+	bool bRenderTEXT1 = false;
+	bool bRenderTEXT2 = false;
+	bool bRenderHGR1 = false;
+	bool bRenderHGR2 = false;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
 	//////////////////////////////////////////////////////////////////////////
 
 	bool IsReady();		// true after full initialization
+	void DisplayCharRomsImGuiChunk();
+	void DisplayImGuiLoadFileWindow(bool* p_open);
+	void DisplayImGuiExtraWindows();
 	void DisplayImGuiWindow(bool* p_open);
 	void ToggleA2Video(bool value);
 
@@ -174,6 +191,10 @@ public:
 	const uint32_t GetVRAMReadId() { return vrams_read->id; };
 	const uint8_t* GetLegacyVRAMReadPtr() { return vrams_read->vram_legacy; };
 	const uint8_t* GetSHRVRAMReadPtr() { return vrams_read->vram_shr; };
+	const uint8_t* GetTEXT1VRAMReadPtr() { return vrams_read->vram_forced_text1; };
+	const uint8_t* GetTEXT2VRAMReadPtr() { return vrams_read->vram_forced_text2; };
+	const uint8_t* GetHGR1VRAMReadPtr() { return vrams_read->vram_forced_hgr1; };
+	const uint8_t* GetHGR2VRAMReadPtr() { return vrams_read->vram_forced_hgr2; };
 	const GLfloat* GetOffsetBufferReadPtr() { return vrams_read->offset_buffer; };
 	uint8_t* GetLegacyVRAMWritePtr() { return vrams_write->vram_legacy; };
 	uint8_t* GetSHRVRAMWritePtr() { return vrams_write->vram_shr; };
@@ -238,11 +259,9 @@ private:
 
 	// imgui vars
 	bool bImguiWindowIsOpen = false;
+	bool bImguiLoadFileWindowIsOpen = false;
 	bool bImguiMemLoadAuxBank = false;
 	int iImguiMemLoadPosition = 0;
-	MemoryEditor mem_edit_vram_legacy;
-	MemoryEditor mem_edit_vram_shr;
-	MemoryEditor mem_edit_offset_buffer;
 	
 	// beam render state variables
 	bool bBeamIsActive = false;				// Is the beam active?
@@ -252,6 +271,12 @@ private:
 	BeamRenderVRAMs* vrams_array;	// 2 buffers of legacy+shr vrams
 	BeamRenderVRAMs* vrams_write;	// the write buffer
 	BeamRenderVRAMs* vrams_read;	// the read buffer
+
+	// Font ROMs array
+	// The font files must be 256 characters, each 14x16px. 16 rows and 16 columns.
+	std::vector<std::string> font_roms_array;
+	int font_rom_regular_idx = 0;
+	int font_rom_alternate_idx = 1;
 
 	Shader shader_merge = Shader();
 
@@ -297,7 +322,6 @@ private:
 	uint8_t overlay_colors[40*24];
 	uint8_t overlay_lines[24];
 	bool bWasSHRBeforeOverlay = false;
-	bool bOverlayOverrides = false;	// override wobble and width in merged mode
 	void UpdateOverlayLine(uint32_t y);
 };
 #endif // A2VIDEOMANAGER_H

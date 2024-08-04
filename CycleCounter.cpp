@@ -1,6 +1,7 @@
 #include "CycleCounter.h"
 #include <mutex>
 #include <iostream>
+#include <chrono>
 #include "A2VideoManager.h"
 
 
@@ -17,8 +18,20 @@ std::mutex mtx_cycle;	// protect the cycle counter
 uint32_t cycles_vblank;
 uint32_t cycles_total;
 
+size_t CycleCounter::GetCurrentTimeInMicroseconds() {
+	// Get the current time point from the high-resolution clock
+	auto now = std::chrono::high_resolution_clock::now();
+	
+	// Convert the time point to a duration since epoch in microseconds
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch());
+	
+	// Return the count of microseconds
+	return duration.count();
+}
+
 void CycleCounter::Initialize()
 {
+	m_tstamp_init = GetCurrentTimeInMicroseconds();
 	// So we can render on startup, move the cycle counter to after HBlank
 	m_cycle = CYCLES_SC_HBL;
 	bIsHBL = false;
@@ -35,6 +48,7 @@ void CycleCounter::Reset()
 
 void CycleCounter::IncrementCycles(int inc, bool isVBL)
 {
+	m_tstamp_cycle = GetCurrentTimeInMicroseconds() - m_tstamp_init;
 	m_cycle += inc;
 	m_cycle = (m_cycle % cycles_total);
 

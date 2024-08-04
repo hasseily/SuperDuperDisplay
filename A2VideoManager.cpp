@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <algorithm>
+#include <system_error>
 #include <map>
 #include "SDL.h"
 #include <SDL_opengl.h>
@@ -103,6 +104,8 @@ static uint16_t g_RAM_HGROffsets[] = {
 	0x0350, 0x0750, 0x0B50, 0x0F50, 0x1350, 0x1750, 0x1B50, 0x1F50,
 	0x03D0, 0x07D0, 0x0BD0, 0x0FD0, 0x13D0, 0x17D0, 0x1BD0, 0x1FD0
 };
+
+static std::string fontpath = "assets/Apple2eFont14x16";
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 A2VideoManager* A2VideoManager::s_instance;
@@ -211,6 +214,15 @@ A2VideoManager::~A2VideoManager()
 			delete[] vrams_array[i].vram_shr;
 		if (vrams_array[i].offset_buffer != nullptr)
 			delete[] vrams_array[i].offset_buffer;
+		
+		if (vrams_array[i].vram_forced_text1 != nullptr)
+			delete[] vrams_array[i].vram_forced_text1;
+		if (vrams_array[i].vram_forced_text2 != nullptr)
+			delete[] vrams_array[i].vram_forced_text2;
+		if (vrams_array[i].vram_forced_hgr1 != nullptr)
+			delete[] vrams_array[i].vram_forced_hgr1;
+		if (vrams_array[i].vram_forced_hgr2 != nullptr)
+			delete[] vrams_array[i].vram_forced_hgr2;
 	}
 	delete[] vrams_array;
 
@@ -244,6 +256,24 @@ void A2VideoManager::Initialize()
 		memset(vrams_array[i].vram_legacy, 0, GetVramSizeLegacy());
 		memset(vrams_array[i].vram_shr, 0, GetVramSizeSHR());
 		memset(vrams_array[i].offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
+		
+		// the debugging special vrams
+		if (vrams_array[i].vram_forced_text1 != nullptr)
+			delete[] vrams_array[i].vram_forced_text1;
+		if (vrams_array[i].vram_forced_text2 != nullptr)
+			delete[] vrams_array[i].vram_forced_text2;
+		if (vrams_array[i].vram_forced_hgr1 != nullptr)
+			delete[] vrams_array[i].vram_forced_hgr1;
+		if (vrams_array[i].vram_forced_hgr2 != nullptr)
+			delete[] vrams_array[i].vram_forced_hgr2;
+		vrams_array[i].vram_forced_text1 = new uint8_t[40 * 192 * 4];
+		vrams_array[i].vram_forced_text2 = new uint8_t[40 * 192 * 4];
+		vrams_array[i].vram_forced_hgr1 = new uint8_t[40 * 192 * 4];
+		vrams_array[i].vram_forced_hgr2 = new uint8_t[40 * 192 * 4];
+		memset(vrams_array[i].vram_forced_text1, 0, 40 * 192 * 4);
+		memset(vrams_array[i].vram_forced_text2, 0, 40 * 192 * 4);
+		memset(vrams_array[i].vram_forced_hgr1, 0, 40 * 192 * 4);
+		memset(vrams_array[i].vram_forced_hgr2, 0, 40 * 192 * 4);
 	}
 	vrams_write = &vrams_array[0];
 	vrams_read = &vrams_array[1];
@@ -256,11 +286,42 @@ void A2VideoManager::Initialize()
 		image_assets[i].tex_id = oglHelper->get_texture_id_at_slot(i);
 	}
 
+	// Get the font roms
+	try {
+		font_roms_array.clear();
+		for (const auto & entry : std::filesystem::directory_iterator(fontpath)) {
+			if (entry.is_regular_file()) {
+				font_roms_array.push_back(entry.path().filename().string());
+			}
+		}
+		if (font_roms_array.empty()) {
+			throw std::filesystem::filesystem_error(
+				"No Font ROM textures found!",
+				std::make_error_code(std::errc::no_such_file_or_directory)
+			);
+		}
+		std::sort(font_roms_array.begin(), font_roms_array.end());
+	} catch (const std::filesystem::filesystem_error& e) {
+		std::cerr << "Error accessing directory: " << e.what() << std::endl;
+		exit;
+	}
+	
 	// Initialize windows
 	windowsbeam[A2VIDEOBEAM_LEGACY] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_LEGACY, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
 	windowsbeam[A2VIDEOBEAM_SHR] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_SHR, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_SHR_FRAGMENT);
 	windowsbeam[A2VIDEOBEAM_LEGACY]->SetBorder(borders_w_cycles, borders_h_scanlines);
 	windowsbeam[A2VIDEOBEAM_SHR]->SetBorder(borders_w_cycles, borders_h_scanlines);
+	
+	windowsbeam[A2VIDEOBEAM_FORCED_TEXT1] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_FORCED_TEXT1, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
+	windowsbeam[A2VIDEOBEAM_FORCED_TEXT2] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_FORCED_TEXT2, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
+	windowsbeam[A2VIDEOBEAM_FORCED_HGR1] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_FORCED_HGR1, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
+	windowsbeam[A2VIDEOBEAM_FORCED_HGR2] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_FORCED_HGR2, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
+	windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->SetBorder(0, 0);
+	windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->SetBorder(0, 0);
+	windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->SetBorder(0, 0);
+	windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->SetBorder(0, 0);
+
+
 
 	// The merged framebuffer will have a size equal to the SHR buffer (including borders)
 	fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
@@ -284,8 +345,8 @@ void A2VideoManager::Initialize()
 	std::memset(overlay_text, 0, sizeof(overlay_text));
 	std::memset(overlay_colors, 0, sizeof(overlay_colors));
 	
-	// Set default border color to green
-	MemoryManager::GetInstance()->switch_c034 = 12;
+	// Set default border color
+	MemoryManager::GetInstance()->switch_c034 = 13;
 
 	bIsReady = true;
 }
@@ -314,6 +375,7 @@ void A2VideoManager::ResetComputer()
     if (bIsRebooting == true)
         return;
     bIsRebooting = true;
+	SerializeState();
 	MemoryManager::GetInstance()->Initialize();
 	SoundManager::GetInstance()->Initialize();
 	MockingboardManager::GetInstance()->Initialize();
@@ -501,7 +563,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	// Check for text overlay in this position
 	if ((_y < COUNT_SC_CONTENT) && (overlay_lines[_y / 8] == 1))
 	{
-		bOverlayOverrides = true;	// Never wobble if there's an overlay
 		if (_x == 0)
 		{
 			bWasSHRBeforeOverlay = memMgr->IsSoftSwitch(A2SS_SHR);
@@ -561,7 +622,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			// Finally set the offset
 			// NOTE: We add 10.f to the offset so that the shader can know which mode to apply
 			//		 If it's negative, it's SHR. Positive, legacy.
-			if (bNoMergedModeWobble || bOverlayOverrides)
+			if (bNoMergedModeWobble)
 			{
 				vrams_write->offset_buffer[_TR_ANY_Y] = (_curr_mode == A2Mode_e::LEGACY ? -10.f : 10.f);
 			}
@@ -788,18 +849,19 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		// 4 bytes in VRAM for each beam byte
 		uint8_t* byteStartPtr = vrams_write->vram_legacy +
 			(GetVramWidthLegacy() * _TR_ANY_Y + _TR_ANY_X) * 4;
-
+		uint32_t startMem;
+		
 		// Determine where in memory we should get the data from, and get it
 		if ((flags & 0b111) < 4)	// D/TEXT AND D/LGR
 		{
-			uint32_t startMem = _A2VIDEO_TEXT1_START;
+			startMem = _A2VIDEO_TEXT1_START;
 			if (((flags & 0b111) < 3) && isPage2)		// check for page 2 (DLGR doesn't have it)
 				startMem = _A2VIDEO_TEXT2_START;
 			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
 			byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
 		}
 		else {		// D/HIRES
-			uint32_t startMem = _A2VIDEO_HGR1_START;
+			startMem = _A2VIDEO_HGR1_START;
 			if (isPage2)
 				startMem = _A2VIDEO_HGR2_START;
 			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
@@ -807,6 +869,44 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		}
 		byteStartPtr[2] = flags;
 		byteStartPtr[3] = colors;
+		
+		// Generate the debug VRAMs if necessary
+		if (bRenderTEXT1)
+		{
+			byteStartPtr = vrams_write->vram_forced_text1 + (40 * _y + _x - CYCLES_SC_HBL) * 4;
+			startMem = _A2VIDEO_TEXT1_START;
+			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[2] = (flags & 0b1111'1000) | 0;	// force TEXT
+			byteStartPtr[3] = colors;
+		}
+		if (bRenderTEXT2)
+		{
+			byteStartPtr = vrams_write->vram_forced_text2 + (40 * _y + _x - CYCLES_SC_HBL) * 4;
+			startMem = _A2VIDEO_TEXT2_START;
+			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[2] = (flags & 0b1111'1000) | 0;	// force TEXT
+			byteStartPtr[3] = colors;
+		}
+		if (bRenderHGR1)
+		{
+			byteStartPtr = vrams_write->vram_forced_hgr1 + (40 * _y + _x - CYCLES_SC_HBL) * 4;
+			startMem = _A2VIDEO_HGR1_START;
+			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[2] = (flags & 0b1111'1000) | 4;	// force HGR
+			byteStartPtr[3] = colors;
+		}
+		if (bRenderHGR2)
+		{
+			byteStartPtr = vrams_write->vram_forced_hgr2 + (40 * _y + _x - CYCLES_SC_HBL) * 4;
+			startMem = _A2VIDEO_HGR2_START;
+			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
+			byteStartPtr[2] = (flags & 0b1111'1000) | 4;	// force HGR
+			byteStartPtr[3] = colors;
+		}
 	}
 		break;
 	default:
@@ -869,10 +969,13 @@ void A2VideoManager::ForceBeamFullScreenRender()
 	for (uint32_t y = 0; y < starty; y++)
 	{
 		// For testing the merged mode
-//		if (y == 50)
-//			MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
-//		if (y == 130)
-//			MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
+		if (bDEMOMergedMode)
+		{
+			if (y == 50)
+				MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
+			if (y == 130)
+				MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, !MemoryManager::GetInstance()->IsSoftSwitch(A2SS_SHR));
+		}
 		for (uint32_t x = 0; x < 65; x++)
 		{
 			this->BeamIsAtPosition(x, y);
@@ -1033,10 +1136,14 @@ GLuint A2VideoManager::Render()
 
 		// image asset 0: The apple 2e US font
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START);
-		image_assets[0].AssignByFilename(this, "assets/Apple2eFont14x16 - Regular.png");
+		if (font_rom_regular_idx >= font_roms_array.size())
+			font_rom_regular_idx = 0;
+		if (font_rom_regular_idx >= font_roms_array.size())
+			font_rom_alternate_idx = (int)font_roms_array.size() - 1;
+		image_assets[0].AssignByFilename(this, std::string(fontpath).append("/").append(font_roms_array[font_rom_regular_idx]).c_str());
 		// image asset 1: The alternate font
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 1);
-		image_assets[1].AssignByFilename(this, "assets/Apple2eFont14x16 - Alternate.png");
+		image_assets[1].AssignByFilename(this, std::string(fontpath).append("/").append(font_roms_array[font_rom_alternate_idx]).c_str());
 		// image asset 2: LGR texture (overkill for color, useful for dithered b/w)
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 2);
 		image_assets[2].AssignByFilename(this, "assets/Texture_composite_lgr.png");
@@ -1110,7 +1217,7 @@ GLuint A2VideoManager::Render()
 		glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
 		shader_merge.setInt("legacyTex", GL_TEXTURE7 - GL_TEXTURE0);
 		shader_merge.setVec2("legacySize", legacy_width, legacy_height);
-		shader_merge.setInt("forceSHRWidth", bForceSHRWidth || bOverlayOverrides);
+		shader_merge.setInt("forceSHRWidth", bForceSHRWidth);
 
 		glActiveTexture(GL_TEXTURE8);
 		glBindTexture(GL_TEXTURE_2D, shr_texture_id);
@@ -1205,6 +1312,28 @@ GLuint A2VideoManager::Render()
 	// all done, the texture for this Apple 2 beam cycle frame is rendered
 	rendered_frame_idx = vrams_read->frame_idx;
 	vrams_read->bWasRendered = true;
+	
+	// Render the debugging textures as necessary
+	if (bRenderTEXT1) {
+		glViewport(0, 0, 280*2, 192*2);
+		windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->Render(true);
+	}
+	if (bRenderTEXT2) {
+		glViewport(0, 0, 280*2, 192*2);
+		windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->Render(true);
+	}
+	if (bRenderHGR1) {
+		glViewport(0, 0, 280*2, 192*2);
+		windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->Render(true);
+	}
+	if (bRenderHGR2) {
+		glViewport(0, 0, 280*2, 192*2);
+		windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->Render(true);
+	}
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "A2VideoManager debugging textures render error: " << glerr << std::endl;
+	}
+
 	return output_texture_id;
 }
 
@@ -1230,11 +1359,127 @@ void A2VideoManager::DeactivateBeam()
 ///
 ///
 
+void A2VideoManager::DisplayCharRomsImGuiChunk()
+{
+	if (ImGui::BeginMenu("Regular"))
+	{
+		for (int i = 0; i < font_roms_array.size(); ++i)
+		{
+			if (ImGui::MenuItem(font_roms_array[i].c_str(), "", i==font_rom_regular_idx))
+			{
+				font_rom_regular_idx = i;
+				bShouldInitializeRender = true;
+			}
+		}
+		ImGui::EndMenu();
+	}
+	if (ImGui::BeginMenu("Alternate"))
+	{
+		for (int i = 0; i < font_roms_array.size(); ++i)
+		{
+			if (ImGui::MenuItem(font_roms_array[i].c_str(), "", i==font_rom_alternate_idx))
+			{
+				font_rom_alternate_idx = i;
+				bShouldInitializeRender = true;
+			}
+		}
+		ImGui::EndMenu();
+	}
+}
+
+void A2VideoManager::DisplayImGuiLoadFileWindow(bool* p_open)
+{
+	bImguiLoadFileWindowIsOpen = p_open;
+	if (p_open) {
+		ImGui::SetNextWindowSizeConstraints(ImVec2(300, 100), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::Begin("Load File into Memory", p_open);
+		if (!ImGui::IsWindowCollapsed())
+		{
+			ImGui::Text("Load Memory Start: ");
+			ImGui::SameLine();
+			ImGui::PushItemWidth(120);
+			ImGui::InputInt("##mem_load", &iImguiMemLoadPosition, 1, 1024, ImGuiInputTextFlags_CharsHexadecimal);
+			ImGui::PopItemWidth();
+			iImguiMemLoadPosition = std::clamp(iImguiMemLoadPosition, 0, 0xFFFF);
+			ImGui::Checkbox("Aux Bank", &bImguiMemLoadAuxBank);
+			ImGui::SameLine(); ImGui::Text("   "); ImGui::SameLine();
+			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank))
+				this->ForceBeamFullScreenRender();
+		}
+		ImGui::End();
+	}
+}
+
+void A2VideoManager::DisplayImGuiExtraWindows()
+{
+	// Show the VRAM legacy window
+	if (mem_edit_vram_legacy.Open)
+	{
+		mem_edit_vram_legacy.DrawWindow("Memory Editor: Beam VRAM Legacy", this->GetLegacyVRAMWritePtr(), this->GetVramSizeLegacy());
+	}
+	
+	// Show the VRAM SHR window
+	if (mem_edit_vram_shr.Open)
+	{
+		mem_edit_vram_shr.DrawWindow("Memory Editor: Beam VRAM SHR", this->GetSHRVRAMWritePtr(), this->GetVramSizeSHR());
+	}
+	
+	// Show the merge offset window
+	if (mem_edit_offset_buffer.Open)
+	{
+		mem_edit_offset_buffer.DrawWindow("Memory Editor: Offset Buffer", (void*)this->GetOffsetBufferReadPtr(), this->GetVramHeightSHR());
+	}
+	
+	// Show extra render windows
+	// The extra windows may not have been rendered yet so we may need to force a re-render
+	if (bRenderTEXT1)
+	{
+		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->GetOutputTextureId();
+		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::Begin("TEXT1 Viewer", &bRenderTEXT1);
+		if (texid == UINT_MAX)
+			this->ForceBeamFullScreenRender();
+		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::End();
+	}
+	if (bRenderTEXT2)
+	{
+		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->GetOutputTextureId();
+		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::Begin("TEXT2 Viewer", &bRenderTEXT2);
+		if (texid == UINT_MAX)
+			this->ForceBeamFullScreenRender();
+		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::End();
+	}
+	if (bRenderHGR1)
+	{
+		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->GetOutputTextureId();
+		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::Begin("HGR1 Viewer", &bRenderHGR1);
+		if (texid == UINT_MAX)
+			this->ForceBeamFullScreenRender();
+		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::End();
+	}
+	if (bRenderHGR2)
+	{
+		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->GetOutputTextureId();
+		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::Begin("HGR2 Viewer", &bRenderHGR2);
+		if (texid == UINT_MAX)
+			this->ForceBeamFullScreenRender();
+		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::End();
+	}
+}
+
 void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 {
 	bImguiWindowIsOpen = p_open;
 	if (p_open)
 	{
+		ImGui::SetNextWindowSizeConstraints(ImVec2(400, 400), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("Apple 2 Video Manager", p_open);
 		if (!ImGui::IsWindowCollapsed())
 		{
@@ -1263,137 +1508,24 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			const char* monitorTypes[] = { "Color", "White", "Green", "Amber" };
 			if (ImGui::Combo("Monitor Type", &this->eA2MonitorType, monitorTypes, IM_ARRAYSIZE(monitorTypes)))
 			{
-				windowsbeam[A2VIDEOBEAM_LEGACY]->monitorColorType = eA2MonitorType;
-				windowsbeam[A2VIDEOBEAM_SHR]->monitorColorType = eA2MonitorType;
+				for (auto i=0; i<A2VIDEOBEAM_TOTAL_COUNT; ++i) {
+					windowsbeam[i]->monitorColorType = eA2MonitorType;
+				}
 				this->ForceBeamFullScreenRender();
 			}
 			
 			ImGui::SeparatorText("[ EXTRA MODES ]");
+			if (ImGui::Checkbox("HGR SPEC1", &bUseHGRSPEC1))
+				this->ForceBeamFullScreenRender();
+			ImGui::SetItemTooltip("A HGR mode that makes 11011 be black, found in the EVE RGB card");
+			if (ImGui::Checkbox("HGR SPEC2", &bUseHGRSPEC2))
+				this->ForceBeamFullScreenRender();
+			ImGui::SetItemTooltip("A HGR mode that makes 00100 be white, found in the EVE RGB card");
 			if (ImGui::Checkbox("DHGR COL140 Mixed", &bUseDHGRCOL140Mixed))
 				this->ForceBeamFullScreenRender();
 			ImGui::SetItemTooltip("A DHGR mode that mixes 16 colors and b/w, found in certain RGB cards");
-			if (ImGui::Checkbox("HGR SPEC1", &bUseHGRSPEC1))
-				this->ForceBeamFullScreenRender();
-			ImGui::SetItemTooltip("A HGR mode that makes 11011 be black, found in the EVE card");
-			if (ImGui::Checkbox("HGR SPEC2", &bUseHGRSPEC2))
-				this->ForceBeamFullScreenRender();
-			ImGui::SetItemTooltip("A HGR mode that makes 00100 be white, found in the EVE card");
-			
-			ImGui::SeparatorText("[ LOAD FILE INTO MEMORY ]");
-			ImGui::Text("Load Memory Start: ");
-			ImGui::SameLine();
-			ImGui::InputInt("##mem_load", &iImguiMemLoadPosition, 1, 1024, ImGuiInputTextFlags_CharsHexadecimal);
-			iImguiMemLoadPosition = std::clamp(iImguiMemLoadPosition, 0, 0xFFFF);
-			ImGui::Checkbox("Aux Bank", &bImguiMemLoadAuxBank);
-			ImGui::SameLine(); ImGui::Text("   "); ImGui::SameLine();
-			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank))
-				this->ForceBeamFullScreenRender();
-			
-			ImGui::SeparatorText("[ VRAM WINDOWS ]");
-			ImGui::Checkbox("VRAM Legacy Memory Window", &mem_edit_vram_legacy.Open);
-			ImGui::Checkbox("VRAM SHR Memory Window", &mem_edit_vram_shr.Open);
-			ImGui::Checkbox("VRAM Offset Buffer", &mem_edit_offset_buffer.Open);
-			
-			if (ImGui::CollapsingHeader("[ SOFT SWITCHES ]"))
-			{
-				bool ssValue0 = memManager->IsSoftSwitch(A2SS_80STORE);
-				if (ImGui::Checkbox("A2SS_80STORE", &ssValue0)) {
-					memManager->SetSoftSwitch(A2SS_80STORE, ssValue0);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue1 = memManager->IsSoftSwitch(A2SS_RAMRD);
-				if (ImGui::Checkbox("A2SS_RAMRD", &ssValue1)) {
-					memManager->SetSoftSwitch(A2SS_RAMRD, ssValue1);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue2 = memManager->IsSoftSwitch(A2SS_RAMWRT);
-				if (ImGui::Checkbox("A2SS_RAMWRT", &ssValue2)) {
-					memManager->SetSoftSwitch(A2SS_RAMWRT, ssValue2);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue3 = memManager->IsSoftSwitch(A2SS_80COL);
-				if (ImGui::Checkbox("A2SS_80COL", &ssValue3)) {
-					memManager->SetSoftSwitch(A2SS_80COL, ssValue3);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue4 = memManager->IsSoftSwitch(A2SS_ALTCHARSET);
-				if (ImGui::Checkbox("A2SS_ALTCHARSET", &ssValue4)) {
-					memManager->SetSoftSwitch(A2SS_ALTCHARSET, ssValue4);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue5 = memManager->IsSoftSwitch(A2SS_INTCXROM);
-				if (ImGui::Checkbox("A2SS_INTCXROM", &ssValue5)) {
-					memManager->SetSoftSwitch(A2SS_INTCXROM, ssValue5);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue6 = memManager->IsSoftSwitch(A2SS_SLOTC3ROM);
-				if (ImGui::Checkbox("A2SS_SLOTC3ROM", &ssValue6)) {
-					memManager->SetSoftSwitch(A2SS_SLOTC3ROM, ssValue6);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue7 = memManager->IsSoftSwitch(A2SS_TEXT);
-				if (ImGui::Checkbox("A2SS_TEXT", &ssValue7)) {
-					memManager->SetSoftSwitch(A2SS_TEXT, ssValue7);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue8 = memManager->IsSoftSwitch(A2SS_MIXED);
-				if (ImGui::Checkbox("A2SS_MIXED", &ssValue8)) {
-					memManager->SetSoftSwitch(A2SS_MIXED, ssValue8);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue9 = memManager->IsSoftSwitch(A2SS_PAGE2);
-				if (ImGui::Checkbox("A2SS_PAGE2", &ssValue9)) {
-					memManager->SetSoftSwitch(A2SS_PAGE2, ssValue9);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue10 = memManager->IsSoftSwitch(A2SS_HIRES);
-				if (ImGui::Checkbox("A2SS_HIRES", &ssValue10)) {
-					memManager->SetSoftSwitch(A2SS_HIRES, ssValue10);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue11 = memManager->IsSoftSwitch(A2SS_DHGR);
-				if (ImGui::Checkbox("A2SS_DHGR", &ssValue11)) {
-					memManager->SetSoftSwitch(A2SS_DHGR, ssValue11);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue12 = memManager->IsSoftSwitch(A2SS_DHGRMONO);
-				if (ImGui::Checkbox("A2SS_DHGRMONO", &ssValue12)) {
-					memManager->SetSoftSwitch(A2SS_DHGRMONO, ssValue12);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue13 = memManager->IsSoftSwitch(A2SS_SHR);
-				if (ImGui::Checkbox("A2SS_SHR", &ssValue13)) {
-					memManager->SetSoftSwitch(A2SS_SHR, ssValue13);
-					this->ForceBeamFullScreenRender();
-				}
-				bool ssValue14 = memManager->IsSoftSwitch(A2SS_GREYSCALE);
-				if (ImGui::Checkbox("A2SS_GREYSCALE", &ssValue14)) {
-					memManager->SetSoftSwitch(A2SS_GREYSCALE, ssValue14);
-					this->ForceBeamFullScreenRender();
-				}
-			}
-			SoundManager::GetInstance()->DisplayImGuiChunk();
-			MockingboardManager::GetInstance()->DisplayImGuiChunk();
 		}
 		ImGui::End();
-	}
-
-	// Show the VRAM legacy window
-	if (mem_edit_vram_legacy.Open)
-	{
-		mem_edit_vram_legacy.DrawWindow("Memory Editor: Beam VRAM Legacy", this->GetLegacyVRAMWritePtr(), this->GetVramSizeLegacy());
-	}
-	
-	// Show the VRAM SHR window
-	if (mem_edit_vram_shr.Open)
-	{
-		mem_edit_vram_shr.DrawWindow("Memory Editor: Beam VRAM SHR", this->GetSHRVRAMWritePtr(), this->GetVramSizeSHR());
-	}
-	
-	// Show the merge offset window
-	if (mem_edit_offset_buffer.Open)
-	{
-		mem_edit_offset_buffer.DrawWindow("Memory Editor: Offset Buffer", (void*)this->GetOffsetBufferReadPtr(), this->GetVramHeightSHR());
 	}
 }
 
@@ -1410,6 +1542,8 @@ nlohmann::json A2VideoManager::SerializeState()
 		{"enable_HGRSPEC2", bUseHGRSPEC2},
 		{"force_shr_width_in_merge_mode", bForceSHRWidth},
 		{"no_merged_mode_wobble", bNoMergedModeWobble},
+		{"font_rom_regular_index", font_rom_regular_idx},
+		{"font_rom_slternate_index", font_rom_alternate_idx},
 	};
 	return jsonState;
 }
@@ -1424,6 +1558,8 @@ void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 	bUseHGRSPEC2 = jsonState.value("enable_HGRSPEC2", bUseHGRSPEC2);
 	bForceSHRWidth = jsonState.value("force_shr_width_in_merge_mode", bForceSHRWidth);
 	bNoMergedModeWobble = jsonState.value("no_merged_mode_wobble", bNoMergedModeWobble);
+	font_rom_regular_idx = jsonState.value("font_rom_regular_index", font_rom_regular_idx);
+	font_rom_alternate_idx = jsonState.value("font_rom_slternate_index", font_rom_alternate_idx);
 
 	SetBordersWithReinit(jsonState.value("borders_w_cycles", borders_w_cycles),
 						 jsonState.value("borders_h_8scanlines", borders_h_scanlines / 8));

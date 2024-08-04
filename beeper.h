@@ -67,7 +67,7 @@ extern "C" {
 	}
 	// toggle current state (on->off or off->on)
 	static inline void beeper_toggle(beeper_t* beeper) {
-		beeper->state = !beeper->state;
+		beeper->state = 1 - beeper->state;
 	}
 	// set current volume 0.0 to 1.0
 	static inline void beeper_set_volume(beeper_t* beeper, float vol) {
@@ -90,12 +90,11 @@ extern "C" {
 void beeper_init(beeper_t* b, const beeper_desc_t* desc) {
 	CHIPS_ASSERT(b && desc);
 	CHIPS_ASSERT((desc->tick_hz > 0) && (desc->sound_hz > 0));
-	*b = (beeper_t){
-		.period = ((int)(desc->tick_hz * BEEPER_FIXEDPOINT_SCALE)) / desc->sound_hz,
-		.counter = b->period,
-		.base_volume = desc->base_volume,
-		.volume = 1.0f,
-	};
+
+	b->period = ((int)(desc->tick_hz * BEEPER_FIXEDPOINT_SCALE)) / desc->sound_hz;
+	b->counter = b->period;
+	b->base_volume = desc->base_volume;
+	b->volume = 1.0f;
 }
 
 void beeper_reset(beeper_t* b) {
