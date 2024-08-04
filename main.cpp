@@ -71,18 +71,18 @@ int _M8DBG_windowHeight = 600;
 
 // OpenGL Debug callback function
 void GLAPIENTRY DebugCallbackKHR(GLenum source,
-								 GLenum type,
-								 GLuint id,
-								 GLenum severity,
-								 GLsizei length,
-								 const GLchar* message,
-								 const void* userParam) {
+	GLenum type,
+	GLuint id,
+	GLenum severity,
+	GLsizei length,
+	const GLchar* message,
+	const void* userParam) {
 	(void)source;		// mark as unused
 	(void)id;			// mark as unused
 	(void)length;		// mark as unused
 	(void)userParam;	// mark as unused
 	std::cerr << "GL CALLBACK: " << (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "")
-	<< " type = " << type << ", severity = " << severity << ", message = " << message << std::endl;
+		<< " type = " << type << ", severity = " << severity << ", message = " << message << std::endl;
 }
 
 bool initialize_glad() {
@@ -117,7 +117,7 @@ void Main_SetVsync(bool _on)
 	}
 	else
 		g_swapInterval = (SDL_GL_SetSwapInterval(0) != 0);		// no VSYNC
-	
+
 	Main_ResetFPSCalculations();
 }
 
@@ -138,7 +138,8 @@ void Main_DrawFPSOverlay()
 	{
 		a2VideoManager->DrawOverlayString("AVERAGE FPS: ", 13, 0b11010010, 0, 0);
 		a2VideoManager->DrawOverlayString("WORST FPS: ", 11, 0b11010010, 2, 1);
-	} else {
+	}
+	else {
 		a2VideoManager->EraseOverlayRange(20, 0, 0);
 		a2VideoManager->EraseOverlayRange(20, 0, 1);
 	}
@@ -188,7 +189,7 @@ void Main_SetFullScreen(bool bWantFullscreen) {
 	// Don't do anything if the window isn't resizable
 	if ((_flags & SDL_WINDOW_RESIZABLE) == 0)
 		return;
-	
+
 	if (bWantFullscreen)
 		SDL_SetWindowDisplayMode(window, &g_fullscreenMode);
 
@@ -230,7 +231,8 @@ static void Main_ToggleImGui(SDL_GLContext gl_context)
 {
 	if (menu == nullptr) {
 		menu = new MainMenu(gl_context, window);
-	} else if (menu != nullptr) {
+	}
+	else if (menu != nullptr) {
 		delete menu;
 		menu = nullptr;
 	}
@@ -268,25 +270,25 @@ int main(int argc, char* argv[])
 	(void)argc;		// mark as unused
 	(void)argv;		// mark as unused
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
-    // when double-clicking the app, change to its working directory
-    char *dir = dirname(strdup(argv[0]));
-    chdir(dir);
+	// when double-clicking the app, change to its working directory
+	char* dir = dirname(strdup(argv[0]));
+	chdir(dir);
 #endif
 	GLenum glerr;
-    // Setup SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
-    {
-        printf("Error: %s\n", SDL_GetError());
-        return -1;
-    }
+	// Setup SDL
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
+	{
+		printf("Error: %s\n", SDL_GetError());
+		return -1;
+	}
 
-    // Decide GL+GLSL versions
-    auto glhelper = OpenGLHelper::GetInstance();
-    glhelper->set_gl_version();
+	// Decide GL+GLSL versions
+	auto glhelper = OpenGLHelper::GetInstance();
+	glhelper->set_gl_version();
 
-    // From 2.0.18: Enable native IME.
+	// From 2.0.18: Enable native IME.
 #ifdef SDL_HINT_IME_SHOW_UI
-    SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
+	SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
 #endif
 
 #ifdef DEBUG
@@ -294,23 +296,23 @@ int main(int argc, char* argv[])
 #else
 #define _MAINWINDOWNAME "Super Duper Display"
 #endif
-    // Create window with graphics context
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+	// Create window with graphics context
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 #if defined(__APPLE__)
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
-        | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-        | SDL_WINDOW_SHOWN);
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
+		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
+		| SDL_WINDOW_SHOWN);
 #elif defined(IMGUI_IMPL_OPENGL_ES2)
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
-		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI 
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
+		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
 		| SDL_WINDOW_SHOWN);
 #else
-	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
-        | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-        | SDL_WINDOW_SHOWN);
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
+		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
+		| SDL_WINDOW_SHOWN);
 #endif
 
 	// Special case for Linux console mode, make it fullscreen always
@@ -336,44 +338,45 @@ int main(int argc, char* argv[])
 	// switch display mode to 1200x1000
 #endif
 
-    window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+	window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		g_fullscreenMode.w, g_fullscreenMode.h, window_flags);
-    SDL_GLContext gl_context = SDL_GL_CreateContext(window);
-    SDL_GL_MakeCurrent(window, gl_context);
+	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+	SDL_GL_MakeCurrent(window, gl_context);
 
-    // Initialize GLAD
-    if (!initialize_glad()) {
-        SDL_GL_DeleteContext(gl_context);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return 1;
-    }
+	// Initialize GLAD
+	if (!initialize_glad()) {
+		SDL_GL_DeleteContext(gl_context);
+		SDL_DestroyWindow(window);
+		SDL_Quit();
+		return 1;
+	}
 
 	while ((glerr = glGetError()) != GL_NO_ERROR) {
-        // reset and clear error
+		// reset and clear error
 		std::cerr << "gladLoadGL error: " << glerr << std::endl;
 	}
-	
+
 #ifdef DEBUG
 	if (GLAD_GL_KHR_debug) {
 		glDebugMessageCallback(DebugCallbackKHR, nullptr);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);
-	} else {
+	}
+	else {
 		std::cerr << "GL_KHR_debug not supported." << std::endl;
 	}
 #endif
-	
-    // glEnable(GL_DEPTH_TEST); // TODO: Check if necessary
-    glEnable(GL_CULL_FACE);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	// glEnable(GL_DEPTH_TEST); // TODO: Check if necessary
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL glEnable error: " << glerr << std::endl;
 	}
 
-    // Our state
+	// Our state
 	static MemoryEditor mem_edit_a2e;
 	static MemoryEditor mem_edit_upload;
 
@@ -382,9 +385,8 @@ int main(int argc, char* argv[])
 
 	static bool bShouldTerminateNetworking = false;
 	static bool bShouldTerminateProcessing = false;
-    bool show_demo_window = false;
-	bool show_profiler_flame_graph = false;
-    bool show_metrics_window = false;
+	bool show_demo_window = false;
+	bool show_metrics_window = false;
 	bool show_texture_window = false;
 	bool show_a2video_window = true;
 	bool show_postprocessing_window = false;
@@ -398,7 +400,7 @@ int main(int argc, char* argv[])
 	// The OpenGLHelper instance is already acquired
 	auto memManager = MemoryManager::GetInstance();
 	auto sdhrManager = SDHRManager::GetInstance();
-    auto a2VideoManager = A2VideoManager::GetInstance();
+	auto a2VideoManager = A2VideoManager::GetInstance();
 	auto postProcessor = PostProcessor::GetInstance();
 	auto eventRecorder = EventRecorder::GetInstance();
 	auto cycleCounter = CycleCounter::GetInstance();
@@ -414,12 +416,12 @@ int main(int argc, char* argv[])
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
 	std::thread thread_server(socket_server_thread, (uint16_t)_SDHR_SERVER_PORT, &bShouldTerminateNetworking);
-    // And run the processing thread
+	// And run the processing thread
 	std::thread thread_processor(process_events_thread, &bShouldTerminateProcessing);
 
-    // Delta Time
+	// Delta Time
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
-    uint64_t dt_LAST = 0;
+	uint64_t dt_LAST = 0;
 	float deltaTime = 0.f;
 
 	Main_SetVsync(g_swapInterval);
@@ -427,10 +429,10 @@ int main(int argc, char* argv[])
 	uint32_t lastMouseMoveTime = SDL_GetTicks();
 	const uint32_t cursorHideDelay = 3000; // After this delay, the mouse cursor disappears
 
-    // Main loop
-    bool done = false;
+	// Main loop
+	bool done = false;
 	GLuint out_tex_id = 0;
-	
+
 	// Get the saved states from previous runs
 	std::cout << "Loading previous state..." << std::endl;
 	nlohmann::json settingsState;
@@ -498,128 +500,136 @@ int main(int argc, char* argv[])
 				SDL_SetWindowSize(window, _ww, _wh);
 			}
 		}
-	} else {
+	}
+	else {
 		std::cerr << "No saved Settings.json file" << std::endl;
 	}
-	
+
 	std::cout << "Previous state loaded!" << std::endl;
 
 	SDL_GetWindowSize(window, &_M8DBG_windowWidth, &_M8DBG_windowHeight);
-		
+
+	iagp::InAppGpuProfiler::Instance()->sIsActive = true;
+
 	// Load up the first screen in SHR, with green border color
 	Main_DisplaySplashScreen();
 
 	if (bDisplayFPSOnScreen)
 		Main_DrawFPSOverlay();
 
-    while (!done)
+	while (!done)
 	{
-		// Check if we should reboot
-		if (a2VideoManager->bShouldReboot)
+		// Profiling
 		{
-			std::cerr << "Reset detected" << std::endl;
-			a2VideoManager->bShouldReboot = false;
-			a2VideoManager->ResetComputer();
-		}
+			AIGPNewFrame("GPU Frame", "GPU Frame");  // a main Zone is always needed
+			{	// profiling frame
 
-        dt_LAST = dt_NOW;
-        dt_NOW = SDL_GetPerformanceCounter();
-		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
+				// Check if we should reboot
+				if (a2VideoManager->bShouldReboot)
+				{
+					std::cerr << "Reset detected" << std::endl;
+					a2VideoManager->bShouldReboot = false;
+					a2VideoManager->ResetComputer();
+				}
+
+				dt_LAST = dt_NOW;
+				dt_NOW = SDL_GetPerformanceCounter();
+				deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
 
 				if (!eventRecorder->IsInReplayMode())
 					eventRecorder->StartReplay();
 
-        SDL_Event event;
-		while (SDL_PollEvent(&event))
-        {
-			if (Main_IsImGuiOn())
-			{
-				// handled in imgui
-				if (menu->HandleEvent(event))
-					continue;
-			}
-            switch (event.type) {
-            case SDL_QUIT:
-				done = true;
-                break;
-            case SDL_WINDOWEVENT:
-			{
-				if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-					int width = event.window.data1;
-					int height = event.window.data2;
-					glViewport(0, 0, width, height);
-				}
-				if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
-					done = true;
-			}
-                break;
-            case SDL_MOUSEMOTION:
-				lastMouseMoveTime = SDL_GetTicks();
-                if (event.motion.state & SDL_BUTTON_RMASK) {
-                    // Move the camera when the right mouse button is pressed while moving the mouse
-                    sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
-                }
-                break;
-            case SDL_MOUSEWHEEL:
-				sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
-                break;
-            case SDL_KEYDOWN:
-			{
-				if (event.key.keysym.sym == SDLK_c) {  // Quit on Ctrl-c
-					if (SDL_GetModState() & KMOD_CTRL) {
+				SDL_Event event;
+				while (SDL_PollEvent(&event))
+				{
+					if (Main_IsImGuiOn())
+					{
+						// handled in imgui
+						if (menu->HandleEvent(event))
+							continue;
+					}
+					switch (event.type) {
+					case SDL_QUIT:
 						done = true;
 						break;
+					case SDL_WINDOWEVENT:
+					{
+						if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+							int width = event.window.data1;
+							int height = event.window.data2;
+							glViewport(0, 0, width, height);
+						}
+						if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
+							done = true;
 					}
-				}
-				else if (event.key.keysym.sym == SDLK_F1) {  // Toggle ImGUI with F1
-					Main_ToggleImGui(gl_context);
-				}
-				else if (event.key.keysym.sym == SDLK_F8) {
-					Main_SetFPSOverlay(!Main_IsFPSOverlay());
-				}
-				else if (event.key.keysym.sym == SDLK_F10) {
-					a2VideoManager->ForceBeamFullScreenRender();
-				}
-				// Handle fullscreen toggle for Alt+Enter
-				else if (event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) {
-					Main_SetFullScreen(!Main_IsFullScreen());
-				}
-				// Make Alt-Tab in full screen revert to window mode
-				else if (event.key.keysym.sym == SDLK_TAB && (event.key.keysym.mod & KMOD_ALT)) {
-					if (Main_IsFullScreen())
-						Main_SetFullScreen(false);
-				}
-				// Camera movement!
-				switch (event.key.keysym.sym)
-				{
-				case SDLK_w:
-					sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
 					break;
-				case SDLK_s:
-					sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
+					case SDL_MOUSEMOTION:
+						lastMouseMoveTime = SDL_GetTicks();
+						if (event.motion.state & SDL_BUTTON_RMASK) {
+							// Move the camera when the right mouse button is pressed while moving the mouse
+							sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
+						}
+						break;
+					case SDL_MOUSEWHEEL:
+						sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
+						break;
+					case SDL_KEYDOWN:
+					{
+						if (event.key.keysym.sym == SDLK_c) {  // Quit on Ctrl-c
+							if (SDL_GetModState() & KMOD_CTRL) {
+								done = true;
+								break;
+							}
+						}
+						else if (event.key.keysym.sym == SDLK_F1) {  // Toggle ImGUI with F1
+							Main_ToggleImGui(gl_context);
+						}
+						else if (event.key.keysym.sym == SDLK_F8) {
+							Main_SetFPSOverlay(!Main_IsFPSOverlay());
+						}
+						else if (event.key.keysym.sym == SDLK_F10) {
+							a2VideoManager->ForceBeamFullScreenRender();
+						}
+						// Handle fullscreen toggle for Alt+Enter
+						else if (event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) {
+							Main_SetFullScreen(!Main_IsFullScreen());
+						}
+						// Make Alt-Tab in full screen revert to window mode
+						else if (event.key.keysym.sym == SDLK_TAB && (event.key.keysym.mod & KMOD_ALT)) {
+							if (Main_IsFullScreen())
+								Main_SetFullScreen(false);
+						}
+						// Camera movement!
+						switch (event.key.keysym.sym)
+						{
+						case SDLK_w:
+							sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
+							break;
+						case SDLK_s:
+							sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
+							break;
+						case SDLK_a:
+							sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
+							break;
+						case SDLK_d:
+							sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
+							break;
+						case SDLK_q:
+							sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
+							break;
+						case SDLK_z:
+							sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
+							break;
+						default:
+							break;
+						};
+					}
 					break;
-				case SDLK_a:
-					sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
-					break;
-				case SDLK_d:
-					sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
-					break;
-				case SDLK_q:
-					sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
-					break;
-				case SDLK_z:
-					sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
-					break;
-				default:
-					break;
-				};
-			}
-                break;
-            default:
-                break;
-            }   // switch event.type
-			
-        }   // while SDL_PollEvent
+					default:
+						break;
+					}   // switch event.type
+
+				}   // while SDL_PollEvent
 
 				{
 					AIGPScoped("VideoManager", "Video Render");
@@ -635,19 +645,19 @@ int main(int argc, char* argv[])
 
 				if (out_tex_id == UINT32_MAX)
 					std::cerr << "ERROR: NO RENDERER OUTPUT!" << std::endl;
-				
+
 				{
 					AIGPScoped("OpenGL", "glBindFramebuffer");
 					glBindFramebuffer(GL_FRAMEBUFFER, 0);
 				}
-				
+
 				{
 					AIGPScoped("OpenGL", "glClearColor");
 					glClearColor(
-								 window_bgcolor[0],
-								 window_bgcolor[1],
-								 window_bgcolor[2],
-								 window_bgcolor[3]);
+						window_bgcolor[0],
+						window_bgcolor[1],
+						window_bgcolor[2],
+						window_bgcolor[3]);
 				}
 
 				{
@@ -655,124 +665,130 @@ int main(int argc, char* argv[])
 					glClear(GL_COLOR_BUFFER_BIT);
 				}
 
-		if (!_M8DBG_bDisablePPRender)
-			postProcessor->Render(window, out_tex_id);
-		
-		if (Main_IsImGuiOn())
-		{
-			menu->Render();
-		}
-		else {
-			// Disable mouse if unused after cursorHideDelay
-			// It's possible that the cursor won't get disabled when in windowed mode
-			// (MacOS doesn't allow this, for example)
-			if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
-				SDL_ShowCursor(SDL_DISABLE);
-			else
-				SDL_ShowCursor(SDL_ENABLE);
-		}
-
-		// TODO: THINGS THAT HAVEN'T YET BEEN REFACTORED INTO MENU
-		/*
-		if (false)
-		{
-			// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-			if (show_demo_window)
-				ImGui::ShowDemoWindow(&show_demo_window);
-
-			ImGui::Begin("Super Duper Display", &show_F1_window);
-			if (!ImGui::IsWindowCollapsed())
-			{
-				ImGui::PushItemWidth(110);
-				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-				ImGui::Text("Worst Frame rate %.3f ms/frame", 1000.0f / fps_worst);
-				ImGui::Separator();
-				if (ImGui::CollapsingHeader("SDHR"))
+				if (!_M8DBG_bDisablePPRender)
 				{
-					auto _c = sdhrManager->camera;
-					auto _pos = _c.Position;
-					ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
-					ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);				}
-				ImGui::PopItemWidth();
-			}
-			ImGui::End();
-
-			if (_M8DBG_bShowF8Window)
-			{
-				ImGui::Begin("KFest 2024", &_M8DBG_bShowF8Window);
-				if (!ImGui::IsWindowCollapsed())
-				{
-					// Retrieve OpenGL version info
-					const GLubyte* renderer = glGetString(GL_RENDERER);
-					const GLubyte* version = glGetString(GL_VERSION);
-					GLint major, minor;
-					glGetIntegerv(GL_MAJOR_VERSION, &major);
-					glGetIntegerv(GL_MINOR_VERSION, &minor);
-					GLint accelerated = 0;
-					SDL_GL_GetAttribute(SDL_GL_ACCELERATED_VISUAL, &accelerated);
-					ImGui::Text("Renderer: %s", renderer);
-					ImGui::Text("OpenGL version: %s", version);
-					ImGui::Text("Major version: %d", major);
-					ImGui::Text("Minor version: %d", minor);
-					ImGui::Text("Hardware Acceleration: %s", accelerated ? "Enabled" : "Disabled");
-					ImGui::Separator();
-					ImGui::Text("Legacy Shader");
-					const char* _legshaders[] = { "0 - Full" };
-					static int _legshader_current = 0;
-					if (ImGui::ListBox("##LegacyShader", &_legshader_current, _legshaders, IM_ARRAYSIZE(_legshaders), 4))
-					{
-						a2VideoManager->SelectLegacyShader(_legshader_current);
-						ResetFPSCalculations(a2VideoManager);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					ImGui::Text("SHR Shader");
-					const char* _shrshaders[] = { "0 - Full" };
-					static int _shrshader_current = 0;
-					if (ImGui::ListBox("##SHRShader", &_shrshader_current, _shrshaders, IM_ARRAYSIZE(_shrshaders), 3))
-					{
-						a2VideoManager->SelectSHRShader(_shrshader_current);
-						ResetFPSCalculations(a2VideoManager);
-						a2VideoManager->ForceBeamFullScreenRender();
-					}
-					ImGui::PopItemWidth();
-					 
-
+					AIGPScoped("PostProcessor", "PP Render");
+					postProcessor->Render(window, out_tex_id);
 				}
 
-				ImGui::End();
-			}
+				if (Main_IsImGuiOn())
+				{
+					AIGPScoped("ImGui", "Menu Render");
+					menu->Render();
+				}
+				else {
+					// Disable mouse if unused after cursorHideDelay
+					// It's possible that the cursor won't get disabled when in windowed mode
+					// (MacOS doesn't allow this, for example)
+					if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
+						SDL_ShowCursor(SDL_DISABLE);
+					else
+						SDL_ShowCursor(SDL_ENABLE);
+				}
 
-					// Rendering
+				// TODO: THINGS THAT HAVEN'T YET BEEN REFACTORED INTO MENU
+				/*
+				if (false)
+				{
+					// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+					if (show_demo_window)
+						ImGui::ShowDemoWindow(&show_demo_window);
+
+					ImGui::Begin("Super Duper Display", &show_F1_window);
+					if (!ImGui::IsWindowCollapsed())
 					{
-						AIGPScoped("ImGUI", "Render");
-						ImGui::Render();
+						ImGui::PushItemWidth(110);
+						ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+						ImGui::Text("Worst Frame rate %.3f ms/frame", 1000.0f / fps_worst);
+						ImGui::Separator();
+						if (ImGui::CollapsingHeader("SDHR"))
+						{
+							auto _c = sdhrManager->camera;
+							auto _pos = _c.Position;
+							ImGui::Text("Camera X:%.2f Y:%.2f Z:%.2f", _pos.x, _pos.y, _pos.z);
+							ImGui::Text("Camera Pitch:%.2f Yaw:%.2f Zoom:%.2f", _c.Pitch, _c.Yaw, _c.Zoom);				}
+						ImGui::PopItemWidth();
+					}
+					ImGui::End();
+
+					if (_M8DBG_bShowF8Window)
+					{
+						ImGui::Begin("KFest 2024", &_M8DBG_bShowF8Window);
+						if (!ImGui::IsWindowCollapsed())
+						{
+							// Retrieve OpenGL version info
+							const GLubyte* renderer = glGetString(GL_RENDERER);
+							const GLubyte* version = glGetString(GL_VERSION);
+							GLint major, minor;
+							glGetIntegerv(GL_MAJOR_VERSION, &major);
+							glGetIntegerv(GL_MINOR_VERSION, &minor);
+							GLint accelerated = 0;
+							SDL_GL_GetAttribute(SDL_GL_ACCELERATED_VISUAL, &accelerated);
+							ImGui::Text("Renderer: %s", renderer);
+							ImGui::Text("OpenGL version: %s", version);
+							ImGui::Text("Major version: %d", major);
+							ImGui::Text("Minor version: %d", minor);
+							ImGui::Text("Hardware Acceleration: %s", accelerated ? "Enabled" : "Disabled");
+							ImGui::Separator();
+							ImGui::Text("Legacy Shader");
+							const char* _legshaders[] = { "0 - Full" };
+							static int _legshader_current = 0;
+							if (ImGui::ListBox("##LegacyShader", &_legshader_current, _legshaders, IM_ARRAYSIZE(_legshaders), 4))
+							{
+								a2VideoManager->SelectLegacyShader(_legshader_current);
+								ResetFPSCalculations(a2VideoManager);
+								a2VideoManager->ForceBeamFullScreenRender();
+							}
+							ImGui::Text("SHR Shader");
+							const char* _shrshaders[] = { "0 - Full" };
+							static int _shrshader_current = 0;
+							if (ImGui::ListBox("##SHRShader", &_shrshader_current, _shrshaders, IM_ARRAYSIZE(_shrshaders), 3))
+							{
+								a2VideoManager->SelectSHRShader(_shrshader_current);
+								ResetFPSCalculations(a2VideoManager);
+								a2VideoManager->ForceBeamFullScreenRender();
+							}
+							ImGui::PopItemWidth();
+
+
+						}
+
+						ImGui::End();
 					}
 
-			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-		}	// show F1 window
-		*/
+							// Rendering
+							{
+								AIGPScoped("ImGUI", "Render");
+								ImGui::Render();
+							}
+
+					ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+				}	// show F1 window
+				*/
 
 				{
 					AIGPScoped("SDL", "GL_SwapWindow");
 					SDL_GL_SwapWindow(window);
 				}
 			} // AIGP Frame
-			
-			// FPS overlay - Calculate frame rates
-			fps_frame_count++;
-			uint32_t currentTime = SDL_GetTicks();
-			uint32_t elapsedTime = currentTime - fps_start_time;
-			// Calculate frame rate every second
-			if (elapsedTime > (_M8DBG_average_fps_window * 1000))
-			{
-				float fps = fps_frame_count / (elapsedTime / 1000.0f);
-				if ((fps_worst > fps) && (fps > 0))
-					fps_worst = fps;
+		}
+		AIGPCollect;  // collect all measure queries out of Main Frame
+
+		// FPS overlay - Calculate frame rates
+		fps_frame_count++;
+		uint32_t currentTime = SDL_GetTicks();
+		uint32_t elapsedTime = currentTime - fps_start_time;
+		// Calculate frame rate every second
+		if (elapsedTime > (_M8DBG_average_fps_window * 1000))
+		{
+			float fps = fps_frame_count / (elapsedTime / 1000.0f);
+			if ((fps_worst > fps) && (fps > 0))
+				fps_worst = fps;
 
 			//if (false)
 			if (bDisplayFPSOnScreen)
 			{
-				snprintf(fps_str_buf, 10,  "%.0f ", fps);
+				snprintf(fps_str_buf, 10, "%.0f ", fps);
 				a2VideoManager->EraseOverlayRange(6, 13, 0);
 				a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b11010010, 13, 0);
 				snprintf(fps_str_buf, 10, "%.0f ", fps_worst);
@@ -781,27 +797,25 @@ int main(int argc, char* argv[])
 			}
 
 
-				// Reset for next calculation
-				fps_start_time = currentTime;
-				fps_frame_count = 0;
-			}
+			// Reset for next calculation
+			fps_start_time = currentTime;
+			fps_frame_count = 0;
 		}
 
-		AIGPCollect;  // collect all measure queries out of Main Frame
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL end of render error: " << glerr << std::endl;
 		}
-    }
+	}
 
 	eventRecorder->StopReplay();
 	soundManager->StopPlay();
 
-    // Stop all threads
+	// Stop all threads
 	bShouldTerminateProcessing = true;
 	terminate_processing_thread();
 	thread_processor.join();
-    bShouldTerminateNetworking = true;
-    thread_server.join();
+	bShouldTerminateNetworking = true;
+	thread_server.join();
 
 	// Serialize settings and save them
 	{
@@ -836,17 +850,18 @@ int main(int argc, char* argv[])
 		if (outFile.is_open()) {
 			outFile << settingsState.dump(4);	// 4 spaces indent
 			outFile.close();
-		} else {
+		}
+		else {
 			std::cerr << "Unable to save Settings.json file" << std::endl;
 		}
 	}
-	
-    // Cleanup
-	delete menu;
-	
-    SDL_GL_DeleteContext(gl_context);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
 
-    return 0;
+	// Cleanup
+	delete menu;
+
+	SDL_GL_DeleteContext(gl_context);
+	SDL_DestroyWindow(window);
+	SDL_Quit();
+
+	return 0;
 }

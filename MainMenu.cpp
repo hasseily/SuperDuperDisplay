@@ -55,7 +55,8 @@ public:
 	bool bShowLoadFileWindow = false;
 	bool bShowImGuiMetricsWindow = false;
 	bool bShowMemoryHeatMap = false;
-	
+	bool bShowProfilerFlameGraph = false;
+
 	bool bSampleRunKarateka = false;
 
 	MemoryEditor mem_edit_a2e;
@@ -446,6 +447,13 @@ void MainMenu::Render() {
 		}
 		
 		A2VideoManager::GetInstance()->DisplayImGuiExtraWindows();
+
+		if (pGui->bShowProfilerFlameGraph) {
+			AIGPScoped("ImGUI", "Flame Graph");
+			iagp::InAppGpuProfiler::Instance()->DrawFlamGraph(
+				"In App Gpu Profiler Flame Graph",
+				&pGui->bShowProfilerFlameGraph);
+		}
 		
 		if (pGui->mem_edit_sdhr_upload.Open)
 		{
@@ -742,6 +750,8 @@ void MainMenu::ShowDeveloperMenu() {
 		ImGui::EndMenu();
 	}
 	ImGui::MenuItem("SDD Textures", "", &pGui->bShowTextureWindow);
+	ImGui::Separator();
+	ImGui::MenuItem("Flame Graph", nullptr, &pGui->bShowProfilerFlameGraph);
 	ImGui::Separator();
 	if (ImGui::BeginMenu("SDHR")) {
 		auto sdhrManager = SDHRManager::GetInstance();

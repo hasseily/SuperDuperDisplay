@@ -314,17 +314,20 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 //		std::cout << "Viewport coordinates:" << ": (" << quadViewportCoords[0] << ", " << quadViewportCoords[1]
 //		<< "), (" << quadViewportCoords[2] << ", " << quadViewportCoords[3] << ")" << std::endl;
 	
-	if (bImguiWindowIsOpen || (!shaderProgram.isReady)
-		|| (last_bound_texture != inputTextureId)
-		|| (prev_texWidth != texWidth) || (prev_texHeight != texHeight))
 	{
-		// only update the shader parameters in certain cases
-		// as it may be very costly for rPi and slow CPUs
-		this->SelectShader();
-	}
-	else
-	{
-		shaderProgram.use();
+		AIGPScoped("PostProcessor", "Use Shader");
+		if (bImguiWindowIsOpen || (!shaderProgram.isReady)
+			|| (last_bound_texture != inputTextureId)
+			|| (prev_texWidth != texWidth) || (prev_texHeight != texHeight))
+		{
+			// only update the shader parameters in certain cases
+			// as it may be very costly for rPi and slow CPUs
+			this->SelectShader();
+		}
+		else
+		{
+			shaderProgram.use();
+		}
 	}
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
