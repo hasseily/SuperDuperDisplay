@@ -566,12 +566,14 @@ int main(int argc, char* argv[])
             case SDL_WINDOWEVENT:
 			{
 				if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-					int width = event.window.data1;
-					int height = event.window.data2;
-					glViewport(0, 0, width, height);
+					g_ww = event.window.data1;
+					g_wh = event.window.data2;
+					glViewport(0, 0, g_ww, g_wh);
 				}
-				SDL_GetWindowPosition(window, &g_wx, &g_wy);
-				SDL_GetWindowSize(window, &g_ww, &g_wh);
+				if (event.window.event == SDL_WINDOWEVENT_MOVED) {
+					g_wx = event.window.data1;
+					g_wy = event.window.data2;
+				}
 				if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
 					done = true;
 			}
