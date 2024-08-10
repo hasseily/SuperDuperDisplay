@@ -189,7 +189,6 @@ void MainMenu::Render() {
 			ImGui::PopFont();
 			ImGui::EndMenu();
 		}
-		/*
 		ImGui::Spacing();
 		if (ImGui::BeginMenu("Samples")) {
 			ImGui::PushFont(_itemFont);
@@ -197,7 +196,6 @@ void MainMenu::Render() {
 			ImGui::PopFont();
 			ImGui::EndMenu();
 		}
-		 */
 		ImGui::Spacing();
 		if (ImGui::BeginMenu("Developer")) {
 			ImGui::PushFont(_itemFont);
@@ -214,7 +212,7 @@ void MainMenu::Render() {
 			screen_width, screen_height
 		);
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
-		ImGui::Text("Buffer %d, Avg %.3f ms/f (%.1f FPS)",
+		ImGui::Text("FrameID: %d, Avg %.3f ms/f (%.1f FPS)",
 					A2VideoManager::GetInstance()->GetVRAMReadId(),
 					1000.0f / io.Framerate, io.Framerate);
 		ImGui::PopFont();
@@ -226,17 +224,17 @@ void MainMenu::Render() {
 			ImGui::PushFont(_menuFont);
 			ImGui::Begin("About", &pGui->bShowAboutWindow, ImGuiWindowFlags_AlwaysAutoResize);
 			ImGui::Text("Super Duper Display");
-			ImGui::PopFont();
 			ImGui::Separator();
-			ImGui::PushFont(_itemFont);
 			ImGui::Text("Version: 0.5.0");
 			ImGui::Text("Software: Henri \"Rikkles\" Asseily");
 			ImGui::Text("Firmware: John \"Elltwo\" Flanagan");
 			ImGui::Text("Appletini design by Elltwo");
 			ImGui::Separator();
+			
 			ImGui::TextWrapped("SuperDuperDisplay is a hybrid emulation frontend for Appletini, the Apple 2 Bus Card.");
-			ImGui::Separator();
-			ImGui::TextColored(ImColor(220, 150, 0), "Press F1 to show/hide the UI");
+			if (ImGui::Button("OK")) {
+				pGui->bShowAboutWindow = false;  // Close the "About" window when the OK button is clicked
+			}
 			ImGui::End();
 			ImGui::PopFont();
 		}
@@ -745,12 +743,6 @@ void MainMenu::ShowDeveloperMenu() {
 	}
 	ImGui::MenuItem("SDD Textures", "", &pGui->bShowTextureWindow);
 	ImGui::Separator();
-	if (ImGui::BeginMenu("Samples")) {
-		ShowSamplesMenu();
-		ImGui::EndMenu();
-	}
-	ImGui::Separator();
-	ImGui::BeginDisabled(true);
 	if (ImGui::BeginMenu("SDHR")) {
 		auto sdhrManager = SDHRManager::GetInstance();
 		ImGui::MenuItem("Untextured Geometry", "", &sdhrManager->bDebugNoTextures);
@@ -758,7 +750,6 @@ void MainMenu::ShowDeveloperMenu() {
 		ImGui::MenuItem("Upload Region Memory Window", "", &pGui->mem_edit_sdhr_upload.Open);
 		ImGui::EndMenu();
 	}
-	ImGui::EndDisabled();
 	ImGui::Separator();
 	ImGui::MenuItem("ImGui Metrics Window", "", &pGui->bShowImGuiMetricsWindow);
 }
