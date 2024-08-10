@@ -151,7 +151,7 @@ float scanlineWeights(float distance, vec3 color, float x) {
 	// scanline than for a wider beam.
 	float wid = SCANLINE_WEIGHT + 0.15 * dot(color, vec3(0.25-0.8*x)); //0.8 vignette strength
 	float weights = distance / wid;
-	return 0.4 * exp(-weights * weights * weights) / wid;
+	return 0.1 * exp(-weights * weights * weights) / wid;
 }
 
 #define pwr vec3(1.0/((-1.0*SCANLINE_WEIGHT+1.0)*(-0.8*CGWG+1.0))-1.2)

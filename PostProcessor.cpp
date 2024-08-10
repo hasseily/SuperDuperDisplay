@@ -457,7 +457,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::RadioButton("Simple##SCANLINETYPE", &p_scanline_type, 1); ImGui::SameLine();
 			ImGui::RadioButton("Complex##SCANLINETYPE", &p_scanline_type, 2);
 			if (p_scanline_type == 2) {
-				ImGui::SliderFloat("Scanline Weight", &p_scanline_weight, 0.001f, 0.5f, "%.2f");
+				ImGui::SliderFloat("Scanline Weight", &p_scanline_weight, 0.001f, 0.7f, "%.2f");
 				ImGui::Checkbox("Vignette", &p_vig);
 				ImGui::Checkbox("Interlacing On/Off", &p_interlace);
 			}
