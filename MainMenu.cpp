@@ -34,6 +34,7 @@ extern void Main_SetBGColor(const float newColor[4]);
 extern void Main_ResetA2SS();
 extern bool Main_IsFPSOverlay();
 extern void Main_SetFPSOverlay(bool isFPSOverlay);
+extern void Main_RequestAppQuit();
 
 class MainMenu::Gui {
 public:
@@ -572,7 +573,7 @@ void MainMenu::ShowSDDMenu() {
 	ImGui::MenuItem("About", "", &pGui->bShowAboutWindow);
 	ImGui::Separator();
 	if (ImGui::MenuItem("Quit", "Ctrl+C")) {
-		HandleQuit();
+		Main_RequestAppQuit();
 	}
 }
 
@@ -801,12 +802,6 @@ void MainMenu::ShowDeveloperMenu() {
 	ImGui::EndDisabled();
 	ImGui::Separator();
 	ImGui::MenuItem("ImGui Metrics Window", "", &pGui->bShowImGuiMetricsWindow);
-}
-
-void MainMenu::HandleQuit() {
-	std::cout << "Quitting application" << std::endl;
-	SDL_Quit();
-	exit(0);
 }
 
 // UTILITY
