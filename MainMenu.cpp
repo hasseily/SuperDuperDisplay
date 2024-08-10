@@ -189,6 +189,7 @@ void MainMenu::Render() {
 			ImGui::PopFont();
 			ImGui::EndMenu();
 		}
+		/*
 		ImGui::Spacing();
 		if (ImGui::BeginMenu("Samples")) {
 			ImGui::PushFont(_itemFont);
@@ -196,6 +197,7 @@ void MainMenu::Render() {
 			ImGui::PopFont();
 			ImGui::EndMenu();
 		}
+		 */
 		ImGui::Spacing();
 		if (ImGui::BeginMenu("Developer")) {
 			ImGui::PushFont(_itemFont);
@@ -212,7 +214,7 @@ void MainMenu::Render() {
 			screen_width, screen_height
 		);
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
-		ImGui::Text("FrameID: %d, Avg %.3f ms/f (%.1f FPS)",
+		ImGui::Text("Buffer %d, Avg %.3f ms/f (%.1f FPS)",
 					A2VideoManager::GetInstance()->GetVRAMReadId(),
 					1000.0f / io.Framerate, io.Framerate);
 		ImGui::PopFont();
@@ -224,7 +226,9 @@ void MainMenu::Render() {
 			ImGui::PushFont(_menuFont);
 			ImGui::Begin("About", &pGui->bShowAboutWindow, ImGuiWindowFlags_AlwaysAutoResize);
 			ImGui::Text("Super Duper Display");
+			ImGui::PopFont();
 			ImGui::Separator();
+			ImGui::PushFont(_itemFont);
 			ImGui::Text("Version: 0.5.0");
 			ImGui::Text("Software: Henri \"Rikkles\" Asseily");
 			ImGui::Text("Firmware: John \"Elltwo\" Flanagan");
@@ -232,11 +236,24 @@ void MainMenu::Render() {
 			ImGui::Separator();
 			
 			ImGui::TextWrapped("SuperDuperDisplay is a hybrid emulation frontend for Appletini, the Apple 2 Bus Card.");
-			if (ImGui::Button("OK")) {
-				pGui->bShowAboutWindow = false;  // Close the "About" window when the OK button is clicked
-			}
-			ImGui::End();
+			ImGui::Separator();
+			// Retrieve OpenGL version info
+			const GLubyte* renderer = glGetString(GL_RENDERER);
+			const GLubyte* version = glGetString(GL_VERSION);
+			GLint major, minor;
+			glGetIntegerv(GL_MAJOR_VERSION, &major);
+			glGetIntegerv(GL_MINOR_VERSION, &minor);
+			GLint accelerated = 0;
+			SDL_GL_GetAttribute(SDL_GL_ACCELERATED_VISUAL, &accelerated);
+			ImGui::Text("Renderer: %s", renderer);
+			ImGui::Text("OpenGL version: %s", version);
+			ImGui::Text("Major version: %d", major);
+			ImGui::Text("Minor version: %d", minor);
+			ImGui::Text("Hardware Acceleration: %s", accelerated ? "Enabled" : "Disabled");
+			ImGui::Separator();
+			ImGui::TextColored(ImColor(220, 150, 0), "Press F1 to show/hide the UI");
 			ImGui::PopFont();
+			ImGui::End();
 		}
 		// Show the Apple //e memory
 		if (pGui->mem_edit_a2e.Open)
@@ -463,23 +480,24 @@ void MainMenu::Render() {
 
 
 void MainMenu::ShowSDDMenu() {
+	/*
+	 // List video drivers for debugging
+	 if (ImGui::BeginMenu("Video Drivers"))
+	 {
+	 auto _n = SDL_GetNumVideoDrivers();
+	 for (size_t i = 0; i < _n; i++)
+	 {
+	 ImGui::Text(SDL_GetVideoDriver(i));
+	 }
+	 ImGui::EndMenu();
+	 }
+	 */
 #ifndef __APPLE__
+	// For OSX, don't let SDL handle fullscreen. It has the potential to crash if the user
+	// maximizes the window to fullscreen as well. So completely hide all fullscreen options in OSX
 	if (ImGui::MenuItem("Fullscreen", "Alt+Enter", Main_IsFullScreen())) {
 		Main_SetFullScreen(!Main_IsFullScreen());
 	}
-#endif
-	/*
-	// List video drivers for debugging
-	if (ImGui::BeginMenu("Video Drivers"))
-	{
-		auto _n = SDL_GetNumVideoDrivers();
-		for (size_t i = 0; i < _n; i++)
-		{
-			ImGui::Text(SDL_GetVideoDriver(i));
-		}
-		ImGui::EndMenu();
-	}
-	*/
 	if (ImGui::BeginMenu("Fullscreen Resolution")) {
 		// FIXME: Figure out the display index for full screen mode
 		int displayIndex = 0;
@@ -516,6 +534,7 @@ void MainMenu::ShowSDDMenu() {
 		}
 		ImGui::EndMenu();
 	}
+#endif
 	int iMMVsync = Main_GetVsync();
 	bool bMMVsync = (iMMVsync == 0 ? 0 : 1);
 	// std::string _s_vsync = (iMMVsync == -1 ? "VSYNC (Adaptive)" : "VSYNC");
@@ -735,6 +754,29 @@ void MainMenu::ShowDeveloperMenu() {
 		ImGui::MenuItem("HGR2", "", &a2VideoManager->bRenderHGR2);
 		ImGui::EndMenu();
 	}
+	/*
+	if (ImGui::BeginMenu("Shaders")) {
+		ImGui::Text("Legacy Shader");
+		const char* _legshaders[] = { "0 - Full",};
+		static int _legshader_current = 0;
+		if (ImGui::ListBox("##LegacyShader", &_legshader_current, _legshaders, IM_ARRAYSIZE(_legshaders), 4))
+		{
+			a2VideoManager->SelectLegacyShader(_legshader_current);
+			Main_ResetFPSCalculations();
+			a2VideoManager->ForceBeamFullScreenRender();
+		}
+		ImGui::Text("SHR Shader");
+		const char* _shrshaders[] = { "0 - Full" };
+		static int _shrshader_current = 0;
+		if (ImGui::ListBox("##SHRShader", &_shrshader_current, _shrshaders, IM_ARRAYSIZE(_shrshaders), 3))
+		{
+			a2VideoManager->SelectSHRShader(_shrshader_current);
+			Main_ResetFPSCalculations();
+			a2VideoManager->ForceBeamFullScreenRender();
+		}
+		ImGui::EndMenu();
+	}
+	 */
 	if (ImGui::BeginMenu("VRAMs")) {
 		ImGui::MenuItem("Legacy", "", &a2VideoManager->mem_edit_vram_legacy.Open);
 		ImGui::MenuItem("SHR", "", &a2VideoManager->mem_edit_vram_shr.Open);
@@ -743,6 +785,12 @@ void MainMenu::ShowDeveloperMenu() {
 	}
 	ImGui::MenuItem("SDD Textures", "", &pGui->bShowTextureWindow);
 	ImGui::Separator();
+	if (ImGui::BeginMenu("Samples")) {
+		ShowSamplesMenu();
+		ImGui::EndMenu();
+	}
+	ImGui::Separator();
+	ImGui::BeginDisabled(true);
 	if (ImGui::BeginMenu("SDHR")) {
 		auto sdhrManager = SDHRManager::GetInstance();
 		ImGui::MenuItem("Untextured Geometry", "", &sdhrManager->bDebugNoTextures);
@@ -750,6 +798,7 @@ void MainMenu::ShowDeveloperMenu() {
 		ImGui::MenuItem("Upload Region Memory Window", "", &pGui->mem_edit_sdhr_upload.Open);
 		ImGui::EndMenu();
 	}
+	ImGui::EndDisabled();
 	ImGui::Separator();
 	ImGui::MenuItem("ImGui Metrics Window", "", &pGui->bShowImGuiMetricsWindow);
 }

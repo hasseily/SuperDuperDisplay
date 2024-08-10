@@ -407,35 +407,31 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::PopStyleVar();
 		}
 
-		
-		/*
 		 // enable to reload the shader
 		if (ImGui::Button("Reload Shader"))
 		{
-			v_ppshaders.at(0).build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");
+			auto ppshader = v_ppshaders.at(1);
+			v_ppshaders.at(1).build(ppshader.GetVertexPath().c_str(), ppshader.GetFragmentPath().c_str());
 		}
-		*/
 		
-		/*	// Enable to choose the shader
+		// Enable to choose the shader
 		if (ImGui::Button("Slot 1 Shader"))
 		{
 			IGFD::FileDialogConfig config;
 			config.path = "./shaders/";
 			ImGuiFileDialog::Instance()->OpenDialog("ChooseShader1DlgKey", "Choose File", ".glsl,", config);
 		}
-
-		// Display the file dialog
 		if (ImGuiFileDialog::Instance()->Display("ChooseShader1DlgKey")) {
 			// Check if a file was selected
 			if (ImGuiFileDialog::Instance()->IsOk()) {
-				v_ppshaders.at(0).build(
-					ImGuiFileDialog::Instance()->GetFilePathName().c_str(), 
+				v_ppshaders.at(1).build(
+					ImGuiFileDialog::Instance()->GetFilePathName().c_str(),
 					ImGuiFileDialog::Instance()->GetFilePathName().c_str()
 				);
 			}
 			ImGuiFileDialog::Instance()->Close();
 		}
-		*/
+
 		ImGui::PushItemWidth(200);
 
 		// PP Type
