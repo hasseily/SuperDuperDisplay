@@ -71,40 +71,40 @@ private:
 	bool bAutoScale = true;		// Automatically scale to max scale?
 
 	// Shader parameter variables
-	int p_i_postprocessingLevel = 1;
-	float p_f_corner = 0.0f;
 	bool p_b_extGamma = false;
 	bool p_b_interlace = false;
 	bool p_b_potato = false;
 	bool p_b_slot = false;
 	bool p_b_vignette = false;
+	float p_f_barrelDistortion = 0.0f;
 	float p_f_bgr = 0.0f;
 	float p_f_black = 0.0f;
 	float p_f_brDep = 0.2f;
-	float p_f_brightness = 1.0f;
-	int p_i_cSpace = 0;
-	float p_f_cStr = 0.0f;
+	float p_f_brightness = 2.0f;
 	float p_f_centerX = 0.0f;
 	float p_f_centerY = 0.0f;
 	float p_f_convB = 0.0f;
 	float p_f_convG = 0.0f;
 	float p_f_convR = 0.0f;
-	int p_i_maskType = 0;
-	float p_f_maskHigh = 0.75f;
-	float p_f_maskLow = 0.3f;
-	float p_f_maskSize = 1.0f;
+	float p_f_corner = 0.0f;
+	float p_f_cStr = 0.0f;
 	float p_f_hueGB = 0.0f;
 	float p_f_hueRB = 0.0f;
 	float p_f_hueRG = 0.0f;
+	float p_f_maskHigh = 0.75f;
+	float p_f_maskLow = 0.3f;
+	float p_f_maskSize = 1.0f;
 	float p_f_saturation = 1.0f;
 	float p_f_scanlineWeight = 0.3f;
-	int p_i_scanlineType = 2;
 	float p_f_slotW = 3.0f;
 	float p_f_warpX = 0.0f;
 	float p_f_warpY = 0.0f;
-	float p_f_barrelDistortion = 0.0f;
 	float p_f_zoomX = 0.0f;
 	float p_f_zoomY = 0.0f;
+	int p_i_cSpace = 0;
+	int p_i_maskType = 0;
+	int p_i_postprocessingLevel = 1;
+	int p_i_scanlineType = 2;
 
 };
 
