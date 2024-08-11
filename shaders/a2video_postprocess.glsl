@@ -68,11 +68,11 @@ out vec4 FragColor;
 
 uniform COMPAT_PRECISION int POSTPROCESSING_LEVEL;
 
-uniform COMPAT_PRECISION bool bEXT_GAMMA; 
-uniform COMPAT_PRECISION bool bINTERLACE;
-uniform COMPAT_PRECISION bool bPOTATO; 
-uniform COMPAT_PRECISION bool bSLOT;
-uniform COMPAT_PRECISION bool bVIGNETTE; 
+uniform bool bEXT_GAMMA; 
+uniform bool bINTERLACE;
+uniform bool bPOTATO; 
+uniform bool bSLOT;
+uniform bool bVIGNETTE; 
 uniform COMPAT_PRECISION float BARRELDISTORTION;
 uniform COMPAT_PRECISION float BGR;
 uniform COMPAT_PRECISION float BLACK; 
@@ -297,7 +297,7 @@ void main() {
  // Color Spaces 
 	if(!bEXT_GAMMA)
 		res *= res;
-	if (iCOLOR_SPACE != 0.0) {
+	if (iCOLOR_SPACE != 0) {
 		if (iCOLOR_SPACE == 1)
 			res *= PAL;
 		if (iCOLOR_SPACE == 2)
