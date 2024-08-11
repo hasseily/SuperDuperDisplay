@@ -62,6 +62,8 @@ constexpr uint32_t _BORDER_HEIGHT_MAX_MULT8 = 3;	// 3*8 scanlines
 // after the maximum bottom border size, but before the top border
 constexpr uint32_t _SCANLINE_START_FRAME = 200 + (_BORDER_HEIGHT_MAX_MULT8 * 8) + 1;
 
+constexpr int _OVERLAY_CHAR_WIDTH = 40;		// Max width of overlay in chars (40 for TEXT)
+
 // Legacy mode VRAM is 4 bytes (main, aux, flags, colors)
 // for each "byte" of screen use
 // colors are 4-bit each of fg and bg colors as in the Apple 2gs
@@ -318,8 +320,8 @@ private:
 	GLint output_height = 0;
 
 	// Overlay strings handling
-	uint8_t overlay_text[40*24];	// text for each overlay
-	uint8_t overlay_colors[40*24];
+	uint8_t overlay_text[_OVERLAY_CHAR_WIDTH *24];	// text for each overlay
+	uint8_t overlay_colors[_OVERLAY_CHAR_WIDTH *24];
 	uint8_t overlay_lines[24];
 	bool bWasSHRBeforeOverlay = false;
 	void UpdateOverlayLine(uint32_t y);
