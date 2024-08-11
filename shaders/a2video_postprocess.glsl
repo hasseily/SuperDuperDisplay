@@ -238,6 +238,10 @@ void main() {
 		return;
 	}
 
+	if ((SCANLINE_TYPE == 1.0) && (mod(floor(TexCoords.y * TextureSize.y), 2.0) > 0.9)) {
+		discard;
+	}
+
 	// Hue matrix inside main() to avoid GLES error
 	mat3 hue = mat3 (
 		1.0, -RG, -RB,
@@ -345,9 +349,6 @@ void main() {
 	res *= blck;
 
 	FragColor = vec4(res, 1.0);
-	if (SCANLINE_TYPE == 1.0) {
-		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(bpos.y * TextureSize.y), 2.0));
-	}
 }
 
 #endif
