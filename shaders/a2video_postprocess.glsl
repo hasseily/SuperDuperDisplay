@@ -244,9 +244,9 @@ void main() {
 
 	// Hue matrix inside main() to avoid GLES error
 	mat3 hue = mat3 (
-		1.0, -RG, -RB,
-		RG, 1.0, -GB,
-		RB, GB, 1.0
+		1.0, RG, RB,
+		-RG, 1.0, GB,
+		-RB, -GB, 1.0
 		);
 	
 // zoom in and center screen for bezel
