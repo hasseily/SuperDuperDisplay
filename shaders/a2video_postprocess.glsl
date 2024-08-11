@@ -66,50 +66,49 @@ in vec2 ps;
 in vec2 v_pos;
 out vec4 FragColor;
 
-uniform COMPAT_PRECISION float POSTPROCESSING_LEVEL;
+uniform COMPAT_PRECISION int POSTPROCESSING_LEVEL;
 
-uniform COMPAT_PRECISION float M_TYPE;
-uniform COMPAT_PRECISION float BGR;
-uniform COMPAT_PRECISION float Maskl;
-uniform COMPAT_PRECISION float Maskh;
-uniform COMPAT_PRECISION float MSIZE;
-uniform COMPAT_PRECISION float P_GLOW;
-uniform COMPAT_PRECISION float C_STR;
-uniform COMPAT_PRECISION float CONV_R;
-uniform COMPAT_PRECISION float CONV_G;
-uniform COMPAT_PRECISION float CONV_B;
-uniform COMPAT_PRECISION float SCANLINE_TYPE;
-uniform COMPAT_PRECISION float SCANLINE_WEIGHT;
-uniform COMPAT_PRECISION float INTERLACE;
-uniform COMPAT_PRECISION float WARPX;
-uniform COMPAT_PRECISION float WARPY;
+uniform COMPAT_PRECISION bool bEXT_GAMMA; 
+uniform COMPAT_PRECISION bool bINTERLACE;
+uniform COMPAT_PRECISION bool bPOTATO; 
+uniform COMPAT_PRECISION bool bSLOT;
+uniform COMPAT_PRECISION bool bVIGNETTE; 
 uniform COMPAT_PRECISION float BARRELDISTORTION;
-uniform COMPAT_PRECISION float SLOT;
-uniform COMPAT_PRECISION float SLOTW;
-uniform COMPAT_PRECISION float c_space;
-uniform COMPAT_PRECISION float SATURATION;
-uniform COMPAT_PRECISION float BRIGHTNESs;
-uniform COMPAT_PRECISION float RG;
-uniform COMPAT_PRECISION float RB;
-uniform COMPAT_PRECISION float GB;
+uniform COMPAT_PRECISION float BGR;
 uniform COMPAT_PRECISION float BLACK; 
 uniform COMPAT_PRECISION float BR_DEP; 
-uniform COMPAT_PRECISION float POTATO; 
-uniform COMPAT_PRECISION float EXT_GAMMA; 
-uniform COMPAT_PRECISION float vig; 
-uniform COMPAT_PRECISION float zoomx;
-uniform COMPAT_PRECISION float zoomy;
-uniform COMPAT_PRECISION float centerx;
-uniform COMPAT_PRECISION float centery;
-uniform COMPAT_PRECISION float bzl;
-uniform COMPAT_PRECISION float corner;
+uniform COMPAT_PRECISION float BRIGHTNESs;
+uniform COMPAT_PRECISION float C_STR;
+uniform COMPAT_PRECISION float CENTERX;
+uniform COMPAT_PRECISION float CENTERY;
+uniform COMPAT_PRECISION float CONV_B;
+uniform COMPAT_PRECISION float CONV_G;
+uniform COMPAT_PRECISION float CONV_R;
+uniform COMPAT_PRECISION float CORNER;
+uniform COMPAT_PRECISION float GB;
+uniform COMPAT_PRECISION float MASKH;
+uniform COMPAT_PRECISION float MASKL;
+uniform COMPAT_PRECISION float MSIZE;
+uniform COMPAT_PRECISION float P_GLOW;
+uniform COMPAT_PRECISION float RB;
+uniform COMPAT_PRECISION float RG;
+uniform COMPAT_PRECISION float SATURATION;
+uniform COMPAT_PRECISION float SCANLINE_WEIGHT;
+uniform COMPAT_PRECISION float SLOTW;
+uniform COMPAT_PRECISION float WARPX;
+uniform COMPAT_PRECISION float WARPY;
+uniform COMPAT_PRECISION float ZOOMX;
+uniform COMPAT_PRECISION float ZOOMY;
+uniform COMPAT_PRECISION int iCOLOR_SPACE;
+uniform COMPAT_PRECISION int iM_TYPE;
+uniform COMPAT_PRECISION int iSCANLINE_TYPE;
 
 vec3 Mask(vec2 pos, float CGWG) {
-	if (M_TYPE == 0.0)
+	if (iM_TYPE == 0)
 		return vec3(1.0);
 	vec3 mask = vec3(CGWG);
-	if (M_TYPE == 1.0){
-		if (POTATO == 1.0) {
+	if (iM_TYPE == 1){
+		if (bPOTATO) {
 			return vec3( (1.0-CGWG)*sin(pos.x*pi)+CGWG);
 		} else {
 			float m = fract(pos.x*0.5);
@@ -121,8 +120,8 @@ vec3 Mask(vec2 pos, float CGWG) {
 		}
 	}
 
-	if (M_TYPE == 2.0) {
-		if (POTATO == 1.0) {
+	if (iM_TYPE == 2) {
+		if (bPOTATO) {
 			return vec3( (1.0-CGWG)*sin(pos.x*pi*0.6667)+CGWG) ;
 		} else {
 			float m = fract(pos.x*0.3333);
@@ -226,20 +225,21 @@ vec2 BarrelDistortion(vec2 uv) {
 
 void main() {
 	
-	if (POSTPROCESSING_LEVEL == 0.0) {
+	if (POSTPROCESSING_LEVEL == 0) {
 		FragColor = texture(A2Texture,TexCoords);
 		return;
 	}
 	
 // Apply simple horizontal scanline if required and exit
-	if (POSTPROCESSING_LEVEL == 1.0) {
+	if (POSTPROCESSING_LEVEL == 1) {
 		FragColor = texture(A2Texture,TexCoords);
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
 		return;
 	}
 
-	if ((SCANLINE_TYPE == 1.0) && (mod(floor(TexCoords.y * TextureSize.y), 2.0) > 0.9)) {
-		discard;
+	if (iSCANLINE_TYPE == 1) {
+		if (mod(floor(TexCoords.y * TextureSize.y), 2.0) > 0.9)
+			discard;
 	}
 
 	// Hue matrix inside main() to avoid GLES error
@@ -250,14 +250,14 @@ void main() {
 		);
 	
 // zoom in and center screen for bezel
-	vec2 pos = Warp(TexCoords*vec2(1.0-zoomx,1.0-zoomy)-vec2(centerx,centery)/100.0);
+	vec2 pos = Warp(TexCoords*vec2(1.0-ZOOMX,1.0-ZOOMY)-vec2(CENTERX,CENTERY)/100.0);
 	
 	
 	float corn;
-	if (corner > 0.0) {
+	if (CORNER > 0.000001) {
 		corn = pos.x * pos.y * (1.-pos.x) * (1.-pos.y);
 		// res = res * smoothstep(0.0, 0.0010, corn);	// if we want it smooth
-		if (corn < corner)								// if we want it cut
+		if (corn < CORNER)								// if we want it cut
 			discard;
 	}
 	
@@ -287,7 +287,7 @@ void main() {
 					);
 // Vignette
 	float x = 0.0;
-	if (vig == 1.0) {
+	if (bVIGNETTE) {
 		x = TexCoords.x-0.5;
 		x = x*x;
 	}
@@ -295,14 +295,14 @@ void main() {
 	float l = dot(vec3(BR_DEP),res);
  
  // Color Spaces 
-	if(EXT_GAMMA != 1.0)
+	if(!bEXT_GAMMA)
 		res *= res;
-	if (c_space != 0.0) {
-		if (c_space == 1.0)
+	if (iCOLOR_SPACE != 0.0) {
+		if (iCOLOR_SPACE == 1)
 			res *= PAL;
-		if (c_space == 2.0)
+		if (iCOLOR_SPACE == 2)
 			res *= NTSC;
-		if (c_space == 3.0)
+		if (iCOLOR_SPACE == 3)
 			res *= NTSC_J;
 		// Apply CRT-like luminances
 		res /= vec3(0.24,0.69,0.07);
@@ -311,10 +311,10 @@ void main() {
 	}
 	
 	// For CRT-Geom scanlines
-	if (SCANLINE_TYPE == 2.0) {
+	if (iSCANLINE_TYPE == 2) {
 		// handle interlacing
 		float s = fract(bpos.y*TextureSize.y/2.001+0.5);
-		if (INTERLACE == 1.0)
+		if (bINTERLACE)
 			s = mod(float(FrameCount),2.0) < 1.0 ? s: s+0.5;
 	
 		// Calculate CRT-Geom scanlines weight and apply
@@ -325,17 +325,17 @@ void main() {
 
 // Masks
 	vec2 xy = TexCoords*OutputSize.xy*scale/MSIZE;	
-	float CGWG = mix(Maskl, Maskh, l);
+	float CGWG = mix(MASKL, MASKH, l);
 	res *= Mask(xy, CGWG);
 
 // Apply slot mask on top of Trinitron-like mask
-	if (SLOT == 1.0)
+	if (bSLOT)
 		res *= mix(slot(xy/2.0),vec3(1.0),CGWG);
-	if (POTATO == 0.0) {
-		res = inv_gamma(res,pwr);
-	} else {
+	if (bPOTATO) {
 		res = sqrt(res);
 		res *= mix(1.3,1.1,l);
+	} else {
+		res = inv_gamma(res,pwr);
 	}
 
 // Saturation
