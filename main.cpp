@@ -480,14 +480,6 @@ int main(int argc, char* argv[])
 			newMode.h = _sm.value("fullscreen height", g_fullscreenMode.h);
 			newMode.refresh_rate = _sm.value("fullscreen refresh rate", g_fullscreenMode.refresh_rate);
 			SDL_GetClosestDisplayMode(_displayIndex, &newMode, &g_fullscreenMode);
-			// then change the non-fullscreen values to allow for window borders and bar
-			if (g_ww >= g_fullscreenMode.w || g_wh >= g_fullscreenMode.h)
-			{
-				g_ww = g_fullscreenMode.w - 100;
-				g_wh = g_fullscreenMode.h - 100;
-				g_wx = 50;
-				g_wy = 50;
-			}
 			Main_SetFullScreen(_sm.value("fullscreen", false));
 			vbl_region = _sm.value("videoregion", vbl_region);
 			if (vbl_region == 0)
@@ -566,13 +558,19 @@ int main(int argc, char* argv[])
             case SDL_WINDOWEVENT:
 			{
 				if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-					g_ww = event.window.data1;
-					g_wh = event.window.data2;
-					glViewport(0, 0, g_ww, g_wh);
+					glViewport(0, 0, event.window.data1, event.window.data2);
+					if (!Main_IsFullScreen())
+					{
+						g_ww = event.window.data1;
+						g_wh = event.window.data2;
+					}
 				}
 				if (event.window.event == SDL_WINDOWEVENT_MOVED) {
-					g_wx = event.window.data1;
-					g_wy = event.window.data2;
+					if (!Main_IsFullScreen())
+					{
+						g_wx = event.window.data1;
+						g_wy = event.window.data2;
+					}
 				}
 				if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
 					done = true;
