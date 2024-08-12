@@ -118,10 +118,10 @@ private:
 	
 	Ayumi ay[4];
 	float allpans[4][3] = {
-		0.0f, 0.0f, 0.0f,	// AY0 pans left
-		1.0f, 1.0f, 1.0f,	// AY1 pans right
-		0.0f, 0.0f, 0.0f,	// AY2 pans left
-		1.0f, 1.0f, 1.0f,	// AY3 pans right
+		0.3f, 0.3f, 0.3f,	// AY0 pans left
+		0.7f, 0.7f, 0.7f,	// AY1 pans right
+		0.2f, 0.2f, 0.2f,	// AY2 pans left
+		0.8f, 0.8f, 0.8f,	// AY3 pans right
 	};
 };
 
