@@ -165,6 +165,7 @@ void PostProcessor::LoadState(int profile_id) {
 void PostProcessor::SelectShader()
 {
 	// Choose the shader
+	// Frame count is always set, outside of the shader selection
 	switch (p_i_postprocessingLevel)
 	{
 	case 0:	// basic passthrough shader with optional scanlines
@@ -180,7 +181,6 @@ void PostProcessor::SelectShader()
 		shaderProgram.use();
 		// common
 		shaderProgram.setInt("A2Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
-		shaderProgram.setInt("FrameCount", frame_count);
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
 		shaderProgram.setVec2("InputSize", glm::vec2(texWidth, texHeight));
 		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
@@ -308,11 +308,17 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 		// only update the shader parameters in certain cases
 		// as it may be very costly for rPi and slow CPUs
 		this->SelectShader();
+		last_bound_texture = inputTextureId;
+		prev_texWidth = texWidth;
+		prev_texHeight = texHeight;
 	}
 	else
 	{
 		shaderProgram.use();
 	}
+
+	// Always set the frame count!
+	shaderProgram.setInt("FrameCount", frame_count);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 2: " << glerr << std::endl;
