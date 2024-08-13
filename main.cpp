@@ -46,6 +46,7 @@ static uint32_t fbHeight = 0;
 static bool g_swapInterval = true;  // VSYNC
 static bool g_adaptiveVsync = true;
 static bool g_quitIsRequested = false;
+static float g_requestedFPS = 60.0;
 float window_bgcolor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 int g_wx = 100, g_wy = 100, g_ww = 800, g_wh = 600;	// window dimensions when not in fullscreen
 
@@ -57,7 +58,7 @@ static SDL_DisplayMode g_fullscreenMode;
 // For FPS calculations
 static float fps_worst = 1000000.f;
 static uint64_t fps_frame_count = 0;
-static auto fps_start_time = SDL_GetTicks();
+static uint64_t fps_last_counter_display = 0;
 static char fps_str_buf[40];
 
 bool _bDisableVideoRender = false;
@@ -98,7 +99,11 @@ void Main_ResetFPSCalculations()
 {
 	fps_worst = 100000.f;
 	fps_frame_count = 0;
-	fps_start_time = SDL_GetTicks();
+}
+
+void Main_SetRequestedFPS(float fps)
+{
+	g_requestedFPS = fps;
 }
 
 int Main_GetVsync()
@@ -112,7 +117,9 @@ void Main_SetVsync(bool _on)
 	if (_on)
 	{
 		g_adaptiveVsync = (SDL_GL_SetSwapInterval(-1) == 0);	// adaptive
-		if (!g_adaptiveVsync) {
+		if (g_adaptiveVsync) {
+			g_swapInterval = true;
+		} else {
 			g_swapInterval = (SDL_GL_SetSwapInterval(1) == 0);	// VSYNC
 		}
 	}
@@ -535,10 +542,6 @@ int main(int argc, char* argv[])
 			a2VideoManager->ResetComputer();
 		}
 
-        dt_LAST = dt_NOW;
-        dt_NOW = SDL_GetPerformanceCounter();
-		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
-
 		if (!eventRecorder->IsInReplayMode())
 			eventRecorder->StartReplay();
 
@@ -683,18 +686,30 @@ int main(int argc, char* argv[])
 
 		SDL_GL_SwapWindow(window);
 
-		// FPS overlay - Calculate frame rates
+		// FRAME COUNTS, FREQUENCY AND RATES
 		fps_frame_count++;
-		uint32_t currentTime = SDL_GetTicks();
-		uint32_t elapsedTime = currentTime - fps_start_time;
-		// Calculate frame rate every second
-		if (elapsedTime > (_fpsAverageTimeWindow * 1000))
+		dt_LAST = dt_NOW;
+		auto _pfreq = SDL_GetPerformanceFrequency();
+		if (!g_swapInterval)
 		{
-			float fps = fps_frame_count / (elapsedTime / 1000.0f);
+			// Allow for custom FPS when not in VSYNC
+			while (true)
+			{
+				if ((SDL_GetPerformanceCounter() - dt_LAST) >=
+					(_pfreq / g_requestedFPS))
+					break;
+			}
+		}
+		dt_NOW = SDL_GetPerformanceCounter();
+		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)_pfreq);
+		// Calculate and display frame rate every second
+		auto _fps_delta = dt_NOW - fps_last_counter_display;
+		if (_fps_delta > (_fpsAverageTimeWindow * _pfreq))
+		{
+			float fps = fps_frame_count / (_fps_delta / _pfreq);
 			if ((fps_worst > fps) && (fps > 0))
 				fps_worst = fps;
 
-			//if (false)
 			if (bDisplayFPSOnScreen)
 			{
 				snprintf(fps_str_buf, 10,  "%.0f ", fps);
@@ -704,11 +719,9 @@ int main(int argc, char* argv[])
 				a2VideoManager->EraseOverlayRange(6, 13, 1);
 				a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b10010010, 13, 1);
 			}
-
-
 			// Reset for next calculation
-			fps_start_time = currentTime;
 			fps_frame_count = 0;
+			fps_last_counter_display = dt_NOW;
 		}
 
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -717,6 +730,7 @@ int main(int argc, char* argv[])
 
 		if (g_quitIsRequested)
 			done = true;
+
     }
 
 	eventRecorder->StopReplay();

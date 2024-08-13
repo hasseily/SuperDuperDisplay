@@ -538,8 +538,6 @@ void MainMenu::ShowSDDMenu() {
 #endif
 	int iMMVsync = Main_GetVsync();
 	bool bMMVsync = (iMMVsync == 0 ? 0 : 1);
-	// std::string _s_vsync = (iMMVsync == -1 ? "VSYNC (Adaptive)" : "VSYNC");
-	// if (ImGui::MenuItem(_s_vsync.c_str(), "", &bMMVsync)) {
 	if (ImGui::Checkbox("VSYNC", &bMMVsync)) {
 		Main_SetVsync(bMMVsync);
 		iMMVsync = Main_GetVsync();
