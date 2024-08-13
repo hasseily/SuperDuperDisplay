@@ -95,6 +95,7 @@ uniform COMPAT_PRECISION float RG;
 uniform COMPAT_PRECISION float SATURATION;
 uniform COMPAT_PRECISION float SCANLINE_WEIGHT;
 uniform COMPAT_PRECISION float SLOTW;
+uniform COMPAT_PRECISION float VIGNETTE_WEIGHT;
 uniform COMPAT_PRECISION float WARPX;
 uniform COMPAT_PRECISION float WARPY;
 uniform COMPAT_PRECISION float ZOOMX;
@@ -148,12 +149,11 @@ float scanlineWeights(float distance, vec3 color, float x) {
 	// independent of its width. That is, for a narrower beam
 	// "weights" should have a higher peak at the center of the
 	// scanline than for a wider beam.
-	float wid = SCANLINE_WEIGHT + 0.15 * dot(color, vec3(0.25-0.8*x)); //0.8 vignette strength
+	float wid = SCANLINE_WEIGHT + 0.15 * dot(color, vec3(0.25-VIGNETTE_WEIGHT*x));
 	float weights = distance / wid;
 	return 0.1 * exp(-weights * weights * weights) / wid;
 }
 
-#define pwr vec3(1.0/((-1.0*SCANLINE_WEIGHT+1.0)*(-0.8*CGWG+1.0))-1.2)
 // Returns gamma corrected output, compensated for scanline+mask embedded gamma
 vec3 inv_gamma(vec3 col, vec3 power) {
 	vec3 cir = col-1.0;
@@ -261,7 +261,7 @@ void main() {
 			discard;
 	}
 	
-// If people brefer the BarrelDistortion algo
+// If people prefer the BarrelDistortion algo
 	pos = BarrelDistortion(pos);
 
 	vec2 bpos = pos;
@@ -285,12 +285,6 @@ void main() {
 					res0.g*(1.0-C_STR) + resg*C_STR,
 					res0.b*(1.0-C_STR) + resb*C_STR
 					);
-// Vignette
-	float x = 0.0;
-	if (bVIGNETTE) {
-		x = TexCoords.x-0.5;
-		x = x*x;
-	}
 
 	float l = dot(vec3(BR_DEP),res);
  
@@ -310,22 +304,36 @@ void main() {
 		res = clamp(res,0.0,1.0);
 	}
 	
+	// Mask CGWG definition, used for scanlines
+	float CGWG = 0.3;
+	if (bSLOT)
+		CGWG = mix(MASKL, MASKH, l);
+
 	// For CRT-Geom scanlines
+	vec3 v_pwr;
 	if (iSCANLINE_TYPE == 2) {
+		v_pwr = vec3(1.0/((-1.0*SCANLINE_WEIGHT+1.0)*(-0.8*CGWG+1.0))-1.2);
 		// handle interlacing
-		float s = fract(bpos.y*TextureSize.y/2.001+0.5);
+		float s = fract(pos.y*TextureSize.y/2.001+0.5);
 		if (bINTERLACE)
-			s = mod(float(FrameCount),2.0) < 1.0 ? s: s+0.5;
+			s = mod(float(FrameCount),2.0) < 1.0 ? s: fract(s+0.5);
 	
+		// Vignette
+		float x = 0.0;
+		if (bVIGNETTE) {
+			x = TexCoords.x-0.5;
+			x = x*x;
+		}
 		// Calculate CRT-Geom scanlines weight and apply
 		float weight = scanlineWeights(s, res, x);
 		float weight2 = scanlineWeights(1.0-s, res, x);
 		res *= weight + weight2;
+	} else {
+		v_pwr = vec3(1.0/((-1.0*0.3+1.0)*(-0.8*CGWG+1.0))-1.2);
 	}
 
 // Masks
 	vec2 xy = TexCoords*OutputSize.xy*scale/MSIZE;	
-	float CGWG = mix(MASKL, MASKH, l);
 	res *= Mask(xy, CGWG);
 
 // Apply slot mask on top of Trinitron-like mask
@@ -335,7 +343,7 @@ void main() {
 		res = sqrt(res);
 		res *= mix(1.3,1.1,l);
 	} else {
-		res = inv_gamma(res,pwr);
+		res = inv_gamma(res,v_pwr);
 	}
 
 // Saturation

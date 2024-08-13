@@ -97,6 +97,7 @@ private:
 	float p_f_saturation = 1.0f;
 	float p_f_scanlineWeight = 0.3f;
 	float p_f_slotW = 3.0f;
+	float p_f_vignetteWeight = 0.8f;
 	float p_f_warpX = 0.0f;
 	float p_f_warpY = 0.0f;
 	float p_f_zoomX = 0.0f;

@@ -91,6 +91,7 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_f_scanlineWeight", p_f_scanlineWeight},
 		{"p_i_scanlineType", p_i_scanlineType},
 		{"p_f_slotW", p_f_slotW},
+		{"p_f_vignetteWeight", p_f_vignetteWeight},
 		{"p_f_warpX", p_f_warpX},
 		{"p_f_warpY", p_f_warpY},
 		{"p_f_barrelDistortion", p_f_barrelDistortion},
@@ -134,6 +135,7 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_f_scanlineWeight = jsonState.value("p_f_scanlineWeight", p_f_scanlineWeight);
 	p_i_scanlineType = jsonState.value("p_i_scanlineType", p_i_scanlineType);
 	p_f_slotW = jsonState.value("p_f_slotW", p_f_slotW);
+	p_f_vignetteWeight = jsonState.value("p_f_vignetteWeight", p_f_vignetteWeight);
 	p_f_warpX = jsonState.value("p_f_warpX", p_f_warpX);
 	p_f_warpY = jsonState.value("p_f_warpY", p_f_warpY);
 	p_f_barrelDistortion = jsonState.value("p_f_barrelDistortion", p_f_barrelDistortion);
@@ -215,6 +217,7 @@ void PostProcessor::SelectShader()
 		shaderProgram.setFloat("SATURATION", p_f_saturation);
 		shaderProgram.setFloat("SCANLINE_WEIGHT", p_f_scanlineWeight);
 		shaderProgram.setFloat("SLOTW", p_f_slotW);
+		shaderProgram.setFloat("VIGNETTE_WEIGHT", p_f_vignetteWeight);
 		shaderProgram.setFloat("WARPX", p_f_warpX);
 		shaderProgram.setFloat("WARPY", p_f_warpY);
 		shaderProgram.setFloat("ZOOMX", p_f_zoomX);
@@ -319,6 +322,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 
 	// Always set the frame count!
 	shaderProgram.setInt("FrameCount", frame_count);
+	shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 2: " << glerr << std::endl;
@@ -441,11 +445,15 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		ImGui::Separator();
 		ImGui::Text("[ POSTPROCESSING LEVEL ]");
 		ImGui::RadioButton("None##PPLEVEL", &p_i_postprocessingLevel, 0); ImGui::SameLine();
+		ImGui::SetItemTooltip("No postprocessing, fast");
 		ImGui::RadioButton("Scanline only##PPLEVEL", &p_i_postprocessingLevel, 1); ImGui::SameLine();
+		ImGui::SetItemTooltip("Simple alternating scanlines, fastest");
 		ImGui::RadioButton("Full CRT##PPLEVEL", &p_i_postprocessingLevel, 2);
+		ImGui::SetItemTooltip("Customizable CRT shader, slow");
 		ImGui::Separator();
 		ImGui::Text("[ BASE INTEGER SCALE ]");
 		ImGui::Checkbox("Auto", &bAutoScale);
+		ImGui::SetItemTooltip("Automatically selects the largest output possible, with pixel perfect scaling");
 		if (bAutoScale)
 			ImGui::BeginDisabled();
 		ImGui::SliderInt("Integer Scale", &integer_scale, 1, max_integer_scale, "%d");
@@ -456,13 +464,27 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::Separator();
 			// Scanline and Interlacing
 			ImGui::Text("[ SCANLINE TYPE ]");
-			ImGui::RadioButton("None##SCANLINETYPE", &p_i_scanlineType, 0); ImGui::SameLine();
-			ImGui::RadioButton("Simple##SCANLINETYPE", &p_i_scanlineType, 1); ImGui::SameLine();
+			if (ImGui::RadioButton("None##SCANLINETYPE", &p_i_scanlineType, 0))
+			{
+				p_f_scanlineWeight = 0.3f;
+			}
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Simple##SCANLINETYPE", &p_i_scanlineType, 1))
+			{
+				p_f_scanlineWeight = 0.3f;
+			}
+			ImGui::SameLine();
 			ImGui::RadioButton("Complex##SCANLINETYPE", &p_i_scanlineType, 2);
-			if (p_i_scanlineType == 2) {
+			ImGui::SetItemTooltip("You should generally increase the brightness (further down) when using the complex scanline type");
+			if (p_i_scanlineType == 2)
+			{
 				ImGui::SliderFloat("Scanline Weight", &p_f_scanlineWeight, 0.03f, 0.7f, "%.2f");
 				ImGui::Checkbox("Scanline Vignette", &p_b_vignette);
+				ImGui::SetItemTooltip("Darker sides of the scanlines, works better when there's distortion");
+				if (p_b_vignette)
+					ImGui::SliderFloat("Vignette Weight", &p_f_vignetteWeight, 0.1, 5.0, "%.2f");
 				ImGui::Checkbox("Interlacing", &p_b_interlace);
+				ImGui::SetItemTooltip("If you really want to feel the pain of bad refresh rates, disable VSYNC and set a low FPS limit like 30 Hz");
 			}
 			
 			ImGui::Separator();
