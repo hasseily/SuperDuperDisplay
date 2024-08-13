@@ -46,7 +46,7 @@ static uint32_t fbHeight = 0;
 static bool g_swapInterval = true;  // VSYNC
 static bool g_adaptiveVsync = true;
 static bool g_quitIsRequested = false;
-static float g_requestedFPS = 60.0;
+static uint32_t g_fpsLimit = UINT32_MAX;
 float window_bgcolor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 int g_wx = 100, g_wy = 100, g_ww = 800, g_wh = 600;	// window dimensions when not in fullscreen
 
@@ -101,9 +101,14 @@ void Main_ResetFPSCalculations()
 	fps_frame_count = 0;
 }
 
-void Main_SetRequestedFPS(float fps)
+uint32_t Main_GetFPSLimit()
 {
-	g_requestedFPS = fps;
+	return g_fpsLimit;
+}
+
+void Main_SetFPSLimit(uint32_t fps)
+{
+	g_fpsLimit = fps;
 }
 
 int Main_GetVsync()
@@ -479,6 +484,7 @@ int main(int argc, char* argv[])
 			g_wy = _sm.value("window y", g_wy);
 			g_ww = _sm.value("window width", g_ww);
 			g_wh = _sm.value("window height", g_wh);
+			g_fpsLimit = _sm.value("fps limit", g_fpsLimit);
 			g_swapInterval = _sm.value("vsync", g_swapInterval);
 			Main_SetVsync(g_swapInterval);
 			// make sure the requested mode is acceptable
@@ -487,6 +493,11 @@ int main(int argc, char* argv[])
 			newMode.h = _sm.value("fullscreen height", g_fullscreenMode.h);
 			newMode.refresh_rate = _sm.value("fullscreen refresh rate", g_fullscreenMode.refresh_rate);
 			SDL_GetClosestDisplayMode(_displayIndex, &newMode, &g_fullscreenMode);
+			// Make sure the windowed mode shows the menu bar
+			if (g_wy == 0)
+				g_wy = 23;
+			if ((g_wh + g_wy) > g_fullscreenMode.h)
+				g_wh = g_fullscreenMode.h - g_wy;
 			Main_SetFullScreen(_sm.value("fullscreen", false));
 			vbl_region = _sm.value("videoregion", vbl_region);
 			if (vbl_region == 0)
@@ -702,7 +713,7 @@ int main(int argc, char* argv[])
 			while (true)
 			{
 				if ((SDL_GetPerformanceCounter() - dt_LAST) >=
-					(_pfreq / g_requestedFPS))
+					(_pfreq / g_fpsLimit))
 					break;
 			}
 		}
@@ -772,6 +783,7 @@ int main(int argc, char* argv[])
 			{"fullscreen height", g_fullscreenMode.h},
 			{"fullscreen refresh rate", g_fullscreenMode.refresh_rate},
 			{"fullscreen", _isFullscreen},
+			{"fps limit", g_fpsLimit},
 			{"vsync", g_swapInterval},
 			{"videoregion", vbl_region},
 			{"window background color", window_bgcolor},

@@ -21,7 +21,8 @@
 #include <vector>
 
 // In main.cpp
-extern void Main_SetRequestedFPS(float fps);
+extern uint32_t Main_GetFPSLimit();
+extern void Main_SetFPSLimit(uint32_t fps);
 extern void Main_ResetFPSCalculations();
 extern SDL_DisplayMode Main_GetFullScreenMode();
 extern void Main_SetFullScreenMode(SDL_DisplayMode mode);
@@ -45,6 +46,7 @@ public:
 
 	std::vector<SDL_DisplayMode> v_displayModes;
 
+	int iFPSLimiter = 0;
 	int iWindowWidth=1200;
 	int iWindowHeight=1000;
 	bool bShowAboutWindow = false;
@@ -553,6 +555,28 @@ void MainMenu::ShowSDDMenu() {
 			ImGui::Text("(Adaptive)");
 		}
 	}
+	if (bMMVsync)
+		ImGui::BeginDisabled(true);
+	if (ImGui::BeginMenu("FPS Limiter")) {
+		pGui->iFPSLimiter = Main_GetFPSLimit();
+		if (ImGui::RadioButton("Disabled##FPSLIMIT", &pGui->iFPSLimiter, UINT32_MAX))
+			Main_SetFPSLimit(UINT32_MAX);
+		if (ImGui::RadioButton("15 Hz##FPSLIMIT", &pGui->iFPSLimiter, 15))
+			Main_SetFPSLimit(15);
+		if (ImGui::RadioButton("20 Hz##FPSLIMIT", &pGui->iFPSLimiter, 20))
+			Main_SetFPSLimit(20);
+		if (ImGui::RadioButton("30 Hz##FPSLIMIT", &pGui->iFPSLimiter, 30))
+			Main_SetFPSLimit(30);
+		if (ImGui::RadioButton("45 Hz##FPSLIMIT", &pGui->iFPSLimiter, 45))
+			Main_SetFPSLimit(45);
+		if (ImGui::RadioButton("50 Hz##FPSLIMIT", &pGui->iFPSLimiter, 50))
+			Main_SetFPSLimit(50);
+		if (ImGui::RadioButton("60 Hz##FPSLIMIT", &pGui->iFPSLimiter, 60))
+			Main_SetFPSLimit(60);
+		ImGui::EndMenu();
+	}
+	if (bMMVsync)
+		ImGui::EndDisabled();
 	if (ImGui::BeginMenu("Background Color")) {
 		float windowBGColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 		Main_GetBGColor(windowBGColor);
