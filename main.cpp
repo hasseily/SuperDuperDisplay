@@ -145,10 +145,10 @@ void Main_DrawFPSOverlay()
 	if (bDisplayFPSOnScreen)
 	{
 		a2VideoManager->DrawOverlayString("AVERAGE FPS: ", 13, 0b11010010, 0, 0);
-		a2VideoManager->DrawOverlayString("WORST FPS: ", 11, 0b11010010, 2, 1);
+		// a2VideoManager->DrawOverlayString("WORST FPS: ", 11, 0b11010010, 2, 1);
 	} else {
 		a2VideoManager->EraseOverlayRange(20, 0, 0);
-		a2VideoManager->EraseOverlayRange(20, 0, 1);
+		// a2VideoManager->EraseOverlayRange(20, 0, 1);
 	}
 	a2VideoManager->ForceBeamFullScreenRender();
 }
@@ -601,7 +601,13 @@ int main(int argc, char* argv[])
 					Main_ToggleImGui(gl_context);
 				}
 				else if (event.key.keysym.sym == SDLK_F8) {
-					Main_SetFPSOverlay(!Main_IsFPSOverlay());
+					if (SDL_GetModState() & KMOD_SHIFT) {
+						// Reset FPS on Shift-F8
+						Main_ResetFPSCalculations();
+					}
+					else {
+						Main_SetFPSOverlay(!Main_IsFPSOverlay());
+					}
 				}
 				else if (event.key.keysym.sym == SDLK_F10) {
 					a2VideoManager->ForceBeamFullScreenRender();
@@ -715,9 +721,9 @@ int main(int argc, char* argv[])
 				snprintf(fps_str_buf, 10,  "%.0f ", fps);
 				a2VideoManager->EraseOverlayRange(6, 13, 0);
 				a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b11010010, 13, 0);
-				snprintf(fps_str_buf, 10, "%.0f ", fps_worst);
-				a2VideoManager->EraseOverlayRange(6, 13, 1);
-				a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b10010010, 13, 1);
+				// snprintf(fps_str_buf, 10, "%.0f ", fps_worst);
+				// a2VideoManager->EraseOverlayRange(6, 13, 1);
+				// a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b10010010, 13, 1);
 			}
 			// Reset for next calculation
 			fps_frame_count = 0;

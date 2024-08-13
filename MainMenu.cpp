@@ -21,6 +21,7 @@
 #include <vector>
 
 // In main.cpp
+extern void Main_SetRequestedFPS(float fps);
 extern void Main_ResetFPSCalculations();
 extern SDL_DisplayMode Main_GetFullScreenMode();
 extern void Main_SetFullScreenMode(SDL_DisplayMode mode);
@@ -637,7 +638,7 @@ void MainMenu::ShowVideoMenu() {
 		Main_ResetFPSCalculations();
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
-	if (ImGui::MenuItem("Reset FPS", "")) {
+	if (ImGui::MenuItem("Reset FPS", "Shift+F8")) {
 		Main_ResetFPSCalculations();
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
