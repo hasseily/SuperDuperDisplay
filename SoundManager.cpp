@@ -9,8 +9,6 @@ SoundManager* SoundManager::s_instance;
 
 beeper_t beeper;
 
-// const int TONE_FREQUENCY = 1023; // Apple //e used a ~1 kHz tone
-
 SoundManager::SoundManager(uint32_t sampleRate, uint32_t bufferSize)
 : sampleRate(sampleRate), bufferSize(bufferSize), bIsPlaying(false) {
 	if (SDL_Init(SDL_INIT_AUDIO) < 0) {
@@ -47,13 +45,25 @@ void SoundManager::Initialize()
 	bIsPlaying = false;
 	beeper_samples_idx = 0;
 	beeper_samples_zero_ct = 0;
-	beeper_desc_t bdesc = {23.14 * SM_SAMPLE_RATE, SM_SAMPLE_RATE, 1.0f};
-	beeper_init(&beeper, &bdesc);
+	SetPAL(bIsPAL);
 }
 
 SoundManager::~SoundManager() {
 	SDL_CloseAudioDevice(audioDevice);
 	SDL_Quit();
+}
+
+void SoundManager::SetPAL(bool isPal) {
+	bIsPAL = isPal;
+	if (!bIsEnabled)
+		return;
+	bool _isPlaying = bIsPlaying;
+	if (_isPlaying)
+		SDL_PauseAudioDevice(audioDevice, 1);
+	beeper_desc_t bdesc = { bIsPAL ? 1'015'625 : 1'020'484, SM_SAMPLE_RATE, 1.0f };
+	beeper_init(&beeper, &bdesc);
+	if (_isPlaying)
+		BeginPlay();
 }
 
 void SoundManager::BeginPlay() {
