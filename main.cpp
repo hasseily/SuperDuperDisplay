@@ -415,7 +415,7 @@ int main(int argc, char* argv[])
 	bool show_postprocessing_window = false;
 	bool show_recorder_window = false;
 	int _slotnum = 0;
-	int vbl_region = 2;		// Default to NTSC. 0 is auto, 1 is PAL, 2 is NTSC
+	VideoRegion_e vbl_region = VideoRegion_e::NTSC;		// videoregion_e::Unknown is auto
 	int vbl_slider_val;
 
 	// Get the instances of all singletons before creating threads
@@ -499,14 +499,14 @@ int main(int argc, char* argv[])
 			if ((g_wh + g_wy) > g_fullscreenMode.h)
 				g_wh = g_fullscreenMode.h - g_wy;
 			Main_SetFullScreen(_sm.value("fullscreen", false));
-			vbl_region = _sm.value("videoregion", vbl_region);
-			if (vbl_region == 0)
+			vbl_region = (VideoRegion_e)_sm.value("videoregion", vbl_region);
+			if (vbl_region == VideoRegion_e::Unknown)
 			{
 				cycleCounter->isVideoRegionDynamic = true;
 			}
 			else {
 				cycleCounter->isVideoRegionDynamic = false;
-				cycleCounter->SetVideoRegion(vbl_region == 1 ? VideoRegion_e::PAL : VideoRegion_e::NTSC);
+				cycleCounter->SetVideoRegion(vbl_region);
 			}
 			if (_sm.value("show F1 window", true))
 				Main_ToggleImGui(gl_context);
@@ -785,7 +785,7 @@ int main(int argc, char* argv[])
 			{"fullscreen", _isFullscreen},
 			{"fps limit", g_fpsLimit},
 			{"vsync", g_swapInterval},
-			{"videoregion", vbl_region},
+			{"videoregion", (int)cycleCounter->GetVideoRegion()},
 			{"window background color", window_bgcolor},
 			{"show F1 window", Main_IsImGuiOn()},
 			{"show Apple 2 Video window", show_a2video_window},
