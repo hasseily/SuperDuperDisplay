@@ -71,6 +71,7 @@ private:
 	bool bAutoScale = true;		// Automatically scale to max scale?
 
 	// Shader parameter variables
+	bool p_b_smoothCorner = false;
 	bool p_b_extGamma = false;
 	bool p_b_interlace = false;
 	bool p_b_potato = false;

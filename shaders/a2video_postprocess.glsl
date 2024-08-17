@@ -68,7 +68,8 @@ out vec4 FragColor;
 
 uniform COMPAT_PRECISION int POSTPROCESSING_LEVEL;
 
-uniform bool bEXT_GAMMA; 
+uniform bool bCORNER_SMOOTH;
+uniform bool bEXT_GAMMA;
 uniform bool bINTERLACE;
 uniform bool bPOTATO; 
 uniform bool bSLOT;
@@ -253,14 +254,6 @@ void main() {
 	vec2 pos = Warp(TexCoords*vec2(1.0-ZOOMX,1.0-ZOOMY)-vec2(CENTERX,CENTERY)/100.0);
 	
 	
-	float corn;
-	if (CORNER > 0.000001) {
-		corn = pos.x * pos.y * (1.-pos.x) * (1.-pos.y);
-		// res = res * smoothstep(0.0, 0.0010, corn);	// if we want it smooth
-		if (corn < CORNER)								// if we want it cut
-			discard;
-	}
-	
 // If people prefer the BarrelDistortion algo
 	pos = BarrelDistortion(pos);
 
@@ -286,6 +279,16 @@ void main() {
 					res0.b*(1.0-C_STR) + resb*C_STR
 					);
 
+	float corn;
+	if (CORNER > 0.000001) {
+		corn = pos.x * pos.y * (1.-pos.x) * (1.-pos.y);
+		if (bCORNER_SMOOTH)
+			res = res * smoothstep(0.0, CORNER, corn);	// if we want it smooth
+		else
+			if (corn < CORNER)						// if we want it cut
+				discard;
+	}
+	
 	float l = dot(vec3(BR_DEP),res);
  
  // Color Spaces 

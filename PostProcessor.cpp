@@ -64,6 +64,7 @@ nlohmann::json PostProcessor::SerializeState()
 		{"bAutoScale", bAutoScale},
 		{"bCRTFillWindow", bCRTFillWindow},
 		{"p_f_corner", p_f_corner},
+		{"p_b_smoothCorner", p_b_smoothCorner},
 		{"p_b_extGamma", p_b_extGamma},
 		{"p_b_interlace", p_b_interlace},
 		{"p_b_potato", p_b_potato},
@@ -108,6 +109,7 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	integer_scale = jsonState.value("integer_scale", integer_scale);
 	bAutoScale = jsonState.value("bAutoScale", bAutoScale);
 	p_f_corner = jsonState.value("p_f_corner", p_f_corner);
+	p_b_smoothCorner = jsonState.value("p_b_smoothCorner", p_b_smoothCorner);
 	p_b_extGamma = jsonState.value("p_b_extGamma", p_b_extGamma);
 	p_b_interlace = jsonState.value("p_b_interlace", p_b_interlace);
 	p_b_potato = jsonState.value("p_b_potato", p_b_potato);
@@ -191,6 +193,7 @@ void PostProcessor::SelectShader()
 		shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
 
 		// shader specific
+		shaderProgram.setBool("bCORNER_SMOOTH", p_b_smoothCorner);
 		shaderProgram.setBool("bEXT_GAMMA", p_b_extGamma);
 		shaderProgram.setBool("bINTERLACE", p_b_interlace);
 		shaderProgram.setBool("bPOTATO", p_b_potato);
@@ -520,6 +523,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::SliderFloat("Curvature Vertical", &p_f_warpY, 0.00f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Barrel Distortion", &p_f_barrelDistortion, -0.30f, 5.00f, "%.2f");
 			ImGui::SliderFloat("Corners Cut", &p_f_corner, 0.f, 90.f, "%.3f");
+			ImGui::Spacing();ImGui::SameLine();ImGui::Checkbox("Smooth Corners", &p_b_smoothCorner);
 			ImGui::Separator();
 			
 			// Color Settings
