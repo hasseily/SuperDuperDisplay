@@ -271,9 +271,14 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	if (_scale > 1.0f)
 		_scale = std::floor(_scale);
 	max_integer_scale = std::max(1, static_cast<int>(_scale) + 3);	// allow for manual further zoom
-	integer_scale = std::min(integer_scale, max_integer_scale);
 	if (!bAutoScale)
+	{
+		integer_scale = std::min(integer_scale, max_integer_scale);
 		_scale = static_cast<float>(integer_scale);
+	}
+	else {
+		integer_scale = static_cast<int>(_scale);
+	}
 
 	// Determine the quad's origin
 	quadWidth = static_cast<int>(_scale * texWidth);
