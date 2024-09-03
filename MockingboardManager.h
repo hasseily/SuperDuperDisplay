@@ -3,11 +3,14 @@
 
 /*
 	This class emulates one or 2 mockingboards with dual AY-3-8910 chips
-	They're in slot 4 and 5
+	They're in slot 4 and 5. This class is NOT a complete mockingboard emulator,
+	it doesn't deal with timers or read requests. Those just cannot be handled on
+	the host computer due to the latency between the Appletini and the host.
  */
 #include <stdio.h>
 #include <SDL.h>
 #include "Ayumi.h"
+#include "SSI263.h"
 #include "nlohmann/json.hpp"
 
 const uint32_t MM_SAMPLE_RATE = 44100; 					// Audio sample rate
@@ -24,12 +27,15 @@ enum A2MBEvent_e
 	A2MBE_TOTAL_COUNT
 };
 
+// Codes for the AY-8913 come from pins BC1, BC2 and BDIR (from low to high bit)
+// BC2 is tied high to +5V
 enum A2MBCodes_e
 {
 	A2MBC_RESET = 0,			// Used generally on init only
-	A2MBC_INACTIVE = 4,			// Always used after any of the other codes is used
-	A2MBC_LATCH = 7,			// Set register number (i.e. "latch" a register)
+	A2MBC_INACTIVE = 2,			// Always used after any of the other codes is used
+	A2MBC_READ = 3,				// Read data from the latched register
 	A2MBC_WRITE = 6,			// Write data to the latched register
+	A2MBC_LATCH = 7,			// Set register number (i.e. "latch" a register)
 	A2MBC_TOTAL_COUNT
 };
 
@@ -63,8 +69,7 @@ public:
 	void Disable() { bIsEnabled = false; };
 
 	// Received a mockingboard event, we don't care if it's C4XX or C5XX
-	// All mockingboard events MUST be write events!
-	void EventReceived(uint16_t addr, uint8_t val);
+	void EventReceived(uint16_t addr, uint8_t val, bool rw);
 	
 	// Set the panning of a channel in an AY
 	// Pan is 0.0-1.0, left to right
@@ -84,6 +89,8 @@ public:
 	// Writes all registers at once -- val_array is 16 values
 	void Util_WriteAllRegisters(uint8_t ay_idx, uint8_t* val_array);
 	
+	// Speak a demo phrase
+	void Util_SpeakDemoPhrase();
 	// ====================
 	
 	// ImGUI and prefs
@@ -123,6 +130,8 @@ private:
 		0.2f, 0.2f, 0.2f,	// AY2 pans left
 		0.8f, 0.8f, 0.8f,	// AY3 pans right
 	};
+	
+	SSI263 ssi[2];
 };
 
 #endif // MOCKINGBOARDMANAGER_H

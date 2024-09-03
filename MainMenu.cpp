@@ -761,6 +761,9 @@ void MainMenu::ShowSamplesMenu() {
 		Main_ResetFPSCalculations();
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
+	if (ImGui::MenuItem("Speech Demo")) {
+		MockingboardManager::GetInstance()->Util_SpeakDemoPhrase();
+	}
 }
 
 void MainMenu::ShowDeveloperMenu() {

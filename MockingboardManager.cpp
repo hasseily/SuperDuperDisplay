@@ -22,12 +22,8 @@ MockingboardManager::MockingboardManager(uint32_t sampleRate, uint32_t bufferSiz
 
 void MockingboardManager::Initialize()
 {
-	// Reset registers
-	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
-	{
-		ay[ayidx].ResetRegisters();
-	}
-	
+	// NOTE: SSI263 objects have their own audioDevice
+	// This here is for mixing the AYs
 	if (audioDevice == 0)
 	{
 		SDL_zero(audioSpec);
@@ -46,6 +42,17 @@ void MockingboardManager::Initialize()
 		SDL_Quit();
 		throw std::runtime_error("SDL_OpenAudioDevice failed");
 	}
+	
+	// Reset registers
+	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
+	{
+		ay[ayidx].ResetRegisters();
+	}
+	for(uint8_t ssiidx = 0; ssiidx < 2; ssiidx++)
+	{
+		ssi[ssiidx].ResetRegisters();
+	}
+	
 	bIsPlaying = false;
 }
 
@@ -62,7 +69,6 @@ void MockingboardManager::BeginPlay() {
 	{
 		ay[ayidx].ResetRegisters();
 	}
-	// The default panning is one AY for each speaker
 	UpdateAllPans();
 	SDL_PauseAudioDevice(audioDevice, 0); // Start audio playback
 	bIsPlaying = true;
@@ -94,8 +100,8 @@ bool MockingboardManager::IsPlaying() {
 
 void MockingboardManager::AudioCallback(void* userdata, uint8_t* stream, int len) {
 	MockingboardManager* self = static_cast<MockingboardManager*>(userdata);
-	int samples = len / (sizeof(float) * 2); // Number of samples to fill
-	std::vector<float> buffer(samples * 2);
+	int samples = len / (sizeof(float) * 2); 	// Number of samples to fill
+	std::vector<float> buffer(samples * 2);		// TODO: preallocate large buffer
 	
 	for (int i = 0; i < samples; ++i) {
 		uint8_t ay_ct = (self->bIsDual ? 4 : 2);
@@ -117,7 +123,7 @@ void MockingboardManager::AudioCallback(void* userdata, uint8_t* stream, int len
 	SDL_memcpy(stream, buffer.data(), len);
 }
 
-void MockingboardManager::EventReceived(uint16_t addr, uint8_t val)
+void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 {
 	if (!bIsEnabled)
 		return;
@@ -136,35 +142,50 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val)
 		ayp = ((addr & 0x80) == 0 ? &ay[0] : &ay[1]);
 	else
 		ayp = ((addr & 0x80) == 0 ? &ay[2] : &ay[3]);
-	uint8_t low_nibble = addr & 0xF;
+	uint8_t low_nibble = addr & 0x0F;
 
 	switch (low_nibble) {
 		case A2MBE_ORA:
 			ayp->value_ora = val;	// data channel now has val
 			break;
 		case A2MBE_ORB:
-			ayp->value_orb = val;
-			switch (val) {
-				case A2MBC_RESET:
-					// Reset all registers to 0
-					ayp->ResetRegisters();
-					break;
-				case A2MBC_INACTIVE:
-					// In some Mockingboards, it's the setting to inactive that triggers the
-					// latching or writing. In others, it's not the case. Let's just keep it simple
-					// and not use the inactive code.
-					break;
-				case A2MBC_LATCH:
-					ayp->latched_register = ayp->value_ora;
-					// std::cerr << "Latching register: " << (int)ayp->value_ora << std::endl;
-					break;
-				case A2MBC_WRITE:
-					SetLatchedRegister(ayp, ayp->value_ora);
-					// std::cerr << "Setting Register value: " << (int)ayp->value_ora << std::endl;
-					break;
-				default:
-					break;
+			if (ayp->value_orb == A2MBC_INACTIVE)
+			{
+				// Functions only work if the AY is in inactive state
+				switch (val) {
+					case A2MBC_RESET:
+						// Reset all registers to 0
+						ayp->ResetRegisters();
+						break;
+					case A2MBC_INACTIVE:
+						// In some Mockingboards, it's the setting to inactive that triggers the
+						// latching or writing. In others, it's not the case. Let's just keep it simple
+						// and not use the inactive code.
+						break;
+					case A2MBC_LATCH:
+						// http://www.worldofspectrum.org/forums/showthread.php?t=23327
+						// Selecting an unused register number above 0x0f puts the AY into a state where
+						// any values written to the data/address bus are ignored, but can be read back
+						// within a few tens of thousands of cycles before they decay to zero.
+						if (addr <= 0x0F)
+						{
+							ayp->latched_register = ayp->value_ora;
+							// std::cerr << "Latching register: " << (int)ayp->value_ora << std::endl;
+						}
+						break;
+					case A2MBC_WRITE:
+						SetLatchedRegister(ayp, ayp->value_ora);
+						// std::cerr << "Setting Register value: " << (int)ayp->value_ora << std::endl;
+						break;
+					case A2MBC_READ:
+						// Never handled here. By the time we returned the data to the
+						// Apple 2 it would be horribly late
+						break;
+					default:
+						break;
+				}
 			}
+			ayp->value_orb = val;
 			break;
 		case A2MBE_ODDRA:
 			ayp->value_oddra = val;
@@ -175,6 +196,17 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val)
 		default:
 			break;
 	}
+	
+	// A6 is for the first SSI263 speech chip
+	// A5 is for the second SSI263 speech chip
+	for(uint8_t ssiidx = 0; ssiidx < 2; ssiidx++)
+	{
+		ssi[ssiidx].SetData(val);
+		ssi[ssiidx].SetRegisterSelect(addr & 0b11);
+		ssi[ssiidx].SetReadMode(rw);
+	}
+	ssi[0].SetCS0(addr & 0x40);
+	ssi[1].SetCS0(addr & 0x20);	
 }
 
 void MockingboardManager::SetPan(uint8_t ay_idx, uint8_t channel_idx, double pan, bool isEqp)
@@ -269,8 +301,8 @@ void MockingboardManager::Util_Reset(uint8_t ay_idx)
 	uint16_t slot = (ay_idx < 2 ? 0xC400 : 0xC500);
 	uint16_t offset = slot + (ay_idx * 0x80);
 	
-	EventReceived(offset+A2MBE_ORB, A2MBC_RESET);
-	EventReceived(offset+A2MBE_ORB, A2MBC_INACTIVE);
+	EventReceived(offset+A2MBE_ORB, A2MBC_RESET, 0);
+	EventReceived(offset+A2MBE_ORB, A2MBC_INACTIVE, 0);
 }
 
 void MockingboardManager::Util_WriteToRegister(uint8_t ay_idx, uint8_t reg_idx, uint8_t val)
@@ -281,14 +313,14 @@ void MockingboardManager::Util_WriteToRegister(uint8_t ay_idx, uint8_t reg_idx, 
 	uint16_t offset = slot + ((ay_idx % 2) * 0x80);
 	
 	// Latch the register
-	EventReceived(offset+A2MBE_ORA, reg_idx);
-	EventReceived(offset+A2MBE_ORB, A2MBC_LATCH);
-	EventReceived(offset+A2MBE_ORB, A2MBC_INACTIVE);
+	EventReceived(offset+A2MBE_ORA, reg_idx, 0);
+	EventReceived(offset+A2MBE_ORB, A2MBC_LATCH, 0);
+	EventReceived(offset+A2MBE_ORB, A2MBC_INACTIVE, 0);
 	
 	// Write
-	EventReceived(offset+A2MBE_ORA, val);
-	EventReceived(offset+A2MBE_ORB, A2MBC_WRITE);
-	EventReceived(offset+A2MBE_ORB, A2MBC_INACTIVE);
+	EventReceived(offset+A2MBE_ORA, val, 0);
+	EventReceived(offset+A2MBE_ORB, A2MBC_WRITE, 0);
+	EventReceived(offset+A2MBE_ORB, A2MBC_INACTIVE, 0);
 }
 
 void MockingboardManager::Util_WriteAllRegisters(uint8_t ay_idx, uint8_t* val_array)
@@ -298,6 +330,85 @@ void MockingboardManager::Util_WriteAllRegisters(uint8_t ay_idx, uint8_t* val_ar
 	}
 }
 
+void MockingboardManager::Util_SpeakDemoPhrase()
+{
+	// Data is formatted like the sample phrases in the MB disk1
+	// Sets of 5 bytes, starting with the highest register (FF) and
+	// ending with the Duration/Phoneme register
+	const uint8_t phrase[220] = {
+		0x50, 0xD0, 0x00, 0xCF, 0x00,	// PAUSE
+		0xE8, 0x70, 0xA8, 0x5F, 0x00,	// PAUSE
+		0xE8, 0x70, 0xA8, 0x5F, 0x00,	// PAUSE
+		0xE8, 0x70, 0xA8, 0x5F, 0x00,	// PAUSE
+		0xE8, 0x7B, 0xA8, 0x5F, 0x63,	// W
+		0xE7, 0x6B, 0xA8, 0x59, 0x47,	// I
+		0xE8, 0x6A, 0xA8, 0x61, 0x36,	// TH
+		0xE8, 0x79, 0xA8, 0x65, 0x37,	// M
+		0xE7, 0x79, 0xA8, 0x69, 0x0E,	// AH
+		0xE7, 0x6A, 0xA8, 0x61, 0x29,	// K
+		0xE8, 0x6B, 0xA8, 0x59, 0xAD,	// HFC
+		0xE8, 0x6B, 0xA8, 0x51, 0xC0,	// PAUSE
+		0xE8, 0x6A, 0xA8, 0x51, 0x07,	// I
+		0xE8, 0x6A, 0xA8, 0x4B, 0x39,	// NG
+		0xE8, 0x6A, 0xA8, 0x49, 0x64,	// B
+		0xE7, 0x6A, 0x88, 0x49, 0x11,	// O
+		0xE7, 0x5A, 0xB8, 0x51, 0x63,	// W
+		0xE7, 0x5A, 0xB8, 0x59, 0x1D,	// R
+		0xE8, 0x7A, 0xA8, 0x61, 0x65,	// D
+		0xE8, 0x79, 0xA8, 0x61, 0xC0,	// PAUSE
+		0xE8, 0x70, 0x78, 0x51, 0x00,	// PAUSE
+		0xE8, 0x70, 0x78, 0x51, 0x00,	// PAUSE
+		0xE8, 0x70, 0x78, 0x59, 0x00,	// PAUSE
+		0xE7, 0x79, 0xA8, 0x65, 0x04,	// Y
+		0xE7, 0x6A, 0x98, 0x61, 0x16,	// U
+		0xE8, 0x6B, 0xA8, 0x61, 0x60,	// L
+		0xE8, 0x7C, 0xA8, 0x59, 0x78,	// N
+		0xE7, 0x7C, 0xA8, 0x55, 0x0A,	// EH
+		0xE8, 0x6B, 0xA8, 0x62, 0x33,	// V
+		0xE8, 0x6A, 0xA8, 0x59, 0x1C,	// ER
+		0xE8, 0x7A, 0xA8, 0x51, 0x64,	// B
+		0xE7, 0x7B, 0x88, 0x51, 0x01,	// E
+		0xE8, 0x7C, 0xA8, 0x59, 0x30,	// S
+		0xE8, 0x7D, 0xA8, 0x59, 0x27,	// P
+		0xE7, 0x7D, 0x78, 0x61, 0x01,	// E
+		0xE8, 0x6C, 0xA8, 0x61, 0x28,	// T
+		0xE8, 0x6B, 0xA8, 0x59, 0x32,	// SCH
+		0xE8, 0x6A, 0xA8, 0x4D, 0x60,	// L
+		0xE7, 0x29, 0xA8, 0x41, 0x0A,	// EH
+		0xE8, 0x78, 0xA8, 0x41, 0x30,	// S
+		0xE8, 0x70, 0xA8, 0x39, 0xFF,	// LB
+		0xE8, 0x70, 0xA8, 0x39, 0x00,	// PAUSE
+		0xE8, 0xFF, 0xA8, 0x39, 0x00,	// PAUSE
+		0xE8, 0x7B, 0xA8, 0x47, 0xFF,	// LB
+	};
+	ssi[0].ResetRegisters();
+	// Raise CTL, set TRANSITIONED_INFLECTION, and lower CTL
+	EventReceived(0xC443, 0x80, 0);	// Reg 3, raise CTL
+	ssi[0].SetCS0(0);
+	EventReceived(0xC440, 0xC0, 0);	// Set TRANSITIONED_INFLECTION
+	ssi[0].SetCS0(0);
+	EventReceived(0xC443, 0x70, 0);	// Reg 3, lower CTL
+	ssi[0].SetCS0(0);
+	
+	for (auto i=0; i < sizeof(phrase); i+=5) {
+		for (auto j=0; j < 5; ++j)
+		{
+			EventReceived(0xC440 + (4-j), phrase[i+j], 0);
+			ssi[0].SetCS0(0);
+		}
+		
+		if (i < (sizeof(phrase) - 1))
+		{
+			while (!ssi[0].WasIRQTriggered() && ssi[0].IsPlaying())
+			{
+				// haven't finished yet, wait for irq to send next phoneme
+				SDL_Delay(1);
+			}
+		}
+	}
+	EventReceived(0xC443, 0x80, 0);
+	ssi[0].SetCS0(0);
+}
 ///
 ///
 /// ImGUI Interface
