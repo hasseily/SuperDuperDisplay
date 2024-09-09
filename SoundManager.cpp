@@ -3,6 +3,7 @@
 #include <iostream>
 #define CHIPS_IMPL
 #include "beeper.h"
+#include "common.h"
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 SoundManager* SoundManager::s_instance;
@@ -60,7 +61,7 @@ void SoundManager::SetPAL(bool isPal) {
 	bool _isPlaying = bIsPlaying;
 	if (_isPlaying)
 		SDL_PauseAudioDevice(audioDevice, 1);
-	beeper_desc_t bdesc = { bIsPAL ? 1'015'625.f : 1'020'484.f, SM_SAMPLE_RATE, 0.6f };
+	beeper_desc_t bdesc = { bIsPAL ? (float)1'015'625 : (float)_A2_CPU_FREQUENCY_NTSC, SM_SAMPLE_RATE, 0.6f };
 	beeper_init(&beeper, &bdesc);
 	if (_isPlaying)
 		BeginPlay();

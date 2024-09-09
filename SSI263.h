@@ -12,7 +12,7 @@
 
 	IMPLEMENTED:
 		- Phonemes
-		- Amplitude (volume)
+		- Amplitude (volume), but only directly applied
 		- Phoneme Duration (cutoff after 25-50-75-100%)
 		- Immediate Inflection
 		- Speech Rate (speed)
@@ -41,6 +41,7 @@
 	 hence have 2 uses: normally they set the phoneme duration (default is value 0),
 	 but also to set the durationMode when CTL goes low. In general the durationMode is set
 	 once at the beginning of the speech, and kept as-is because CTL won't move from 0.
+
  */
 
 #include <stdio.h>

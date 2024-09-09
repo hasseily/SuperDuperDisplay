@@ -36,6 +36,10 @@
 typedef struct uixy { uint32_t x; uint32_t y; } uXY;
 typedef struct ixy { int32_t x; int32_t y; } iXY;
 
+// Apple 2 frequency
+#define _A2_CPU_FREQUENCY_NTSC 1'020'484
+#define _A2_CPU_FREQUENCY_PAL 1'015'625
+
 // START AND END POINTS OF MEMORY SHADOWING
 // Both banks of the Apple 2 are shadowed on the host machine
 // in a single memory space, of size _A2_MEMORY_SHADOW_END*2

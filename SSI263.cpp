@@ -55,7 +55,7 @@ void SSI263::ResetRegisters()
 		audioSpec.freq = SSI263_SAMPLE_RATE;
 		audioSpec.format = AUDIO_S16LSB;
 		audioSpec.channels = 1;
-		audioSpec.samples = 64;
+		audioSpec.samples = 512;
 		audioSpec.callback = SSI263::AudioCallback;
 		audioSpec.userdata = this;
 		
@@ -291,16 +291,24 @@ void SSI263::AudioCallback(void* userdata, uint8_t* stream, int len) {
 	int samples_to_copy = len;
 	samples_to_copy = std::min(samples_to_copy, static_cast<int>(_vecS.size()) - _currIdx);
 
-if (_DEBUG_SSI263 > 1)
-	std::cerr << "samples: " << samples_to_copy << " / " << _currIdx << " / " << _vecS.size() << std::endl;
+	if (_DEBUG_SSI263 > 1)
+		std::cerr << "samples: " << samples_to_copy << " / " << _currIdx << " / " << _vecS.size() << std::endl;
 
 	SDL_memcpy(stream, _vecS.data() + _currIdx, samples_to_copy);
 	_currIdx += samples_to_copy;
 	
 	// rollover
 	if (samples_to_copy < len) {
-		SDL_memcpy(stream + samples_to_copy, _vecS.data(), (len - samples_to_copy));
-		_currIdx = (len - samples_to_copy);
+		// TODO: CHECK WHICH IS HAPPENING IN THE REAL MOCKINGBOARD
+		// HARDCODED LAST SAMPLES
+		_currIdx = static_cast<int>(_vecS.size()) - self->audioSpec.samples*2;
+		SDL_memcpy(stream + samples_to_copy, _vecS.data() + _currIdx, (len - samples_to_copy));
+		// LAST X SAMPLES
+		// _currIdx = static_cast<int>(_vecS.size()) - (len - samples_to_copy);
+		// SDL_memcpy(stream + samples_to_copy, _vecS.data() + _currIdx, (len - samples_to_copy));
+		// ROLL OVER
+		// SDL_memcpy(stream + samples_to_copy, _vecS.data(), (len - samples_to_copy));
+		// _currIdx = (len - samples_to_copy);
 		
 		// Determine if we need to trigger the IRQ
 		if (self->durationMode != SSI263DR_DISABLED_AR)

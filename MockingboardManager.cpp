@@ -1,6 +1,7 @@
 #include "MockingboardManager.h"
 #include <iostream>
 #include <vector>
+#include "common.h"
 #include "imgui.h"
 
 // below because "The declaration of a static data member in its class definition is not a definition"
@@ -8,10 +9,10 @@ MockingboardManager* MockingboardManager::s_instance;
 
 MockingboardManager::MockingboardManager(uint32_t sampleRate, uint32_t bufferSize)
 : sampleRate(sampleRate), bufferSize(bufferSize),
-	ay{ Ayumi(false, 1750000, sampleRate),
-		Ayumi(false, 1750000, sampleRate),
-		Ayumi(false, 1750000, sampleRate),
-		Ayumi(false, 1750000, sampleRate) } {
+	ay{ Ayumi(false, _A2_CPU_FREQUENCY_NTSC, sampleRate),
+		Ayumi(false, _A2_CPU_FREQUENCY_NTSC, sampleRate),
+		Ayumi(false, _A2_CPU_FREQUENCY_NTSC, sampleRate),
+		Ayumi(false, _A2_CPU_FREQUENCY_NTSC, sampleRate) } {
 	if (SDL_Init(SDL_INIT_AUDIO) < 0) {
 		std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
 		throw std::runtime_error("SDL_Init failed");
@@ -354,7 +355,7 @@ void MockingboardManager::Util_SpeakDemoPhrase()
 		0xE7, 0x6A, 0x88, 0x49, 0x11,	// O
 		0xE7, 0x5A, 0xB8, 0x51, 0x63,	// W
 		0xE7, 0x5A, 0xB8, 0x59, 0x1D,	// R
-		0xE8, 0x7A, 0xA8, 0x61, 0x65,	// D
+		0xE8, 0x7A, 0xA8, 0x61, 0x65,	// D	(75% speed - at 100% is good: byte 5 would be 0x25)
 		0xE8, 0x79, 0xA8, 0x61, 0xC0,	// PAUSE
 		0xE8, 0x70, 0x78, 0x51, 0x00,	// PAUSE
 		0xE8, 0x70, 0x78, 0x51, 0x00,	// PAUSE
@@ -368,7 +369,7 @@ void MockingboardManager::Util_SpeakDemoPhrase()
 		0xE8, 0x6A, 0xA8, 0x59, 0x1C,	// ER
 		0xE8, 0x7A, 0xA8, 0x51, 0x64,	// B
 		0xE7, 0x7B, 0x88, 0x51, 0x01,	// E
-		0xE8, 0x7C, 0xA8, 0x59, 0x30,	// S
+		0xE8, 0x7C, 0xA8, 0x59, 0x30,	// S	Always crackles at 100%
 		0xE8, 0x7D, 0xA8, 0x59, 0x27,	// P
 		0xE7, 0x7D, 0x78, 0x61, 0x01,	// E
 		0xE8, 0x6C, 0xA8, 0x61, 0x28,	// T
