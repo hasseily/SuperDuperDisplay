@@ -105,6 +105,9 @@
     <ClCompile Include="SoundManager.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="SSI263.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -212,6 +215,12 @@
     <ClInclude Include="SoundManager.h">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="MainMenu.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SSI263.h">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
@@ -269,9 +278,6 @@
       <Filter>shaders</Filter>
     </None>
     <None Include="shaders\a2video_beam_merge.frag">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\a2video_postprocess2.glsl">
       <Filter>shaders</Filter>
     </None>
   </ItemGroup>

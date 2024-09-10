@@ -49,7 +49,7 @@ void MockingboardManager::Initialize()
 	{
 		ay[ayidx].ResetRegisters();
 	}
-	for(uint8_t ssiidx = 0; ssiidx < 2; ssiidx++)
+	for(uint8_t ssiidx = 0; ssiidx < 4; ssiidx++)
 	{
 		ssi[ssiidx].ResetRegisters();
 	}
@@ -128,6 +128,13 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 {
 	if (!bIsEnabled)
 		return;
+
+	// Reset CS0 for all SSI chips
+	for (uint8_t ssiidx = 0; ssiidx < 4; ssiidx++)
+	{
+		ssi[ssiidx].SetCS0(0);
+	}
+
 	// Only parse 0xC4xx or 0xC5xx events (slots 4 and 5)
 	if (((addr >> 8) != 0xC4) && ((addr >> 8) != 0xC5))
 		return;
@@ -139,10 +146,17 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 
 	// get which ay chip to use
 	Ayumi *ayp;
+	SSI263* ssip;
 	if ((addr >> 8) == 0xC4)
-		ayp = ((addr & 0x80) == 0 ? &ay[0] : &ay[1]);
-	else
-		ayp = ((addr & 0x80) == 0 ? &ay[2] : &ay[3]);
+	{
+		ayp = ((addr & 0x80) == 0 ? &ay[0] : &ay[1]);		// 0x00, 0x80
+		ssip = ((addr & 0x20) == 0 ? &ssi[0] : &ssi[1]);	// 0x40, 0x20
+	}
+	else {
+		ayp = ((addr & 0x80) == 0 ? &ay[2] : &ay[3]);		// 0x00, 0x80
+		ssip = ((addr & 0x20) == 0 ? &ssi[2] : &ssi[3]);	// 0x40, 0x20
+	}
+
 	uint8_t low_nibble = addr & 0x0F;
 
 	switch (low_nibble) {
@@ -197,17 +211,13 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 		default:
 			break;
 	}
-	
-	// A6 is for the first SSI263 speech chip
-	// A5 is for the second SSI263 speech chip
-	for(uint8_t ssiidx = 0; ssiidx < 2; ssiidx++)
-	{
-		ssi[ssiidx].SetData(val);
-		ssi[ssiidx].SetRegisterSelect(addr & 0b11);
-		ssi[ssiidx].SetReadMode(rw);
-	}
-	ssi[0].SetCS0(addr & 0x40);
-	ssi[1].SetCS0(addr & 0x20);	
+
+	// Update the valid SSI chip
+	ssip->SetData(val);
+	ssip->SetRegisterSelect(addr & 0b11);
+	ssip->SetReadMode(rw);
+	ssip->SetCS0(1);
+	ssip->Update();
 }
 
 void MockingboardManager::SetPan(uint8_t ay_idx, uint8_t channel_idx, double pan, bool isEqp)
@@ -385,17 +395,13 @@ void MockingboardManager::Util_SpeakDemoPhrase()
 	ssi[0].ResetRegisters();
 	// Raise CTL, set TRANSITIONED_INFLECTION, and lower CTL
 	EventReceived(0xC443, 0x80, 0);	// Reg 3, raise CTL
-	ssi[0].SetCS0(0);
 	EventReceived(0xC440, 0xC0, 0);	// Set TRANSITIONED_INFLECTION
-	ssi[0].SetCS0(0);
 	EventReceived(0xC443, 0x70, 0);	// Reg 3, lower CTL
-	ssi[0].SetCS0(0);
 	
 	for (auto i=0; i < sizeof(phrase); i+=5) {
 		for (auto j=0; j < 5; ++j)
 		{
 			EventReceived(0xC440 + (4-j), phrase[i+j], 0);
-			ssi[0].SetCS0(0);
 		}
 		
 		if (i < (sizeof(phrase) - 1))
@@ -408,7 +414,6 @@ void MockingboardManager::Util_SpeakDemoPhrase()
 		}
 	}
 	EventReceived(0xC443, 0x80, 0);
-	ssi[0].SetCS0(0);
 }
 ///
 ///

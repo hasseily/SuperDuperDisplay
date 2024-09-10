@@ -100,6 +100,11 @@ private:
 	bool pinRead;			// R/!W
 	bool pinCS0;			// switching cs0 to ON writes the data
 	bool pinCS1;			// !IOSELECT
+
+	// Previous pin state
+	bool pinRead_prev;
+	bool pinCS0_prev;
+	bool pinCS1_prev;
 	
 	bool irqIsSet = false;
 	bool irqShouldProcess = false;

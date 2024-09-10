@@ -131,7 +131,7 @@ private:
 		0.8f, 0.8f, 0.8f,	// AY3 pans right
 	};
 	
-	SSI263 ssi[2];
+	SSI263 ssi[4];
 };
 
 #endif // MOCKINGBOARDMANAGER_H

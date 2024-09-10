@@ -186,6 +186,7 @@
     <ClCompile Include="A2VideoManager.cpp" />
     <ClCompile Include="shader.cpp" />
     <ClCompile Include="SoundManager.cpp" />
+    <ClCompile Include="SSI263.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="A2VideoManager.h" />
@@ -223,6 +224,7 @@
     <ClInclude Include="SDHRWindow.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="SoundManager.h" />
+    <ClInclude Include="SSI263.h" />
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>

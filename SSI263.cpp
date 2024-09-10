@@ -27,6 +27,18 @@ SSI263::~SSI263()
 	
 }
 
+void SSI263::Update()
+{
+	if (!pinCS0)
+		return;
+	bool isChanged = 
+		((pinRead != pinRead_prev)
+		|| (pinCS0 != pinCS0_prev)
+		|| (pinCS1 != pinCS1_prev));
+	if (isChanged && !pinRead && pinCS0 && !pinCS1)
+		LoadRegister();
+}
+
 void SSI263::ResetRegisters()
 {
 	// Reset all registers to their default values on power-on
@@ -40,9 +52,9 @@ void SSI263::ResetRegisters()
 	
 	registerSelect = 0;
 	byteData = 0;
-	pinRead = false;
-	pinCS0 = false;
-	pinCS1 = false;
+	pinRead = pinRead_prev = false;
+	pinCS0 = pinCS0_prev = false;
+	pinCS1 = pinCS1_prev = false;
 	irqIsSet = false;
 	irqShouldProcess = false;
 	regCTL = true; // Power down
@@ -173,28 +185,22 @@ void SSI263::LoadRegister()
 void SSI263::SetReadMode(bool pinState)
 {
 	// Set R/W mode, true for R (read)
-	bool isChanged = (pinRead != pinState);
+	pinRead_prev = pinRead;
 	pinRead = pinState;
-	if (isChanged && !pinRead && pinCS0 && !pinCS1)
-		LoadRegister();
 }
 
 void SSI263::SetCS0(bool pinState)
 {
 	// Coming from A6 or A5 depending on the SSI chip position on the card
-	bool isChanged = (pinCS0 != pinState);
+	pinCS0_prev = pinCS0;
 	pinCS0 = pinState;
-	if (isChanged && !pinRead && pinCS0 && !pinCS1)
-		LoadRegister();
 }
 
 void SSI263::SetCS1(bool pinState)
 {
 	// Set CS1 pin state (IOSELECT)
-	bool isChanged = (pinCS1 != pinState);
+	pinCS1_prev = pinCS1;
 	pinCS1 = pinState;
-	if (isChanged && !pinRead && pinCS0 && !pinCS1)
-		LoadRegister();
 }
 
 bool SSI263::WasIRQTriggered()
