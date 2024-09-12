@@ -61,7 +61,7 @@ void SoundManager::SetPAL(bool isPal) {
 	bool _isPlaying = bIsPlaying;
 	if (_isPlaying)
 		SDL_PauseAudioDevice(audioDevice, 1);
-	beeper_desc_t bdesc = { bIsPAL ? (float)1'015'625 : (float)_A2_CPU_FREQUENCY_NTSC, SM_SAMPLE_RATE, 0.6f };
+	beeper_desc_t bdesc = { bIsPAL ? (float)_A2_CPU_FREQUENCY_PAL : (float)_A2_CPU_FREQUENCY_NTSC, SM_SAMPLE_RATE, 0.6f };
 	beeper_init(&beeper, &bdesc);
 	if (_isPlaying)
 		BeginPlay();
