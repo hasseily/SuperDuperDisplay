@@ -46,7 +46,7 @@ public:
 	 @param index index of the sound channel
 	 @param t_off 1 if the tone is off
 	 @param n_off 1 if the noise is off
-	 @param e_on 1 if the envalope is on
+	 @param e_on 1 if the envelope is on
 	 */
 	void SetMixer(int index, bool t_off, bool n_off, bool e_on);
 	/** @brief Sets the volume for the specified sound channel

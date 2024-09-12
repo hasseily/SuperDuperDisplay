@@ -106,11 +106,11 @@ void MockingboardManager::AudioCallback(void* userdata, uint8_t* stream, int len
 		}
 		if (self->bIsDual)
 		{
-			buffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left + self->ay[2].left + self->ay[3].left);
-			buffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right + self->ay[2].right + self->ay[3].right);
+			buffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left + self->ay[2].left + self->ay[3].left) / 4.0f;
+			buffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right + self->ay[2].right + self->ay[3].right) / 4.0f;
 		} else {
-			buffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left);
-			buffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right);
+			buffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left) / 2.0f;
+			buffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right) / 2.0f;
 		}
 	}
 	
@@ -158,20 +158,6 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 			ayp->value_ora = val;	// data channel now has val
 			break;
 		case A2MBE_ORB:
-			// Check !RESET pin
-			if ((val & 0b100) == 0)
-			{
-				if (bNotResetPinState == 1)
-				{
-					// !RESET pulled low
-					// Reset all registers to 0
-					ayp->ResetRegisters();
-					bNotResetPinState = 0;
-				}
-			}
-			else {
-				bNotResetPinState = 1;
-			}
 			switch (val & 0b11) {
 			case A2MBC_INACTIVE:
 				// In some Mockingboards, it's the setting to inactive that triggers the
@@ -201,6 +187,20 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 				break;
 			}
 			ayp->value_orb = (val & 0b11);
+			// Check !RESET pin
+			if ((val >> 2) == 0)
+			{
+				if (bNotResetPinState == 1)
+				{
+					// !RESET pulled low
+					// Reset all registers to 0
+					ayp->ResetRegisters();
+					bNotResetPinState = 0;
+				}
+			}
+			else {
+				bNotResetPinState = 1;
+			}
 			break;
 		case A2MBE_ODDRA:
 			ayp->value_oddra = val;

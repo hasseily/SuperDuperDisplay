@@ -153,20 +153,14 @@ void Ayumi::ResetRegisters() {
 	SetTone(1, 0);			// reg 2 & 3
 	SetTone(2, 0);			// reg 4 & 5
 	SetNoise(0);			// reg 6
-	channels[0].t_off = 1;	// reg 5
-	channels[1].t_off = 1;
-	channels[2].t_off = 1;
-	channels[0].n_off = 1;
-	channels[1].n_off = 1;
-	channels[2].n_off = 1;
-	SetVolume(0, 0);		// reg 8
-	channels[0].e_on = 0;
-	SetVolume(1, 0);		// reg 9
-	channels[1].e_on = 0;
-	SetVolume(2, 0);		// reg 10
-	channels[2].e_on = 0;
-	SetEnvelope(0);			// reg 11 & 12
-	SetEnvelopeShape(0);	// reg 13
+	SetMixer(0, 0, 0, 0);	// reg 7
+	SetMixer(1, 0, 0, 0);
+	SetMixer(2, 0, 0, 0);
+	SetVolume(0, 0);		// reg 10
+	SetVolume(1, 0);		// reg 11
+	SetVolume(2, 0);		// reg 12
+	SetEnvelope(0);			// reg 13 & 14
+	SetEnvelopeShape(0);	// reg 15
 }
 
 void Ayumi::Process() {
