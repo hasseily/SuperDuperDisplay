@@ -77,13 +77,6 @@ void MockingboardManager::BeginPlay() {
 }
 
 void MockingboardManager::StopPlay() {
-	bool is_queue_empty = false;
-	while (!is_queue_empty) {
-		if (SDL_GetQueuedAudioSize(audioDevice) == 0) {
-			is_queue_empty = true;
-		}
-		SDL_Delay(5);
-	}
 	// set amplitude to 0
 	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
 	{
@@ -92,6 +85,7 @@ void MockingboardManager::StopPlay() {
 		ay[ayidx].SetVolume(2, 0);
 	}
 	SDL_PauseAudioDevice(audioDevice, 1);
+	SDL_ClearQueuedAudio(audioDevice);
 	bIsPlaying = false;
 }
 
@@ -164,43 +158,49 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 			ayp->value_ora = val;	// data channel now has val
 			break;
 		case A2MBE_ORB:
-			if (ayp->value_orb == A2MBC_INACTIVE)
+			// Check !RESET pin
+			if ((val & 0b100) == 0)
 			{
-				// Functions only work if the AY is in inactive state
-				switch (val) {
-					case A2MBC_RESET:
-						// Reset all registers to 0
-						ayp->ResetRegisters();
-						break;
-					case A2MBC_INACTIVE:
-						// In some Mockingboards, it's the setting to inactive that triggers the
-						// latching or writing. In others, it's not the case. Let's just keep it simple
-						// and not use the inactive code.
-						break;
-					case A2MBC_LATCH:
-						// http://www.worldofspectrum.org/forums/showthread.php?t=23327
-						// Selecting an unused register number above 0x0f puts the AY into a state where
-						// any values written to the data/address bus are ignored, but can be read back
-						// within a few tens of thousands of cycles before they decay to zero.
-						if (addr <= 0x0F)
-						{
-							ayp->latched_register = ayp->value_ora;
-							// std::cerr << "Latching register: " << (int)ayp->value_ora << std::endl;
-						}
-						break;
-					case A2MBC_WRITE:
-						SetLatchedRegister(ayp, ayp->value_ora);
-						// std::cerr << "Setting Register value: " << (int)ayp->value_ora << std::endl;
-						break;
-					case A2MBC_READ:
-						// Never handled here. By the time we returned the data to the
-						// Apple 2 it would be horribly late
-						break;
-					default:
-						break;
+				if (bNotResetPinState == 1)
+				{
+					// !RESET pulled low
+					// Reset all registers to 0
+					ayp->ResetRegisters();
+					bNotResetPinState = 0;
 				}
 			}
-			ayp->value_orb = val;
+			else {
+				bNotResetPinState = 1;
+			}
+			switch (val & 0b11) {
+			case A2MBC_INACTIVE:
+				// In some Mockingboards, it's the setting to inactive that triggers the
+				// latching or writing. In others, it's not the case. Let's just keep it simple
+				// and not use the inactive code.
+				break;
+			case A2MBC_READ:
+				// Never handled here. By the time we returned the data to the
+				// Apple 2 it would be horribly late
+				break;
+			case A2MBC_WRITE:
+				SetLatchedRegister(ayp, ayp->value_ora);
+				// std::cerr << "Setting Register value: " << (int)ayp->value_ora << std::endl;
+				break;
+			case A2MBC_LATCH:
+				// http://www.worldofspectrum.org/forums/showthread.php?t=23327
+				// Selecting an unused register number above 0x0f puts the AY into a state where
+				// any values written to the data/address bus are ignored, but can be read back
+				// within a few tens of thousands of cycles before they decay to zero.
+				if (ayp->value_ora <= 0xFF)
+				{
+					ayp->latched_register = ayp->value_ora;
+					// std::cerr << "Latching register: " << (int)ayp->value_ora << std::endl;
+				}
+				break;
+			default:
+				break;
+			}
+			ayp->value_orb = (val & 0b11);
 			break;
 		case A2MBE_ODDRA:
 			ayp->value_oddra = val;
@@ -304,6 +304,7 @@ void MockingboardManager::SetLatchedRegister(Ayumi* ayp, uint8_t value)
 
 // UTILITY METHODS
 // These methods are unnecessary for regular operation on SDD where only events are received
+// Every time we send an event, make sure the !RESET bit (bit 2) is high
 
 void MockingboardManager::Util_Reset(uint8_t ay_idx)
 {
@@ -312,8 +313,8 @@ void MockingboardManager::Util_Reset(uint8_t ay_idx)
 	uint16_t slot = (ay_idx < 2 ? 0xC400 : 0xC500);
 	uint16_t offset = slot + (ay_idx * 0x80);
 	
-	EventReceived(offset+A2MBE_ORB, A2MBC_RESET, 0);
-	EventReceived(offset+A2MBE_ORB, A2MBC_INACTIVE, 0);
+	EventReceived(offset+A2MBE_ORB, 0, 0);	// Reset (bit 2 is 0)
+	EventReceived(offset+A2MBE_ORB, 0b100 | A2MBC_INACTIVE, 0);
 }
 
 void MockingboardManager::Util_WriteToRegister(uint8_t ay_idx, uint8_t reg_idx, uint8_t val)
@@ -325,13 +326,13 @@ void MockingboardManager::Util_WriteToRegister(uint8_t ay_idx, uint8_t reg_idx, 
 	
 	// Latch the register
 	EventReceived(offset+A2MBE_ORA, reg_idx, 0);
-	EventReceived(offset+A2MBE_ORB, A2MBC_LATCH, 0);
-	EventReceived(offset+A2MBE_ORB, A2MBC_INACTIVE, 0);
+	EventReceived(offset+A2MBE_ORB, 0b100 | A2MBC_LATCH, 0);
+	EventReceived(offset+A2MBE_ORB, 0b100 | A2MBC_INACTIVE, 0);
 	
 	// Write
 	EventReceived(offset+A2MBE_ORA, val, 0);
-	EventReceived(offset+A2MBE_ORB, A2MBC_WRITE, 0);
-	EventReceived(offset+A2MBE_ORB, A2MBC_INACTIVE, 0);
+	EventReceived(offset+A2MBE_ORB, 0b100 | A2MBC_WRITE, 0);
+	EventReceived(offset+A2MBE_ORB, 0b100 | A2MBC_INACTIVE, 0);
 }
 
 void MockingboardManager::Util_WriteAllRegisters(uint8_t ay_idx, uint8_t* val_array)

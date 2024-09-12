@@ -9,7 +9,7 @@
 #include "SSI263Phonemes.h"
 #include <iostream>
 
-#define _DEBUG_SSI263 1
+#define _DEBUG_SSI263 0
 
 SSI263::SSI263()
 {

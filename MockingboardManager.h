@@ -6,7 +6,18 @@
 	They're in slot 4 and 5. This class is NOT a complete mockingboard emulator,
 	it doesn't deal with timers or read requests. Those just cannot be handled on
 	the host computer due to the latency between the Appletini and the host.
+
+	* Notes on the Mockingboards:
+	* Do not assume any panning for the AY channels beyond the fact that each AY with
+	* its 3 channels maps to the same L-R pan. The original MB-A maps AY1 left and AY2
+	* right, although AY-2 has some crosstalk in the left channel. The new ReactiveMicro
+	* v2.1 maps both AYs to both L+R but slightly more left.
+	* 
+	* In both cases of MB-A and RM-2.1, AY1 is _significantly_ more powerful than AY2
+	* and outputs close to 4x the dB of AY2. If the AY2 pot in MB-A is at max, then to
+	* balance out AY1 its pot needs to be at 1/4.
  */
+
 #include <stdio.h>
 #include <SDL.h>
 #include "Ayumi.h"
@@ -29,13 +40,13 @@ enum A2MBEvent_e
 
 // Codes for the AY-8913 come from pins BC1, BC2 and BDIR (from low to high bit)
 // BC2 is tied high to +5V
+// The first 2 bits of the value will be BC1 and BDIR. The 3rd bit is !RESET
 enum A2MBCodes_e
 {
-	A2MBC_RESET = 0,			// Used generally on init only
-	A2MBC_INACTIVE = 2,			// Always used after any of the other codes is used
-	A2MBC_READ = 3,				// Read data from the latched register
-	A2MBC_WRITE = 6,			// Write data to the latched register
-	A2MBC_LATCH = 7,			// Set register number (i.e. "latch" a register)
+	A2MBC_INACTIVE = 0,		// Always used after any of the other codes is used
+	A2MBC_READ,				// Read data from the latched register
+	A2MBC_WRITE,			// Write data to the latched register
+	A2MBC_LATCH,			// Set register number (i.e. "latch" a register)
 	A2MBC_TOTAL_COUNT
 };
 
@@ -121,6 +132,7 @@ private:
 	bool bIsEnabled = true;
 	bool bIsDual = true;
 	bool bIsPlaying;
+	bool bNotResetPinState = 1;
 	int mb_event_count = 0;
 	
 	Ayumi ay[4];
