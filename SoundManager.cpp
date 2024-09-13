@@ -22,27 +22,30 @@ SoundManager::SoundManager(uint32_t sampleRate, uint32_t bufferSize)
 
 void SoundManager::Initialize()
 {
-	if (audioDevice != 0)
+	if (audioDevice == 0)
 	{
-		StopPlay();
-		SDL_CloseAudioDevice(audioDevice);
-		audioDevice = 0;
+		SDL_zero(audioSpec);
+		audioSpec.freq = sampleRate;
+		audioSpec.format = AUDIO_F32;
+		audioSpec.channels = 1;
+		audioSpec.samples = bufferSize;
+		audioSpec.callback = nullptr;
+		audioSpec.userdata = this;
+
+		audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
 	}
-	SDL_zero(audioSpec);
-	audioSpec.freq = sampleRate;
-	audioSpec.format = AUDIO_F32;
-	audioSpec.channels = 1;
-	audioSpec.samples = bufferSize;
-	audioSpec.callback = nullptr;
-	audioSpec.userdata = this;
-	
-	audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
+	else {
+		std::cerr << "Stopping and clearing Speaker Audio" << std::endl;
+		SDL_PauseAudioDevice(audioDevice, 1);
+		SDL_ClearQueuedAudio(audioDevice);
+	}
 	
 	if (audioDevice == 0) {
 		std::cerr << "Failed to open audio device: " << SDL_GetError() << std::endl;
 		SDL_Quit();
 		throw std::runtime_error("SDL_OpenAudioDevice failed");
 	}
+
 	bIsPlaying = false;
 	beeper_samples_idx = 0;
 	beeper_samples_zero_ct = 0;

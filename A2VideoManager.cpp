@@ -375,7 +375,7 @@ void A2VideoManager::ResetComputer()
     if (bIsRebooting == true)
         return;
     bIsRebooting = true;
-	SerializeState();
+	Initialize();
 	MemoryManager::GetInstance()->Initialize();
 	SoundManager::GetInstance()->Initialize();
 	MockingboardManager::GetInstance()->Initialize();
