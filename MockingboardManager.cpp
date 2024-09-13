@@ -37,6 +37,11 @@ void MockingboardManager::Initialize()
 		
 		audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
 	}
+	else {
+		// std::cerr << "Stopping and clearing Mockingboard Audio" << std::endl;
+		SDL_PauseAudioDevice(audioDevice, 1);
+		SDL_ClearQueuedAudio(audioDevice);
+	}
 	
 	if (audioDevice == 0) {
 		std::cerr << "Failed to open audio device: " << SDL_GetError() << std::endl;
@@ -154,62 +159,65 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 	uint8_t low_nibble = addr & 0x0F;
 
 	switch (low_nibble) {
-		case A2MBE_ORA:
-			ayp->value_ora = val;	// data channel now has val
-			break;
-		case A2MBE_ORB:
-			switch (val & 0b11) {
-			case A2MBC_INACTIVE:
-				// In some Mockingboards, it's the setting to inactive that triggers the
-				// latching or writing. In others, it's not the case. Let's just keep it simple
-				// and not use the inactive code.
-				break;
-			case A2MBC_READ:
-				// Never handled here. By the time we returned the data to the
-				// Apple 2 it would be horribly late
-				break;
-			case A2MBC_WRITE:
-				SetLatchedRegister(ayp, ayp->value_ora);
-				// std::cerr << "Setting Register value: " << (int)ayp->value_ora << std::endl;
-				break;
-			case A2MBC_LATCH:
-				// http://www.worldofspectrum.org/forums/showthread.php?t=23327
-				// Selecting an unused register number above 0x0f puts the AY into a state where
-				// any values written to the data/address bus are ignored, but can be read back
-				// within a few tens of thousands of cycles before they decay to zero.
-				if (ayp->value_ora <= 0xFF)
-				{
-					ayp->latched_register = ayp->value_ora;
-					// std::cerr << "Latching register: " << (int)ayp->value_ora << std::endl;
-				}
-				break;
-			default:
-				break;
-			}
-			ayp->value_orb = (val & 0b11);
-			// Check !RESET pin
-			if ((val >> 2) == 0)
+	case A2MBE_ORA:
+		ayp->value_ora = val;	// data channel now has val
+		break;
+	case A2MBE_ORB:
+		// Check !RESET pin
+		if ((val & 0b111) == 0)
+		{
+			// std::cerr << "RESET LOW" << std::endl;
+			if (bNotResetPinState == true)
 			{
-				if (bNotResetPinState == 1)
-				{
-					// !RESET pulled low
-					// Reset all registers to 0
-					ayp->ResetRegisters();
-					bNotResetPinState = 0;
-				}
-			}
-			else {
-				bNotResetPinState = 1;
+				// !RESET pulled low
+				// Reset all registers to 0
+				ayp->ResetRegisters();
+				bNotResetPinState = false;
+				// std::cerr << "    Registers Reset" << std::endl;
 			}
 			break;
-		case A2MBE_ODDRA:
-			ayp->value_oddra = val;
+		}
+		else {
+			bNotResetPinState = true;
+		}
+		switch (val & 0b11) {
+		case A2MBC_INACTIVE:
+			// In some Mockingboards, it's the setting to inactive that triggers the
+			// latching or writing. In others, it's not the case. Let's just keep it simple
+			// and not use the inactive code.
 			break;
-		case A2MBE_ODDRB:
-			ayp->value_oddrb = val;
+		case A2MBC_READ:
+			// Never handled here. By the time we returned the data to the
+			// Apple 2 it would be horribly late
+			break;
+		case A2MBC_WRITE:
+			SetLatchedRegister(ayp, ayp->value_ora);
+			// std::cerr << "Setting Register value: " << (int)ayp->value_ora << std::endl;
+			break;
+		case A2MBC_LATCH:
+			// http://www.worldofspectrum.org/forums/showthread.php?t=23327
+			// Selecting an unused register number above 0x0f puts the AY into a state where
+			// any values written to the data/address bus are ignored, but can be read back
+			// within a few tens of thousands of cycles before they decay to zero.
+			if (ayp->value_ora <= 0xFF)
+			{
+				ayp->latched_register = ayp->value_ora;
+				// std::cerr << "Latching register: " << (int)ayp->value_ora << std::endl;
+			}
 			break;
 		default:
 			break;
+		}
+		ayp->value_orb = (val & 0b11);
+		break;
+	case A2MBE_ODDRA:
+		ayp->value_oddra = val;
+		break;
+	case A2MBE_ODDRB:
+		ayp->value_oddrb = val;
+		break;
+	default:
+		break;
 	}
 
 	// Update the valid SSI chip

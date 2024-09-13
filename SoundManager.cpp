@@ -35,7 +35,7 @@ void SoundManager::Initialize()
 		audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
 	}
 	else {
-		std::cerr << "Stopping and clearing Speaker Audio" << std::endl;
+		// std::cerr << "Stopping and clearing Speaker Audio" << std::endl;
 		SDL_PauseAudioDevice(audioDevice, 1);
 		SDL_ClearQueuedAudio(audioDevice);
 	}
