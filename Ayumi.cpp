@@ -157,8 +157,11 @@ void Ayumi::ResetRegisters() {
 	SetMixer(1, 0, 0, 0);
 	SetMixer(2, 0, 0, 0);
 	SetVolume(0, 0);		// reg 10
+	channels[0].e_on = 0;
 	SetVolume(1, 0);		// reg 11
+	channels[1].e_on = 0;
 	SetVolume(2, 0);		// reg 12
+	channels[2].e_on = 0;
 	SetEnvelope(0);			// reg 13 & 14
 	SetEnvelopeShape(0);	// reg 15
 }
