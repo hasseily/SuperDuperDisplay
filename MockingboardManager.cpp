@@ -53,6 +53,11 @@ void MockingboardManager::Initialize()
 	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
 	{
 		ay[ayidx].ResetRegisters();
+		ay[ayidx].value_ora = 0;
+		ay[ayidx].value_orb = 0;
+		ay[ayidx].value_oddra = 0xFF;
+		ay[ayidx].value_oddrb = 0xFF;
+		ay[ayidx].latched_register = 0;
 	}
 	for(uint8_t ssiidx = 0; ssiidx < 4; ssiidx++)
 	{
@@ -160,11 +165,13 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 
 	switch (low_nibble) {
 	case A2MBE_ORA:
-		ayp->value_ora = val;	// data channel now has val
+		ayp->value_ora = val & ayp->value_oddra;	// data channel now has val
 		break;
 	case A2MBE_ORB:
+		// std::cerr << std::hex << "ORB " << (int)val << " DD " << (int)ayp->value_oddrb << std::endl;
+		val &= ayp->value_oddrb;
 		// Check !RESET pin
-		if ((val & 0b111) == 0)
+		if ((val & 0b100) == 0)
 		{
 			// std::cerr << "RESET LOW" << std::endl;
 			if (bNotResetPinState == true)
@@ -172,6 +179,11 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 				// !RESET pulled low
 				// Reset all registers to 0
 				ayp->ResetRegisters();
+				ayp->value_ora = 0;
+				ayp->value_orb = 0;
+				ayp->value_oddra = 0xFF;
+				ayp->value_oddrb = 0xFF;
+				ayp->latched_register = 0;
 				bNotResetPinState = false;
 				// std::cerr << "    Registers Reset" << std::endl;
 			}
