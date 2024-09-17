@@ -2,7 +2,8 @@
 #define MOCKINGBOARDMANAGER_H
 
 /*
-	This class emulates one or 2 mockingboards with dual AY-3-8910 chips
+	This class emulates one or 2 mockingboards, each with the following chips:
+		2x M6522, 2x AY-3-8913, 2x SSI263
 	They're in slot 4 and 5. This class is NOT a complete mockingboard emulator,
 	it doesn't deal with timers or read requests. Those just cannot be handled on
 	the host computer due to the latency between the Appletini and the host.
@@ -132,18 +133,23 @@ private:
 	bool bIsEnabled = true;
 	bool bIsDual = true;
 	bool bIsPlaying;
-	bool bNotResetPinState = 1;
 	int mb_event_count = 0;
 	
+	// Chips
 	Ayumi ay[4];
+	SSI263 ssi[4];
+
+	// M6522 pin state
+	uint64_t a_pins_in[4] = { 0 };
+	uint64_t a_pins_out[4] = { 0 };
+	uint64_t a_pins_out_prev[4] = { 0 };
+
 	float allpans[4][3] = {
 		0.3f, 0.3f, 0.3f,	// AY0 pans left
 		0.7f, 0.7f, 0.7f,	// AY1 pans right
 		0.2f, 0.2f, 0.2f,	// AY2 pans left
 		0.8f, 0.8f, 0.8f,	// AY3 pans right
 	};
-	
-	SSI263 ssi[4];
 };
 
 #endif // MOCKINGBOARDMANAGER_H

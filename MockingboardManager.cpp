@@ -4,6 +4,10 @@
 #include "common.h"
 #include "imgui.h"
 
+#define CHIPS_IMPL
+#include "m6522.h"
+m6522_t m6522[4];
+
 // below because "The declaration of a static data member in its class definition is not a definition"
 MockingboardManager* MockingboardManager::s_instance;
 
@@ -36,11 +40,21 @@ void MockingboardManager::Initialize()
 		audioSpec.userdata = this;
 		
 		audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
+
+		for (uint8_t viaidx = 0; viaidx < 4; viaidx++)
+		{
+			m6522_init(&m6522[viaidx]);
+		}
 	}
 	else {
 		// std::cerr << "Stopping and clearing Mockingboard Audio" << std::endl;
 		SDL_PauseAudioDevice(audioDevice, 1);
 		SDL_ClearQueuedAudio(audioDevice);
+
+		for (uint8_t viaidx = 0; viaidx < 4; viaidx++)
+		{
+			m6522_reset(&m6522[viaidx]);
+		}
 	}
 	
 	if (audioDevice == 0) {
@@ -50,6 +64,7 @@ void MockingboardManager::Initialize()
 	}
 	
 	// Reset registers
+	/*
 	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
 	{
 		ay[ayidx].ResetRegisters();
@@ -57,8 +72,9 @@ void MockingboardManager::Initialize()
 		ay[ayidx].value_orb = 0;
 		ay[ayidx].value_oddra = 0xFF;
 		ay[ayidx].value_oddrb = 0xFF;
-		ay[ayidx].latched_register = 0;
+		ay[ayidx].latched_register = 0;		
 	}
+	*/
 	for(uint8_t ssiidx = 0; ssiidx < 4; ssiidx++)
 	{
 		ssi[ssiidx].ResetRegisters();
@@ -75,11 +91,6 @@ MockingboardManager::~MockingboardManager() {
 void MockingboardManager::BeginPlay() {
 	if (!bIsEnabled)
 		return;
-	// Reset registers and set panning
-	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
-	{
-		ay[ayidx].ResetRegisters();
-	}
 	UpdateAllPans();
 	SDL_PauseAudioDevice(audioDevice, 0); // Start audio playback
 	bIsPlaying = true;
@@ -139,94 +150,147 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 		ssi[ssiidx].SetCS0(0);
 	}
 
+	// M6522 STATE MACHINE - Runs every tick
+	//		Figure out the IN pins based on the event info
+	//		Call tick() and retrieve the OUT pins of all M6522s
+
+	uint64_t pins_in = 0;
+	pins_in = addr & 0xF;	// Pins RS0-RS3
+	if (rw == 0)
+		pins_in |= ((uint64_t)val << M6522_PIN_D0);	// Pins D0-D7
+	pins_in |= ((uint64_t)rw << M6522_PIN_RW);
+
+	for (int viaidx = 0; viaidx < 4; ++viaidx)
+	{
+		a_pins_in[viaidx] = pins_in;	// standard for all 4 chips
+		a_pins_out_prev[viaidx] = a_pins_out[viaidx];
+	}
+
+	// The other input pins are dependent on which M6522 is chosen
+	// CS1 is A7 or !A7 (ie 0x00 or 0x80 of the address) depending on the MC6522 position in a card
+	// !IOSELECT (CS2) depends on the address (0xC4-- or 0xC5--), i.e. which card it is
+	// CA1 is an input-only pin on the M6522 which comes from the SSI263's A/!R as it finishes a phoneme
+
+	if ((addr >> 8) == 0xC4)
+	{
+		// FIRST MOCKINGBOARD, SLOT 4
+		a_pins_in[0] |= (0ULL << M6522_PIN_CS2);
+		a_pins_in[1] |= (0ULL << M6522_PIN_CS2);
+		a_pins_in[2] |= (1ULL << M6522_PIN_CS2);
+		a_pins_in[3] |= (1ULL << M6522_PIN_CS2);
+	}
+	else if ((addr >> 8) == 0xC5)
+	{
+		// SECOND MOCKINGBOARD, SLOT 5
+		a_pins_in[0] |= (1ULL << M6522_PIN_CS2);
+		a_pins_in[1] |= (1ULL << M6522_PIN_CS2);
+		a_pins_in[2] |= (0ULL << M6522_PIN_CS2);
+		a_pins_in[3] |= (0ULL << M6522_PIN_CS2);
+	}
+	else
+	{
+		a_pins_in[0] |= (1ULL << M6522_PIN_CS2);
+		a_pins_in[1] |= (1ULL << M6522_PIN_CS2);
+		a_pins_in[2] |= (1ULL << M6522_PIN_CS2);
+		a_pins_in[3] |= (1ULL << M6522_PIN_CS2);
+	}
+
+	if (addr & 0x80)
+	{
+		// FIRST M6522 IN EACH CARD
+		a_pins_in[0] |= (1ULL << M6522_PIN_CS1);
+		a_pins_in[1] |= (0ULL << M6522_PIN_CS1);
+		a_pins_in[2] |= (1ULL << M6522_PIN_CS1);
+		a_pins_in[3] |= (0ULL << M6522_PIN_CS1);
+	}
+	else {
+		// SECOND M6522 IN EACH CARD
+		a_pins_in[0] |= (0ULL << M6522_PIN_CS1);
+		a_pins_in[1] |= (1ULL << M6522_PIN_CS1);
+		a_pins_in[2] |= (0ULL << M6522_PIN_CS1);
+		a_pins_in[3] |= (1ULL << M6522_PIN_CS1);
+	}
+
+	int _activeChipsIdx = -1;
+	Ayumi* ayp = nullptr;
+	SSI263* ssip = nullptr;
+
+	// Tick all the M6522s
+	// Check if we need to reset any AY chip
+	// And figure out which AY and SSI chips are active
+	for (int viaidx = 0; viaidx < 4; ++viaidx)
+	{
+		a_pins_out[viaidx] = m6522_tick(&m6522[viaidx], a_pins_in[viaidx]);
+		if ((a_pins_out_prev[viaidx] & M6522_PB2) != 0)
+		{
+			// PB2 went LOW, which goes to !RESET
+			if ((a_pins_out[viaidx] & M6522_PB2) == 0)
+				ay[viaidx].ResetRegisters();
+		}
+		// CS1 && !CS2 means the chip is active
+		if (((a_pins_in[viaidx] & M6522_CS1) != 0) &&
+			((a_pins_in[viaidx] & M6522_CS2) == 0))
+		{
+			_activeChipsIdx = viaidx;
+			ayp = &ay[viaidx];
+			ssip = &ssi[viaidx];
+		}
+	}
+
 	// Only parse 0xC4xx or 0xC5xx events (slots 4 and 5)
-	if (((addr >> 8) != 0xC4) && ((addr >> 8) != 0xC5))
+	if (_activeChipsIdx == -1)
 		return;
+
+	// 
+	// All below code doesn't tick but instead responds only on specific events
+	// 
 	
 	if (!bIsPlaying)
 		BeginPlay();
 
 	++mb_event_count;
 
-	// get which ay chip to use
-	Ayumi *ayp;
-	SSI263* ssip;
-	if ((addr >> 8) == 0xC4)
-	{
-		ayp = ((addr & 0x80) == 0 ? &ay[0] : &ay[1]);		// 0x00, 0x80
-		ssip = ((addr & 0x20) == 0 ? &ssi[0] : &ssi[1]);	// 0x40, 0x20
-	}
-	else {
-		ayp = ((addr & 0x80) == 0 ? &ay[2] : &ay[3]);		// 0x00, 0x80
-		ssip = ((addr & 0x20) == 0 ? &ssi[2] : &ssi[3]);	// 0x40, 0x20
-	}
+	// The AYs are connected to the M6522 through:
+	//	M6522		AY
+	//	-----		-----
+	//	PA0-7		A0-7
+	//	PB0			BC1
+	//	PB1			BDIR
+	//	PB2			!RESET
 
-	uint8_t low_nibble = addr & 0x0F;
+	// And in the AY, the functions are:
+	//	BDIR	BC1		function
+	//	0		0		INACTIVE
+	//	0		1		READ
+	//	1		0		WRITE
+	//	1		1		LATCH
 
-	switch (low_nibble) {
-	case A2MBE_ORA:
-		ayp->value_ora = val & ayp->value_oddra;	// data channel now has val
+	int ay_function = M6522_GET_PB(a_pins_out[_activeChipsIdx]) & 0b11;	// PB1 and PB0
+	int ay_value = M6522_GET_PA(a_pins_out[_activeChipsIdx]);			// Port A pins of the MC6522
+	switch (ay_function) {
+	case A2MBC_INACTIVE:
+		// In some Mockingboards, it's the setting to inactive that triggers the
+		// latching or writing. In others, it's not the case. Let's just keep it simple
+		// and not use the inactive code.
 		break;
-	case A2MBE_ORB:
-		// std::cerr << std::hex << "ORB " << (int)val << " DD " << (int)ayp->value_oddrb << std::endl;
-		val &= ayp->value_oddrb;
-		// Check !RESET pin
-		if ((val & 0b100) == 0)
+	case A2MBC_READ:
+		// Never handled here. By the time we returned the data to the
+		// Apple 2 it would be horribly late
+		break;
+	case A2MBC_WRITE:
+		SetLatchedRegister(ayp, ay_value);
+		// std::cerr << "Setting Register value: " << (int)ay_value << std::endl;
+		break;
+	case A2MBC_LATCH:
+		// http://www.worldofspectrum.org/forums/showthread.php?t=23327
+		// Selecting an unused register number above 0x0f puts the AY into a state where
+		// any values written to the data/address bus are ignored, but can be read back
+		// within a few tens of thousands of cycles before they decay to zero.
+		if (ay_value <= 0xFF)
 		{
-			// std::cerr << "RESET LOW" << std::endl;
-			if (bNotResetPinState == true)
-			{
-				// !RESET pulled low
-				// Reset all registers to 0
-				ayp->ResetRegisters();
-				ayp->value_ora = 0;
-				ayp->value_orb = 0;
-				ayp->value_oddra = 0xFF;
-				ayp->value_oddrb = 0xFF;
-				ayp->latched_register = 0;
-				bNotResetPinState = false;
-				// std::cerr << "    Registers Reset" << std::endl;
-			}
-			break;
+			ayp->latched_register = ay_value;
+			// std::cerr << "Latching register: " << (int)ay_value << std::endl;
 		}
-		else {
-			bNotResetPinState = true;
-		}
-		switch (val & 0b11) {
-		case A2MBC_INACTIVE:
-			// In some Mockingboards, it's the setting to inactive that triggers the
-			// latching or writing. In others, it's not the case. Let's just keep it simple
-			// and not use the inactive code.
-			break;
-		case A2MBC_READ:
-			// Never handled here. By the time we returned the data to the
-			// Apple 2 it would be horribly late
-			break;
-		case A2MBC_WRITE:
-			SetLatchedRegister(ayp, ayp->value_ora);
-			// std::cerr << "Setting Register value: " << (int)ayp->value_ora << std::endl;
-			break;
-		case A2MBC_LATCH:
-			// http://www.worldofspectrum.org/forums/showthread.php?t=23327
-			// Selecting an unused register number above 0x0f puts the AY into a state where
-			// any values written to the data/address bus are ignored, but can be read back
-			// within a few tens of thousands of cycles before they decay to zero.
-			if (ayp->value_ora <= 0xFF)
-			{
-				ayp->latched_register = ayp->value_ora;
-				// std::cerr << "Latching register: " << (int)ayp->value_ora << std::endl;
-			}
-			break;
-		default:
-			break;
-		}
-		ayp->value_orb = (val & 0b11);
-		break;
-	case A2MBE_ODDRA:
-		ayp->value_oddra = val;
-		break;
-	case A2MBE_ODDRB:
-		ayp->value_oddrb = val;
 		break;
 	default:
 		break;

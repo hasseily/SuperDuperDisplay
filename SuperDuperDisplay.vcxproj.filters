@@ -221,6 +221,9 @@
     <ClInclude Include="SSI263.h">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="m6522.h">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
