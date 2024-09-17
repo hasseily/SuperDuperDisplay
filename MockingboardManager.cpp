@@ -171,7 +171,7 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 	// !IOSELECT (CS2) depends on the address (0xC4-- or 0xC5--), i.e. which card it is
 	// CA1 is an input-only pin on the M6522 which comes from the SSI263's A/!R as it finishes a phoneme
 
-	// Defaults disabled
+	// Defaults disabled (high)
 	a_pins_in[0] |= (1ULL << M6522_PIN_CS2);
 	a_pins_in[1] |= (1ULL << M6522_PIN_CS2);
 	a_pins_in[2] |= (1ULL << M6522_PIN_CS2);
@@ -197,15 +197,11 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 	{
 		// FIRST M6522 IN EACH CARD
 		a_pins_in[0] |= (1ULL << M6522_PIN_CS1);
-		a_pins_in[1] |= (0ULL << M6522_PIN_CS1);
 		a_pins_in[2] |= (1ULL << M6522_PIN_CS1);
-		a_pins_in[3] |= (0ULL << M6522_PIN_CS1);
 	}
 	else {
 		// SECOND M6522 IN EACH CARD
-		a_pins_in[0] |= (0ULL << M6522_PIN_CS1);
 		a_pins_in[1] |= (1ULL << M6522_PIN_CS1);
-		a_pins_in[2] |= (0ULL << M6522_PIN_CS1);
 		a_pins_in[3] |= (1ULL << M6522_PIN_CS1);
 	}
 
