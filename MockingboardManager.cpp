@@ -117,7 +117,7 @@ bool MockingboardManager::IsPlaying() {
 void MockingboardManager::AudioCallback(void* userdata, uint8_t* stream, int len) {
 	MockingboardManager* self = static_cast<MockingboardManager*>(userdata);
 	int samples = len / (sizeof(float) * 2); 	// Number of samples to fill
-	std::vector<float> buffer(samples * 2);		// TODO: preallocate large buffer
+	std::vector<float> buffer(samples * 2, 0.0f);		// TODO: preallocate large buffer
 	
 	for (int i = 0; i < samples; ++i) {
 		uint8_t ay_ct = (self->bIsDual ? 4 : 2);
@@ -171,28 +171,26 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 	// !IOSELECT (CS2) depends on the address (0xC4-- or 0xC5--), i.e. which card it is
 	// CA1 is an input-only pin on the M6522 which comes from the SSI263's A/!R as it finishes a phoneme
 
+	// Defaults disabled
+	a_pins_in[0] |= (1ULL << M6522_PIN_CS2);
+	a_pins_in[1] |= (1ULL << M6522_PIN_CS2);
+	a_pins_in[2] |= (1ULL << M6522_PIN_CS2);
+	a_pins_in[3] |= (1ULL << M6522_PIN_CS2);
+
 	if ((addr >> 8) == 0xC4)
 	{
 		// FIRST MOCKINGBOARD, SLOT 4
-		a_pins_in[0] |= (0ULL << M6522_PIN_CS2);
-		a_pins_in[1] |= (0ULL << M6522_PIN_CS2);
-		a_pins_in[2] |= (1ULL << M6522_PIN_CS2);
-		a_pins_in[3] |= (1ULL << M6522_PIN_CS2);
+		a_pins_in[0] &= (~M6522_CS2);
+		a_pins_in[1] &= (~M6522_CS2);
 	}
 	else if ((addr >> 8) == 0xC5)
 	{
 		// SECOND MOCKINGBOARD, SLOT 5
-		a_pins_in[0] |= (1ULL << M6522_PIN_CS2);
-		a_pins_in[1] |= (1ULL << M6522_PIN_CS2);
-		a_pins_in[2] |= (0ULL << M6522_PIN_CS2);
-		a_pins_in[3] |= (0ULL << M6522_PIN_CS2);
-	}
-	else
-	{
-		a_pins_in[0] |= (1ULL << M6522_PIN_CS2);
-		a_pins_in[1] |= (1ULL << M6522_PIN_CS2);
-		a_pins_in[2] |= (1ULL << M6522_PIN_CS2);
-		a_pins_in[3] |= (1ULL << M6522_PIN_CS2);
+		if (this->bIsDual)
+		{
+			a_pins_in[2] &= (~M6522_CS2);
+			a_pins_in[3] &= (~M6522_CS2);
+		}
 	}
 
 	if (addr & 0x80)
