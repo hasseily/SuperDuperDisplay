@@ -117,7 +117,6 @@ bool MockingboardManager::IsPlaying() {
 void MockingboardManager::AudioCallback(void* userdata, uint8_t* stream, int len) {
 	MockingboardManager* self = static_cast<MockingboardManager*>(userdata);
 	int samples = len / (sizeof(float) * 2); 	// Number of samples to fill
-	std::vector<float> buffer(samples * 2, 0.0f);		// TODO: preallocate large buffer
 	
 	for (int i = 0; i < samples; ++i) {
 		uint8_t ay_ct = (self->bIsDual ? 4 : 2);
@@ -127,16 +126,17 @@ void MockingboardManager::AudioCallback(void* userdata, uint8_t* stream, int len
 		}
 		if (self->bIsDual)
 		{
-			buffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left + self->ay[2].left + self->ay[3].left) / 4.0f;
-			buffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right + self->ay[2].right + self->ay[3].right) / 4.0f;
+			self->audioCallbackBuffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left + self->ay[2].left + self->ay[3].left) / 4.0f;
+			self->audioCallbackBuffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right + self->ay[2].right + self->ay[3].right) / 4.0f;
 		} else {
-			buffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left) / 2.0f;
-			buffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right) / 2.0f;
+			self->audioCallbackBuffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left) / 2.0f;
+			self->audioCallbackBuffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right) / 2.0f;
 		}
 	}
 	
 	// Copy the buffer to the stream
-	SDL_memcpy(stream, buffer.data(), len);
+	SDL_memcpy(stream, self->audioCallbackBuffer, len);
+	SDL_memset(self->audioCallbackBuffer, 0, len);
 }
 
 void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
@@ -503,10 +503,8 @@ void MockingboardManager::Util_SpeakDemoPhrase()
 void MockingboardManager::DisplayImGuiChunk()
 {
 	ImGui::Checkbox("Enable Mockingboard (Slot 4)", &bIsEnabled);
-	if (ImGui::Checkbox("Dual Mockingboards (Slots 4 and 5)", &bIsDual))
-		bIsEnabled = true;
-	
 	if (bIsEnabled)
+		ImGui::Checkbox("Dual Mockingboards (Slots 4 and 5)", &bIsDual);
 		ImGui::Text("Mockingboard Events: %d", mb_event_count);
 	
 	ImGui::SeparatorText("[ CHANNEL PANNING ]");

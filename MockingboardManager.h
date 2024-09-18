@@ -134,6 +134,7 @@ private:
 	bool bIsDual = true;
 	bool bIsPlaying;
 	int mb_event_count = 0;
+	float audioCallbackBuffer[MM_BUFFER_SIZE*2] = { 0.f };	// Stereo
 	
 	// Chips
 	Ayumi ay[4];
