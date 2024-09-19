@@ -502,10 +502,14 @@ void MockingboardManager::Util_SpeakDemoPhrase()
 
 void MockingboardManager::DisplayImGuiChunk()
 {
-	ImGui::Checkbox("Enable Mockingboard (Slot 4)", &bIsEnabled);
+	if (ImGui::Checkbox("Enable Mockingboard (Slot 4)", &bIsEnabled))
+		this->Initialize();
 	if (bIsEnabled)
-		ImGui::Checkbox("Dual Mockingboards (Slots 4 and 5)", &bIsDual);
+	{
+		if (ImGui::Checkbox("Dual Mockingboards (Slots 4 and 5)", &bIsDual))
+			this->Initialize();
 		ImGui::Text("Mockingboard Events: %d", mb_event_count);
+	}
 	
 	ImGui::SeparatorText("[ CHANNEL PANNING ]");
 	if (ImGui::SliderFloat("AY Chip 0 Channel 0", &allpans[0][0], 0, 1, "%.3f", 1))
