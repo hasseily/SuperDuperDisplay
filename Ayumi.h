@@ -125,7 +125,8 @@ public:
 
 	// this is public because of the Envelopes dispatch table
 	void ResetSegment();
-
+	// dummy variable to force MSVC to not merge hold_top() and hold_bottom()
+	volatile bool bHoldTop;
 private:
 	int UpdateTone(int index);
 	int UpdateNoise();

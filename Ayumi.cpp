@@ -59,11 +59,11 @@ static void slide_down(Ayumi* ay) {
 }
 
 static void hold_top(Ayumi* ay) {
-	(void) ay;
+	ay->bHoldTop = true;
 }
 
 static void hold_bottom(Ayumi* ay) {
-	(void) ay;
+	ay->bHoldTop = false;
 }
 
 static void (* const Envelopes[][2])(Ayumi*) = {
@@ -248,15 +248,30 @@ int Ayumi::UpdateEnvelope() {
 void Ayumi::UpdateMixer() {
 	int i;
 	int out;
-	int noise = UpdateNoise();
-	int envelope = UpdateEnvelope();
+	int _noise = UpdateNoise();
+	int _envelope = UpdateEnvelope();
 	left = 0;
 	right = 0;
 	for (i = 0; i < AYUMI_TONE_CHANNELS; i += 1) {
-		out = (UpdateTone(i) | channels[i].t_off) & (noise | channels[i].n_off);
-		out *= channels[i].e_on ? envelope : channels[i].volume * 2 + 1;
+		/*
+		// Old code
+		out = (UpdateTone(i) | channels[i].t_off) & (_noise | channels[i].n_off);
+		out *= channels[i].e_on ? _envelope : channels[i].volume * 2 + 1;
 		left += dac_table[out] * channels[i].pan_left;
 		right += dac_table[out] * channels[i].pan_right;
+		*/
+
+		int _tone = UpdateTone(i);
+		bool isToneActive = !channels[i].t_off && _tone;
+		bool isNoiseActive = !channels[i].n_off && _noise;
+		bool isOutputActive = isToneActive || isNoiseActive;
+
+		int outputLevel = isOutputActive
+			? (channels[i].e_on ? _envelope : channels[i].volume * 2 + 1)
+			: 0;  // Output level is 0 if the channel is not active
+
+		left += dac_table[outputLevel] * channels[i].pan_left;
+		right += dac_table[outputLevel] * channels[i].pan_right;
 	}
 }
 
