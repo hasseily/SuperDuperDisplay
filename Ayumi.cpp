@@ -254,24 +254,21 @@ void Ayumi::UpdateMixer() {
 	right = 0;
 	for (i = 0; i < AYUMI_TONE_CHANNELS; i += 1) {
 		/*
-		// Old code
+		// Old code, uses bit masking on differing types
 		out = (UpdateTone(i) | channels[i].t_off) & (_noise | channels[i].n_off);
 		out *= channels[i].e_on ? _envelope : channels[i].volume * 2 + 1;
-		left += dac_table[out] * channels[i].pan_left;
-		right += dac_table[out] * channels[i].pan_right;
 		*/
 
-		int _tone = UpdateTone(i);
-		bool isToneActive = !channels[i].t_off && _tone;
+		bool isToneActive = !channels[i].t_off && UpdateTone(i);
 		bool isNoiseActive = !channels[i].n_off && _noise;
 		bool isOutputActive = isToneActive || isNoiseActive;
 
-		int outputLevel = isOutputActive
+		out = isOutputActive
 			? (channels[i].e_on ? _envelope : channels[i].volume * 2 + 1)
-			: 0;  // Output level is 0 if the channel is not active
+			: 0;
 
-		left += dac_table[outputLevel] * channels[i].pan_left;
-		right += dac_table[outputLevel] * channels[i].pan_right;
+		left += dac_table[out] * channels[i].pan_left;
+		right += dac_table[out] * channels[i].pan_right;
 	}
 }
 
