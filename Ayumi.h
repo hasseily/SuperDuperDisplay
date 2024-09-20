@@ -72,10 +72,6 @@ public:
 	 */
 	void Process();
 	
-	uint8_t value_ora = 0;			// data channel
-	uint8_t value_orb = 0;			// command channel
-	uint8_t value_oddra = 0;		// data direction (a) -- should always be 0xFF after init
-	uint8_t value_oddrb = 0;		// data direction (b) -- should always be 0xFF after init
 	uint8_t latched_register = 0;	// currently latched register
 	
 	struct tone_channel {
