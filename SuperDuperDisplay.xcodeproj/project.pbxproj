@@ -500,7 +500,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"/opt/homebrew/Cellar/openssl@3/3.2.0_1/lib",
+					"/opt/homebrew/Cellar/openssl@3/**",
 					/opt/homebrew/Cellar/sdl2/2.28.5/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -517,7 +517,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"/opt/homebrew/Cellar/openssl@3/3.2.0_1/lib",
+					"/opt/homebrew/Cellar/openssl@3/**",
 					/opt/homebrew/Cellar/sdl2/2.28.5/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
