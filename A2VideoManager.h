@@ -35,7 +35,7 @@ enum class BeamState_e
 	BEAMSTATE_TOTAL_COUNT
 };
 
-static std::string BeamStateToString(BeamState_e state) {
+[[maybe_unused]] static std::string BeamStateToString(BeamState_e state) {
 	switch(state) {
 		case BeamState_e::UNKNOWN: return "UNKNOWN";
 		case BeamState_e::NBHBLANK: return "NBHBLANK";

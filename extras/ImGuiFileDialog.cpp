@@ -1623,7 +1623,8 @@ bool IGFD::FileInfos::FinalizeFileTypeParsing(const size_t& vMaxDotToExtract) {
 			if (countExtDot > 1U) {  // multi layer ext
 				auto count = countExtDot;
 				while (count > 0 && lpt != std::string::npos && lvl < fileExtLevels.size()) {
-					++lpt, ++lvl;
+					++lpt;
+					++lvl;
 					if (fileNameExt.size() > lpt) {
 						lpt = fileNameExt.find_first_of('.', lpt);
 						if (lpt != std::string::npos) {

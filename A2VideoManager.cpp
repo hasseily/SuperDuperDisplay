@@ -303,7 +303,7 @@ void A2VideoManager::Initialize()
 		std::sort(font_roms_array.begin(), font_roms_array.end());
 	} catch (const std::filesystem::filesystem_error& e) {
 		std::cerr << "Error accessing directory: " << e.what() << std::endl;
-		exit;
+		exit(1);
 	}
 	
 	// Initialize windows

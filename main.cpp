@@ -41,8 +41,6 @@
 #include <libgen.h>
 #endif
 
-static uint32_t fbWidth = 0;
-static uint32_t fbHeight = 0;
 static bool g_swapInterval = true;  // VSYNC
 static bool g_adaptiveVsync = true;
 static bool g_quitIsRequested = false;
@@ -194,9 +192,7 @@ void Main_SetFullScreen(bool bWantFullscreen) {
 	// Do nothing if it's Apple. Let the user maximize via the OSX UI
 	// Because if the user sets fullscreen via the OSX UI we won't know,
 	// and later setting fullscreen crashes SDL
-#if defined(__APPLE__)
-	return;
-#endif
+#if !defined(__APPLE__)
 	auto _flags = SDL_GetWindowFlags(window);
 	// Don't do anything if the window isn't resizable
 	if ((_flags & SDL_WINDOW_RESIZABLE) == 0)
@@ -216,6 +212,8 @@ void Main_SetFullScreen(bool bWantFullscreen) {
 	}
 
 	Main_ResetFPSCalculations();
+#endif
+
 }
 
 SDL_DisplayMode Main_GetFullScreenMode() {
@@ -408,27 +406,24 @@ int main(int argc, char* argv[])
 
 	static bool bShouldTerminateNetworking = false;
 	static bool bShouldTerminateProcessing = false;
-    bool show_demo_window = false;
     bool show_metrics_window = false;
 	bool show_texture_window = false;
 	bool show_a2video_window = true;
 	bool show_postprocessing_window = false;
 	bool show_recorder_window = false;
-	int _slotnum = 0;
 	VideoRegion_e vbl_region = VideoRegion_e::NTSC;		// videoregion_e::Unknown is auto
-	int vbl_slider_val;
 
 	// Get the instances of all singletons before creating threads
 	// This ensures thread safety
 	// The OpenGLHelper instance is already acquired
-	auto memManager = MemoryManager::GetInstance();
-	auto sdhrManager = SDHRManager::GetInstance();
-    auto a2VideoManager = A2VideoManager::GetInstance();
-	auto postProcessor = PostProcessor::GetInstance();
-	auto eventRecorder = EventRecorder::GetInstance();
-	auto cycleCounter = CycleCounter::GetInstance();
-	auto soundManager = SoundManager::GetInstance();
-	auto mockingboardManager = MockingboardManager::GetInstance();
+	[[maybe_unused]] auto memManager = MemoryManager::GetInstance();
+	[[maybe_unused]] auto sdhrManager = SDHRManager::GetInstance();
+	[[maybe_unused]] auto a2VideoManager = A2VideoManager::GetInstance();
+	[[maybe_unused]] auto postProcessor = PostProcessor::GetInstance();
+	[[maybe_unused]] auto eventRecorder = EventRecorder::GetInstance();
+	[[maybe_unused]] auto cycleCounter = CycleCounter::GetInstance();
+	[[maybe_unused]] auto soundManager = SoundManager::GetInstance();
+	[[maybe_unused]] auto mockingboardManager = MockingboardManager::GetInstance();
 
 	std::cout << "Renderer Initializing..." << std::endl;
 	while (!a2VideoManager->IsReady())
