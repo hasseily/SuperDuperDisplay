@@ -33,12 +33,12 @@ void A2WindowBeam::SetShaderPrograms(const char* shaderVertexPath, const char* s
 }
 
 
-const uint32_t A2WindowBeam::GetWidth()
+uint32_t A2WindowBeam::GetWidth() const
 {
 	return screen_count.x;
 }
 
-const uint32_t A2WindowBeam::GetHeight()
+uint32_t A2WindowBeam::GetHeight() const
 {
 	return screen_count.y;
 }
@@ -78,7 +78,7 @@ void A2WindowBeam::UpdateVertexArray()
 }
 
 
-GLuint A2WindowBeam::GetOutputTextureId()
+GLuint A2WindowBeam::GetOutputTextureId() const
 {
 	return output_texture_id;
 }
