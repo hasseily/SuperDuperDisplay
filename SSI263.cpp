@@ -90,7 +90,7 @@ void SSI263::LoadRegister()
 				phoneme 		= byteData & 0b0011'1111;
 				phonemeDuration = ((byteData & 0b1100'0000) >> 6);
 				irqIsSet = false;
-				if (_DEBUG_SSI263 > 0)
+				if constexpr (_DEBUG_SSI263 > 0)
 					std::cerr << "Generating P:" << phoneme << " Dur:" << phonemeDuration << std::endl;
 				GeneratePhonemeSamples();
 			}
@@ -101,7 +101,7 @@ void SSI263::LoadRegister()
 				inflection &= ~(0x00FF << 3);
 				inflection |= (byteData << 3);
 				irqIsSet = false;
-				if (_DEBUG_SSI263 > 0)
+				if constexpr (_DEBUG_SSI263 > 0)
 					std::cerr << "I1:" << inflection << std::endl;
 			}
 			break;
@@ -117,7 +117,7 @@ void SSI263::LoadRegister()
 				// top 4 bits are the speech rate
 				speechRate = (byteData >> 4);
 				irqIsSet = false;
-				if (_DEBUG_SSI263 > 0)
+				if constexpr (_DEBUG_SSI263 > 0)
 					std::cerr << "I2:" << inflection << " SpeechRate:" << speechRate << std::endl;
 
 			}
@@ -126,7 +126,7 @@ void SSI263::LoadRegister()
 			{
 				amplitude = byteData & 0b1111;
 				articulationRate = (byteData >> 4) & 0b111;
-				if (_DEBUG_SSI263 > 0)
+				if constexpr (_DEBUG_SSI263 > 0)
 					std::cerr << "Amp:" << amplitude << " Artic:" << articulationRate << std::endl;
 
 				// if CTL goes from high to low:
@@ -158,7 +158,7 @@ void SSI263::LoadRegister()
 			break;
 		default:	// Anything 0b1xx
 			filterFrequency = byteData;
-			if (_DEBUG_SSI263 > 0)
+			if constexpr (_DEBUG_SSI263 > 0)
 				std::cerr << "FF:" << filterFrequency << std::endl;
 			break;
 	}

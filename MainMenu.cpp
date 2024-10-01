@@ -332,7 +332,6 @@ void MainMenu::Render() {
 			ImGui::SliderInt("Texture Slot Number", &pGui->iTextureSlotIdx, 0, _SDHR_MAX_TEXTURES + 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
 			GLint _w, _h;
 			auto glhelper = OpenGLHelper::GetInstance();
-			auto a2VideoManager = A2VideoManager::GetInstance();
 			if (pGui->iTextureSlotIdx < _SDHR_MAX_TEXTURES)
 			{
 				glBindTexture(GL_TEXTURE_2D, glhelper->get_texture_id_at_slot(pGui->iTextureSlotIdx));
@@ -378,7 +377,6 @@ void MainMenu::Render() {
 		if (pGui->bShowSSWindow) {
 			ImGui::SetNextWindowSizeConstraints(ImVec2(170, 410), ImVec2(FLT_MAX, FLT_MAX));
 			ImGui::Begin("Soft Switches", &pGui->bShowSSWindow);
-			auto a2VideoManager = A2VideoManager::GetInstance();
 			auto memManager = MemoryManager::GetInstance();
 			bool ssValue0 = memManager->IsSoftSwitch(A2SS_80STORE);
 			if (ImGui::Checkbox("A2SS_80STORE", &ssValue0)) {

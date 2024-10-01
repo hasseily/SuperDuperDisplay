@@ -4,6 +4,7 @@
 #include <sstream>
 
 float Memory_HighlightWriteFunction(const uint8_t* data, size_t offset, uint8_t cutoffSeconds) {
+	(void)data;
 	// data pointer is the start of memory
 	auto usecdelta = CycleCounter::GetInstance()->GetCycleTimestamp() - MemoryManager::GetInstance()->GetMemWriteTimestamp(offset);
 	// Return a range between 0 and 1, where 1 is newly updated and 0 is at least 1 second ago

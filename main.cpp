@@ -723,7 +723,7 @@ int main(int argc, char* argv[])
 		auto _fps_delta = dt_NOW - fps_last_counter_display;
 		if (_fps_delta > (_fpsAverageTimeWindow * _pfreq))
 		{
-			float fps = fps_frame_count / (_fps_delta / _pfreq);
+			float fps = fps_frame_count / ((float)_fps_delta / _pfreq);
 			if ((fps_worst > fps) && (fps > 0))
 				fps_worst = fps;
 
