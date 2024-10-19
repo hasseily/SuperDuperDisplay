@@ -2,12 +2,27 @@
 #define MOCKINGBOARDMANAGER_H
 
 /*
-	This class emulates one or 2 mockingboards with dual AY-3-8910 chips
-	They're in slot 4 and 5
+	This class emulates one or 2 mockingboards, each with the following chips:
+		2x M6522, 2x AY-3-8913, 2x SSI263
+	They're in slot 4 and 5. This class is NOT a complete mockingboard emulator,
+	it doesn't deal with timers or read requests. Those just cannot be handled on
+	the host computer due to the latency between the Appletini and the host.
+
+	* Notes on the Mockingboards:
+	* Do not assume any panning for the AY channels beyond the fact that each AY with
+	* its 3 channels maps to the same L-R pan. The original MB-A maps AY1 left and AY2
+	* right, although AY-2 has some crosstalk in the left channel. The new ReactiveMicro
+	* v2.1 maps both AYs to both L+R but slightly more left.
+	* 
+	* In both cases of MB-A and RM-2.1, AY1 is _significantly_ more powerful than AY2
+	* and outputs close to 4x the dB of AY2. If the AY2 pot in MB-A is at max, then to
+	* balance out AY1 its pot needs to be at 1/4.
  */
+
 #include <stdio.h>
 #include <SDL.h>
 #include "Ayumi.h"
+#include "SSI263.h"
 #include "nlohmann/json.hpp"
 
 const uint32_t MM_SAMPLE_RATE = 44100; 					// Audio sample rate
@@ -24,12 +39,15 @@ enum A2MBEvent_e
 	A2MBE_TOTAL_COUNT
 };
 
+// Codes for the AY-8913 come from pins BC1, BC2 and BDIR (from low to high bit)
+// BC2 is tied high to +5V
+// The first 2 bits of the value will be BC1 and BDIR. The 3rd bit is !RESET
 enum A2MBCodes_e
 {
-	A2MBC_RESET = 0,			// Used generally on init only
-	A2MBC_INACTIVE = 4,			// Always used after any of the other codes is used
-	A2MBC_LATCH = 7,			// Set register number (i.e. "latch" a register)
-	A2MBC_WRITE = 6,			// Write data to the latched register
+	A2MBC_INACTIVE = 0,		// Always used after any of the other codes is used
+	A2MBC_READ,				// Read data from the latched register
+	A2MBC_WRITE,			// Write data to the latched register
+	A2MBC_LATCH,			// Set register number (i.e. "latch" a register)
 	A2MBC_TOTAL_COUNT
 };
 
@@ -63,8 +81,7 @@ public:
 	void Disable() { bIsEnabled = false; };
 
 	// Received a mockingboard event, we don't care if it's C4XX or C5XX
-	// All mockingboard events MUST be write events!
-	void EventReceived(uint16_t addr, uint8_t val);
+	void EventReceived(uint16_t addr, uint8_t val, bool rw);
 	
 	// Set the panning of a channel in an AY
 	// Pan is 0.0-1.0, left to right
@@ -84,6 +101,8 @@ public:
 	// Writes all registers at once -- val_array is 16 values
 	void Util_WriteAllRegisters(uint8_t ay_idx, uint8_t* val_array);
 	
+	// Speak a demo phrase
+	void Util_SpeakDemoPhrase();
 	// ====================
 	
 	// ImGUI and prefs
@@ -115,13 +134,22 @@ private:
 	bool bIsDual = true;
 	bool bIsPlaying;
 	int mb_event_count = 0;
+	float audioCallbackBuffer[MM_BUFFER_SIZE*2] = { 0.f };	// Stereo
 	
+	// Chips
 	Ayumi ay[4];
+	SSI263 ssi[4];
+
+	// M6522 pin state
+	uint64_t a_pins_in[4] = { 0 };
+	uint64_t a_pins_out[4] = { 0 };
+	uint64_t a_pins_out_prev[4] = { 0 };
+
 	float allpans[4][3] = {
-		0.0f, 0.0f, 0.0f,	// AY0 pans left
-		1.0f, 1.0f, 1.0f,	// AY1 pans right
-		0.0f, 0.0f, 0.0f,	// AY2 pans left
-		1.0f, 1.0f, 1.0f,	// AY3 pans right
+		0.3f, 0.3f, 0.3f,	// AY0 pans left
+		0.7f, 0.7f, 0.7f,	// AY1 pans right
+		0.2f, 0.2f, 0.2f,	// AY2 pans left
+		0.8f, 0.8f, 0.8f,	// AY3 pans right
 	};
 };
 

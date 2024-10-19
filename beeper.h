@@ -35,7 +35,7 @@ extern "C" {
 	// error-accumulation precision boost
 #define BEEPER_FIXEDPOINT_SCALE (100)
 	// DC adjust buffer size
-#define BEEPER_DCADJ_BUFLEN (128)
+#define BEEPER_DCADJ_BUFLEN (256)
 	
 	// initialization parameters
 	typedef struct {

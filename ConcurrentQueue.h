@@ -32,7 +32,7 @@ public:
 	}
 	T pop() {
 		std::unique_lock<std::mutex> lock(this->d_mutex);
-		this->d_condition.wait(lock, [=] { return !this->d_queue.empty(); });
+		this->d_condition.wait(lock, [this] { return !this->d_queue.empty(); });
 		T rc(std::move(this->d_queue.back()));
 		this->d_queue.pop_back();
 		return rc;

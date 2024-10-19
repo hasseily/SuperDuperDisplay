@@ -118,8 +118,8 @@ void A2VideoManager::DrawOverlayString(const std::string& text, uint8_t colors, 
 {
 	for (uint8_t i = 0; i < text.length(); ++i)
 	{
-		overlay_text[40 * y + x + i] = text.c_str()[i] + 0x80;
-		overlay_colors[40 * y + x + i] = colors;
+		overlay_text[_OVERLAY_CHAR_WIDTH * y + x + i] = text.c_str()[i] + 0x80;
+		overlay_colors[_OVERLAY_CHAR_WIDTH * y + x + i] = colors;
 	}
 	overlay_lines[y] = 1;
 }
@@ -129,8 +129,8 @@ void A2VideoManager::DrawOverlayString(const char* text, uint8_t len, uint8_t co
 	uint8_t i = 0;
 	while (text[i] != '\0')
 	{
-		overlay_text[40 * y + x + i] = text[i] + 0x80;
-		overlay_colors[40 * y+ + x + i] = colors;
+		overlay_text[_OVERLAY_CHAR_WIDTH * y + x + i] = text[i] + 0x80;
+		overlay_colors[_OVERLAY_CHAR_WIDTH * y+ + x + i] = colors;
 		++i;
 	}
 	overlay_lines[y] = 1;
@@ -138,27 +138,27 @@ void A2VideoManager::DrawOverlayString(const char* text, uint8_t len, uint8_t co
 
 void A2VideoManager::DrawOverlayCharacter(const char c, uint8_t colors, uint32_t x, uint32_t y)
 {
-	overlay_text[40 * y + x] = c + 0x80;
-	overlay_colors[40 * y + x] = colors;
+	overlay_text[_OVERLAY_CHAR_WIDTH * y + x] = c + 0x80;
+	overlay_colors[_OVERLAY_CHAR_WIDTH * y + x] = colors;
 	overlay_lines[y] = 1;
 }
 
 void A2VideoManager::EraseOverlayRange(uint8_t len, uint32_t x, uint32_t y)
 {
-	memset(overlay_text + (40 * y + x), 0, len);
+	memset(overlay_text + (_OVERLAY_CHAR_WIDTH * y + x), 0, len);
 	UpdateOverlayLine(y);
 }
 
 void A2VideoManager::EraseOverlayCharacter(uint32_t x, uint32_t y)
 {
-	overlay_text[40 * y + x] = 0;
+	overlay_text[_OVERLAY_CHAR_WIDTH * y + x] = 0;
 	UpdateOverlayLine(y);
 }
 
 inline void A2VideoManager::UpdateOverlayLine(uint32_t y)
 {
-	for (uint8_t i=0; i<40; ++i) {
-		if (overlay_text[40 * y + i] > 0)
+	for (uint8_t i=0; i< _OVERLAY_CHAR_WIDTH; ++i) {
+		if (overlay_text[_OVERLAY_CHAR_WIDTH * y + i] > 0)
 		{
 			overlay_lines[y] = 1;
 			return;
@@ -303,7 +303,7 @@ void A2VideoManager::Initialize()
 		std::sort(font_roms_array.begin(), font_roms_array.end());
 	} catch (const std::filesystem::filesystem_error& e) {
 		std::cerr << "Error accessing directory: " << e.what() << std::endl;
-		exit;
+		exit(1);
 	}
 	
 	// Initialize windows
@@ -375,7 +375,7 @@ void A2VideoManager::ResetComputer()
     if (bIsRebooting == true)
         return;
     bIsRebooting = true;
-	SerializeState();
+	Initialize();
 	MemoryManager::GetInstance()->Initialize();
 	SoundManager::GetInstance()->Initialize();
 	MockingboardManager::GetInstance()->Initialize();
@@ -575,7 +575,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		{
 			if (_x < CYCLES_SC_HBL || _y >= mode_scanlines)		// bounds check if mode changes midway
 				return;
-			uint32_t _toff = 40 * (_y/8) + (_x - CYCLES_SC_HBL);
+			uint32_t _toff = _OVERLAY_CHAR_WIDTH * (_y/8) + (_x - CYCLES_SC_HBL);
 			// Override when the byte is an overlay
 			if (overlay_text[_toff] > 0)
 			{

@@ -66,50 +66,51 @@ in vec2 ps;
 in vec2 v_pos;
 out vec4 FragColor;
 
-uniform COMPAT_PRECISION float POSTPROCESSING_LEVEL;
+uniform COMPAT_PRECISION int POSTPROCESSING_LEVEL;
 
-uniform COMPAT_PRECISION float M_TYPE;
-uniform COMPAT_PRECISION float BGR;
-uniform COMPAT_PRECISION float Maskl;
-uniform COMPAT_PRECISION float Maskh;
-uniform COMPAT_PRECISION float MSIZE;
-uniform COMPAT_PRECISION float P_GLOW;
-uniform COMPAT_PRECISION float C_STR;
-uniform COMPAT_PRECISION float CONV_R;
-uniform COMPAT_PRECISION float CONV_G;
-uniform COMPAT_PRECISION float CONV_B;
-uniform COMPAT_PRECISION float SCANLINE_TYPE;
-uniform COMPAT_PRECISION float SCANLINE_WEIGHT;
-uniform COMPAT_PRECISION float INTERLACE;
-uniform COMPAT_PRECISION float WARPX;
-uniform COMPAT_PRECISION float WARPY;
+uniform bool bCORNER_SMOOTH;
+uniform bool bEXT_GAMMA;
+uniform bool bINTERLACE;
+uniform bool bPOTATO; 
+uniform bool bSLOT;
+uniform bool bVIGNETTE; 
 uniform COMPAT_PRECISION float BARRELDISTORTION;
-uniform COMPAT_PRECISION float SLOT;
-uniform COMPAT_PRECISION float SLOTW;
-uniform COMPAT_PRECISION float c_space;
-uniform COMPAT_PRECISION float SATURATION;
-uniform COMPAT_PRECISION float BRIGHTNESs;
-uniform COMPAT_PRECISION float RG;
-uniform COMPAT_PRECISION float RB;
-uniform COMPAT_PRECISION float GB;
+uniform COMPAT_PRECISION float BGR;
 uniform COMPAT_PRECISION float BLACK; 
 uniform COMPAT_PRECISION float BR_DEP; 
-uniform COMPAT_PRECISION float POTATO; 
-uniform COMPAT_PRECISION float EXT_GAMMA; 
-uniform COMPAT_PRECISION float vig; 
-uniform COMPAT_PRECISION float zoomx;
-uniform COMPAT_PRECISION float zoomy;
-uniform COMPAT_PRECISION float centerx;
-uniform COMPAT_PRECISION float centery;
-uniform COMPAT_PRECISION float bzl;
-uniform COMPAT_PRECISION float corner;
+uniform COMPAT_PRECISION float BRIGHTNESs;
+uniform COMPAT_PRECISION float C_STR;
+uniform COMPAT_PRECISION float CENTERX;
+uniform COMPAT_PRECISION float CENTERY;
+uniform COMPAT_PRECISION float CONV_B;
+uniform COMPAT_PRECISION float CONV_G;
+uniform COMPAT_PRECISION float CONV_R;
+uniform COMPAT_PRECISION float CORNER;
+uniform COMPAT_PRECISION float GB;
+uniform COMPAT_PRECISION float MASKH;
+uniform COMPAT_PRECISION float MASKL;
+uniform COMPAT_PRECISION float MSIZE;
+uniform COMPAT_PRECISION float P_GLOW;
+uniform COMPAT_PRECISION float RB;
+uniform COMPAT_PRECISION float RG;
+uniform COMPAT_PRECISION float SATURATION;
+uniform COMPAT_PRECISION float SCANLINE_WEIGHT;
+uniform COMPAT_PRECISION float SLOTW;
+uniform COMPAT_PRECISION float VIGNETTE_WEIGHT;
+uniform COMPAT_PRECISION float WARPX;
+uniform COMPAT_PRECISION float WARPY;
+uniform COMPAT_PRECISION float ZOOMX;
+uniform COMPAT_PRECISION float ZOOMY;
+uniform COMPAT_PRECISION int iCOLOR_SPACE;
+uniform COMPAT_PRECISION int iM_TYPE;
+uniform COMPAT_PRECISION int iSCANLINE_TYPE;
 
 vec3 Mask(vec2 pos, float CGWG) {
-	if (M_TYPE == 0.0)
+	if (iM_TYPE == 0)
 		return vec3(1.0);
 	vec3 mask = vec3(CGWG);
-	if (M_TYPE == 1.0){
-		if (POTATO == 1.0) {
+	if (iM_TYPE == 1){
+		if (bPOTATO) {
 			return vec3( (1.0-CGWG)*sin(pos.x*pi)+CGWG);
 		} else {
 			float m = fract(pos.x*0.5);
@@ -121,8 +122,8 @@ vec3 Mask(vec2 pos, float CGWG) {
 		}
 	}
 
-	if (M_TYPE == 2.0) {
-		if (POTATO == 1.0) {
+	if (iM_TYPE == 2) {
+		if (bPOTATO) {
 			return vec3( (1.0-CGWG)*sin(pos.x*pi*0.6667)+CGWG) ;
 		} else {
 			float m = fract(pos.x*0.3333);
@@ -149,12 +150,11 @@ float scanlineWeights(float distance, vec3 color, float x) {
 	// independent of its width. That is, for a narrower beam
 	// "weights" should have a higher peak at the center of the
 	// scanline than for a wider beam.
-	float wid = SCANLINE_WEIGHT + 0.15 * dot(color, vec3(0.25-0.8*x)); //0.8 vignette strength
+	float wid = SCANLINE_WEIGHT + 0.15 * dot(color, vec3(0.25-VIGNETTE_WEIGHT*x));
 	float weights = distance / wid;
-	return 0.4 * exp(-weights * weights * weights) / wid;
+	return 0.1 * exp(-weights * weights * weights) / wid;
 }
 
-#define pwr vec3(1.0/((-1.0*SCANLINE_WEIGHT+1.0)*(-0.8*CGWG+1.0))-1.2)
 // Returns gamma corrected output, compensated for scanline+mask embedded gamma
 vec3 inv_gamma(vec3 col, vec3 power) {
 	vec3 cir = col-1.0;
@@ -226,38 +226,35 @@ vec2 BarrelDistortion(vec2 uv) {
 
 void main() {
 	
-	if (POSTPROCESSING_LEVEL == 0.0) {
+	if (POSTPROCESSING_LEVEL == 0) {
 		FragColor = texture(A2Texture,TexCoords);
 		return;
 	}
 	
 // Apply simple horizontal scanline if required and exit
-	if (POSTPROCESSING_LEVEL == 1.0) {
+	if (POSTPROCESSING_LEVEL == 1) {
 		FragColor = texture(A2Texture,TexCoords);
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
 		return;
 	}
 
+	if (iSCANLINE_TYPE == 1) {
+		if (mod(floor(TexCoords.y * TextureSize.y), 2.0) > 0.9)
+			discard;
+	}
+
 	// Hue matrix inside main() to avoid GLES error
 	mat3 hue = mat3 (
-		1.0, -RG, -RB,
-		RG, 1.0, -GB,
-		RB, GB, 1.0
+		1.0, RG, RB,
+		-RG, 1.0, GB,
+		-RB, -GB, 1.0
 		);
 	
 // zoom in and center screen for bezel
-	vec2 pos = Warp(TexCoords*vec2(1.0-zoomx,1.0-zoomy)-vec2(centerx,centery)/100.0);
+	vec2 pos = Warp(TexCoords*vec2(1.0-ZOOMX,1.0-ZOOMY)-vec2(CENTERX,CENTERY)/100.0);
 	
 	
-	float corn;
-	if (corner > 0.0) {
-		corn = pos.x * pos.y * (1.-pos.x) * (1.-pos.y);
-		// res = res * smoothstep(0.0, 0.0010, corn);	// if we want it smooth
-		if (corn < corner)								// if we want it cut
-			discard;
-	}
-	
-// If people brefer the BarrelDistortion algo
+// If people prefer the BarrelDistortion algo
 	pos = BarrelDistortion(pos);
 
 	vec2 bpos = pos;
@@ -281,24 +278,28 @@ void main() {
 					res0.g*(1.0-C_STR) + resg*C_STR,
 					res0.b*(1.0-C_STR) + resb*C_STR
 					);
-// Vignette
-	float x = 0.0;
-	if (vig == 1.0) {
-		x = TexCoords.x-0.5;
-		x = x*x;
-	}
 
+	float corn;
+	if (CORNER > 0.000001) {
+		corn = pos.x * pos.y * (1.-pos.x) * (1.-pos.y);
+		if (bCORNER_SMOOTH)
+			res = res * smoothstep(0.0, CORNER, corn);	// if we want it smooth
+		else
+			if (corn < CORNER)						// if we want it cut
+				discard;
+	}
+	
 	float l = dot(vec3(BR_DEP),res);
  
  // Color Spaces 
-	if(EXT_GAMMA != 1.0)
+	if(!bEXT_GAMMA)
 		res *= res;
-	if (c_space != 0.0) {
-		if (c_space == 1.0)
+	if (iCOLOR_SPACE != 0) {
+		if (iCOLOR_SPACE == 1)
 			res *= PAL;
-		if (c_space == 2.0)
+		if (iCOLOR_SPACE == 2)
 			res *= NTSC;
-		if (c_space == 3.0)
+		if (iCOLOR_SPACE == 3)
 			res *= NTSC_J;
 		// Apply CRT-like luminances
 		res /= vec3(0.24,0.69,0.07);
@@ -306,32 +307,46 @@ void main() {
 		res = clamp(res,0.0,1.0);
 	}
 	
+	// Mask CGWG definition, used for scanlines
+	float CGWG = 0.3;
+	if (bSLOT)
+		CGWG = mix(MASKL, MASKH, l);
+
 	// For CRT-Geom scanlines
-	if (SCANLINE_TYPE == 2.0) {
+	vec3 v_pwr;
+	if (iSCANLINE_TYPE == 2) {
+		v_pwr = vec3(1.0/((-1.0*SCANLINE_WEIGHT+1.0)*(-0.8*CGWG+1.0))-1.2);
 		// handle interlacing
-		float s = fract(bpos.y*TextureSize.y/2.001+0.5);
-		if (INTERLACE == 1.0)
-			s = mod(float(FrameCount),2.0) < 1.0 ? s: s+0.5;
+		float s = fract(pos.y*TextureSize.y/2.001+0.5);
+		if (bINTERLACE)
+			s = mod(float(FrameCount),2.0) < 1.0 ? s: fract(s+0.5);
 	
+		// Vignette
+		float x = 0.0;
+		if (bVIGNETTE) {
+			x = TexCoords.x-0.5;
+			x = x*x;
+		}
 		// Calculate CRT-Geom scanlines weight and apply
 		float weight = scanlineWeights(s, res, x);
 		float weight2 = scanlineWeights(1.0-s, res, x);
 		res *= weight + weight2;
+	} else {
+		v_pwr = vec3(1.0/((-1.0*0.3+1.0)*(-0.8*CGWG+1.0))-1.2);
 	}
 
 // Masks
 	vec2 xy = TexCoords*OutputSize.xy*scale/MSIZE;	
-	float CGWG = mix(Maskl, Maskh, l);
 	res *= Mask(xy, CGWG);
 
 // Apply slot mask on top of Trinitron-like mask
-	if (SLOT == 1.0)
+	if (bSLOT)
 		res *= mix(slot(xy/2.0),vec3(1.0),CGWG);
-	if (POTATO == 0.0) {
-		res = inv_gamma(res,pwr);
-	} else {
+	if (bPOTATO) {
 		res = sqrt(res);
 		res *= mix(1.3,1.1,l);
+	} else {
+		res = inv_gamma(res,v_pwr);
 	}
 
 // Saturation
@@ -345,9 +360,6 @@ void main() {
 	res *= blck;
 
 	FragColor = vec4(res, 1.0);
-	if (SCANLINE_TYPE == 1.0) {
-		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(bpos.y * TextureSize.y), 2.0));
-	}
 }
 
 #endif

@@ -99,9 +99,14 @@ void process_single_event(SDHREvent& e)
 	 */
 	auto soundMgr = SoundManager::GetInstance();
 	soundMgr->EventReceived((e.addr & 0xFFF0) == 0xC030);
-	auto mockingboardMgr = MockingboardManager::GetInstance();
-	mockingboardMgr->EventReceived(e.addr, e.data);
 	
+	/*
+	 *********************************
+	 HANDLE MOCKINGBOARD EVENTS
+	 *********************************
+	 */
+	auto mockingboardMgr = MockingboardManager::GetInstance();
+	mockingboardMgr->EventReceived(e.addr, e.data, e.rw);
 	
 	if (e.is_iigs && e.m2sel) {
 		// ignore updates from iigs_mode firmware with m2sel high
@@ -115,7 +120,7 @@ void process_single_event(SDHREvent& e)
 	auto memMgr = MemoryManager::GetInstance();
 	auto sdhrMgr = SDHRManager::GetInstance();
 	auto a2VideoMgr = A2VideoManager::GetInstance();
-
+	
 	/*
 	 *********************************
 	 HANDLE SIMPLE MEMORY WRITE EVENTS

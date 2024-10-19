@@ -21,6 +21,8 @@
 #include <vector>
 
 // In main.cpp
+extern uint32_t Main_GetFPSLimit();
+extern void Main_SetFPSLimit(uint32_t fps);
 extern void Main_ResetFPSCalculations();
 extern SDL_DisplayMode Main_GetFullScreenMode();
 extern void Main_SetFullScreenMode(SDL_DisplayMode mode);
@@ -34,6 +36,7 @@ extern void Main_SetBGColor(const float newColor[4]);
 extern void Main_ResetA2SS();
 extern bool Main_IsFPSOverlay();
 extern void Main_SetFPSOverlay(bool isFPSOverlay);
+extern void Main_RequestAppQuit();
 
 class MainMenu::Gui {
 public:
@@ -43,6 +46,7 @@ public:
 
 	std::vector<SDL_DisplayMode> v_displayModes;
 
+	int iFPSLimiter = 0;
 	int iWindowWidth=1200;
 	int iWindowHeight=1000;
 	bool bShowAboutWindow = false;
@@ -537,8 +541,6 @@ void MainMenu::ShowSDDMenu() {
 #endif
 	int iMMVsync = Main_GetVsync();
 	bool bMMVsync = (iMMVsync == 0 ? 0 : 1);
-	// std::string _s_vsync = (iMMVsync == -1 ? "VSYNC (Adaptive)" : "VSYNC");
-	// if (ImGui::MenuItem(_s_vsync.c_str(), "", &bMMVsync)) {
 	if (ImGui::Checkbox("VSYNC", &bMMVsync)) {
 		Main_SetVsync(bMMVsync);
 		iMMVsync = Main_GetVsync();
@@ -553,6 +555,28 @@ void MainMenu::ShowSDDMenu() {
 			ImGui::Text("(Adaptive)");
 		}
 	}
+	if (bMMVsync)
+		ImGui::BeginDisabled(true);
+	if (ImGui::BeginMenu("FPS Limiter")) {
+		pGui->iFPSLimiter = Main_GetFPSLimit();
+		if (ImGui::RadioButton("Disabled##FPSLIMIT", &pGui->iFPSLimiter, UINT32_MAX))
+			Main_SetFPSLimit(UINT32_MAX);
+		if (ImGui::RadioButton("15 Hz##FPSLIMIT", &pGui->iFPSLimiter, 15))
+			Main_SetFPSLimit(15);
+		if (ImGui::RadioButton("20 Hz##FPSLIMIT", &pGui->iFPSLimiter, 20))
+			Main_SetFPSLimit(20);
+		if (ImGui::RadioButton("30 Hz##FPSLIMIT", &pGui->iFPSLimiter, 30))
+			Main_SetFPSLimit(30);
+		if (ImGui::RadioButton("45 Hz##FPSLIMIT", &pGui->iFPSLimiter, 45))
+			Main_SetFPSLimit(45);
+		if (ImGui::RadioButton("50 Hz##FPSLIMIT", &pGui->iFPSLimiter, 50))
+			Main_SetFPSLimit(50);
+		if (ImGui::RadioButton("60 Hz##FPSLIMIT", &pGui->iFPSLimiter, 60))
+			Main_SetFPSLimit(60);
+		ImGui::EndMenu();
+	}
+	if (bMMVsync)
+		ImGui::EndDisabled();
 	if (ImGui::BeginMenu("Background Color")) {
 		float windowBGColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 		Main_GetBGColor(windowBGColor);
@@ -572,7 +596,7 @@ void MainMenu::ShowSDDMenu() {
 	ImGui::MenuItem("About", "", &pGui->bShowAboutWindow);
 	ImGui::Separator();
 	if (ImGui::MenuItem("Quit", "Ctrl+C")) {
-		HandleQuit();
+		Main_RequestAppQuit();
 	}
 }
 
@@ -638,7 +662,7 @@ void MainMenu::ShowVideoMenu() {
 		Main_ResetFPSCalculations();
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
-	if (ImGui::MenuItem("Reset FPS", "")) {
+	if (ImGui::MenuItem("Reset FPS", "Shift+F8")) {
 		Main_ResetFPSCalculations();
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
@@ -737,6 +761,9 @@ void MainMenu::ShowSamplesMenu() {
 		Main_ResetFPSCalculations();
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
+	if (ImGui::MenuItem("Speech Demo")) {
+		MockingboardManager::GetInstance()->Util_SpeakDemoPhrase();
+	}
 }
 
 void MainMenu::ShowDeveloperMenu() {
@@ -801,12 +828,6 @@ void MainMenu::ShowDeveloperMenu() {
 	ImGui::EndDisabled();
 	ImGui::Separator();
 	ImGui::MenuItem("ImGui Metrics Window", "", &pGui->bShowImGuiMetricsWindow);
-}
-
-void MainMenu::HandleQuit() {
-	std::cout << "Quitting application" << std::endl;
-	SDL_Quit();
-	exit(0);
 }
 
 // UTILITY
