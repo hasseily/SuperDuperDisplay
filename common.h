@@ -107,7 +107,7 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 //#define _SHADER_DHGR_FRAGMENT "shaders/a2video_dhgr.frag"
 //#define _SHADER_SHR_FRAGMENT "shaders/a2video_shr.frag"
 #define _SHADER_BEAM_LEGACY_FRAGMENT "shaders/a2video_beam_legacy.frag"
-#define _SHADER_BEAM_SHR_FRAGMENT "shaders/a2video_beam_shr.frag"
+#define _SHADER_BEAM_SHR_FRAGMENT "shaders/a2video_beam_shr_raw.frag"
 #define _SHADER_BEAM_MERGE_FRAGMENT "shaders/a2video_beam_merge.frag"
 
 #define _SHADER_SDHR_VERTEX_DEFAULT "shaders/sdhr_default_330.vert"

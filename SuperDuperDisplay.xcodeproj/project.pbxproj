@@ -10,6 +10,7 @@
 		BB006F532C3C2E49008BFFAF /* Ayumi.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB006F4F2C3C2E49008BFFAF /* Ayumi.cpp */; };
 		BB006F542C3C2E49008BFFAF /* MockingboardManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB006F522C3C2E49008BFFAF /* MockingboardManager.cpp */; };
 		BB01620B2B83643D00A3D503 /* assets in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBD102132B829BAE00360B33 /* assets */; };
+		BB6BE3152CC3963B00901A03 /* libopencv_core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BB6BE3142CC395F000901A03 /* libopencv_core.a */; };
 		BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = BB96E3EA2B6650BA00A3077C /* libz.tbd */; };
 		BB96E3ED2B66513700A3077C /* imgui_demo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3EC2B66513700A3077C /* imgui_demo.cpp */; };
 		BB96E3F32B66515400A3077C /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3F22B66515400A3077C /* imgui_widgets.cpp */; };
@@ -82,6 +83,7 @@
 		BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MemoryLoader.h; path = extras/MemoryLoader.h; sourceTree = "<group>"; };
 		BB64A7D02C391D580044E05B /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		BB68B4C72C4248C400F96269 /* beeper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = beeper.h; sourceTree = "<group>"; };
+		BB6BE3142CC395F000901A03 /* libopencv_core.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopencv_core.a; path = ../../../../../opt/homebrew/Cellar/opencv/4.10.0_11/lib/libopencv_core.a; sourceTree = "<group>"; };
 		BB8330D62B6645B300071F38 /* SuperDuperDisplay */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SuperDuperDisplay; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB96E3EA2B6650BA00A3077C /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		BB96E3EC2B66513700A3077C /* imgui_demo.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_demo.cpp; path = imgui/imgui_demo.cpp; sourceTree = "<group>"; };
@@ -158,6 +160,7 @@
 				BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */,
 				BBB525292B664A7D00A65C62 /* OpenGL.framework in Frameworks */,
 				BBB5252B2B664A8F00A65C62 /* CoreVideo.framework in Frameworks */,
+				BB6BE3152CC3963B00901A03 /* libopencv_core.a in Frameworks */,
 				BB9F87242C4BEE920091F5C6 /* SDL2.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -261,6 +264,7 @@
 		BBB525272B664A7D00A65C62 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				BB6BE3142CC395F000901A03 /* libopencv_core.a */,
 				BB96E3EA2B6650BA00A3077C /* libz.tbd */,
 				BB9F87222C4BECEE0091F5C6 /* SDL2.framework */,
 				BBB5252A2B664A8F00A65C62 /* CoreVideo.framework */,
@@ -503,8 +507,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"/opt/homebrew/Cellar/openssl@3/**",
-					/opt/homebrew/Cellar/sdl2/2.28.5/lib,
+					/opt/homebrew/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -521,8 +524,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"/opt/homebrew/Cellar/openssl@3/**",
-					/opt/homebrew/Cellar/sdl2/2.28.5/lib,
+					/opt/homebrew/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
