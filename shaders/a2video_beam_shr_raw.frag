@@ -195,27 +195,33 @@ void main()
 		uint byteVal_0_3 = texelFetch(VRAMTEX,originByte+ivec2(-1,+1),0).r;
 		uint byteVal_1_3 = texelFetch(VRAMTEX,originByte+ivec2(0,+1),0).r;
 		uint byteVal_1_4 = texelFetch(VRAMTEX,originByte+ivec2(0,+2),0).r;
-
-		fragColor.r = 	float((byteVal_1_2 & 0xF0u) >> 4) * 8.0;
-		fragColor.g =	float((byteVal_1_0 & 0xF0u) >> 4) * -1.0 +
-						float((byteVal_1_1 & 0xFu)) * 2.0 +
-						float((byteVal_0_2 & 0xF0u) >> 4) * -1.0 +
-						float((byteVal_0_2 & 0xFu)) * 2.0 +
-						float((byteVal_1_2 & 0xF0u) >> 4) * 4.0 +
-						float((byteVal_1_2 & 0xFu)) * 2.0 +
-						float((byteVal_2_2 & 0xF0u) >> 4) * -1.0 +
-						float((byteVal_1_3 & 0xFu)) * 2.0 +
-						float((byteVal_1_4 & 0xF0u) >> 4) * -1.0;
-		fragColor.b =	float((byteVal_1_0 & 0xF0u) >> 4) * -1.5 +
-						float((byteVal_0_1 & 0xFu)) * 2.0 +
-						float((byteVal_1_1 & 0xFu)) * 2.0 +
-						float((byteVal_0_2 & 0xF0u) >> 4) * -1.5 +
-						float((byteVal_1_2 & 0xF0u) >> 4) * 6.0 +
-						float((byteVal_2_2 & 0xF0u) >> 4) * -1.5 +
-						float((byteVal_0_3 & 0xFu)) * 2.0 +
-						float((byteVal_1_3 & 0xFu)) * 2.0 +
-						float((byteVal_1_4 & 0xF0u) >> 4) * -1.5;
-
+		
+		fragColor.r = 	float(
+							  ((byteVal_1_2 & 0xF0u) >> 4) * 8
+							  );
+		fragColor.g =	float(
+							  ((byteVal_1_0 & 0xF0u) >> 4) * -1 +
+							  ((byteVal_1_1 & 0xFu)) * 2 +
+							  ((byteVal_0_2 & 0xF0u) >> 4) * -1 +
+							  ((byteVal_0_2 & 0xFu)) * 2 +
+							  ((byteVal_1_2 & 0xF0u) >> 4) * 4 +
+							  ((byteVal_1_2 & 0xFu)) * 2 +
+							  ((byteVal_2_2 & 0xF0u) >> 4) * -1 +
+							  ((byteVal_1_3 & 0xFu)) * 2 +
+							  ((byteVal_1_4 & 0xF0u) >> 4) * -1
+							  );
+		fragColor.b =	float(
+							  ((byteVal_1_0 & 0xF0u) >> 4) * -3/2 +
+							  ((byteVal_0_1 & 0xFu)) * 2 +
+							  ((byteVal_1_1 & 0xFu)) * 2 +
+							  ((byteVal_0_2 & 0xF0u) >> 4) * -3/2 +
+							  ((byteVal_1_2 & 0xF0u) >> 4) * 6 +
+							  ((byteVal_2_2 & 0xF0u) >> 4) * -3/2 +
+							  ((byteVal_0_3 & 0xFu)) * 2 +
+							  ((byteVal_1_3 & 0xFu)) * 2 +
+							  ((byteVal_1_4 & 0xF0u) >> 4) * -3/2
+							  );
+		
 	} else if (((xpos % 2) == 0) && ((scanline % 2) == 1))
 	{
 		// top right corner: green location, even row
@@ -229,30 +235,36 @@ void main()
 		uint byteVal_2_3 = texelFetch(VRAMTEX,originByte+ivec2(+1,+1),0).r;
 		uint byteVal_1_4 = texelFetch(VRAMTEX,originByte+ivec2(0,+2),0).r;
 		
-		fragColor.r =	float((byteVal_1_0 & 0xFu)) * 0.5 +
-						float((byteVal_1_1 & 0xF0u) >> 4) * -1.0 +
-						float((byteVal_2_1 & 0xF0u) >> 4) * -1.0 +
-						float((byteVal_0_2 & 0xFu)) * -1.0 +
-						float((byteVal_1_2 & 0xF0u) >> 4) * 4.0 +
-						float((byteVal_1_2 & 0xFu)) * 5.0 +
-						float((byteVal_2_2 & 0xF0u) >> 4) * 4.0 +
-						float((byteVal_2_2 & 0xFu)) * -1.0 +
-						float((byteVal_1_3 & 0xF0u) >> 4) * -1.0 +
-						float((byteVal_2_3 & 0xF0u) >> 4) * -1.0 +
-						float((byteVal_1_4 & 0xFu)) * 0.5;
-		fragColor.g = 	float(byteVal_1_2 & 0xFu) * 8.0;
-		fragColor.b =	float((byteVal_1_0 & 0xFu)) * -1.0 +
-						float((byteVal_1_1 & 0xF0u) >> 4) * -1.0 +
-						float((byteVal_1_1 & 0xFu)) * 4.0 +
-						float((byteVal_2_1 & 0xF0u) >> 4) * -1.0 +
-						float((byteVal_0_2 & 0xFu)) * 0.5 +
-						float((byteVal_1_2 & 0xFu)) * 5.0 +
-						float((byteVal_2_2 & 0xFu)) * 0.5 +
-						float((byteVal_1_3 & 0xF0u) >> 4) * -1.0 +
-						float((byteVal_1_3 & 0xFu)) * 4.0 +
-						float((byteVal_2_3 & 0xF0u) >> 4) * -1.0 +
-						float((byteVal_1_4 & 0xFu)) * -1.0;
-
+		fragColor.r =	float(
+							  ((byteVal_1_0 & 0xFu)) * 1/2 +
+							  ((byteVal_1_1 & 0xF0u) >> 4) * -1 +
+							  ((byteVal_2_1 & 0xF0u) >> 4) * -1 +
+							  ((byteVal_0_2 & 0xFu)) * -1 +
+							  ((byteVal_1_2 & 0xF0u) >> 4) * 4 +
+							  ((byteVal_1_2 & 0xFu)) * 5 +
+							  ((byteVal_2_2 & 0xF0u) >> 4) * 4 +
+							  ((byteVal_2_2 & 0xFu)) * -1 +
+							  ((byteVal_1_3 & 0xF0u) >> 4) * -1 +
+							  ((byteVal_2_3 & 0xF0u) >> 4) * -1 +
+							  ((byteVal_1_4 & 0xFu)) * 1/2
+							  );
+		fragColor.g = 	float(
+							  (byteVal_1_2 & 0xFu) * 8
+							  );
+		fragColor.b =	float(
+							  ((byteVal_1_0 & 0xFu)) * -1 +
+							  ((byteVal_1_1 & 0xF0u) >> 4) * -1 +
+							  ((byteVal_1_1 & 0xFu)) * 4 +
+							  ((byteVal_2_1 & 0xF0u) >> 4) * -1 +
+							  ((byteVal_0_2 & 0xFu)) * 1/2 +
+							  ((byteVal_1_2 & 0xFu)) * 5 +
+							  ((byteVal_2_2 & 0xFu)) * 1/2 +
+							  ((byteVal_1_3 & 0xF0u) >> 4) * -1 +
+							  ((byteVal_1_3 & 0xFu)) * 4 +
+							  ((byteVal_2_3 & 0xF0u) >> 4) * -1 +
+							  ((byteVal_1_4 & 0xFu)) * -1
+							  );
+		
 	} else if (((xpos % 2) == 1) && ((scanline % 2) == 0))
 	{
 		// bottom left corner: green location, odd row
@@ -266,29 +278,35 @@ void main()
 		uint byteVal_1_3 = texelFetch(VRAMTEX,originByte+ivec2(0,+1),0).r;
 		uint byteVal_1_4 = texelFetch(VRAMTEX,originByte+ivec2(0,+2),0).r;
 		
-		fragColor.r =	float((byteVal_1_0 & 0xF0u) >> 4) * -1.0 +
-						float((byteVal_0_1 & 0xFu)) * -1.0 +
-						float((byteVal_1_1 & 0xF0u) >> 4) * 4.0 +
-						float((byteVal_1_1 & 0xFu)) * -1.0 +
-						float((byteVal_0_2 & 0xF0u) >> 4) * 0.5 +
-						float((byteVal_1_2 & 0xF0u) >> 4) * 5.0 +
-						float((byteVal_2_2 & 0xF0u) >> 4) * 0.5 +
-						float((byteVal_0_3 & 0xFu)) * -1.0 +
-						float((byteVal_1_3 & 0xF0u) >> 4) * 4.0 +
-						float((byteVal_1_3 & 0xFu)) * -1.0 +
-						float((byteVal_1_4 & 0xF0u) >> 4) * -1.0;
-		fragColor.g = 	float((byteVal_1_2 & 0xF0u) >> 4) * 8.0;
-		fragColor.b =	float((byteVal_1_0 & 0xF0u) >> 4) * 0.5 +
-						float((byteVal_0_1 & 0xFu)) * -1.0 +
-						float((byteVal_1_1 & 0xFu)) * -1.0 +
-						float((byteVal_0_2 & 0xF0u) >> 4) * -1.0 +
-						float((byteVal_0_2 & 0xFu)) * 4.0 +
-						float((byteVal_1_2 & 0xF0u) >> 4) * 5.0 +
-						float((byteVal_1_2 & 0xFu)) * 4.0 +
-						float((byteVal_2_2 & 0xF0u) >> 4) * -1.0 +
-						float((byteVal_0_3 & 0xFu)) * -1.0 +
-						float((byteVal_1_3 & 0xFu)) * -1.0 +
-						float((byteVal_1_4 & 0xF0u) >> 4) * 0.5;
+		fragColor.r =	float(
+							  ((byteVal_1_0 & 0xF0u) >> 4) * -1 +
+							  ((byteVal_0_1 & 0xFu)) * -1 +
+							  ((byteVal_1_1 & 0xF0u) >> 4) * 4 +
+							  ((byteVal_1_1 & 0xFu)) * -1 +
+							  ((byteVal_0_2 & 0xF0u) >> 4) * 1/2 +
+							  ((byteVal_1_2 & 0xF0u) >> 4) * 5 +
+							  ((byteVal_2_2 & 0xF0u) >> 4) * 1/2 +
+							  ((byteVal_0_3 & 0xFu)) * -1 +
+							  ((byteVal_1_3 & 0xF0u) >> 4) * 4 +
+							  ((byteVal_1_3 & 0xFu)) * -1 +
+							  ((byteVal_1_4 & 0xF0u) >> 4) * -1
+							  );
+		fragColor.g = 	float(
+							  ((byteVal_1_2 & 0xF0u) >> 4) * 8
+							  );
+		fragColor.b =	float(
+							  ((byteVal_1_0 & 0xF0u) >> 4) * 1/2 +
+							  ((byteVal_0_1 & 0xFu)) * -1 +
+							  ((byteVal_1_1 & 0xFu)) * -1 +
+							  ((byteVal_0_2 & 0xF0u) >> 4) * -1 +
+							  ((byteVal_0_2 & 0xFu)) * 4 +
+							  ((byteVal_1_2 & 0xF0u) >> 4) * 5 +
+							  ((byteVal_1_2 & 0xFu)) * 4 +
+							  ((byteVal_2_2 & 0xF0u) >> 4) * -1 +
+							  ((byteVal_0_3 & 0xFu)) * -1 +
+							  ((byteVal_1_3 & 0xFu)) * -1 +
+							  ((byteVal_1_4 & 0xF0u) >> 4) * 1/2
+							  );
 	} else
 	{
 		// bottom right corner: blue location, odd row
@@ -301,25 +319,31 @@ void main()
 		uint byteVal_1_3 = texelFetch(VRAMTEX,originByte+ivec2(0,+1),0).r;
 		uint byteVal_2_3 = texelFetch(VRAMTEX,originByte+ivec2(+1,+1),0).r;
 		uint byteVal_1_4 = texelFetch(VRAMTEX,originByte+ivec2(0,+2),0).r;
-		fragColor.r = 	float((byteVal_1_0 & 0xFu)) * -1.5 +
-						float((byteVal_1_1 & 0xF0u) >> 4) * 2.0 +
-						float((byteVal_2_1 & 0xF0u) >> 4) * 2.0 +
-						float((byteVal_0_2 & 0xFu)) * -1.5 +
-						float((byteVal_1_2 & 0xFu)) * 6.0 +
-						float((byteVal_2_2 & 0xFu)) * -1.5 +
-						float((byteVal_1_3 & 0xF0u) >> 4) * 2.0 +
-						float((byteVal_2_3 & 0xF0u) >> 4) * 2.0 +
-						float((byteVal_1_4 & 0xFu)) * -1.5;
-		fragColor.g =	float((byteVal_1_0 & 0xFu)) * -1.0 +
-						float((byteVal_1_1 & 0xFu)) * 2.0 +
-						float((byteVal_0_2 & 0xFu)) * -1.0 +
-						float((byteVal_1_2 & 0xF0u) >> 4) * 2.0 +
-						float((byteVal_1_2 & 0xFu)) * 4.0 +
-						float((byteVal_2_2 & 0xF0u) >> 4) * 2.0 +
-						float((byteVal_2_2 & 0xFu)) * -1.0 +
-						float((byteVal_1_3 & 0xFu)) * 2.0 +
-						float((byteVal_1_4 & 0xFu)) * -1.0;
-		fragColor.b =	float(byteVal_1_2 & 0xFu) * 8.0;
+		fragColor.r = 	float(
+							  ((byteVal_1_0 & 0xFu)) * -3/2 +
+							  ((byteVal_1_1 & 0xF0u) >> 4) * 2 +
+							  ((byteVal_2_1 & 0xF0u) >> 4) * 2 +
+							  ((byteVal_0_2 & 0xFu)) * -3/2 +
+							  ((byteVal_1_2 & 0xFu)) * 6 +
+							  ((byteVal_2_2 & 0xFu)) * -3/2 +
+							  ((byteVal_1_3 & 0xF0u) >> 4) * 2 +
+							  ((byteVal_2_3 & 0xF0u) >> 4) * 2 +
+							  ((byteVal_1_4 & 0xFu)) * -3/2
+							  );
+		fragColor.g =	float(
+							  ((byteVal_1_0 & 0xFu)) * -1 +
+							  ((byteVal_1_1 & 0xFu)) * 2 +
+							  ((byteVal_0_2 & 0xFu)) * -1 +
+							  ((byteVal_1_2 & 0xF0u) >> 4) * 2 +
+							  ((byteVal_1_2 & 0xFu)) * 4 +
+							  ((byteVal_2_2 & 0xF0u) >> 4) * 2 +
+							  ((byteVal_2_2 & 0xFu)) * -1 +
+							  ((byteVal_1_3 & 0xFu)) * 2 +
+							  ((byteVal_1_4 & 0xFu)) * -1
+							  );
+		fragColor.b =	float(
+							  (byteVal_1_2 & 0xFu) * 8
+							  );
 	}
 	
 	fragColor /= (8.0 * 16.0);
