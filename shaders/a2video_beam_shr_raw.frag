@@ -192,11 +192,14 @@ void main()
 	         L            R
 	 */
 	
-	uint xpos = uint(vFragPos.x);
-	uint ypos = uint(vFragPos.y);
-	// Note that the VRAM fetches use "scanline" and not ypos
-	// because the lines are doubled. Each scanline is for 2 consecutive ypos
-	ivec2 originByte = ivec2(33 + int(float(xpos) / 4.0), scanline);
+	int xpos = int(vFragPos.x);
+	int ypos = int(vFragPos.y);
+	//uint xpos = uint(vFragPos.x / 2.0) * 2u;
+	//uint ypos = uint(vFragPos.y / 2.0) * 2u;
+	
+	// Also we're running at 640x400 so each byte is 4x2 pixels
+	// And each color is 2x2 pixels because we have 2 colors per byte
+	ivec2 originByte = ivec2(33 + xpos/4, ypos/2);
 
 	int byteVal_1_0 = int(texelFetch(VRAMTEX,originByte+ivec2(0,-2),0).r);
 	int byteVal_0_1 = int(texelFetch(VRAMTEX,originByte+ivec2(-1,-1),0).r);
@@ -237,7 +240,7 @@ void main()
 	float _val_1_4_1 = float(byteVal_1_4 & 0xF);
 	
 	// ALL COLORS ARE SCALED BY 8.0
-	if (((xpos % 2) == 0) && ((scanline % 2) == 0))
+	if (((xpos % 4) < 2) && ((ypos % 4) < 2))
 	{
 		// top left corner: red location, even row
 		// Origin is on the left nibble
@@ -263,8 +266,10 @@ void main()
 						_val_0_3_1 * 2.0 +
 						_val_1_3_1 * 2.0 +
 						_val_1_4_0 * -1.5;
+		fragColor.g = 0;
+		fragColor.b = 0;
 		
-	} else if (((xpos % 2) == 1) && ((scanline % 2) == 0))
+	} else if (((xpos % 4) > 1) && ((ypos % 4) < 2))
 	{
 		// top right corner: green location, even row
 		// Origin is on the right nibble
@@ -294,8 +299,10 @@ void main()
 						_val_1_3_1 * 4.0 +
 						_val_2_3_0 * -1.0 +
 						_val_1_4_1 * -1.0;
+		fragColor.r = 0;
+		fragColor.b = 0;
 
-	} else if (((xpos % 2) == 0) && ((scanline % 2) == 1))
+	} else if (((xpos % 4) < 2) && ((ypos % 4) > 1))
 	{
 		// bottom left corner: green location, odd row
 		// Origin is on the left nibble
@@ -325,6 +332,8 @@ void main()
 						_val_0_3_1 * -1.0 +
 						_val_1_3_1 * -1.0 +
 						_val_1_4_0 * 0.5;
+		fragColor.r = 0;
+		fragColor.b = 0;
 		
 	} else
 	{
@@ -352,7 +361,9 @@ void main()
 						_val_1_3_1 * 2.0 +
 						_val_1_4_1 * -1.0;
 		fragColor.b =	_val_1_2_1 * 8.0;
-
+		fragColor.r = 0;
+		fragColor.g = 0;
+		
 	}
 	
 	fragColor /= (8.0 * 16.0);
