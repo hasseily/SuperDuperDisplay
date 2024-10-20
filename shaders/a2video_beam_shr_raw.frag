@@ -166,187 +166,197 @@ void main()
 	 Blue at blue locations	(just get its value)
 	*/
 	
+
+	
+	/*
+	 The pattern is a 2x2 of:
+	  RG
+	  GR
+	 Each byte has either RG or GR, depending on the scanline row (even or odd)
+	 
+	 We fetch all the texels in the following pattern around the origin:
+	          X
+	         XXX
+	         XOX
+	         XXX
+	          X
+	 
+	 And get the 2 byte color values (nibbles) for each texel so we end up with one of
+	 2 patterns, depending if we're on an even or odd column:
+	       EVEN          ODD
+	       ----          ---
+	         L            R
+	        RLR          LRL
+	       LRLRL        RLRLR
+	        RLR          LRL
+	         L            R
+	 */
+	
 	uint xpos = uint(vFragPos.x);
 	uint ypos = uint(vFragPos.y);
 	// Note that the VRAM fetches use "scanline" and not ypos
 	// because the lines are doubled. Each scanline is for 2 consecutive ypos
+	ivec2 originByte = ivec2(33 + int(float(xpos) / 4.0), scanline);
+
+	int byteVal_1_0 = int(texelFetch(VRAMTEX,originByte+ivec2(0,-2),0).r);
+	int byteVal_0_1 = int(texelFetch(VRAMTEX,originByte+ivec2(-1,-1),0).r);
+	int byteVal_1_1 = int(texelFetch(VRAMTEX,originByte+ivec2(0,-1),0).r);
+	int byteVal_2_1 = int(texelFetch(VRAMTEX,originByte+ivec2(+1,-1),0).r);
+	int byteVal_0_2 = int(texelFetch(VRAMTEX,originByte+ivec2(-1,0),0).r);
+	int byteVal_1_2 = int(texelFetch(VRAMTEX,originByte,0).r);	// Origin
+	int byteVal_2_2 = int(texelFetch(VRAMTEX,originByte+ivec2(+1,0),0).r);
+	int byteVal_0_3 = int(texelFetch(VRAMTEX,originByte+ivec2(-1,+1),0).r);
+	int byteVal_1_3 = int(texelFetch(VRAMTEX,originByte+ivec2(0,+1),0).r);
+	int byteVal_2_3 = int(texelFetch(VRAMTEX,originByte+ivec2(+1,+1),0).r);
+	int byteVal_1_4 = int(texelFetch(VRAMTEX,originByte+ivec2(0,+2),0).r);
 	
-	// For the algorithm, we need to fetch 9 bytes. Which ones around our pixel depend
-	// on the XY of the RGGB 2x2 square that we're in
+	// Left color value (nibble) of each texel
+	float _val_1_0_0 = float((byteVal_1_0 & 0xF0) >> 4);
+	float _val_0_1_0 = float((byteVal_0_1 & 0xF0) >> 4);
+	float _val_1_1_0 = float((byteVal_1_1 & 0xF0) >> 4);
+	float _val_2_1_0 = float((byteVal_2_1 & 0xF0) >> 4);
+	float _val_0_2_0 = float((byteVal_0_2 & 0xF0) >> 4);
+	float _val_1_2_0 = float((byteVal_1_2 & 0xF0) >> 4);
+	float _val_2_2_0 = float((byteVal_2_2 & 0xF0) >> 4);
+	float _val_0_3_0 = float((byteVal_0_3 & 0xF0) >> 4);
+	float _val_1_3_0 = float((byteVal_1_3 & 0xF0) >> 4);
+	float _val_2_3_0 = float((byteVal_2_3 & 0xF0) >> 4);
+	float _val_1_4_0 = float((byteVal_1_4 & 0xF0) >> 4);
 	
-	uint byteVal_AL = texelFetch(VRAMTEX, ivec2(33u + uint(float(xpos) / 4.0) - 1, scanline - 1), 0).r;
-	uint byteVal_A = texelFetch(VRAMTEX, ivec2(33u + uint(float(xpos) / 4.0), scanline - 1), 0).r;
-	uint byteVal_C = texelFetch(VRAMTEX, ivec2(33u + uint(float(xpos) / 4.0), scanline), 0).r;
-	uint byteVal_R = texelFetch(VRAMTEX, ivec2(33u + uint(float(xpos) / 4.0) + 1, scanline), 0).r;
-	uint byteVal_B = texelFetch(VRAMTEX, ivec2(33u + uint(float(xpos) / 4.0), scanline + 1), 0).r;
-	
-	ivec2 originByte = ivec2(33u + uint(float(xpos) / 4.0), scanline);
+	// Right color value (nibble) of each texel
+	float _val_1_0_1 = float(byteVal_1_0 & 0xF);
+	float _val_0_1_1 = float(byteVal_0_1 & 0xF);
+	float _val_1_1_1 = float(byteVal_1_1 & 0xF);
+	float _val_2_1_1 = float(byteVal_2_1 & 0xF);
+	float _val_0_2_1 = float(byteVal_0_2 & 0xF);
+	float _val_1_2_1 = float(byteVal_1_2 & 0xF);
+	float _val_2_2_1 = float(byteVal_2_2 & 0xF);
+	float _val_0_3_1 = float(byteVal_0_3 & 0xF);
+	float _val_1_3_1 = float(byteVal_1_3 & 0xF);
+	float _val_2_3_1 = float(byteVal_2_3 & 0xF);
+	float _val_1_4_1 = float(byteVal_1_4 & 0xF);
 	
 	// ALL COLORS ARE SCALED BY 8.0
 	if (((xpos % 2) == 0) && ((scanline % 2) == 0))
 	{
 		// top left corner: red location, even row
-		uint byteVal_1_0 = texelFetch(VRAMTEX,originByte+ivec2(0,-2),0).r;
-		uint byteVal_0_1 = texelFetch(VRAMTEX,originByte+ivec2(-1,-1),0).r;
-		uint byteVal_1_1 = texelFetch(VRAMTEX,originByte+ivec2(0,-1),0).r;
-		uint byteVal_0_2 = texelFetch(VRAMTEX,originByte+ivec2(-1,0),0).r;
-		uint byteVal_1_2 = texelFetch(VRAMTEX,originByte,0).r;
-		uint byteVal_2_2 = texelFetch(VRAMTEX,originByte+ivec2(+1,0),0).r;
-		uint byteVal_0_3 = texelFetch(VRAMTEX,originByte+ivec2(-1,+1),0).r;
-		uint byteVal_1_3 = texelFetch(VRAMTEX,originByte+ivec2(0,+1),0).r;
-		uint byteVal_1_4 = texelFetch(VRAMTEX,originByte+ivec2(0,+2),0).r;
+		// Origin is on the left nibble
 		
-		fragColor.r = 	float(
-							  ((byteVal_1_2 & 0xF0u) >> 4) * 8
-							  );
-		fragColor.g =	float(
-							  ((byteVal_1_0 & 0xF0u) >> 4) * -1 +
-							  ((byteVal_1_1 & 0xFu)) * 2 +
-							  ((byteVal_0_2 & 0xF0u) >> 4) * -1 +
-							  ((byteVal_0_2 & 0xFu)) * 2 +
-							  ((byteVal_1_2 & 0xF0u) >> 4) * 4 +
-							  ((byteVal_1_2 & 0xFu)) * 2 +
-							  ((byteVal_2_2 & 0xF0u) >> 4) * -1 +
-							  ((byteVal_1_3 & 0xFu)) * 2 +
-							  ((byteVal_1_4 & 0xF0u) >> 4) * -1
-							  );
-		fragColor.b =	float(
-							  ((byteVal_1_0 & 0xF0u) >> 4) * -3/2 +
-							  ((byteVal_0_1 & 0xFu)) * 2 +
-							  ((byteVal_1_1 & 0xFu)) * 2 +
-							  ((byteVal_0_2 & 0xF0u) >> 4) * -3/2 +
-							  ((byteVal_1_2 & 0xF0u) >> 4) * 6 +
-							  ((byteVal_2_2 & 0xF0u) >> 4) * -3/2 +
-							  ((byteVal_0_3 & 0xFu)) * 2 +
-							  ((byteVal_1_3 & 0xFu)) * 2 +
-							  ((byteVal_1_4 & 0xF0u) >> 4) * -3/2
-							  );
-		
-	} else if (((xpos % 2) == 0) && ((scanline % 2) == 1))
-	{
-		// top right corner: green location, even row
-		uint byteVal_1_0 = texelFetch(VRAMTEX,originByte+ivec2(0,-2),0).r;
-		uint byteVal_1_1 = texelFetch(VRAMTEX,originByte+ivec2(0,-1),0).r;
-		uint byteVal_2_1 = texelFetch(VRAMTEX,originByte+ivec2(+1,-1),0).r;
-		uint byteVal_0_2 = texelFetch(VRAMTEX,originByte+ivec2(-1,0),0).r;
-		uint byteVal_1_2 = texelFetch(VRAMTEX,originByte,0).r;
-		uint byteVal_2_2 = texelFetch(VRAMTEX,originByte+ivec2(+1,0),0).r;
-		uint byteVal_1_3 = texelFetch(VRAMTEX,originByte+ivec2(0,+1),0).r;
-		uint byteVal_2_3 = texelFetch(VRAMTEX,originByte+ivec2(+1,+1),0).r;
-		uint byteVal_1_4 = texelFetch(VRAMTEX,originByte+ivec2(0,+2),0).r;
-		
-		fragColor.r =	float(
-							  ((byteVal_1_0 & 0xFu)) * 1/2 +
-							  ((byteVal_1_1 & 0xF0u) >> 4) * -1 +
-							  ((byteVal_2_1 & 0xF0u) >> 4) * -1 +
-							  ((byteVal_0_2 & 0xFu)) * -1 +
-							  ((byteVal_1_2 & 0xF0u) >> 4) * 4 +
-							  ((byteVal_1_2 & 0xFu)) * 5 +
-							  ((byteVal_2_2 & 0xF0u) >> 4) * 4 +
-							  ((byteVal_2_2 & 0xFu)) * -1 +
-							  ((byteVal_1_3 & 0xF0u) >> 4) * -1 +
-							  ((byteVal_2_3 & 0xF0u) >> 4) * -1 +
-							  ((byteVal_1_4 & 0xFu)) * 1/2
-							  );
-		fragColor.g = 	float(
-							  (byteVal_1_2 & 0xFu) * 8
-							  );
-		fragColor.b =	float(
-							  ((byteVal_1_0 & 0xFu)) * -1 +
-							  ((byteVal_1_1 & 0xF0u) >> 4) * -1 +
-							  ((byteVal_1_1 & 0xFu)) * 4 +
-							  ((byteVal_2_1 & 0xF0u) >> 4) * -1 +
-							  ((byteVal_0_2 & 0xFu)) * 1/2 +
-							  ((byteVal_1_2 & 0xFu)) * 5 +
-							  ((byteVal_2_2 & 0xFu)) * 1/2 +
-							  ((byteVal_1_3 & 0xF0u) >> 4) * -1 +
-							  ((byteVal_1_3 & 0xFu)) * 4 +
-							  ((byteVal_2_3 & 0xF0u) >> 4) * -1 +
-							  ((byteVal_1_4 & 0xFu)) * -1
-							  );
+		fragColor.r = 	_val_1_2_0 * 8.0;
+		fragColor.g =
+						_val_1_0_0 * -1.0 +
+						_val_1_1_0 * 2.0 +
+						_val_0_2_0 * -1.0 +
+						_val_0_2_1 * 2.0 +
+						_val_1_2_0 * 4.0 +
+						_val_1_2_1 * 2.0 +
+						_val_2_2_0 * -1.0 +
+						_val_1_3_0 * 2.0 +
+						_val_1_4_0 * -1.0;
+		fragColor.b =
+						_val_1_0_0 * -1.5 +
+						_val_0_1_1 * 2.0 +
+						_val_1_1_1 * 2.0 +
+						_val_0_2_0 * -1.5 +
+						_val_1_2_0 * -6.0 +
+						_val_2_2_0 * -1.5 +
+						_val_0_3_1 * 2.0 +
+						_val_1_3_1 * 2.0 +
+						_val_1_4_0 * -1.5;
 		
 	} else if (((xpos % 2) == 1) && ((scanline % 2) == 0))
 	{
+		// top right corner: green location, even row
+		// Origin is on the right nibble
+
+		fragColor.r =
+						_val_1_0_1 * 0.5 +
+						_val_1_1_0 * -1.0 +
+						_val_2_1_0 * -1.0 +
+						_val_0_2_1 * -1.0 +
+						_val_1_2_0 * 4.0 +
+						_val_1_2_1 * 5.0 +
+						_val_2_2_0 * 4.0 +
+						_val_2_2_1 * -1.0 +
+						_val_1_3_0 * -1.0 +
+						_val_2_3_0 * -1.0 +
+						_val_1_4_1 * 0.5;
+		fragColor.g = 	_val_1_2_1 * 8.0;
+		fragColor.b =
+						_val_1_0_1 * -1.0 +
+						_val_1_1_0 * -1.0 +
+						_val_1_1_1 * 4.0 +
+						_val_2_1_0 * -1.0 +
+						_val_0_2_1 * -0.5 +
+						_val_1_2_1 * 5.0 +
+						_val_2_2_1 * -0.5 +
+						_val_1_3_0 * -1.0 +
+						_val_1_3_1 * 4.0 +
+						_val_2_3_0 * -1.0 +
+						_val_1_4_1 * -1.0;
+
+	} else if (((xpos % 2) == 0) && ((scanline % 2) == 1))
+	{
 		// bottom left corner: green location, odd row
-		uint byteVal_1_0 = texelFetch(VRAMTEX,originByte+ivec2(0,-2),0).r;
-		uint byteVal_0_1 = texelFetch(VRAMTEX,originByte+ivec2(-1,-1),0).r;
-		uint byteVal_1_1 = texelFetch(VRAMTEX,originByte+ivec2(0,-1),0).r;
-		uint byteVal_0_2 = texelFetch(VRAMTEX,originByte+ivec2(-1,0),0).r;
-		uint byteVal_1_2 = texelFetch(VRAMTEX,originByte,0).r;
-		uint byteVal_2_2 = texelFetch(VRAMTEX,originByte+ivec2(+1,0),0).r;
-		uint byteVal_0_3 = texelFetch(VRAMTEX,originByte+ivec2(-1,+1),0).r;
-		uint byteVal_1_3 = texelFetch(VRAMTEX,originByte+ivec2(0,+1),0).r;
-		uint byteVal_1_4 = texelFetch(VRAMTEX,originByte+ivec2(0,+2),0).r;
+		// Origin is on the left nibble
+
+		fragColor.r =
+						_val_1_0_0 * -1.0 +
+						_val_0_1_1 * -1.0 +
+						_val_1_1_0 * 4.0 +
+						_val_1_1_1 * -1.0 +
+						_val_0_2_0 * -0.5 +
+						_val_1_2_0 * 5.0 +
+						_val_2_2_0 * -0.5 +
+						_val_0_3_1 * -1.0 +
+						_val_1_3_0 * 4.0 +
+						_val_1_3_1 * -1.0 +
+						_val_1_4_0 * -1.0;
+		fragColor.g = 	_val_1_2_0 * 8.0;
+		fragColor.b =
+						_val_1_0_0 * 0.5 +
+						_val_0_1_1 * -1.0 +
+						_val_1_1_1 * -1.0 +
+						_val_0_2_0 * -1.0 +
+						_val_0_2_1 * 4.0 +
+						_val_1_2_0 * 5.0 +
+						_val_1_2_1 * 4.0 +
+						_val_2_2_0 * -1.0 +
+						_val_0_3_1 * -1.0 +
+						_val_1_3_1 * -1.0 +
+						_val_1_4_0 * 0.5;
 		
-		fragColor.r =	float(
-							  ((byteVal_1_0 & 0xF0u) >> 4) * -1 +
-							  ((byteVal_0_1 & 0xFu)) * -1 +
-							  ((byteVal_1_1 & 0xF0u) >> 4) * 4 +
-							  ((byteVal_1_1 & 0xFu)) * -1 +
-							  ((byteVal_0_2 & 0xF0u) >> 4) * 1/2 +
-							  ((byteVal_1_2 & 0xF0u) >> 4) * 5 +
-							  ((byteVal_2_2 & 0xF0u) >> 4) * 1/2 +
-							  ((byteVal_0_3 & 0xFu)) * -1 +
-							  ((byteVal_1_3 & 0xF0u) >> 4) * 4 +
-							  ((byteVal_1_3 & 0xFu)) * -1 +
-							  ((byteVal_1_4 & 0xF0u) >> 4) * -1
-							  );
-		fragColor.g = 	float(
-							  ((byteVal_1_2 & 0xF0u) >> 4) * 8
-							  );
-		fragColor.b =	float(
-							  ((byteVal_1_0 & 0xF0u) >> 4) * 1/2 +
-							  ((byteVal_0_1 & 0xFu)) * -1 +
-							  ((byteVal_1_1 & 0xFu)) * -1 +
-							  ((byteVal_0_2 & 0xF0u) >> 4) * -1 +
-							  ((byteVal_0_2 & 0xFu)) * 4 +
-							  ((byteVal_1_2 & 0xF0u) >> 4) * 5 +
-							  ((byteVal_1_2 & 0xFu)) * 4 +
-							  ((byteVal_2_2 & 0xF0u) >> 4) * -1 +
-							  ((byteVal_0_3 & 0xFu)) * -1 +
-							  ((byteVal_1_3 & 0xFu)) * -1 +
-							  ((byteVal_1_4 & 0xF0u) >> 4) * 1/2
-							  );
 	} else
 	{
 		// bottom right corner: blue location, odd row
-		uint byteVal_1_0 = texelFetch(VRAMTEX,originByte+ivec2(0,-2),0).r;
-		uint byteVal_1_1 = texelFetch(VRAMTEX,originByte+ivec2(0,-1),0).r;
-		uint byteVal_2_1 = texelFetch(VRAMTEX,originByte+ivec2(+1,-1),0).r;
-		uint byteVal_0_2 = texelFetch(VRAMTEX,originByte+ivec2(-1,0),0).r;
-		uint byteVal_1_2 = texelFetch(VRAMTEX,originByte,0).r;
-		uint byteVal_2_2 = texelFetch(VRAMTEX,originByte+ivec2(+1,0),0).r;
-		uint byteVal_1_3 = texelFetch(VRAMTEX,originByte+ivec2(0,+1),0).r;
-		uint byteVal_2_3 = texelFetch(VRAMTEX,originByte+ivec2(+1,+1),0).r;
-		uint byteVal_1_4 = texelFetch(VRAMTEX,originByte+ivec2(0,+2),0).r;
-		fragColor.r = 	float(
-							  ((byteVal_1_0 & 0xFu)) * -3/2 +
-							  ((byteVal_1_1 & 0xF0u) >> 4) * 2 +
-							  ((byteVal_2_1 & 0xF0u) >> 4) * 2 +
-							  ((byteVal_0_2 & 0xFu)) * -3/2 +
-							  ((byteVal_1_2 & 0xFu)) * 6 +
-							  ((byteVal_2_2 & 0xFu)) * -3/2 +
-							  ((byteVal_1_3 & 0xF0u) >> 4) * 2 +
-							  ((byteVal_2_3 & 0xF0u) >> 4) * 2 +
-							  ((byteVal_1_4 & 0xFu)) * -3/2
-							  );
-		fragColor.g =	float(
-							  ((byteVal_1_0 & 0xFu)) * -1 +
-							  ((byteVal_1_1 & 0xFu)) * 2 +
-							  ((byteVal_0_2 & 0xFu)) * -1 +
-							  ((byteVal_1_2 & 0xF0u) >> 4) * 2 +
-							  ((byteVal_1_2 & 0xFu)) * 4 +
-							  ((byteVal_2_2 & 0xF0u) >> 4) * 2 +
-							  ((byteVal_2_2 & 0xFu)) * -1 +
-							  ((byteVal_1_3 & 0xFu)) * 2 +
-							  ((byteVal_1_4 & 0xFu)) * -1
-							  );
-		fragColor.b =	float(
-							  (byteVal_1_2 & 0xFu) * 8
-							  );
+		// Origin is on the right nibble
+
+		fragColor.r =
+						_val_1_0_1 * -1.5 +
+						_val_1_1_0 * 2.0 +
+						_val_2_1_0 * 2.0 +
+						_val_0_2_1 * -1.5 +
+						_val_1_2_1 * 6.0 +
+						_val_2_2_1 * -1.5 +
+						_val_1_3_0 * 2.0 +
+						_val_2_3_0 * 2.0 +
+						_val_1_4_1 * -1.5;
+		fragColor.g =
+						_val_1_0_1 * -1.0 +
+						_val_1_1_1 * 2.0 +
+						_val_0_2_1 * -1.0 +
+						_val_1_2_0 * 2.0 +
+						_val_1_2_1 * 4.0 +
+						_val_2_2_0 * 2.0 +
+						_val_2_2_1 * -1.0 +
+						_val_1_3_1 * 2.0 +
+						_val_1_4_1 * -1.0;
+		fragColor.b =	_val_1_2_1 * 8.0;
+
 	}
 	
 	fragColor /= (8.0 * 16.0);
+
 	fragColor.a = 1.0;
 	fragColor = clamp(fragColor, 0.0, 1.0);
 	
