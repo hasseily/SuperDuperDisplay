@@ -266,8 +266,6 @@ void main()
 						_val_0_3_1 * 2.0 +
 						_val_1_3_1 * 2.0 +
 						_val_1_4_0 * -1.5;
-		fragColor.g = 0;
-		fragColor.b = 0;
 		
 	} else if (((xpos % 4) > 1) && ((ypos % 4) < 2))
 	{
@@ -299,8 +297,6 @@ void main()
 						_val_1_3_1 * 4.0 +
 						_val_2_3_0 * -1.0 +
 						_val_1_4_1 * -1.0;
-		fragColor.r = 0;
-		fragColor.b = 0;
 
 	} else if (((xpos % 4) < 2) && ((ypos % 4) > 1))
 	{
@@ -332,8 +328,6 @@ void main()
 						_val_0_3_1 * -1.0 +
 						_val_1_3_1 * -1.0 +
 						_val_1_4_0 * 0.5;
-		fragColor.r = 0;
-		fragColor.b = 0;
 		
 	} else
 	{
@@ -361,8 +355,6 @@ void main()
 						_val_1_3_1 * 2.0 +
 						_val_1_4_1 * -1.0;
 		fragColor.b =	_val_1_2_1 * 8.0;
-		fragColor.r = 0;
-		fragColor.g = 0;
 		
 	}
 	
