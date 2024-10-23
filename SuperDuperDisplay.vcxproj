@@ -238,6 +238,7 @@
     <None Include="shaders\a2video_beam_legacy.frag" />
     <None Include="shaders\a2video_beam_merge.frag" />
     <None Include="shaders\a2video_beam_shr.frag" />
+    <None Include="shaders\a2video_beam_shr_raw.frag" />
     <None Include="shaders\a2video_dhgr.frag" />
     <None Include="shaders\a2video_hgr.frag" />
     <None Include="shaders\a2video_lgr.frag" />

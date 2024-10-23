@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <cstring>   // for std::memcmp
 #include <string>
 #include <algorithm>
 #include <system_error>
@@ -1171,6 +1172,11 @@ GLuint A2VideoManager::Render()
 
 	// std::cerr << "--- Actual Render: " << vrams_read->frame_idx << std::endl;
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
+
+	// Set the magic bytes, currently only in SHR mode
+	auto memAuxPtr = MemoryManager::GetInstance()->GetApple2MemAuxPtr();
+	std::memcpy(&windowsbeam[A2VIDEOBEAM_SHR]->magicBytes, memAuxPtr + _A2VIDEO_SHR_MAGIC_BYTES,
+		sizeof(&windowsbeam[A2VIDEOBEAM_SHR]->magicBytes));
 
 	// ===============================================================================
 	// ============================== MERGED MODE RENDER ==============================
