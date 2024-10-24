@@ -233,7 +233,7 @@ void main()
     // or 2 doubled dots in 320 mode
     uint byteVal = texelFetch(VRAMTEX,originByte,0).r;
 
-    uint colorIdx = 0;
+    uint colorIdx = 0u;
     
     if (is640Mode)
     {
@@ -248,7 +248,7 @@ void main()
     paletteColorB2 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u + 1u, originByte.y), 0).r;
 
     if ((magicBytes == 0xC2C7C7D2)	        // Frame has "RGGB" (reversed bytes in the integer)
-        && ((paletteColorB2 >> 4) == 0x1))  // pixel is a RGGB 
+        && ((paletteColorB2 >> 4) == 0x1u))  // pixel is a RGGB 
     {
         // We want raw Color Filter Array (CFA) RGGB images, so we need to "demosaic".
         // Each byte is 2 pixels. If it's in an even scanline, the byte has 2 pixels: R and G
@@ -332,7 +332,7 @@ void main()
             fetchByteColorsIdx640(originByte + ivec2(0, +1), byteColorsD);
             colors[2][0] = float(byteColorsU[originLocalPixel]);      // 2
             colors[2][2] = float(byteColorsD[originLocalPixel]);     // 10
-            if (originLocalPixel == 0)  // needs the left bytes
+            if (originLocalPixel == 0u)  // needs the left bytes
             {
                 colors[3][0] = float(byteColorsU[originLocalPixel+1]);  // 3 right side
                 colors[3][2] = float(byteColorsD[originLocalPixel+1]); // 11
@@ -340,7 +340,7 @@ void main()
                 fetchByteColorsIdx640(originByte + ivec2(-1, +1), byteColorsD);
                 colors[1][0] = float(byteColorsU[3]);  // 1 left side
                 colors[1][2] = float(byteColorsD[3]);  // 9
-            } else if (originLocalPixel == 3) // needs the right bytes
+            } else if (originLocalPixel == 3u) // needs the right bytes
             {
                 colors[1][0] = float(byteColorsU[originLocalPixel-1]);  // 1 left side
                 colors[1][2] = float(byteColorsD[originLocalPixel-1]);  // 9
@@ -358,11 +358,11 @@ void main()
             // Finally, the center row. We need to fetch 5 consecutive pixels, which could be in different bytes
             fetchByteColorsIdx640(originByte, byteColorsU);
             colors[2][1] = float(byteColorsU[originLocalPixel]);
-            if (originLocalPixel < 2)  // needs the left byte
+            if (originLocalPixel < 2u)  // needs the left byte
             {
                 colors[3][1] = float(byteColorsU[originLocalPixel+1]);  // 7 right side
                 colors[0][2] = float(byteColorsU[originLocalPixel+2]);  // 8
-                if (originLocalPixel == 1)
+                if (originLocalPixel == 1u)
                 {
                     colors[1][1] = float(byteColorsU[0]);  // 5
                     fetchByteColorsIdx640(originByte + ivec2(-1, 0), byteColorsU);
@@ -376,7 +376,7 @@ void main()
             {
                 colors[0][1] = float(byteColorsU[originLocalPixel-2]);  // 4 left side
                 colors[1][1] = float(byteColorsU[originLocalPixel-1]);  // 5
-                if (originLocalPixel == 2)
+                if (originLocalPixel == 2u)
                 {
                     colors[3][1] = float(byteColorsU[3]);  // 7 right side
                     fetchByteColorsIdx640(originByte + ivec2(+1, 0), byteColorsU);
@@ -437,7 +437,7 @@ void main()
             fetchByteColorsIdx320(originByte + ivec2(0, +1), byteColorsD);
             colors[2][0] = float(byteColorsU[originLocalPixel]);      // 2
             colors[2][2] = float(byteColorsD[originLocalPixel]);     // 10
-            if (originLocalPixel == 0)  // needs the left bytes
+            if (originLocalPixel == 0u)  // needs the left bytes
             {
                 colors[3][0] = float(byteColorsU[1]);  // 3 right side
                 colors[3][2] = float(byteColorsD[1]); // 11
@@ -459,7 +459,7 @@ void main()
             fetchByteColorsIdx320(originByte, byteColorsU);
             colors[2][1] = float(byteColorsU[originLocalPixel]);    // 6 center pixel
             // colors[2][1] = paletteColorB2 & 0xFu;
-            if (originLocalPixel == 0)  // needs the full left byte and half of the right byte
+            if (originLocalPixel == 0u)  // needs the full left byte and half of the right byte
             {
                 colors[3][1] = float(byteColorsU[1]);  // 7 right side
                 fetchByteColorsIdx320(originByte + ivec2(+1, 0), byteColorsU);
