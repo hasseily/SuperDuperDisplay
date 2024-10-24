@@ -334,25 +334,25 @@ void main()
             colors[2][2] = float(byteColorsD[originLocalPixel]);     // 10
             if (originLocalPixel == 0u)  // needs the left bytes
             {
-                colors[3][0] = float(byteColorsU[originLocalPixel+1]);  // 3 right side
-                colors[3][2] = float(byteColorsD[originLocalPixel+1]); // 11
+                colors[3][0] = float(byteColorsU[originLocalPixel+1u]);  // 3 right side
+                colors[3][2] = float(byteColorsD[originLocalPixel+1u]); // 11
                 fetchByteColorsIdx640(originByte + ivec2(-1, -1), byteColorsU);
                 fetchByteColorsIdx640(originByte + ivec2(-1, +1), byteColorsD);
                 colors[1][0] = float(byteColorsU[3]);  // 1 left side
                 colors[1][2] = float(byteColorsD[3]);  // 9
             } else if (originLocalPixel == 3u) // needs the right bytes
             {
-                colors[1][0] = float(byteColorsU[originLocalPixel-1]);  // 1 left side
-                colors[1][2] = float(byteColorsD[originLocalPixel-1]);  // 9
+                colors[1][0] = float(byteColorsU[originLocalPixel-1u]);  // 1 left side
+                colors[1][2] = float(byteColorsD[originLocalPixel-1u]);  // 9
                 fetchByteColorsIdx640(originByte + ivec2(+1, -1), byteColorsU);
                 fetchByteColorsIdx640(originByte + ivec2(+1, +1), byteColorsD);
                 colors[3][0] = float(byteColorsU[0]);  // 3 right side
                 colors[3][2] = float(byteColorsD[0]); // 11
             } else {    // no need for another fetch
-                colors[1][0] = float(byteColorsU[originLocalPixel-1]);  // 1 left side
-                colors[1][2] = float(byteColorsD[originLocalPixel-1]);  // 9
-                colors[3][0] = float(byteColorsU[originLocalPixel+1]);  // 3 right side
-                colors[3][2] = float(byteColorsD[originLocalPixel+1]); // 11
+                colors[1][0] = float(byteColorsU[originLocalPixel-1u]);  // 1 left side
+                colors[1][2] = float(byteColorsD[originLocalPixel-1u]);  // 9
+                colors[3][0] = float(byteColorsU[originLocalPixel+1u]);  // 3 right side
+                colors[3][2] = float(byteColorsD[originLocalPixel+1u]); // 11
             }
 
             // Finally, the center row. We need to fetch 5 consecutive pixels, which could be in different bytes
@@ -360,8 +360,8 @@ void main()
             colors[2][1] = float(byteColorsU[originLocalPixel]);
             if (originLocalPixel < 2u)  // needs the left byte
             {
-                colors[3][1] = float(byteColorsU[originLocalPixel+1]);  // 7 right side
-                colors[0][2] = float(byteColorsU[originLocalPixel+2]);  // 8
+                colors[3][1] = float(byteColorsU[originLocalPixel+1u]);  // 7 right side
+                colors[0][2] = float(byteColorsU[originLocalPixel+2u]);  // 8
                 if (originLocalPixel == 1u)
                 {
                     colors[1][1] = float(byteColorsU[0]);  // 5
@@ -374,8 +374,8 @@ void main()
                 }
             } else // needs the right byte
             {
-                colors[0][1] = float(byteColorsU[originLocalPixel-2]);  // 4 left side
-                colors[1][1] = float(byteColorsU[originLocalPixel-1]);  // 5
+                colors[0][1] = float(byteColorsU[originLocalPixel-2u]);  // 4 left side
+                colors[1][1] = float(byteColorsU[originLocalPixel-1u]);  // 5
                 if (originLocalPixel == 2u)
                 {
                     colors[3][1] = float(byteColorsU[3]);  // 7 right side
