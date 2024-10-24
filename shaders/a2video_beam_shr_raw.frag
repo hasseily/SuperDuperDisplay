@@ -391,19 +391,19 @@ void main()
 
             // Switch to 640x200, from 640x400
             ypos = ypos >> 1;   // divide by 2
-            if (((xpos & 1) == 0u) && ((ypos & 1) == 0u))
+            if (((xpos & 1u) == 0u) && ((ypos & 1u) == 0u))
             {
                 // top left corner: red location, even row
                 fragColor.r = colors[2][1] * 8.0;
                 applyFilterToColor(fragColor.g, matGFilter, colors);
                 applyFilterToColor(fragColor.b, matRBFilter, colors);
-            } else if (((xpos & 1) == 1u) && ((ypos & 1) == 0u))
+            } else if (((xpos & 1u) == 1u) && ((ypos & 1u) == 0u))
             {
                 // top right corner: green location, even row
                 applyFilterToColor(fragColor.r, matXGFilter, colors);
                 fragColor.g = colors[2][1] * 8.0;
                 applyFilterToColor(fragColor.b, matXGXFilter, colors);
-            } else if (((xpos & 1) == 0u) && ((ypos & 1) == 1u))
+            } else if (((xpos & 1u) == 0u) && ((ypos & 1u) == 1u))
             {
                 // bottom left corner: green location, odd row
                 applyFilterToColor(fragColor.r, matXGXFilter, colors);
@@ -482,19 +482,19 @@ void main()
             // Switch to 320x200, from 640x400
             xpos = xpos >> 1;
             ypos = ypos >> 1;
-            if (((xpos & 1) == 0u) && ((ypos & 1) == 0u))
+            if (((xpos & 1u) == 0u) && ((ypos & 1u) == 0u))
             {
                 // top left corner: red location, even row
                 fragColor.r = colors[2][1] * 8.0;
                 applyFilterToColor(fragColor.g, matGFilter, colors);
                 applyFilterToColor(fragColor.b, matRBFilter, colors);
-            } else if (((xpos & 1) == 1u) && ((ypos & 1) == 0u))
+            } else if (((xpos & 1u) == 1u) && ((ypos & 1u) == 0u))
             {
                 // top right corner: green location, even row
                 applyFilterToColor(fragColor.r, matXGFilter, colors);
                 fragColor.g = colors[2][1] * 8.0;
                 applyFilterToColor(fragColor.b, matXGXFilter, colors);
-            } else if (((xpos & 1) == 0u) && ((ypos & 1) == 1u))
+            } else if (((xpos & 1u) == 0u) && ((ypos & 1u) == 1u))
             {
                 // bottom left corner: green location, odd row
                 applyFilterToColor(fragColor.r, matXGXFilter, colors);
