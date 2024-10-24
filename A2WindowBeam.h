@@ -52,10 +52,10 @@ public:
 
 	A2WindowBeam(A2VideoModeBeam_e _video_mode, const char* shaderVertexPath, const char* shaderFragmentPath);
 	~A2WindowBeam();
-	const uint32_t GetWidth();
-	const uint32_t GetHeight();
+	uint32_t GetWidth() const;
+	uint32_t GetHeight() const;
 	void SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vertical);
-	GLuint GetOutputTextureId();
+	GLuint GetOutputTextureId() const;
 	GLuint Render(bool shouldUpdateDataInGPU);	// returns the output texture id
 
 	Shader* GetShader() { return &shader; };
@@ -68,6 +68,8 @@ public:
 	
 	int specialModesMask = A2_VSM_NONE;		// Or'ed A2VideoSpecialMode_e
 	int monitorColorType = A2_MON_COLOR;	// Monitor color type A2VideoMonitorType_e
+
+	uint32_t magicBytes = 0;	// 4 Magic SHR bytes and potentially anything else to alter the shader behavior
 
 private:
 	bool vramTextureExists = false;						// true if the VRAM texture exists and only needs an update
