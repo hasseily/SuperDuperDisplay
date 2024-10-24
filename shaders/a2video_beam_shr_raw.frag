@@ -226,7 +226,7 @@ void main()
       
     // Also we're running at 640x400 so each byte is 4x2 pixels
     // And each color is 2x2 pixels because we have 2 colors per byte
-    ivec2 originByte = ivec2(33u + xpos/4u, ypos/2u);
+    ivec2 originByte = ivec2(33u + (xpos >> 2), ypos >> 1);
 
     // Grab the scanline color byte value
     // The scanline color byte value gives the color for either 4 dots in 640 mode,
@@ -241,7 +241,7 @@ void main()
     }
     else
     {
-        colorIdx = (byteVal >> (4u * (fragOffset/2u))) & 0xFu;
+        colorIdx = (byteVal >> (4u * (fragOffset >> 1))) & 0xFu;
     }
 
     // Get the second palette byte, we need it to determine if it's standard SHR or not
@@ -416,7 +416,7 @@ void main()
                 applyFilterToColor(fragColor.g, matGFilter, colors);
                 fragColor.b = colors[2][1] * 8.0;
             }
-            fragColor /= (8.0 * 4.0);  // Colors are 0-3, and filter gives x8
+            fragColor *= (1/(32.0));  // Colors are 0-3, and filter gives x8, so divide by 4x8
 
         } else {    // 320 mode
 
@@ -507,7 +507,7 @@ void main()
                 applyFilterToColor(fragColor.g, matGFilter, colors);
                 fragColor.b = colors[2][1] * 8.0;
             }
-            fragColor /= (8.0 * 16.0);  // Colors are 0-15, and filter gives x8
+            fragColor *= (1.0/128.0);  // Colors are 0-15, and filter gives x8, so divide by 16x8
         }   // end 640 or 320 mode
 
         fragColor.a = 1.0;
