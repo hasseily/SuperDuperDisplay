@@ -93,6 +93,7 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _A2VIDEO_SHR_START 0x2000	// All SHR is in the AUX (E1) bank!
 #define _A2VIDEO_SHR_SIZE 0x8000
 #define _A2VIDEO_SHR_SCB_START 0x9D00	// scanline control bytes: 1 per line, 200 total
+#define _A2VIDEO_SHR_MAGIC_BYTES 0x9DFC	// start of the 4 magic bytes determining the SHR mode
 #define _A2VIDEO_SHR_PALETTE_START 0x9E00
 
 
@@ -107,7 +108,7 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 //#define _SHADER_DHGR_FRAGMENT "shaders/a2video_dhgr.frag"
 //#define _SHADER_SHR_FRAGMENT "shaders/a2video_shr.frag"
 #define _SHADER_BEAM_LEGACY_FRAGMENT "shaders/a2video_beam_legacy.frag"
-#define _SHADER_BEAM_SHR_FRAGMENT "shaders/a2video_beam_shr.frag"
+#define _SHADER_BEAM_SHR_FRAGMENT "shaders/a2video_beam_shr_raw.frag"
 #define _SHADER_BEAM_MERGE_FRAGMENT "shaders/a2video_beam_merge.frag"
 
 #define _SHADER_SDHR_VERTEX_DEFAULT "shaders/sdhr_default_330.vert"

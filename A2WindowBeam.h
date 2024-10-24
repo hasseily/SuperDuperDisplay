@@ -69,6 +69,8 @@ public:
 	int specialModesMask = A2_VSM_NONE;		// Or'ed A2VideoSpecialMode_e
 	int monitorColorType = A2_MON_COLOR;	// Monitor color type A2VideoMonitorType_e
 
+	uint32_t magicBytes = 0;	// 4 Magic SHR bytes and potentially anything else to alter the shader behavior
+
 private:
 	bool vramTextureExists = false;						// true if the VRAM texture exists and only needs an update
 	A2VideoModeBeam_e video_mode = A2VIDEOBEAM_LEGACY;	// Which video mode is used
