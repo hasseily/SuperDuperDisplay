@@ -191,9 +191,7 @@ void fetchByteColors320(ivec2 byteCoord, out uint colors[2]) {
 // Function that applies the 5x5 filter to a color component
 void applyFilterToColor(inout float colorComponent, mat4 filterMatrix, mat4 colors) {
     for (int i = 0; i < 4; ++i) {
-        for (int j = 0; j < 4; ++j) {
-            colorComponent += colors[i][j] * filterMatrix[i][j];
-        }
+        colorComponent += dot(colors[i], filterMatrix[i]);
     }
 }
 
@@ -228,7 +226,7 @@ void main()
       
     // Also we're running at 640x400 so each byte is 4x2 pixels
     // And each color is 2x2 pixels because we have 2 colors per byte
-    ivec2 originByte = ivec2(33 + xpos/4, ypos/2);
+    ivec2 originByte = ivec2(33u + xpos/4u, ypos/2u);
 
     // Grab the scanline color byte value
     // The scanline color byte value gives the color for either 4 dots in 640 mode,
@@ -305,28 +303,28 @@ void main()
                 RLR          LRL
                  L            R
          */
-    
+        // Let's use matrices to store the colors. We need to store exactly 13 colors.
+        // So we can use a 4x4 matrix and keep the last values 0.
+        mat4 colors = mat4(0.0);
+        /* 
+            The color indexes are:
+                    0
+                1   2   3
+            4   5   6   7   8
+                9   10  11
+                    12
+            In matrix terms, using the same layout as the filter matrices:
+            0: 0,0      1: 1,0      2: 2,0      3: 3,0
+            4: 0,1      5: 1,1      6: 2,1      7: 3,1
+            8: 0,2      9: 1,2     10: 2,2     11: 3,2
+            12: 0,3     13: 1,3     14: 2,3     15: 3,3
+                
+        */
+
         if (is640Mode)
         {
             uint originLocalPixel = xpos % 4u;    // Local pixel index [0, 3] within the byte
 
-            // Let's use matrices to store the colors. We need to store exactly 13 colors.
-            // So we can use a 4x4 matrix and keep the last values 0.
-            mat4 colors = mat4(0.0);
-            /* 
-                The color indexes are:
-                        0
-                    1   2   3
-                4   5   6   7   8
-                    9   10  11
-                        12
-                In matrix terms:
-                0: 0,0      4: 1,0      8: 2,0     12: 3,0
-                1: 0,1      5: 1,1      9: 2,1     13: 3,1
-                2: 0,2      6: 1,2     10: 2,2     14: 3,2
-                3: 0,3      7: 1,3     11: 2,3     15: 3,3
-                
-            */
             // Arrays to store the 4 colors of the fetched byte
             uint byteColorsU[4];  // The 4 colors of the byte on the rows above center
             uint byteColorsD[4];  // The 4 colors of the byte on the rows below center
@@ -335,57 +333,72 @@ void main()
             fetchByteColors640(originByte + ivec2(0, -2), byteColorsU);
             fetchByteColors640(originByte + ivec2(0, +2), byteColorsD);
             colors[0][0] = float(byteColorsU[originLocalPixel]);    // 0
-            colors[3][0] = float(byteColorsD[originLocalPixel]);    // 12
+            colors[0][3] = float(byteColorsD[originLocalPixel]);    // 12
 
             // For rows 2 and 4, we need to fetch 3 consecutive pixels, which could be in different bytes
             fetchByteColors640(originByte + ivec2(0, -1), byteColorsU);
             fetchByteColors640(originByte + ivec2(0, +1), byteColorsD);
-            colors[0][2] = float(byteColorsU[originLocalPixel]);      // 2
+            colors[2][0] = float(byteColorsU[originLocalPixel]);      // 2
             colors[2][2] = float(byteColorsD[originLocalPixel]);     // 10
             if (originLocalPixel == 0)  // needs the left bytes
             {
-                colors[0][3] = float(byteColorsU[originLocalPixel+1]);  // 3 right side
-                colors[2][3] = float(byteColorsD[originLocalPixel+1]); // 11
+                colors[3][0] = float(byteColorsU[originLocalPixel+1]);  // 3 right side
+                colors[3][2] = float(byteColorsD[originLocalPixel+1]); // 11
                 fetchByteColors640(originByte + ivec2(-1, -1), byteColorsU);
                 fetchByteColors640(originByte + ivec2(-1, +1), byteColorsD);
-                colors[0][1] = float(byteColorsU[originLocalPixel-1]);  // 1 left side
-                colors[2][1] = float(byteColorsD[originLocalPixel-1]);  // 9
+                colors[1][0] = float(byteColorsU[3]);  // 1 left side
+                colors[1][2] = float(byteColorsD[3]);  // 9
             } else if (originLocalPixel == 3) // needs the right bytes
             {
-                colors[0][1] = float(byteColorsU[originLocalPixel-1]);  // 1 left side
-                colors[2][1] = float(byteColorsD[originLocalPixel-1]);  // 9
+                colors[1][0] = float(byteColorsU[originLocalPixel-1]);  // 1 left side
+                colors[1][2] = float(byteColorsD[originLocalPixel-1]);  // 9
                 fetchByteColors640(originByte + ivec2(+1, -1), byteColorsU);
                 fetchByteColors640(originByte + ivec2(+1, +1), byteColorsD);
-                colors[0][3] = float(byteColorsU[originLocalPixel+1]);  // 3 right side
-                colors[2][3] = float(byteColorsD[originLocalPixel+1]); // 11
+                colors[3][0] = float(byteColorsU[0]);  // 3 right side
+                colors[3][2] = float(byteColorsD[0]); // 11
             } else {    // no need for another fetch
-                colors[0][1] = float(byteColorsU[originLocalPixel-1]);  // 1 left side
-                colors[2][1] = float(byteColorsD[originLocalPixel-1]);  // 9
-                colors[0][3] = float(byteColorsU[originLocalPixel+1]);  // 3 right side
-                colors[2][3] = float(byteColorsD[originLocalPixel+1]); // 11
+                colors[1][0] = float(byteColorsU[originLocalPixel-1]);  // 1 left side
+                colors[1][2] = float(byteColorsD[originLocalPixel-1]);  // 9
+                colors[3][0] = float(byteColorsU[originLocalPixel+1]);  // 3 right side
+                colors[3][2] = float(byteColorsD[originLocalPixel+1]); // 11
             }
 
             // Finally, the center row. We need to fetch 5 consecutive pixels, which could be in different bytes
             fetchByteColors640(originByte, byteColorsU);
-            colors[1][2] = float(byteColorsU[originLocalPixel]);
+            colors[2][1] = float(byteColorsU[originLocalPixel]);
             if (originLocalPixel < 2)  // needs the left byte
             {
-                colors[1][3] = float(byteColorsU[originLocalPixel+1]);  // 7 right side
-                colors[2][0] = float(byteColorsU[originLocalPixel+2]);  // 8
-                fetchByteColors640(originByte + ivec2(-1, 0), byteColorsU);
-                colors[1][0] = float(byteColorsU[originLocalPixel-2]);  // 4 left side
-                colors[1][1] = float(byteColorsU[originLocalPixel-1]);  // 5
+                colors[3][1] = float(byteColorsU[originLocalPixel+1]);  // 7 right side
+                colors[0][2] = float(byteColorsU[originLocalPixel+2]);  // 8
+                if (originLocalPixel == 1)
+                {
+                    colors[1][1] = float(byteColorsU[0]);  // 5
+                    fetchByteColors640(originByte + ivec2(-1, 0), byteColorsU);
+                    colors[0][1] = float(byteColorsU[3]);  // 4 left side
+                } else {
+                    fetchByteColors640(originByte + ivec2(-1, 0), byteColorsU);
+                    colors[0][1] = float(byteColorsU[2]);  // 4 left side
+                    colors[1][1] = float(byteColorsU[3]);  // 5
+                }
             } else // needs the right byte
             {
-                colors[1][0] = float(byteColorsU[originLocalPixel-2]);  // 4 left side
+                colors[0][1] = float(byteColorsU[originLocalPixel-2]);  // 4 left side
                 colors[1][1] = float(byteColorsU[originLocalPixel-1]);  // 5
-                fetchByteColors640(originByte + ivec2(+1, 0), byteColorsU);
-                colors[1][3] = float(byteColorsU[originLocalPixel+1]);  // 7 right side
-                colors[2][0] = float(byteColorsU[originLocalPixel+2]);  // 8
+                if (originLocalPixel == 2)
+                {
+                    colors[3][1] = float(byteColorsU[3]);  // 7 right side
+                    fetchByteColors640(originByte + ivec2(+1, 0), byteColorsU);
+                    colors[0][2] = float(byteColorsU[0]);  // 8
+                } else {
+                    fetchByteColors640(originByte + ivec2(+1, 0), byteColorsU);
+                    colors[3][1] = float(byteColorsU[0]);  // 7 right side
+                    colors[0][2] = float(byteColorsU[1]);  // 8
+                }
             }
-    
             // The `colors` mat4 now contains the color values around the origin pixel
 
+            // Switch to 640x200, from 640x400
+            ypos /= 2u;
             if (((xpos % 2) == 0) && ((ypos % 2) == 0))
             {
                 // top left corner: red location, even row
@@ -415,163 +428,91 @@ void main()
 
         } else {    // 320 mode
 
-            int byteVal_1_0 = int(texelFetch(VRAMTEX,originByte+ivec2(0,-2),0).r);
-            int byteVal_0_1 = int(texelFetch(VRAMTEX,originByte+ivec2(-1,-1),0).r);
-            int byteVal_1_1 = int(texelFetch(VRAMTEX,originByte+ivec2(0,-1),0).r);
-            int byteVal_2_1 = int(texelFetch(VRAMTEX,originByte+ivec2(+1,-1),0).r);
-            int byteVal_0_2 = int(texelFetch(VRAMTEX,originByte+ivec2(-1,0),0).r);
-            int byteVal_1_2 = int(byteVal);	// Origin
-            int byteVal_2_2 = int(texelFetch(VRAMTEX,originByte+ivec2(+1,0),0).r);
-            int byteVal_0_3 = int(texelFetch(VRAMTEX,originByte+ivec2(-1,+1),0).r);
-            int byteVal_1_3 = int(texelFetch(VRAMTEX,originByte+ivec2(0,+1),0).r);
-            int byteVal_2_3 = int(texelFetch(VRAMTEX,originByte+ivec2(+1,+1),0).r);
-            int byteVal_1_4 = int(texelFetch(VRAMTEX,originByte+ivec2(0,+2),0).r);
+            uint originLocalPixel = xpos % 2u;    // Local pixel index [0, 1] within the byte
 
-            // name convention is _val_x_y_p where p is the pixel position in the byte
+            // Arrays to store the 2 colors of the fetched byte
+            uint byteColorsU[2];  // The 2 colors of the byte on the rows above center
+            uint byteColorsD[2];  // The 2 colors of the byte on the rows below center
 
-            // Left color value (nibble) of each texel
-            float _val_1_0_0 = float(byteVal_1_0 >> 4);
-            float _val_0_1_0 = float(byteVal_0_1 >> 4);
-            float _val_1_1_0 = float(byteVal_1_1 >> 4);
-            float _val_2_1_0 = float(byteVal_2_1 >> 4);
-            float _val_0_2_0 = float(byteVal_0_2 >> 4);
-            float _val_1_2_0 = float(byteVal_1_2 >> 4);
-            float _val_2_2_0 = float(byteVal_2_2 >> 4);
-            float _val_0_3_0 = float(byteVal_0_3 >> 4);
-            float _val_1_3_0 = float(byteVal_1_3 >> 4);
-            float _val_2_3_0 = float(byteVal_2_3 >> 4);
-            float _val_1_4_0 = float(byteVal_1_4 >> 4);
+            // Top and bottom row, just fetch the center byte and get the single pixel color
+            fetchByteColors320(originByte + ivec2(0, -2), byteColorsU);
+            fetchByteColors320(originByte + ivec2(0, +2), byteColorsD);
+            colors[0][0] = float(byteColorsU[originLocalPixel]);    // 0
+            colors[0][3] = float(byteColorsD[originLocalPixel]);    // 12
+
+            // For rows 2 and 4, we need to fetch 3 consecutive pixels, which could be in different bytes
+            fetchByteColors320(originByte + ivec2(0, -1), byteColorsU);
+            fetchByteColors320(originByte + ivec2(0, +1), byteColorsD);
+            colors[2][0] = float(byteColorsU[originLocalPixel]);      // 2
+            colors[2][2] = float(byteColorsD[originLocalPixel]);     // 10
+            if (originLocalPixel == 0)  // needs the left bytes
+            {
+                colors[3][0] = float(byteColorsU[1]);  // 3 right side
+                colors[3][2] = float(byteColorsD[1]); // 11
+                fetchByteColors320(originByte + ivec2(-1, -1), byteColorsU);
+                fetchByteColors320(originByte + ivec2(-1, +1), byteColorsD);
+                colors[1][0] = float(byteColorsU[1]);  // 1 left side
+                colors[1][2] = float(byteColorsD[1]);  // 9
+            } else // needs the right bytes
+            {
+                colors[1][0] = float(byteColorsU[0]);  // 1 left side
+                colors[1][2] = float(byteColorsD[0]);  // 9
+                fetchByteColors320(originByte + ivec2(+1, -1), byteColorsU);
+                fetchByteColors320(originByte + ivec2(+1, +1), byteColorsD);
+                colors[3][0] = float(byteColorsU[0]);  // 3 right side
+                colors[3][2] = float(byteColorsD[0]); // 11
+            }
+
+            // Finally, the center row. We need to fetch 5 consecutive pixels, which will be in different bytes
+            fetchByteColors320(originByte, byteColorsU);
+            colors[2][1] = float(byteColorsU[originLocalPixel]);
+            if (originLocalPixel == 0)  // needs the full left byte and half of the right byte
+            {
+                colors[3][1] = float(byteColorsU[1]);  // 7 right side
+                fetchByteColors320(originByte + ivec2(+1, 0), byteColorsU);
+                colors[0][2] = float(byteColorsU[0]);  // 8
+                fetchByteColors320(originByte + ivec2(-1, 0), byteColorsU);
+                colors[0][1] = float(byteColorsU[0]);  // 4 left side
+                colors[1][1] = float(byteColorsU[1]);  // 5
+            } else // needs the the full right byte and half of the left byte
+            {
+                colors[1][1] = float(byteColorsU[0]);  // 5 left side
+                fetchByteColors320(originByte + ivec2(-1, 0), byteColorsU);
+                colors[0][1] = float(byteColorsU[1]);  // 4
+                fetchByteColors320(originByte + ivec2(+1, 0), byteColorsU);
+                colors[3][1] = float(byteColorsU[0]);  // 7 right side
+                colors[0][2] = float(byteColorsU[1]);  // 8
+            }
     
-            // Right color value (nibble) of each texel
-            float _val_1_0_1 = float(byteVal_1_0 & 0xF);
-            float _val_0_1_1 = float(byteVal_0_1 & 0xF);
-            float _val_1_1_1 = float(byteVal_1_1 & 0xF);
-            float _val_2_1_1 = float(byteVal_2_1 & 0xF);
-            float _val_0_2_1 = float(byteVal_0_2 & 0xF);
-            float _val_1_2_1 = float(byteVal_1_2 & 0xF);
-            float _val_2_2_1 = float(byteVal_2_2 & 0xF);
-            float _val_0_3_1 = float(byteVal_0_3 & 0xF);
-            float _val_1_3_1 = float(byteVal_1_3 & 0xF);
-            float _val_2_3_1 = float(byteVal_2_3 & 0xF);
-            float _val_1_4_1 = float(byteVal_1_4 & 0xF);
-    
-            // ALL COLORS ARE SCALED BY 8.0
-            if (((xpos % 4) < 2) && ((ypos % 4) < 2))
+            // The `colors` mat4 now contains the color values around the origin pixel
+
+            // Switch to 320x200, from 640x400
+            xpos /= 2u;
+            ypos /= 2u;
+            if (((xpos % 2) == 0) && ((ypos % 2) == 0))
             {
                 // top left corner: red location, even row
-                // Origin is on the left nibble
-        
-                fragColor.r = 	_val_1_2_0 * 8.0;
-                fragColor.g =
-                                _val_1_0_0 * -1.0 +
-                                _val_1_1_0 * 2.0 +
-                                _val_0_2_0 * -1.0 +
-                                _val_0_2_1 * 2.0 +
-                                _val_1_2_0 * 4.0 +
-                                _val_1_2_1 * 2.0 +
-                                _val_2_2_0 * -1.0 +
-                                _val_1_3_0 * 2.0 +
-                                _val_1_4_0 * -1.0;
-                fragColor.b =
-                                _val_1_0_0 * -1.5 +
-                                _val_0_1_1 * 2.0 +
-                                _val_1_1_1 * 2.0 +
-                                _val_0_2_0 * -1.5 +
-                                _val_1_2_0 * -6.0 +
-                                _val_2_2_0 * -1.5 +
-                                _val_0_3_1 * 2.0 +
-                                _val_1_3_1 * 2.0 +
-                                _val_1_4_0 * -1.5;
-        
-            } else if (((xpos % 4) > 1) && ((ypos % 4) < 2))
+                fragColor.r = colors[1][2] * 8.0;
+                applyFilterToColor(fragColor.g, matGFilter, colors);
+                applyFilterToColor(fragColor.b, matRBFilter, colors);
+            } else if (((xpos % 2) == 0) && ((ypos % 2) == 1))
             {
                 // top right corner: green location, even row
-                // Origin is on the right nibble
-
-                fragColor.r =
-                                _val_1_0_1 * 0.5 +
-                                _val_1_1_0 * -1.0 +
-                                _val_2_1_0 * -1.0 +
-                                _val_0_2_1 * -1.0 +
-                                _val_1_2_0 * 4.0 +
-                                _val_1_2_1 * 5.0 +
-                                _val_2_2_0 * 4.0 +
-                                _val_2_2_1 * -1.0 +
-                                _val_1_3_0 * -1.0 +
-                                _val_2_3_0 * -1.0 +
-                                _val_1_4_1 * 0.5;
-                fragColor.g = 	_val_1_2_1 * 8.0;
-                fragColor.b =
-                                _val_1_0_1 * -1.0 +
-                                _val_1_1_0 * -1.0 +
-                                _val_1_1_1 * 4.0 +
-                                _val_2_1_0 * -1.0 +
-                                _val_0_2_1 * -0.5 +
-                                _val_1_2_1 * 5.0 +
-                                _val_2_2_1 * -0.5 +
-                                _val_1_3_0 * -1.0 +
-                                _val_1_3_1 * 4.0 +
-                                _val_2_3_0 * -1.0 +
-                                _val_1_4_1 * -1.0;
-
-            } else if (((xpos % 4) < 2) && ((ypos % 4) > 1))
+                applyFilterToColor(fragColor.r, matXGFilter, colors);
+                fragColor.g = colors[1][2] * 8.0;
+                applyFilterToColor(fragColor.b, matXGXFilter, colors);
+            } else if (((xpos % 2) == 1) && ((ypos % 2) == 0))
             {
                 // bottom left corner: green location, odd row
-                // Origin is on the left nibble
-
-                fragColor.r =
-                                _val_1_0_0 * -1.0 +
-                                _val_0_1_1 * -1.0 +
-                                _val_1_1_0 * 4.0 +
-                                _val_1_1_1 * -1.0 +
-                                _val_0_2_0 * -0.5 +
-                                _val_1_2_0 * 5.0 +
-                                _val_2_2_0 * -0.5 +
-                                _val_0_3_1 * -1.0 +
-                                _val_1_3_0 * 4.0 +
-                                _val_1_3_1 * -1.0 +
-                                _val_1_4_0 * -1.0;
-                fragColor.g = 	_val_1_2_0 * 8.0;
-                fragColor.b =
-                                _val_1_0_0 * 0.5 +
-                                _val_0_1_1 * -1.0 +
-                                _val_1_1_1 * -1.0 +
-                                _val_0_2_0 * -1.0 +
-                                _val_0_2_1 * 4.0 +
-                                _val_1_2_0 * 5.0 +
-                                _val_1_2_1 * 4.0 +
-                                _val_2_2_0 * -1.0 +
-                                _val_0_3_1 * -1.0 +
-                                _val_1_3_1 * -1.0 +
-                                _val_1_4_0 * 0.5;
-        
+                applyFilterToColor(fragColor.r, matXGXFilter, colors);
+                fragColor.g = colors[1][2] * 8.0;
+                applyFilterToColor(fragColor.b, matXGFilter, colors);
             } else
             {
-                // bottom right corner: blue location, odd row
-                // Origin is on the right nibble
-
-                fragColor.r =
-                                _val_1_0_1 * -1.5 +
-                                _val_1_1_0 * 2.0 +
-                                _val_2_1_0 * 2.0 +
-                                _val_0_2_1 * -1.5 +
-                                _val_1_2_1 * 6.0 +
-                                _val_2_2_1 * -1.5 +
-                                _val_1_3_0 * 2.0 +
-                                _val_2_3_0 * 2.0 +
-                                _val_1_4_1 * -1.5;
-                fragColor.g =
-                                _val_1_0_1 * -1.0 +
-                                _val_1_1_1 * 2.0 +
-                                _val_0_2_1 * -1.0 +
-                                _val_1_2_0 * 2.0 +
-                                _val_1_2_1 * 4.0 +
-                                _val_2_2_0 * 2.0 +
-                                _val_2_2_1 * -1.0 +
-                                _val_1_3_1 * 2.0 +
-                                _val_1_4_1 * -1.0;
-                fragColor.b =	_val_1_2_1 * 8.0;
-        
+                // bottom right right corner: blue location, odd row
+                applyFilterToColor(fragColor.r, matRBFilter, colors);
+                applyFilterToColor(fragColor.g, matGFilter, colors);
+                fragColor.b = colors[1][2] * 8.0;
             }
             fragColor /= (8.0 * 16.0);  // Colors are 0-15, and filter gives x8
         }   // end 640 or 320 mode
