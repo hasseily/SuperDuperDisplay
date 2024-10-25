@@ -17,7 +17,9 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  On each line:
  - the first byte is the SCB of the line
  - the next 32 bytes is the color palette (16 colors of 2 bytes each)
- - the last 160 bytes + hborders are the SHR scanline byte
+ - then 4 bytes for each hborder (each cycle is 16 dots == 4 bytes)
+ - then 160 bytes for the SHR data
+ - and finally another 4 bytes for each hborder
 
  The SCB and palette are loaded at the start of the line by the beam generator,
  so they are always fixed for the line. This has been verified on original hardware
@@ -175,9 +177,11 @@ uint extractColorIdx320(uint byteVal, int localPixel) {
 }
 
 // Function to fetch 4 or 2 color indexes from a byte
+// In the VRAM there bytes are for each line: 1 SCB, 32 palette, 4*hborder, 192 SHR, 4*hborder
+// And there are vborder lines above and below
 void fetchByteColorsIdx640(ivec2 byteCoord, out uint colors[4]) {
-    bvec2 withinBounds = greaterThanEqual(byteCoord, ivec2(33+hborder*8,vborder)) 
-                           && lessThanEqual(byteCoord, ivec2(33+192+hborder*8, 199+vborder));
+    bvec2 withinBounds = greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)) 
+                           && lessThanEqual(byteCoord, ivec2(33+192+hborder*4, 199+vborder));
     if (!all(withinBounds)) {
         colors = uint[4](0u, 0u, 0u, 0u);
         return;
@@ -190,7 +194,7 @@ void fetchByteColorsIdx640(ivec2 byteCoord, out uint colors[4]) {
 
 void fetchByteColorsIdx320(ivec2 byteCoord, out uint colors[2]) {
     bvec2 withinBounds = greaterThanEqual(byteCoord, ivec2(33,0)) 
-                            && lessThanEqual(byteCoord, ivec2(33+192+hborder*8, 199+vborder));
+                            && lessThanEqual(byteCoord, ivec2(33+192+hborder*4, 199+vborder));
     if (!all(withinBounds)) {
         colors = uint[2](0u, 0u);
         return;
@@ -215,7 +219,7 @@ void main()
     if ((vFragPos.y < float(vborder*2)) || (vFragPos.y >= float(vborder*2+400)) || 
         (vFragPos.x < float(hborder*16)) || (vFragPos.x >= float(640+hborder*16)))
     {
-        fragColor = bordercolors[texelFetch(VRAMTEX, ivec2(33u + uint(float(vFragPos.x) / 4.0), scanline), 0).r & 0x0Fu];
+        fragColor = bordercolors[texelFetch(VRAMTEX, ivec2(33u + (uint(vFragPos.x) >> 2), scanline), 0).r & 0x0Fu];
         if (monitorColorType > 0)
             fragColor = GetMonochromeValue(fragColor, monitorcolors[monitorColorType]);
         return;
