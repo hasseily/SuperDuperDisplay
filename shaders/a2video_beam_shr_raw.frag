@@ -321,10 +321,10 @@ void main()
                 9   10  11
                     12
             In matrix terms, using the same layout as the filter matrices:
-            0: 0,0      1: 1,0      2: 2,0      3: 3,0
-            4: 0,1      5: 1,1      6: 2,1      7: 3,1
-            8: 0,2      9: 1,2     10: 2,2     11: 3,2
-            12: 0,3     13: 1,3     14: 2,3     15: 3,3
+            0: 0,0      1: 0,1      2: 0,2      3: 0,3
+            4: 1,0      5: 1,1      6: 1,2      7: 1,3
+            8: 2,0      9: 2,1     10: 2,2     11: 2,3
+           12: 3,0     13: 3,1     14: 3,2     15: 3,3
 
             13-15 are unused and set to 0
                 
@@ -342,66 +342,66 @@ void main()
             fetchByteColorsIdx640(originByte + ivec2(0, -2), byteColorsU);
             fetchByteColorsIdx640(originByte + ivec2(0, +2), byteColorsD);
             colors[0][0] = float(byteColorsU[originLocalPixel]);    // 0
-            colors[0][3] = float(byteColorsD[originLocalPixel]);    // 12
+            colors[3][0] = float(byteColorsD[originLocalPixel]);    // 12
 
             // For rows 2 and 4, we need to fetch 3 consecutive pixels, which could be in different bytes
             fetchByteColorsIdx640(originByte + ivec2(0, -1), byteColorsU);
             fetchByteColorsIdx640(originByte + ivec2(0, +1), byteColorsD);
-            colors[2][0] = float(byteColorsU[originLocalPixel]);      // 2
+            colors[0][2] = float(byteColorsU[originLocalPixel]);      // 2
             colors[2][2] = float(byteColorsD[originLocalPixel]);     // 10
             if (originLocalPixel == 0u)  // needs the left bytes
             {
-                colors[3][0] = float(byteColorsU[originLocalPixel+1u]);  // 3 right side
-                colors[3][2] = float(byteColorsD[originLocalPixel+1u]); // 11
+                colors[0][3] = float(byteColorsU[originLocalPixel+1u]);  // 3 right side
+                colors[2][3] = float(byteColorsD[originLocalPixel+1u]); // 11
                 fetchByteColorsIdx640(originByte + ivec2(-1, -1), byteColorsU);
                 fetchByteColorsIdx640(originByte + ivec2(-1, +1), byteColorsD);
-                colors[1][0] = float(byteColorsU[3]);  // 1 left side
-                colors[1][2] = float(byteColorsD[3]);  // 9
+                colors[0][1] = float(byteColorsU[3]);  // 1 left side
+                colors[2][1] = float(byteColorsD[3]);  // 9
             } else if (originLocalPixel == 3u) // needs the right bytes
             {
-                colors[1][0] = float(byteColorsU[originLocalPixel-1u]);  // 1 left side
-                colors[1][2] = float(byteColorsD[originLocalPixel-1u]);  // 9
+                colors[0][1] = float(byteColorsU[originLocalPixel-1u]);  // 1 left side
+                colors[2][1] = float(byteColorsD[originLocalPixel-1u]);  // 9
                 fetchByteColorsIdx640(originByte + ivec2(+1, -1), byteColorsU);
                 fetchByteColorsIdx640(originByte + ivec2(+1, +1), byteColorsD);
-                colors[3][0] = float(byteColorsU[0]);  // 3 right side
-                colors[3][2] = float(byteColorsD[0]); // 11
+                colors[0][3] = float(byteColorsU[0]);  // 3 right side
+                colors[2][3] = float(byteColorsD[0]); // 11
             } else {    // no need for another fetch
-                colors[1][0] = float(byteColorsU[originLocalPixel-1u]);  // 1 left side
-                colors[1][2] = float(byteColorsD[originLocalPixel-1u]);  // 9
-                colors[3][0] = float(byteColorsU[originLocalPixel+1u]);  // 3 right side
-                colors[3][2] = float(byteColorsD[originLocalPixel+1u]); // 11
+                colors[0][1] = float(byteColorsU[originLocalPixel-1u]);  // 1 left side
+                colors[2][1] = float(byteColorsD[originLocalPixel-1u]);  // 9
+                colors[0][3] = float(byteColorsU[originLocalPixel+1u]);  // 3 right side
+                colors[2][3] = float(byteColorsD[originLocalPixel+1u]); // 11
             }
 
             // Finally, the center row. We need to fetch 5 consecutive pixels, which could be in different bytes
             fetchByteColorsIdx640(originByte, byteColorsU);
-            colors[2][1] = float(byteColorsU[originLocalPixel]);
+            colors[1][2] = float(byteColorsU[originLocalPixel]);
             if (originLocalPixel < 2u)  // needs the left byte
             {
-                colors[3][1] = float(byteColorsU[originLocalPixel+1u]);  // 7 right side
-                colors[0][2] = float(byteColorsU[originLocalPixel+2u]);  // 8
+                colors[1][3] = float(byteColorsU[originLocalPixel+1u]);  // 7 right side
+                colors[2][0] = float(byteColorsU[originLocalPixel+2u]);  // 8
                 if (originLocalPixel == 1u)
                 {
                     colors[1][1] = float(byteColorsU[0]);  // 5
                     fetchByteColorsIdx640(originByte + ivec2(-1, 0), byteColorsU);
-                    colors[0][1] = float(byteColorsU[3]);  // 4 left side
+                    colors[1][0] = float(byteColorsU[3]);  // 4 left side
                 } else {
                     fetchByteColorsIdx640(originByte + ivec2(-1, 0), byteColorsU);
-                    colors[0][1] = float(byteColorsU[2]);  // 4 left side
+                    colors[1][0] = float(byteColorsU[2]);  // 4 left side
                     colors[1][1] = float(byteColorsU[3]);  // 5
                 }
             } else // needs the right byte
             {
-                colors[0][1] = float(byteColorsU[originLocalPixel-2u]);  // 4 left side
+                colors[1][0] = float(byteColorsU[originLocalPixel-2u]);  // 4 left side
                 colors[1][1] = float(byteColorsU[originLocalPixel-1u]);  // 5
                 if (originLocalPixel == 2u)
                 {
-                    colors[3][1] = float(byteColorsU[3]);  // 7 right side
+                    colors[1][3] = float(byteColorsU[3]);  // 7 right side
                     fetchByteColorsIdx640(originByte + ivec2(+1, 0), byteColorsU);
-                    colors[0][2] = float(byteColorsU[0]);  // 8
+                    colors[2][0] = float(byteColorsU[0]);  // 8
                 } else {
                     fetchByteColorsIdx640(originByte + ivec2(+1, 0), byteColorsU);
-                    colors[3][1] = float(byteColorsU[0]);  // 7 right side
-                    colors[0][2] = float(byteColorsU[1]);  // 8
+                    colors[1][3] = float(byteColorsU[0]);  // 7 right side
+                    colors[2][0] = float(byteColorsU[1]);  // 8
                 }
             }
             // The `colors` mat4 now contains the color values around the origin pixel
@@ -411,27 +411,27 @@ void main()
             if (((xpos & 1u) == 0u) && ((ypos & 1u) == 0u))
             {
                 // top left corner: red location, even row
-                fragColor.r = colors[2][1] * 8.0;
+                fragColor.r = colors[1][2] * 8.0;
                 applyFilterToColor(fragColor.g, matGFilter, colors);
                 applyFilterToColor(fragColor.b, matRBFilter, colors);
             } else if (((xpos & 1u) == 1u) && ((ypos & 1u) == 0u))
             {
                 // top right corner: green location, even row
                 applyFilterToColor(fragColor.r, matXGFilter, colors);
-                fragColor.g = colors[2][1] * 8.0;
+                fragColor.g = colors[1][2] * 8.0;
                 applyFilterToColor(fragColor.b, matXGXFilter, colors);
             } else if (((xpos & 1u) == 0u) && ((ypos & 1u) == 1u))
             {
                 // bottom left corner: green location, odd row
                 applyFilterToColor(fragColor.r, matXGXFilter, colors);
-                fragColor.g = colors[2][1] * 8.0;
+                fragColor.g = colors[1][2] * 8.0;
                 applyFilterToColor(fragColor.b, matXGFilter, colors);
             } else
             {
                 // bottom right right corner: blue location, odd row
                 applyFilterToColor(fragColor.r, matRBFilter, colors);
                 applyFilterToColor(fragColor.g, matGFilter, colors);
-                fragColor.b = colors[2][1] * 8.0;
+                fragColor.b = colors[1][2] * 8.0;
             }
             fragColor *= (1/(24.0));  // Colors are 0-3, and filter gives x8, so divide by 3x8
 
@@ -447,51 +447,50 @@ void main()
             fetchByteColorsIdx320(originByte + ivec2(0, -2), byteColorsU);
             fetchByteColorsIdx320(originByte + ivec2(0, +2), byteColorsD);
             colors[0][0] = float(byteColorsU[originLocalPixel]);    // 0
-            colors[0][3] = float(byteColorsD[originLocalPixel]);    // 12
+            colors[3][0] = float(byteColorsD[originLocalPixel]);    // 12
 
             // For rows 2 and 4, we need to fetch 3 consecutive pixels, which could be in different bytes
             fetchByteColorsIdx320(originByte + ivec2(0, -1), byteColorsU);
             fetchByteColorsIdx320(originByte + ivec2(0, +1), byteColorsD);
-            colors[2][0] = float(byteColorsU[originLocalPixel]);      // 2
+            colors[0][2] = float(byteColorsU[originLocalPixel]);      // 2
             colors[2][2] = float(byteColorsD[originLocalPixel]);     // 10
             if (originLocalPixel == 0u)  // needs the left bytes
             {
-                colors[3][0] = float(byteColorsU[1]);  // 3 right side
-                colors[3][2] = float(byteColorsD[1]); // 11
+                colors[0][3] = float(byteColorsU[1]);  // 3 right side
+                colors[2][3] = float(byteColorsD[1]); // 11
                 fetchByteColorsIdx320(originByte + ivec2(-1, -1), byteColorsU);
                 fetchByteColorsIdx320(originByte + ivec2(-1, +1), byteColorsD);
-                colors[1][0] = float(byteColorsU[1]);  // 1 left side
-                colors[1][2] = float(byteColorsD[1]);  // 9
+                colors[0][1] = float(byteColorsU[1]);  // 1 left side
+                colors[2][1] = float(byteColorsD[1]);  // 9
             } else // needs the right bytes
             {
-                colors[1][0] = float(byteColorsU[0]);  // 1 left side
-                colors[1][2] = float(byteColorsD[0]);  // 9
+                colors[0][1] = float(byteColorsU[0]);  // 1 left side
+                colors[2][1] = float(byteColorsD[0]);  // 9
                 fetchByteColorsIdx320(originByte + ivec2(+1, -1), byteColorsU);
                 fetchByteColorsIdx320(originByte + ivec2(+1, +1), byteColorsD);
-                colors[3][0] = float(byteColorsU[0]);  // 3 right side
-                colors[3][2] = float(byteColorsD[0]); // 11
+                colors[0][3] = float(byteColorsU[0]);  // 3 right side
+                colors[2][3] = float(byteColorsD[0]); // 11
             }
 
             // Finally, the center row. We need to fetch 5 consecutive pixels, which will be in different bytes
             fetchByteColorsIdx320(originByte, byteColorsU);
-            colors[2][1] = float(byteColorsU[originLocalPixel]);    // 6 center pixel
-            // colors[2][1] = paletteColorB2 & 0xFu;
+            colors[1][2] = float(byteColorsU[originLocalPixel]);    // 6 center pixel
             if (originLocalPixel == 0u)  // needs the full left byte and half of the right byte
             {
-                colors[3][1] = float(byteColorsU[1]);  // 7 right side
+                colors[1][3] = float(byteColorsU[1]);  // 7 right side
                 fetchByteColorsIdx320(originByte + ivec2(+1, 0), byteColorsU);
-                colors[0][2] = float(byteColorsU[0]);  // 8
+                colors[2][0] = float(byteColorsU[0]);  // 8
                 fetchByteColorsIdx320(originByte + ivec2(-1, 0), byteColorsU);
-                colors[0][1] = float(byteColorsU[0]);  // 4 left side
+                colors[1][0] = float(byteColorsU[0]);  // 4 left side
                 colors[1][1] = float(byteColorsU[1]);  // 5
             } else // needs the the full right byte and half of the left byte
             {
                 colors[1][1] = float(byteColorsU[0]);  // 5 left side
                 fetchByteColorsIdx320(originByte + ivec2(-1, 0), byteColorsU);
-                colors[0][1] = float(byteColorsU[1]);  // 4
+                colors[1][0] = float(byteColorsU[1]);  // 4
                 fetchByteColorsIdx320(originByte + ivec2(+1, 0), byteColorsU);
-                colors[3][1] = float(byteColorsU[0]);  // 7 right side
-                colors[0][2] = float(byteColorsU[1]);  // 8
+                colors[1][3] = float(byteColorsU[0]);  // 7 right side
+                colors[2][0] = float(byteColorsU[1]);  // 8
             }
     
             // The `colors` mat4 now contains the color values around the origin pixel
@@ -502,27 +501,27 @@ void main()
             if (((xpos & 1u) == 0u) && ((ypos & 1u) == 0u))
             {
                 // top left corner: red location, even row
-                fragColor.r = colors[2][1] * 8.0;
+                fragColor.r = colors[1][2] * 8.0;
                 applyFilterToColor(fragColor.g, matGFilter, colors);
                 applyFilterToColor(fragColor.b, matRBFilter, colors);
             } else if (((xpos & 1u) == 1u) && ((ypos & 1u) == 0u))
             {
                 // top right corner: green location, even row
                 applyFilterToColor(fragColor.r, matXGFilter, colors);
-                fragColor.g = colors[2][1] * 8.0;
+                fragColor.g = colors[1][2] * 8.0;
                 applyFilterToColor(fragColor.b, matXGXFilter, colors);
             } else if (((xpos & 1u) == 0u) && ((ypos & 1u) == 1u))
             {
                 // bottom left corner: green location, odd row
                 applyFilterToColor(fragColor.r, matXGXFilter, colors);
-                fragColor.g = colors[2][1] * 8.0;
+                fragColor.g = colors[1][2] * 8.0;
                 applyFilterToColor(fragColor.b, matXGFilter, colors);
             } else
             {
                 // bottom right right corner: blue location, odd row
                 applyFilterToColor(fragColor.r, matRBFilter, colors);
                 applyFilterToColor(fragColor.g, matGFilter, colors);
-                fragColor.b = colors[2][1] * 8.0;
+                fragColor.b = colors[1][2] * 8.0;
             }
             fragColor *= (1.0/120.0);  // Colors are 0-15, and filter gives x8, so divide by 15x8
         }   // end 640 or 320 mode
