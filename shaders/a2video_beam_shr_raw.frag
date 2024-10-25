@@ -13,11 +13,11 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  Apple 2gs video beam shader for SHR.
  
  This shader expects as input a VRAMTEX texture that is a GL_R8UI byte buffer.
- It is a series of 193 byte lines.
+ It is a series of 193 byte lines + vborders
  On each line:
  - the first byte is the SCB of the line
  - the next 32 bytes is the color palette (16 colors of 2 bytes each)
- - the last 160 bytes are the SHR scanline byte
+ - the last 160 bytes + hborders are the SHR scanline byte
 
  The SCB and palette are loaded at the start of the line by the beam generator,
  so they are always fixed for the line. This has been verified on original hardware
@@ -176,12 +176,25 @@ uint extractColorIdx320(uint byteVal, int localPixel) {
 
 // Function to fetch 4 or 2 color indexes from a byte
 void fetchByteColorsIdx640(ivec2 byteCoord, out uint colors[4]) {
+    bvec2 withinBounds = greaterThanEqual(byteCoord, ivec2(33+hborder*8,vborder)) 
+                           && lessThanEqual(byteCoord, ivec2(33+192+hborder*8, 199+vborder));
+    if (!all(withinBounds)) {
+        colors = uint[4](0u, 0u, 0u, 0u);
+        return;
+    }
     uint byteVal = texelFetch(VRAMTEX, byteCoord, 0).r;
     for (int i = 0; i < 4; i++) {
         colors[i] = extractColorIdx640(byteVal, i);
     }
 }
+
 void fetchByteColorsIdx320(ivec2 byteCoord, out uint colors[2]) {
+    bvec2 withinBounds = greaterThanEqual(byteCoord, ivec2(33,0)) 
+                            && lessThanEqual(byteCoord, ivec2(33+192+hborder*8, 199+vborder));
+    if (!all(withinBounds)) {
+        colors = uint[2](0u, 0u);
+        return;
+    }
     uint byteVal = texelFetch(VRAMTEX, byteCoord, 0).r;
     for (int i = 0; i < 2; i++) {
         colors[i] = extractColorIdx320(byteVal, i);
