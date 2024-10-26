@@ -241,7 +241,8 @@ void main()
 
     uint xpos = uint(vFragPos.x);
     uint ypos = uint(vFragPos.y);
-    uint fragOffset = 3u - (xpos & 2u);			// reversed so that palette calc is easier
+    uint fragOffset = 3u - (xpos & 3u);	// reversed so that palette calc is easier
+	// (&3u is equivalent to %4u)
       
     // Also we're running at 640x400 so each byte is 4x2 pixels
     // And each color is 2x2 pixels because we have 2 colors per byte
@@ -256,7 +257,7 @@ void main()
     
     if (is640Mode)
     {
-        colorIdx = palette640[(fragOffset * 4u) + ((byteVal >> (2u * fragOffset)) & 0x3u)];
+        colorIdx = palette640[(fragOffset << 2) + ((byteVal >> (fragOffset << 1)) & 0x3u)];
     }
     else
     {
