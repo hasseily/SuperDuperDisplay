@@ -180,8 +180,8 @@ uint extractColorIdx320(uint byteVal, int localPixel) {
 // In the VRAM there bytes are for each line: 1 SCB, 32 palette, 4*hborder, 192 SHR, 4*hborder
 // And there are vborder lines above and below
 void fetchByteColorsIdx640(ivec2 byteCoord, out uint colors[4]) {
-    bvec2 withinBounds = greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)) 
-                           && lessThanEqual(byteCoord, ivec2(33+192+hborder*4, 199+vborder));
+    bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)),
+							   lessThanEqual(byteCoord, ivec2(33+192+hborder*4, 199+vborder)));
     if (!all(withinBounds)) {
         colors = uint[4](0u, 0u, 0u, 0u);
         return;
@@ -193,8 +193,8 @@ void fetchByteColorsIdx640(ivec2 byteCoord, out uint colors[4]) {
 }
 
 void fetchByteColorsIdx320(ivec2 byteCoord, out uint colors[2]) {
-    bvec2 withinBounds = greaterThanEqual(byteCoord, ivec2(33,0)) 
-                            && lessThanEqual(byteCoord, ivec2(33+192+hborder*4, 199+vborder));
+	bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)),
+							   lessThanEqual(byteCoord, ivec2(33+192+hborder*4, 199+vborder)));
     if (!all(withinBounds)) {
         colors = uint[2](0u, 0u);
         return;
