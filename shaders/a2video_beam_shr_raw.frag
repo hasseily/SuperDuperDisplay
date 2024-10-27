@@ -436,7 +436,7 @@ void main()
 				fragColor.g = applyFilterToColor(matGFilter, colors);
 				fragColor.b = colors[1][2] * 8.0;
             }
-            fragColor *= (1/(24.0));  // Colors are 0-3, and filter gives x8, so divide by 3x8
+            fragColor *= (1.0/(24.0));  // Colors are 0-3, and filter gives x8, so divide by 3x8
 
         } else {    // 320 mode
 
