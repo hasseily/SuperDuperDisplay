@@ -180,8 +180,8 @@ uint extractColorIdx320(uint byteVal, int localPixel) {
 // In the VRAM there bytes are for each line: 1 SCB, 32 palette, 4*hborder, 192 SHR, 4*hborder
 // And there are vborder lines above and below
 void fetchByteColorsIdx640(ivec2 byteCoord, out uint colors[4]) {
-    bvec2 withinBounds = greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)) 
-                           && lessThanEqual(byteCoord, ivec2(33+192+hborder*4, 199+vborder));
+    bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)),
+							   lessThanEqual(byteCoord, ivec2(33+192+hborder*4, 199+vborder)));
     if (!all(withinBounds)) {
         colors = uint[4](0u, 0u, 0u, 0u);
         return;
@@ -193,8 +193,8 @@ void fetchByteColorsIdx640(ivec2 byteCoord, out uint colors[4]) {
 }
 
 void fetchByteColorsIdx320(ivec2 byteCoord, out uint colors[2]) {
-    bvec2 withinBounds = greaterThanEqual(byteCoord, ivec2(33,0)) 
-                            && lessThanEqual(byteCoord, ivec2(33+192+hborder*4, 199+vborder));
+	bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)),
+							   lessThanEqual(byteCoord, ivec2(33+192+hborder*4, 199+vborder)));
     if (!all(withinBounds)) {
         colors = uint[2](0u, 0u);
         return;
@@ -206,10 +206,12 @@ void fetchByteColorsIdx320(ivec2 byteCoord, out uint colors[2]) {
 }
 
 // Function that applies the 5x5 filter to a color component
-void applyFilterToColor(inout float colorComponent, mat4 filterMatrix, mat4 colors) {
+float applyFilterToColor(mat4 filterMatrix, mat4 colors) {
+	float colorComponent = 0.0;
     for (int i = 0; i < 4; ++i) {
         colorComponent += dot(colors[i], filterMatrix[i]);
     }
+	return colorComponent;
 }
 
 void main()
@@ -239,7 +241,8 @@ void main()
 
     uint xpos = uint(vFragPos.x);
     uint ypos = uint(vFragPos.y);
-    uint fragOffset = 3u - (xpos & 2u);			// reversed so that palette calc is easier
+    uint fragOffset = 3u - (xpos & 3u);	// reversed so that palette calc is easier
+	// (&3u is equivalent to %4u)
       
     // Also we're running at 640x400 so each byte is 4x2 pixels
     // And each color is 2x2 pixels because we have 2 colors per byte
@@ -254,7 +257,7 @@ void main()
     
     if (is640Mode)
     {
-        colorIdx = palette640[(fragOffset * 4u) + ((byteVal >> (2u * fragOffset)) & 0x3u)];
+        colorIdx = palette640[(fragOffset << 2) + ((byteVal >> (fragOffset << 1)) & 0x3u)];
     }
     else
     {
@@ -411,27 +414,27 @@ void main()
             if (((xpos & 1u) == 0u) && ((ypos & 1u) == 0u))
             {
                 // top left corner: red location, even row
-                fragColor.r = colors[1][2] * 8.0;
-                applyFilterToColor(fragColor.g, matGFilter, colors);
-                applyFilterToColor(fragColor.b, matRBFilter, colors);
+				fragColor.r = colors[1][2] * 8.0;
+				fragColor.g = applyFilterToColor(matGFilter, colors);
+				fragColor.b = applyFilterToColor(matRBFilter, colors);
             } else if (((xpos & 1u) == 1u) && ((ypos & 1u) == 0u))
             {
                 // top right corner: green location, even row
-                applyFilterToColor(fragColor.r, matXGFilter, colors);
-                fragColor.g = colors[1][2] * 8.0;
-                applyFilterToColor(fragColor.b, matXGXFilter, colors);
+				fragColor.r = applyFilterToColor(matXGFilter, colors);
+				fragColor.g = colors[1][2] * 8.0;
+				fragColor.b = applyFilterToColor(matXGXFilter, colors);
             } else if (((xpos & 1u) == 0u) && ((ypos & 1u) == 1u))
             {
                 // bottom left corner: green location, odd row
-                applyFilterToColor(fragColor.r, matXGXFilter, colors);
-                fragColor.g = colors[1][2] * 8.0;
-                applyFilterToColor(fragColor.b, matXGFilter, colors);
+				fragColor.r = applyFilterToColor(matXGXFilter, colors);
+				fragColor.g = colors[1][2] * 8.0;
+				fragColor.b = applyFilterToColor(matXGFilter, colors);
             } else
             {
                 // bottom right right corner: blue location, odd row
-                applyFilterToColor(fragColor.r, matRBFilter, colors);
-                applyFilterToColor(fragColor.g, matGFilter, colors);
-                fragColor.b = colors[1][2] * 8.0;
+				fragColor.r = applyFilterToColor(matRBFilter, colors);
+				fragColor.g = applyFilterToColor(matGFilter, colors);
+				fragColor.b = colors[1][2] * 8.0;
             }
             fragColor *= (1/(24.0));  // Colors are 0-3, and filter gives x8, so divide by 3x8
 
@@ -502,25 +505,25 @@ void main()
             {
                 // top left corner: red location, even row
                 fragColor.r = colors[1][2] * 8.0;
-                applyFilterToColor(fragColor.g, matGFilter, colors);
-                applyFilterToColor(fragColor.b, matRBFilter, colors);
+				fragColor.g = applyFilterToColor(matGFilter, colors);
+				fragColor.b = applyFilterToColor(matRBFilter, colors);
             } else if (((xpos & 1u) == 1u) && ((ypos & 1u) == 0u))
             {
                 // top right corner: green location, even row
-                applyFilterToColor(fragColor.r, matXGFilter, colors);
+				fragColor.r = applyFilterToColor(matXGFilter, colors);
                 fragColor.g = colors[1][2] * 8.0;
-                applyFilterToColor(fragColor.b, matXGXFilter, colors);
+				fragColor.b = applyFilterToColor(matXGXFilter, colors);
             } else if (((xpos & 1u) == 0u) && ((ypos & 1u) == 1u))
             {
                 // bottom left corner: green location, odd row
-                applyFilterToColor(fragColor.r, matXGXFilter, colors);
+				fragColor.r = applyFilterToColor(matXGXFilter, colors);
                 fragColor.g = colors[1][2] * 8.0;
-                applyFilterToColor(fragColor.b, matXGFilter, colors);
+				fragColor.b = applyFilterToColor(matXGFilter, colors);
             } else
             {
                 // bottom right right corner: blue location, odd row
-                applyFilterToColor(fragColor.r, matRBFilter, colors);
-                applyFilterToColor(fragColor.g, matGFilter, colors);
+				fragColor.r = applyFilterToColor(matRBFilter, colors);
+				fragColor.g = applyFilterToColor(matGFilter, colors);
                 fragColor.b = colors[1][2] * 8.0;
             }
             fragColor *= (1.0/120.0);  // Colors are 0-15, and filter gives x8, so divide by 15x8
