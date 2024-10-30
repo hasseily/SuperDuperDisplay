@@ -432,11 +432,6 @@ int main(int argc, char* argv[])
 	}
 	std::cout << "Renderer Ready!" << std::endl;
 
-	// Run the network thread that will update the internal state as well as the apple 2 memory
-	std::thread thread_server(socket_server_thread, (uint16_t)_SDHR_SERVER_PORT, &bShouldTerminateNetworking);
-    // And run the processing thread
-	std::thread thread_processor(process_events_thread, &bShouldTerminateProcessing);
-
     // Delta Time
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
     uint64_t dt_LAST = 0;
@@ -537,6 +532,11 @@ int main(int argc, char* argv[])
 
 	if (bDisplayFPSOnScreen)
 		Main_DrawFPSOverlay();
+
+	// Run the network thread that will update the internal state as well as the apple 2 memory
+	std::thread thread_server(socket_server_thread, (uint16_t)_SDHR_SERVER_PORT, &bShouldTerminateNetworking);
+	// And run the processing thread
+	std::thread thread_processor(process_events_thread, &bShouldTerminateProcessing);
 
     while (!done)
 	{
