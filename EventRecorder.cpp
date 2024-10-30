@@ -334,6 +334,7 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 		}
 		else {
 			currentReplayEvent = 0;
+			ApplyRAMSnapshot(0);
 		}
 	}
 	SetState(EventRecorderStates_e::STOPPED);
