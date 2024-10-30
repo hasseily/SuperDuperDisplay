@@ -382,7 +382,7 @@ void EventRecorder::LoadRecording()
 	IGFD::FileDialogConfig config;
 	config.path = "./recordings/";
 	ImGui::SetNextWindowSize(ImVec2(800, 400));
-	ImGuiFileDialog::Instance()->OpenDialog("ChooseRecordingLoad", "Load Recording File", ".vcr,", config);
+	ImGuiFileDialog::Instance()->OpenDialog("ChooseRecordingLoad", "Load Recording File", ".vcr,.shra", config);
 }
 
 void EventRecorder::LoadTextEventsFromFile()
@@ -524,12 +524,15 @@ void EventRecorder::DisplayImGuiWindow(bool* p_open)
 		if (ImGuiFileDialog::Instance()->Display("ChooseRecordingLoad")) {
 			// Check if a file was selected
 			if (ImGuiFileDialog::Instance()->IsOk()) {
+				auto _fileExtension = ImGuiFileDialog::Instance()->GetCurrentFilter();
 				std::ifstream file(ImGuiFileDialog::Instance()->GetFilePathName().c_str(), std::ios::binary);
 				if (file.is_open()) {
 					try
 					{
-						ReadRecordingFile(file);
-
+						if (_fileExtension == ".vcr")
+							ReadRecordingFile(file);
+						else if (_fileExtension == ".shra")
+							ReadPaintWorksAnimationsFile(file);
 					}
 					catch (std::ifstream::failure& e)
 					{
