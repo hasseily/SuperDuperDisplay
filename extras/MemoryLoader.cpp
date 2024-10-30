@@ -12,7 +12,7 @@
 #include "../MemoryManager.h"
 #include "ImGuiFileDialog.h"
 
-bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank) {
+bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank, size_t fileSize) {
 	bool res = false;
 	
 	uint8_t* pMem;
@@ -24,16 +24,19 @@ bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank) {
 	std::ifstream file(filePath, std::ios::binary);
 	if (file) {
 		// Move to the end to get the file size
-		file.seekg(0, std::ios::end);
-		size_t fileSize = file.tellg();
+		if (fileSize == 0) {
+			file.seekg(0, std::ios::end);
+			fileSize = file.tellg();
+		}
 		
-		if (fileSize > 0 && (position + fileSize) <= (_A2_MEMORY_SHADOW_END)) {
+		if (fileSize == 0) {
+			std::cerr << "Error: File size is zero." << std::endl;
+		} else {
+			if ((position + fileSize) > (_A2_MEMORY_SHADOW_END))
+				fileSize = _A2_MEMORY_SHADOW_END - position;
 			file.seekg(0, std::ios::beg); // Go back to the start of the file
 			file.read(reinterpret_cast<char*>(pMem), fileSize);
 			res = true;
-		} else {
-			// Handle the error: file is too big or other issues
-			std::cerr << "Error: File is too large or other issue." << std::endl;
 		}
 		file.close();
 	} else {

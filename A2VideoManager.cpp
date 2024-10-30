@@ -1176,7 +1176,7 @@ GLuint A2VideoManager::Render()
 	// Set the magic bytes, currently only in SHR mode
 	auto memAuxPtr = MemoryManager::GetInstance()->GetApple2MemAuxPtr();
 	std::memcpy(&windowsbeam[A2VIDEOBEAM_SHR]->magicBytes, memAuxPtr + _A2VIDEO_SHR_MAGIC_BYTES,
-		sizeof(&windowsbeam[A2VIDEOBEAM_SHR]->magicBytes));
+		sizeof(windowsbeam[A2VIDEOBEAM_SHR]->magicBytes));
 
 	// ===============================================================================
 	// ============================== MERGED MODE RENDER ==============================

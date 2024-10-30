@@ -745,6 +745,30 @@ void MainMenu::ShowSamplesMenu() {
 		a2VideoManager->bNoMergedModeWobble = true;
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
+	if (ImGui::MenuItem("SHR RGGB (Bayer) 320@16")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, true);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_HIRES, false);
+		MemoryLoadSHR("samples/SHR RGGB/320_16_abstracteyear99#C10000.shr");
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("SHR RGGB (Bayer) 640@4")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, true);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_HIRES, false);
+		MemoryLoadSHR("samples/SHR RGGB/640_04_abstracteyear99#C10000.shr");
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("SHR Animation (PWA $C2)")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, true);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_HIRES, false);
+		std::ifstream animationFile("recordings/anim00342#C20000.shra", std::ios::binary);
+		eventRecorder->ReadPaintWorksAnimationsFile(animationFile);
+	}
 	if (ImGui::MenuItem("Run Karateka Demo", "", &pGui->bSampleRunKarateka)) {
 		if (pGui->bSampleRunKarateka) {
 			std::ifstream karatekafile("./recordings/karateka.vcr", std::ios::binary);

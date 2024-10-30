@@ -152,6 +152,61 @@ void EventRecorder::ReadTextEventsFromFile(std::ifstream& file)
 	bHasRecording = true;
 }
 
+// Reading an animation file locally
+// The PaintWorks animations format is:
+// 0x0000-0x7FFF: first SHR animation frame, standard SHR
+// 0x8000-0x8003: length of animation data block (starting at 0x8008)
+// 0x8004-0x8007: delay time per frame, in 60th of a second
+// 0x8008-0x8011: disregard (sometimes offset to starting records)
+// 0x8011-EOF   : animations data block: 2 byte offset, 2 byte value
+// If offset is zero, it's the end of the frame
+// Offset is to the start of the SHR image, so need to add 0x2000 in AUX mem
+void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
+{
+	ClearRecording();
+	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
+	auto pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + 0x2000;
+	// Read first SHR frame
+	file.read(reinterpret_cast<char*>(pMem), 0x8000);
+	// Then the animations block length
+	uint32_t dbaLength = 0;
+	file.read(reinterpret_cast<char*>(&dbaLength), 4);
+	// Then the frame delay
+	uint32_t frameDelay = 0;
+	file.read(reinterpret_cast<char*>(&frameDelay), 4);
+	// And the unused offset
+	uint32_t _unusedOffset = 0;
+	file.read(reinterpret_cast<char*>(&_unusedOffset), 4);
+	MakeRAMSnapshot(0);	// Make a snapshot now, before doing the animations events
+	if (dbaLength > 4)
+	{
+		dbaLength -= 4;
+		uint16_t _off = 0;
+		uint8_t _valHi = 0;
+		uint8_t _valLo = 0;
+		
+		v_events.push_back(SDHREvent(false, false, false, false, 0xC005, 0));	// RAMWRTON
+		for (uint32_t i = 0; i < (dbaLength / 4); ++i)
+		{
+			file.read(reinterpret_cast<char*>(&_off), 2);
+			file.read(reinterpret_cast<char*>(&_valHi), 1);
+			file.read(reinterpret_cast<char*>(&_valLo), 1);
+			if (_off != 0)
+			{
+				v_events.push_back(SDHREvent(false, false, false, false, _off + 0x2000, _valHi));
+				v_events.push_back(SDHREvent(false, false, false, false, _off + 0x2001, _valLo));
+			} else {
+				// add the delay between the frames using a dummy read event
+				for (size_t _d = 0; _d < ((size_t)frameDelay * (1'000'000 / 60)); ++_d) {
+					v_events.push_back(SDHREvent(false, false, false, true, 0, 0));
+				}
+			}
+		}
+		v_events.push_back(SDHREvent(false, false, false, false, 0xC004, 0));	// RAMWRTOFF
+	}
+	bHasRecording = true;
+}
+
 void EventRecorder::WriteEvent(const SDHREvent& event, std::ofstream& file) {
 	// Serialize and write each member of SDHREvent to the file
 	file.write(reinterpret_cast<const char*>(&event.is_iigs), sizeof(event.is_iigs));
