@@ -53,7 +53,8 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
 		ImGui::SetNextWindowSize(ImVec2(800, 400));
 		IGFD::FileDialogConfig config;
 		config.path = ".";
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", ".bin,.txt,.hgr,.dhr,.shr", config);
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", 
+			".bin,.txt,.hgr,.dhr,.shr, #C10000", config);
 	}
 	
 	// Display the file dialog
@@ -69,6 +70,8 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
 				else if (extension == ".dhr")
 					res =  MemoryLoadDHR(filePath);
 				else if (extension == ".shr")
+					res = MemoryLoadSHR(filePath);
+				else if (extension == "#C10000")
 					res = MemoryLoadSHR(filePath);
 				if (res)
 				{

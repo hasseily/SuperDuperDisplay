@@ -199,12 +199,12 @@
     <ClInclude Include="ConcurrentQueue.h" />
     <ClInclude Include="CycleCounter.h" />
     <ClInclude Include="EventRecorder.h" />
+    <ClInclude Include="extras\ImGuiFileDialog.h" />
+    <ClInclude Include="extras\ImGuiFileDialogConfig.h" />
     <ClInclude Include="extras\MemoryLoader.h" />
     <ClInclude Include="glad\glad.h" />
     <ClInclude Include="glad\khrplatform.h" />
     <ClInclude Include="GRAddr2XY.h" />
-    <ClInclude Include="ImGuiFileDialog.h" />
-    <ClInclude Include="ImGuiFileDialogConfig.h" />
     <ClInclude Include="imgui\backends\imgui_impl_opengl3.h" />
     <ClInclude Include="imgui\backends\imgui_impl_opengl3_loader.h" />
     <ClInclude Include="imgui\backends\imgui_impl_sdl2.h" />
