@@ -11,6 +11,7 @@
 #include <iostream>
 #include "../MemoryManager.h"
 #include "ImGuiFileDialog.h"
+#include <locale.h>
 
 bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank, size_t fileSize) {
 	bool res = false;
@@ -47,6 +48,7 @@ bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank, s
 }
 
 bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
+	setlocale(LC_ALL, ".UTF8");
 	bool res = false;
 	if (ImGui::Button("Load File"))
 	{
