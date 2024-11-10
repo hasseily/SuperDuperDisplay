@@ -1565,6 +1565,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 				this->ForceBeamFullScreenRender();
 			ImGui::SetItemTooltip("A DHGR mode that mixes 16 colors and b/w, found in certain RGB cards");
 			
+			ImGui::Columns(2, "SHR_Columns", false);
 			ImGui::SeparatorText("[ SHR EXTRA MODES ]");
 			bool isNoneActive = (vrams_read->frameSHR4Modes == A2_VSM_NONE);
 			bool isSHR4SHRActive = (vrams_read->frameSHR4Modes & A2_VSM_SHR4SHR) != 0;
@@ -1573,12 +1574,36 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			bool isSHR4R4G4B4Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4R4G4B4) != 0;
 			
 			ImGui::BeginDisabled();
-			ImGui::Checkbox("None", &isNoneActive);
+			ImGui::Checkbox("None##SHR4", &isNoneActive);
 			ImGui::Checkbox("SHR4 SHR", &isSHR4SHRActive);
 			ImGui::Checkbox("SHR4 RGGB", &isSHR4RGGBActive);
 			ImGui::Checkbox("SHR4 PAL256", &isSHR4PAL256Active);
 			ImGui::Checkbox("SHR4 R4G4B4", &isSHR4R4G4B4Active);
 			ImGui::EndDisabled();
+			
+			ImGui::NextColumn();
+			ImGui::SeparatorText("[ Override ]");
+			if (ImGui::RadioButton("None##SHR4override", windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 0)) {
+				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = 0;
+				this->ForceBeamFullScreenRender();
+			}
+			if (ImGui::RadioButton("Force SHR", windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 1)) {
+				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = 1;
+				this->ForceBeamFullScreenRender();
+			}
+			if (ImGui::RadioButton("Force RGGB", windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 2)) {
+				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = 2;
+				this->ForceBeamFullScreenRender();
+			}
+			if (ImGui::RadioButton("Force PAL256", windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 3)) {
+				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = 3;
+				this->ForceBeamFullScreenRender();
+			}
+			if (ImGui::RadioButton("Force R4G4B4", windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 4)) {
+				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = 4;
+				this->ForceBeamFullScreenRender();
+			}
+			ImGui::Columns(1);
 		}
 		ImGui::End();
 	}

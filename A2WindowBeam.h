@@ -73,6 +73,7 @@ public:
 	unsigned int VBO = UINT_MAX;			// Vertex Buffer Object (holds vertices)
 	
 	int specialModesMask = A2_VSM_NONE;		// Or'ed A2VideoSpecialMode_e
+	int overrideSHR4Mode = 0;				// Debugging to override the SHR4 modes in the shader
 	int monitorColorType = A2_MON_COLOR;	// Monitor color type A2VideoMonitorType_e
 
 private:

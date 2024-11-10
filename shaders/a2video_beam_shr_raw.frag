@@ -71,6 +71,7 @@ uniform usampler2D PAL256TEX;	// Video RAM texture of all colors when in PAL256 
 // Uniforms assigned in A2WindowBeam
 uniform int ticks;              // ms since start
 uniform int specialModesMask;	// type of SHR format
+uniform int overrideSHR4Mode;	// SHR4 mode override
 uniform int monitorColorType;
 
 /*
@@ -300,8 +301,12 @@ void main()
 
     // Get the second palette byte, we need it to determine if it's standard SHR or not
     paletteColorB2 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u + 1u, originByte.y), 0).r;
+	if (overrideSHR4Mode > 0)
+	{
+		paletteColorB2 = (paletteColorB2 & 0xFu) | (uint(overrideSHR4Mode - 1) << 4);
+	}
 
-    if ((specialModesMask & 0xF0) != 0)	        // Frame has SHR4 modes active
+    if (((specialModesMask & 0xF0) != 0) || (overrideSHR4Mode > 0))	        // Frame has SHR4 modes active
     {
         switch (paletteColorB2 >> 4) {
             case 0u:    // Standard SHR

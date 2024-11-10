@@ -271,10 +271,8 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	// as well as any other unique mode data
 	if (video_mode == A2VIDEOBEAM_SHR)
 	{
-		if ((specialModesMask & A2_VSM_SHR4PAL256) != 0)
-		{
-			shader.setInt("PAL256TEX", _TEXUNIT_PAL256BUFFER - GL_TEXTURE0);
-		}
+		shader.setInt("PAL256TEX", _TEXUNIT_PAL256BUFFER - GL_TEXTURE0);
+		shader.setInt("overrideSHR4Mode", overrideSHR4Mode);
 	}
 	else {
 		shader.setInt("a2ModesTex0", _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0);	// D/TEXT font regular
