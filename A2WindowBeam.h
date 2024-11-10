@@ -23,12 +23,18 @@ enum A2VideoModeBeam_e
 
 // Special less compatible modes from lesser known cards
 // like Chat Mauve RGB cards, or Apple RGB card
+// and the new SHR4 modes for VidHD and Appletini
 enum A2VideoSpecialMode_e
 {
-	A2_VSM_NONE 			= 0b0000,
-	A2_VSM_DHGRCOL140Mixed 	= 0b0001,	// Mode that mixes 560 wide B/W alongside 160 wide DHGR color
-	A2_VSM_HGRSPEC1			= 0b0010,	// Mode that forces black in middle pixel of 11011 pattern in HGR
-	A2_VSM_HGRSPEC2		 	= 0b0100,	// Mode that forces white in middle pixel of 00100 pattern in HGR
+	A2_VSM_NONE 			= 0b0000'0000,
+	A2_VSM_DHGRCOL140Mixed 	= 0b0000'0001,	// Mode that mixes 560 wide B/W alongside 160 wide DHGR color
+	A2_VSM_HGRSPEC1			= 0b0000'0010,	// Mode that forces black in middle pixel of 11011 pattern in HGR
+	A2_VSM_HGRSPEC2		 	= 0b0000'0100,	// Mode that forces white in middle pixel of 00100 pattern in HGR
+	
+	A2_VSM_SHR4SHR			= 0b0001'0000,	// New SHR4 modes - default SHR but with 'magic bytes' active
+	A2_VSM_SHR4RGGB			= 0b0010'0000,	// New SHR4 modes - RGGB   (see shader for details)
+	A2_VSM_SHR4PAL256		= 0b0100'0000,	// New SHR4 modes - PAL256 (see shader for details)
+	A2_VSM_SHR4R4G4B4		= 0b1000'0000,	// New SHR4 modes - r4G4B4 (see shader for details)
 };
 
 // Monitor color type
@@ -69,15 +75,14 @@ public:
 	int specialModesMask = A2_VSM_NONE;		// Or'ed A2VideoSpecialMode_e
 	int monitorColorType = A2_MON_COLOR;	// Monitor color type A2VideoMonitorType_e
 
-	uint32_t magicBytes = 0;	// 4 Magic SHR bytes and potentially anything else to alter the shader behavior
-
 private:
 	bool vramTextureExists = false;						// true if the VRAM texture exists and only needs an update
 	A2VideoModeBeam_e video_mode = A2VIDEOBEAM_LEGACY;	// Which video mode is used
 	Shader shader = Shader();							// Shader used
 	uXY screen_count = {0,0};				// width,height in pixels of visible screen area of window
 
-	unsigned int VRAMTEX = UINT_MAX;		// VRAM buffer texture. Holds R as MAIN, G and AUX, B as flags
+	unsigned int VRAMTEX = UINT_MAX;		// GL_R8UI VRAM buffer texture. Format depends on legacy or SHR mode
+	unsigned int PAL256TEX = UINT_MAX;		// GL_R16UI Special VRAM for SHR4 PAL256 mode
 
 	uint32_t border_width_cycles = 0;
 	uint32_t border_height_scanlines = 0;

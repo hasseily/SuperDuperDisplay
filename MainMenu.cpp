@@ -326,7 +326,7 @@ void MainMenu::Render() {
 			ImGui::End();
 			
 		}
-		// Show the 16 textures loaded (which are always bound to GL_TEXTURE2 -> GL_TEXTURE18)
+		// Show the textures starting at _TEXUNIT_IMAGE_ASSETS_START
 		if (pGui->bShowTextureWindow)
 		{
 			ImGui::SetNextWindowSizeConstraints(ImVec2(300, 250), ImVec2(FLT_MAX, FLT_MAX));

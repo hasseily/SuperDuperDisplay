@@ -59,13 +59,28 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 
 // Global uniforms assigned in A2VideoManager
-uniform int ticks;              // ms since start
 uniform int hborder;			// horizontal border in cycles
 uniform int vborder;			// vertical border in scanlines
 uniform usampler2D VRAMTEX;		// Video RAM texture
+uniform usampler2D PAL256TEX;	// Video RAM texture of all colors when in PAL256 mode
 
 // Uniforms assigned in A2WindowBeam
-uniform int magicBytes;			// type of SHR format
+uniform int ticks;              // ms since start
+uniform int specialModesMask;	// type of SHR format
+uniform int monitorColorType;
+
+/*
+ Special modes mask for SHR
+ enum A2VideoSpecialMode_e
+ {
+ A2_VSM_NONE 				= 0b0000'0000,
+ ...
+ A2_VSM_SHR4SHR			= 0b0001'0000,	// New SHR4 modes - default SHR but with 'magic bytes' active
+ A2_VSM_SHR4RGGB		= 0b0010'0000,	// New SHR4 modes - RGGB   (see shader for details)
+ A2_VSM_SHR4PAL256		= 0b0100'0000,	// New SHR4 modes - PAL256 (see shader for details)
+ A2_VSM_SHR4R4G4B4		= 0b1000'0000,	// New SHR4 modes - r4G4B4 (see shader for details)
+ };
+ */
 
 in vec2 vFragPos;       // The fragment position in pixels
 out vec4 fragColor;
@@ -94,7 +109,6 @@ const uint palette640[16] = uint[16](
 //		A2_MON_TOTAL_COUNT
 // };
 
-uniform int monitorColorType;
 // colors for monitor color types
 const vec4 monitorcolors[5] = vec4[5](
     vec4(0.000000,	0.000000,	0.000000,	1.000000)	/*BLACK, -- this is a color monitor */
@@ -123,6 +137,16 @@ const vec4 bordercolors[16] = vec4[16] (
     vec4(0.42, 0.93, 0.70, 1.0), // AQUA
     vec4(1.00, 1.00, 1.00, 1.0)  // WHITE
 );
+
+vec4 ConvertIIgs2RGB3Col(uint r, uint g, uint b)
+{
+	// They're 4 bits. Normalize them to 1.0
+	float _red = float(r) / 16.0;
+	float _green = float(g) / 16.0;
+	float _blue = float(b) / 16.0;
+	float _alpha = 1.0; 								// Fully opaque
+	return vec4(_red, _green, _blue, _alpha);
+}
 
 vec4 ConvertIIgs2RGB(uint gscolor)
 {
@@ -273,18 +297,17 @@ void main()
     // Get the second palette byte, we need it to determine if it's standard SHR or not
     paletteColorB2 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u + 1u, originByte.y), 0).r;
 
-    if ((magicBytes == 0xC2C7C7D2)	        // Frame has "RGGB" (reversed bytes in the integer)
-        && ((paletteColorB2 >> 4) == 0x1u))  // pixel is a RGGB 
+    if ((specialModesMask & 0xF0) != 0)	        // Frame has SHR4 modes active
     {
         switch (paletteColorB2 >> 4) {
-            case 1u:    // Standard SHR
+            case 0u:    // Standard SHR
             {
                 // get the missing first palette byte and fetch the color
                 paletteColorB1 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u, originByte.y), 0).r;
                 fragColor = ConvertIIgs2RGB((paletteColorB2 << 8) + paletteColorB1);
                 break;
             }
-            case 2u:    // RGGB Color Filter Array
+            case 1u:    // RGGB Color Filter Array
             {
                 // We want raw Color Filter Array (CFA) RGGB images, so we need to "demosaic".
                 // Each byte is 2 pixels. If it's in an even scanline, the byte has 2 pixels: R and G
@@ -552,32 +575,69 @@ void main()
             case 2u:    // Pal256
             {
                 /*
-                    $2RGB = Pal256
+                    $2RGB = PAL256
                     Even 4-bit pixels fetch the next odd pixel to make a Pal256 lookup at $E1/9E00.
                     The 12-bit RGB is used for both pixels.
                 */
-                // TODO: Must push to the shader all the raw palettes as a big byte array
-                fragColor = vec4(1.0,1.0,0.1,1.0);
+				// Use the special pregenerated PAL256 colors buffer:
+				// 160 words per line, 2 bytes per pair of pixels
+				// Both pixels use the same color. PAL256TEX is a R16UI
+				// The reason the CPU pregenerates the colors is that they depend on the state of
+				// all the palettes at the time of the beam cycle.
+				uint pal256Word = texelFetch(PAL256TEX,ivec2(xpos >> 2, ypos >> 1),0).r;
+				fragColor = ConvertIIgs2RGB(pal256Word);
                 break;
             }
             case 3u:    // R4G4B4
             {
                 /*
                     $3xxx = R4G4B4
-                    Causes every 3rd 4-bit pixel to fetch the next two 4-bit pixels
-                    and display R4,G4,B4 for all 3 pixels. xxx = don't care
+					We have AB CD EF as 4bit groups,
+					which we transform into RGB pixels ABC, DEF
+					2 pixel colors spanning 3 dots each. Example:
+					Bytes: C3 D4 E5
+					6 dots: The first 3 dots have color C3D (as RGB respectively) and the others 4E5
                 */
-                uint originLocalPixel = xpos & 3u;    // Local pixel index [0, 3] within the byte
-
+				// Determine pixel position, which determines which 2 bytes to fetch
+				// We've already fetched one byte, but we need to fetch either the previous or next byte as well
+				// to get all 3 RGB colors and apply to the pixel
+				uint tripletPos = xpos % 6u;
+				if (tripletPos < 2u)	// AB
+				{
+					// get the next byte and take only the high nibble (C)
+					ivec2 otherByte = originByte + ivec2(1, 0);
+					uint otherByteVal = texelFetch(VRAMTEX,otherByte,0).r;	// CD
+					fragColor = ConvertIIgs2RGB3Col(byteVal >> 4, byteVal & 0xFu, otherByteVal >> 4);	// A B C
+				} else if (tripletPos == 2u)	// C
+				{
+					// get the previous byte
+					ivec2 otherByte = originByte + ivec2(-1, 0);
+					uint otherByteVal = texelFetch(VRAMTEX,otherByte,0).r;	// AB
+					fragColor = ConvertIIgs2RGB3Col(otherByteVal >> 4, otherByteVal & 0xFu, byteVal >> 4);	// A B C
+				} else if (tripletPos == 3u)	// D
+				{
+					// get the next byte
+					ivec2 otherByte = originByte + ivec2(1, 0);
+					uint otherByteVal = texelFetch(VRAMTEX,otherByte,0).r;	// EF
+					fragColor = ConvertIIgs2RGB3Col(byteVal & 0xFu, otherByteVal >> 4, otherByteVal & 0xFu);	// D E F
+				} else	// EF
+				{
+					// get the previous byte and take only the low nibble (D)
+					ivec2 otherByte = originByte + ivec2(-1, 0);
+					uint otherByteVal = texelFetch(VRAMTEX,otherByte,0).r;	// CD
+					fragColor = ConvertIIgs2RGB3Col(otherByteVal & 0xFu, byteVal >> 4, byteVal & 0xFu);	// D E F
+				}
                 break;
             }
         }   // end switch paletteColorB2 >> 4
 
-    }	// end magicBytes "RGGB"
-    else {  // (magicBytes == 0x00000000)	// Standard SHR
+    }	// end SHR4 is active
+    else {  // ((specialModesMask & 0xF0) == 0)	// Standard SHR
         // get the missing first palette byte and fetch the color
         paletteColorB1 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u, originByte.y), 0).r;
         fragColor = ConvertIIgs2RGB((paletteColorB2 << 8) + paletteColorB1);
+		// same as: (TODO: check speed difference)
+		// fragColor = ConvertIIgs2RGB3Col(paletteColorB2 & 0xFu, paletteColorB1 >> 4, paletteColorB1 & 0xFu);
     }
     
     if (monitorColorType > 0)

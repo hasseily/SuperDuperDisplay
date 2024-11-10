@@ -213,6 +213,8 @@ A2VideoManager::~A2VideoManager()
 			delete[] vrams_array[i].vram_legacy;
 		if (vrams_array[i].vram_shr != nullptr)
 			delete[] vrams_array[i].vram_shr;
+		if (vrams_array[i].vram_pal256 != nullptr)
+			delete[] vrams_array[i].vram_pal256;
 		if (vrams_array[i].offset_buffer != nullptr)
 			delete[] vrams_array[i].offset_buffer;
 		
@@ -249,10 +251,13 @@ void A2VideoManager::Initialize()
 			delete[] vrams_array[i].vram_legacy;
 		if (vrams_array[i].vram_shr != nullptr)
 			delete[] vrams_array[i].vram_shr;
+		if (vrams_array[i].vram_pal256 != nullptr)
+				delete[] vrams_array[i].vram_pal256;
 		if (vrams_array[i].offset_buffer != nullptr)
 			delete[] vrams_array[i].offset_buffer;
 		vrams_array[i].vram_legacy = new uint8_t[GetVramSizeLegacy()];
 		vrams_array[i].vram_shr = new uint8_t[GetVramSizeSHR()];
+		vrams_array[i].vram_pal256 = new uint8_t[_A2VIDEO_SHR_BYTES_PER_LINE*2*_A2VIDEO_SHR_SCANLINES];
 		vrams_array[i].offset_buffer = new GLfloat[GetVramHeightSHR()];
 		memset(vrams_array[i].vram_legacy, 0, GetVramSizeLegacy());
 		memset(vrams_array[i].vram_shr, 0, GetVramSizeSHR());
@@ -441,6 +446,8 @@ void A2VideoManager::StartNextFrame()
 	region_scanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
 	// For the merged mode
 	merge_last_change_y = UINT_MAX;
+	// Additional frame data resets
+	vrams_write->frameSHR4Modes = 0;
 }
 
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
@@ -688,6 +695,20 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
 				   memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
 				   32);					// palette length is 32 bytes
+			
+			// Also here check all the palette reserved nibble values (high nibble of byte 2) to see
+			// what SHR4 modes are used in this line, if SHR4 is enabled via the magic bytes
+			
+			uint32_t magicBytes = reinterpret_cast<uint32_t*>(memPtr + _A2VIDEO_SHR_MAGIC_BYTES)[0];
+			if (magicBytes == _A2VIDEO_SHR_MAGIC_STRING)	// SHR4 mode is enabled
+			{
+				// Modes are 0,1,2,3 on the high nibble of the 2-byte palette. We need to switch to bits as per A2VideoSpecialMode_e
+				scanlineSHR4Modes = 0b00010000;	// Default SHR enabled for SHR4
+				for (uint8_t i = 0; i < 16; ++i) {
+					scanlineSHR4Modes |= (1 << ((lineStartPtr[2 + 2*i] >> 4) + 4));	// second byte of each palette color (skip SCB byte 1)
+				}
+				vrams_write->frameSHR4Modes |= scanlineSHR4Modes;	// Add to the frame's SHR4 modes the new modes found on this line
+			}
 		}
 		
 		switch (beamState)
@@ -734,6 +755,23 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 					if ((byteColor & 0x0F) == 0)
 						byteColor |= (byteColor >> 4);
 					lineStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i] = byteColor;
+				}
+			}
+			// Here deal with the new SHR4 mode PAL256, where each byte is an index into the full palette
+			// of 256 colors. We have to do it here because the palette can be dynamically modified while
+			// racing the beam.
+			if ((scanlineSHR4Modes & A2_VSM_SHR4PAL256) != 0)
+			{
+				auto pal256ByteStartPtr = vrams_write->vram_pal256 + (((_A2VIDEO_SHR_BYTES_PER_LINE * _TR_ANY_Y) + (4 * _TR_ANY_X)) * 2);
+
+				for (uint32_t i = 0; i < 4; i++)
+				{
+					// get the byte value, a pointer to the palette color
+					auto byteColor = lineStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i];
+					// get the palette color (2 bytes), the palette being all 256 colors in a single palette
+					auto paletteColorStart = memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)byteColor * 2);
+					pal256ByteStartPtr[2*i] = paletteColorStart[0];
+					pal256ByteStartPtr[2*i + 1] = paletteColorStart[1];
 				}
 			}
 		}
@@ -1062,7 +1100,7 @@ void A2VideoManager::PrepareOffsetTexture() {
 		// Generate the texture if it doesn't exist
 		if (OFFSETTEX == UINT_MAX)
 			glGenTextures(1, &OFFSETTEX);
-		glActiveTexture(_TEXUNIT_DATABUFFER);
+		glActiveTexture(GL_TEXTURE10);
 		glBindTexture(GL_TEXTURE_2D, OFFSETTEX);
 
 		// Set texture parameters
@@ -1081,8 +1119,7 @@ void A2VideoManager::PrepareOffsetTexture() {
 	}
 	else {
 		// Update the texture
-		glActiveTexture(_TEXUNIT_DATABUFFER);
-		glBindTexture(GL_TEXTURE_2D, OFFSETTEX);
+		glActiveTexture(GL_TEXTURE10);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, GetVramHeightSHR(), GL_RED, GL_FLOAT, vrams_read->offset_buffer);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
@@ -1174,9 +1211,7 @@ GLuint A2VideoManager::Render()
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
 
 	// Set the magic bytes, currently only in SHR mode
-	auto memAuxPtr = MemoryManager::GetInstance()->GetApple2MemAuxPtr();
-	std::memcpy(&windowsbeam[A2VIDEOBEAM_SHR]->magicBytes, memAuxPtr + _A2VIDEO_SHR_MAGIC_BYTES,
-		sizeof(windowsbeam[A2VIDEOBEAM_SHR]->magicBytes));
+	windowsbeam[A2VIDEOBEAM_SHR]->specialModesMask |= vrams_read->frameSHR4Modes;
 
 	// ===============================================================================
 	// ============================== MERGED MODE RENDER ==============================
@@ -1217,21 +1252,21 @@ GLuint A2VideoManager::Render()
 			return UINT32_MAX;
 		}
 
-		// Bind both Legacy and SHR textures to Tex 7 and 8 respectively
-		glActiveTexture(GL_TEXTURE7);
+		// Bind both Legacy and SHR textures to Tex 8 and 9 respectively
+		glActiveTexture(GL_TEXTURE8);
 		glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
-		shader_merge.setInt("legacyTex", GL_TEXTURE7 - GL_TEXTURE0);
+		shader_merge.setInt("legacyTex", GL_TEXTURE8 - GL_TEXTURE0);
 		shader_merge.setVec2("legacySize", legacy_width, legacy_height);
 		shader_merge.setInt("forceSHRWidth", bForceSHRWidth);
 
-		glActiveTexture(GL_TEXTURE8);
+		glActiveTexture(GL_TEXTURE9);
 		glBindTexture(GL_TEXTURE_2D, shr_texture_id);
-		shader_merge.setInt("shrTex", GL_TEXTURE8- GL_TEXTURE0);
+		shader_merge.setInt("shrTex", GL_TEXTURE9 - GL_TEXTURE0);
 		shader_merge.setVec2("shrSize", fb_width, fb_height);
 
 		// Point the uniform at the OFFSET texture
 		PrepareOffsetTexture();
-		shader_merge.setInt("OFFSETTEX", _TEXUNIT_DATABUFFER - GL_TEXTURE0);
+		shader_merge.setInt("OFFSETTEX", GL_TEXTURE10 - GL_TEXTURE0);
 
 		// Render the fullscreen quad
 		if (quadVAO == UINT_MAX) {
@@ -1517,7 +1552,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 				this->ForceBeamFullScreenRender();
 			}
 			
-			ImGui::SeparatorText("[ EXTRA MODES ]");
+			ImGui::SeparatorText("[ LEGACY EXTRA MODES ]");
 			if (ImGui::Checkbox("HGR SPEC1", &bUseHGRSPEC1))
 				this->ForceBeamFullScreenRender();
 			ImGui::SetItemTooltip("A HGR mode that makes 11011 be black, found in the EVE RGB card");
@@ -1527,6 +1562,21 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			if (ImGui::Checkbox("DHGR COL140 Mixed", &bUseDHGRCOL140Mixed))
 				this->ForceBeamFullScreenRender();
 			ImGui::SetItemTooltip("A DHGR mode that mixes 16 colors and b/w, found in certain RGB cards");
+			
+			ImGui::SeparatorText("[ SHR EXTRA MODES ]");
+			bool isNoneActive = (vrams_read->frameSHR4Modes == A2_VSM_NONE);
+			bool isSHR4SHRActive = (vrams_read->frameSHR4Modes & A2_VSM_SHR4SHR) != 0;
+			bool isSHR4RGGBActive = (vrams_read->frameSHR4Modes & A2_VSM_SHR4RGGB) != 0;
+			bool isSHR4PAL256Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4PAL256) != 0;
+			bool isSHR4R4G4B4Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4R4G4B4) != 0;
+			
+			ImGui::BeginDisabled();
+			ImGui::Checkbox("None", &isNoneActive);
+			ImGui::Checkbox("SHR4 SHR", &isSHR4SHRActive);
+			ImGui::Checkbox("SHR4 RGGB", &isSHR4RGGBActive);
+			ImGui::Checkbox("SHR4 PAL256", &isSHR4PAL256Active);
+			ImGui::Checkbox("SHR4 R4G4B4", &isSHR4R4G4B4Active);
+			ImGui::EndDisabled();
 		}
 		ImGui::End();
 	}

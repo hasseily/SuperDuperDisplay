@@ -117,11 +117,13 @@ public:
 		A2Mode_e mode = A2Mode_e::NONE;
 		uint8_t* vram_legacy = nullptr;
 		uint8_t* vram_shr = nullptr;
+		uint8_t* vram_pal256 = nullptr;			// special vram for mode SHR4 PAL256. 2 bytes of color per byte of shr
 		uint8_t* vram_forced_text1 = nullptr;	// these force specific modes for debugging
 		uint8_t* vram_forced_text2 = nullptr;
 		uint8_t* vram_forced_hgr1 = nullptr;
 		uint8_t* vram_forced_hgr2 = nullptr;
 		GLfloat* offset_buffer = nullptr;
+		int frameSHR4Modes = 0;					// All SHR4 modes in the frame
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -193,6 +195,7 @@ public:
 	const uint32_t GetVRAMReadId() { return vrams_read->id; };
 	const uint8_t* GetLegacyVRAMReadPtr() { return vrams_read->vram_legacy; };
 	const uint8_t* GetSHRVRAMReadPtr() { return vrams_read->vram_shr; };
+	const uint8_t* GetPAL256VRAMReadPtr() { return vrams_read->vram_pal256; };
 	const uint8_t* GetTEXT1VRAMReadPtr() { return vrams_read->vram_forced_text1; };
 	const uint8_t* GetTEXT2VRAMReadPtr() { return vrams_read->vram_forced_text2; };
 	const uint8_t* GetHGR1VRAMReadPtr() { return vrams_read->vram_forced_hgr1; };
@@ -268,6 +271,7 @@ private:
 	// beam render state variables
 	bool bBeamIsActive = false;				// Is the beam active?
 	BeamState_e beamState = BeamState_e::UNKNOWN;
+	int scanlineSHR4Modes = 0;			// All SHR4 modes in the scanline
 
 	// Double-buffered vrams
 	BeamRenderVRAMs* vrams_array;	// 2 buffers of legacy+shr vrams

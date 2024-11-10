@@ -63,8 +63,7 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
 		if (ImGuiFileDialog::Instance()->IsOk()) {
 			std::string filePath = ImGuiFileDialog::Instance()->GetFilePathName();
 			if (filePath.length() >= 4) {
-				// Extract the last 4 characters
-				std::string extension = filePath.substr(filePath.length() - 4, 4);
+				std::string extension = ImGuiFileDialog::Instance()->GetCurrentFilter();
 				if (extension == ".hgr")
 					res = MemoryLoadHGR(filePath);
 				else if (extension == ".dhr")

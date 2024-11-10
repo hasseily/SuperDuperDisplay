@@ -62,10 +62,12 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 
 // For all modes!
 // The data buffer is always in tex1.
-// Image assets can be put in tex2 to tex14
-// Post processing input texture is always in tex14
+// The special SHR4 PAL256 vram is in tex2.
+// Image assets can be put in tex3 to tex7
+// Post processing input texture is always in tex15
 #define _TEXUNIT_DATABUFFER GL_TEXTURE1			// Texunit of the data buffer (vram for legacy, TBO for SDHR)
-#define _TEXUNIT_IMAGE_ASSETS_START GL_TEXTURE2	// Start of the image assets
+#define _TEXUNIT_PAL256BUFFER GL_TEXTURE2		// Texunit of the SHR4 PAL256 vram
+#define _TEXUNIT_IMAGE_ASSETS_START GL_TEXTURE3	// Start of the image assets
 #define _TEXUNIT_POSTPROCESS GL_TEXTURE15		// input texunit the PP will use to generate the final output
 
 
@@ -83,6 +85,7 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _A2VIDEO_SHR_WIDTH 640
 #define _A2VIDEO_SHR_HEIGHT 200*2
 #define _A2VIDEO_SHR_BYTES_PER_LINE 160
+#define _A2VIDEO_SHR_SCANLINES 200
 
 #define _A2VIDEO_TEXT1_START 0x400
 #define _A2VIDEO_TEXT2_START 0x800
@@ -92,9 +95,11 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _A2VIDEO_HGR_SIZE 0x2000
 #define _A2VIDEO_SHR_START 0x2000	// All SHR is in the AUX (E1) bank!
 #define _A2VIDEO_SHR_SIZE 0x8000
-#define _A2VIDEO_SHR_SCB_START 0x9D00	// scanline control bytes: 1 per line, 200 total
-#define _A2VIDEO_SHR_MAGIC_BYTES 0x9DFC	// start of the 4 magic bytes determining the SHR mode
-#define _A2VIDEO_SHR_PALETTE_START 0x9E00
+#define _A2VIDEO_SHR_SCB_START 0x9D00			// scanline control bytes: 1 per line, 200 total
+#define _A2VIDEO_SHR_MAGIC_BYTES 0x9DFC			// start of the 4 magic bytes determining the SHR mode
+#define _A2VIDEO_SHR_MAGIC_STRING 0xB4D2C8D3	// 'SHR4' for now (in reverse order in memory)
+//#define _A2VIDEO_SHR_MAGIC_STRING 0xC2C7C7D2	// 'RGGB' for now (in reverse order in memory)
+#define _A2VIDEO_SHR_PALETTE_START 0x9E00	// 16 SHR palettes of 16 colors, 2 bytes per color. Total 512 bytes
 
 
 // SHADERS
