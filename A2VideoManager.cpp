@@ -760,7 +760,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			// Here deal with the new SHR4 mode PAL256, where each byte is an index into the full palette
 			// of 256 colors. We have to do it here because the palette can be dynamically modified while
 			// racing the beam.
-			if ((scanlineSHR4Modes & A2_VSM_SHR4PAL256) != 0)
+			if (((scanlineSHR4Modes & A2_VSM_SHR4PAL256) != 0) || (windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 3))
 			{
 				// calculate x value where x is 0-40 in the content area
 				auto _x_just_content = _x - CYCLES_SC_HBL;

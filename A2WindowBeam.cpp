@@ -197,7 +197,7 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_w_with_border * 4), _A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines), GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
-				if ((specialModesMask & A2_VSM_SHR4PAL256) != 0)
+				if (((specialModesMask & A2_VSM_SHR4PAL256) != 0) || (overrideSHR4Mode == 2))
 				{
 					glActiveTexture(_TEXUNIT_PAL256BUFFER);
 					glBindTexture(GL_TEXTURE_2D, PAL256TEX);
