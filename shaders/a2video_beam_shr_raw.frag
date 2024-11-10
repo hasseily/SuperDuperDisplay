@@ -600,14 +600,14 @@ void main()
                     $3xxx = R4G4B4
 					We have AB CD EF as 4bit groups,
 					which we transform into RGB pixels ABC, DEF
-					2 pixel colors spanning 3 dots each. Example:
+					2 pixel colors spanning 3 dots each (at 320 width, so 6 dots at full resolution. Example:
 					Bytes: C3 D4 E5
 					6 dots: The first 3 dots have color C3D (as RGB respectively) and the others 4E5
                 */
 				// Determine pixel position, which determines which 2 bytes to fetch
 				// We've already fetched one byte, but we need to fetch either the previous or next byte as well
 				// to get all 3 RGB colors and apply to the pixel
-				uint tripletPos = xpos % 6u;
+				uint tripletPos = (xpos >> 1) % 6u;		// it is in 320 mode so need to divide by 2 first
 				if (tripletPos < 2u)	// AB
 				{
 					// get the next byte and take only the high nibble (C)
