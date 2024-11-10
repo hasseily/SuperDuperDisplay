@@ -584,7 +584,9 @@ void main()
 				// Both pixels use the same color. PAL256TEX is a R16UI
 				// The reason the CPU pregenerates the colors is that they depend on the state of
 				// all the palettes at the time of the beam cycle.
-				uint pal256Word = texelFetch(PAL256TEX,ivec2(xpos >> 2, ypos >> 1),0).r;
+				uint xpos_noborder = xpos - uint(hborder*16);
+				uint ypos_noborder = ypos - uint(vborder*2);
+				uint pal256Word = texelFetch(PAL256TEX,ivec2(xpos_noborder >> 2, ypos_noborder >> 1),0).r;
 				fragColor = ConvertIIgs2RGB(pal256Word);
                 break;
             }

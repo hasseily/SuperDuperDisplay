@@ -762,7 +762,9 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			// racing the beam.
 			if ((scanlineSHR4Modes & A2_VSM_SHR4PAL256) != 0)
 			{
-				auto pal256ByteStartPtr = vrams_write->vram_pal256 + (((_A2VIDEO_SHR_BYTES_PER_LINE * _TR_ANY_Y) + (4 * _TR_ANY_X)) * 2);
+				// calculate x value where x is 0-40 in the content area
+				auto _x_just_content = _x - CYCLES_SC_HBL;
+				auto pal256ByteStartPtr = vrams_write->vram_pal256 + (_y * _A2VIDEO_SHR_BYTES_PER_LINE + (4 * _x_just_content))*2;
 
 				for (uint32_t i = 0; i < 4; i++)
 				{
