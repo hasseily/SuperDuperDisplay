@@ -97,8 +97,7 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _A2VIDEO_SHR_SIZE 0x8000
 #define _A2VIDEO_SHR_SCB_START 0x9D00			// scanline control bytes: 1 per line, 200 total
 #define _A2VIDEO_SHR_MAGIC_BYTES 0x9DFC			// start of the 4 magic bytes determining the SHR mode
-#define _A2VIDEO_SHR_MAGIC_STRING 0xB4D2C8D3	// 'SHR4' for now (in reverse order in memory)
-//#define _A2VIDEO_SHR_MAGIC_STRING 0xC2C7C7D2	// 'RGGB' for now (in reverse order in memory)
+#define _A2VIDEO_SHR_MAGIC_STRING 0xB4D2C8D3	// 'SHR4' (in reverse order in memory) activates SHR4 mode
 #define _A2VIDEO_SHR_PALETTE_START 0x9E00	// 16 SHR palettes of 16 colors, 2 bytes per color. Total 512 bytes
 
 

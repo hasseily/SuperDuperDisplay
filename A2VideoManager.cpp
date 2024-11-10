@@ -1582,7 +1582,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			ImGui::EndDisabled();
 			
 			ImGui::NextColumn();
-			ImGui::SeparatorText("[ Override ]");
+			ImGui::SeparatorText("[ OVERRIDE ]");
 			if (ImGui::RadioButton("None##SHR4override", windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 0)) {
 				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = 0;
 				this->ForceBeamFullScreenRender();
