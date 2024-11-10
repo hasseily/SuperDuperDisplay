@@ -1443,7 +1443,7 @@ void A2VideoManager::DisplayImGuiLoadFileWindow(bool* p_open)
 			iImguiMemLoadPosition = std::clamp(iImguiMemLoadPosition, 0, 0xFFFF);
 			ImGui::Checkbox("Aux Bank", &bImguiMemLoadAuxBank);
 			ImGui::SameLine(); ImGui::Text("   "); ImGui::SameLine();
-			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank))
+			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank, sImguiLoadPath))
 				this->ForceBeamFullScreenRender();
 		}
 		ImGui::End();

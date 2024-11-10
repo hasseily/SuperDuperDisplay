@@ -267,6 +267,7 @@ private:
 	bool bImguiLoadFileWindowIsOpen = false;
 	bool bImguiMemLoadAuxBank = false;
 	int iImguiMemLoadPosition = 0;
+	std::string sImguiLoadPath = ".";
 	
 	// beam render state variables
 	bool bBeamIsActive = false;				// Is the beam active?

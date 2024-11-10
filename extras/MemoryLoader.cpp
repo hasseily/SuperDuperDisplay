@@ -47,15 +47,15 @@ bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank, s
 	return res;
 }
 
-bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
+bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) {
 	setlocale(LC_ALL, ".UTF8");
 	bool res = false;
 	if (ImGui::Button("Load File"))
 	{
 		ImGui::SetNextWindowSize(ImVec2(800, 400));
 		IGFD::FileDialogConfig config;
-		config.path = ".";
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", 
+		config.path = (path.empty() ? "." : path);
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File",
 			".bin,.txt,.hgr,.dhr,.shr, #C10000", config);
 	}
 	
@@ -64,6 +64,7 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
 		// Check if a file was selected
 		if (ImGuiFileDialog::Instance()->IsOk()) {
 			std::string filePath = ImGuiFileDialog::Instance()->GetFilePathName();
+			path = ImGuiFileDialog::Instance()->GetCurrentPath();
 			if (filePath.length() >= 4) {
 				std::string extension = ImGuiFileDialog::Instance()->GetCurrentFilter();
 				if (extension == ".hgr")
