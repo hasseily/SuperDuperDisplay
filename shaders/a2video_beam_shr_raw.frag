@@ -43,14 +43,18 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  - It grabs the texel and determines the video mode to use
  - It runs the video mode code on that byte and chooses the correct fragment
 
- In addition, if the magicBytes are "RGGB", we now allow for 4 graphics mode, which can be
+ In addition, if the magicBytes are "SHR4", we now allow for 4 graphics mode, which can be
  mixed and matched per scanline. The top 4 palette color bits determine the type:
  $0RGB = Pal16, Normal SHR 16-color palette entry
  $1ggg = RGGB, Bayer mode where ggg is a grayscale that is the same as the palette index
  $2RGB = Pal256, even 4-bit pixels fetch the next odd pixel to make a Pal256 lookup at $E1/9E00.
          The 12-bit RGB is used for both pixels
- $3xxx = R4G4B4, bytes ABCD EFGH IJKL at 4 bit groups turn into RGB pixels ABC, DEF, GHI, JKL. 
-         xxx = don't care
+ $3xxx = R4G4B4, bytes AB CD EF at 4 bit groups turn into RGB pixels ABC, DEF, each pixel spanning 3 dots
+ 
+ In order to get Pal256 working, it is neccessary to have access to the single unified palette
+ of 256 colors at the time the beam is on each byte. Therefore we have to generate another buffer called
+ PAL256TEX which is a 160x200 buffer of 2 bytes: the snapshots of the colors for each byte at the time
+ the beam was on it. The shader simply applies the relevant color.
          
 
  See comments in the code below.
