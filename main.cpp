@@ -597,8 +597,8 @@ int main(int argc, char* argv[])
                 break;
             case SDL_KEYDOWN:
 			{
-				if (event.key.keysym.sym == SDLK_c) {  // Quit on Ctrl-c
-					if (SDL_GetModState() & KMOD_CTRL) {
+				if (event.key.keysym.sym == SDLK_F4) {  // Quit on ALT-F4
+					if (SDL_GetModState() & KMOD_ALT) {
 						done = true;
 						break;
 					}

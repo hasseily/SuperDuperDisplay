@@ -595,7 +595,7 @@ void MainMenu::ShowSDDMenu() {
 	ImGui::Separator();
 	ImGui::MenuItem("About", "", &pGui->bShowAboutWindow);
 	ImGui::Separator();
-	if (ImGui::MenuItem("Quit", "Ctrl+C")) {
+	if (ImGui::MenuItem("Quit", "Alt+F4")) {
 		Main_RequestAppQuit();
 	}
 }
