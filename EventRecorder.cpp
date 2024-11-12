@@ -84,6 +84,7 @@ void EventRecorder::WriteRecordingFile(std::ofstream& file)
 
 void EventRecorder::ReadRecordingFile(std::ifstream& file)
 {
+	StopReplay();
 	ClearRecording();
 	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
 	// First read the ram snapshot interval
@@ -113,6 +114,7 @@ void EventRecorder::ReadRecordingFile(std::ifstream& file)
 
 void EventRecorder::ReadTextEventsFromFile(std::ifstream& file)
 {
+	StopReplay();
 	ClearRecording();
 	MakeRAMSnapshot(0);	// Just make a snapshot of what is now
 	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
@@ -163,6 +165,7 @@ void EventRecorder::ReadTextEventsFromFile(std::ifstream& file)
 // Offset is to the start of the SHR image, so need to add 0x2000 in AUX mem
 void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 {
+	StopReplay();
 	ClearRecording();
 	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
 	auto pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + 0x2000;
@@ -383,7 +386,7 @@ void EventRecorder::LoadRecording()
 	IGFD::FileDialogConfig config;
 	config.path = "./recordings/";
 	ImGui::SetNextWindowSize(ImVec2(800, 400));
-	ImGuiFileDialog::Instance()->OpenDialog("ChooseRecordingLoad", "Load Recording File", ".vcr,.shra,#c20000", config);
+	ImGuiFileDialog::Instance()->OpenDialog("ChooseRecordingLoad", "Load Recording File", ".vcr,.shra,#C20000", config);
 }
 
 void EventRecorder::LoadTextEventsFromFile()
@@ -534,7 +537,7 @@ void EventRecorder::DisplayImGuiWindow(bool* p_open)
 							ReadRecordingFile(file);
 						else if (_fileExtension == ".shra")
 							ReadPaintWorksAnimationsFile(file);
-						else if (_fileExtension == "#c20000")
+						else if (_fileExtension == "#C20000")
 							ReadPaintWorksAnimationsFile(file);
 					}
 					catch (std::ifstream::failure& e)
