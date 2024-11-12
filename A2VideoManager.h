@@ -267,6 +267,7 @@ private:
 	bool bImguiLoadFileWindowIsOpen = false;
 	bool bImguiMemLoadAuxBank = false;
 	int iImguiMemLoadPosition = 0;
+	int overrideSHR4Mode = 0;				// Cached here to keep the value between A2WindowBeam resets
 	std::string sImguiLoadPath = ".";
 	
 	// beam render state variables

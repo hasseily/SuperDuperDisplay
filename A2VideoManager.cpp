@@ -1583,24 +1583,19 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			
 			ImGui::NextColumn();
 			ImGui::SeparatorText("[ OVERRIDE ]");
-			if (ImGui::RadioButton("None##SHR4override", windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 0)) {
-				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = 0;
-				this->ForceBeamFullScreenRender();
-			}
-			if (ImGui::RadioButton("Force SHR", windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 1)) {
-				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = 1;
-				this->ForceBeamFullScreenRender();
-			}
-			if (ImGui::RadioButton("Force RGGB", windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 2)) {
-				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = 2;
-				this->ForceBeamFullScreenRender();
-			}
-			if (ImGui::RadioButton("Force PAL256", windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 3)) {
-				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = 3;
-				this->ForceBeamFullScreenRender();
-			}
-			if (ImGui::RadioButton("Force R4G4B4", windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 4)) {
-				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = 4;
+			if (ImGui::RadioButton("None##SHR4override", overrideSHR4Mode == 0))
+				overrideSHR4Mode = 0;
+			if (ImGui::RadioButton("Force SHR", overrideSHR4Mode == 1))
+				overrideSHR4Mode = 1;
+			if (ImGui::RadioButton("Force RGGB", overrideSHR4Mode == 2))
+				overrideSHR4Mode = 2;
+			if (ImGui::RadioButton("Force PAL256", overrideSHR4Mode == 3))
+				overrideSHR4Mode = 3;
+			if (ImGui::RadioButton("Force R4G4B4", overrideSHR4Mode == 4))
+				overrideSHR4Mode = 4;
+			if (windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode != overrideSHR4Mode)
+			{
+				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = overrideSHR4Mode;
 				this->ForceBeamFullScreenRender();
 			}
 			ImGui::Columns(1);
