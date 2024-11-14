@@ -127,6 +127,7 @@ void A2VideoManager::DrawOverlayString(const std::string& text, uint8_t colors, 
 
 void A2VideoManager::DrawOverlayString(const char* text, uint8_t len, uint8_t colors, uint32_t x, uint32_t y)
 {
+	(void)len;
 	uint8_t i = 0;
 	while (text[i] != '\0')
 	{

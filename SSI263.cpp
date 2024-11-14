@@ -105,7 +105,7 @@ void SSI263::LoadRegister()
 				phoneme 		= byteData & 0b0011'1111;
 				phonemeDuration = ((byteData & 0b1100'0000) >> 6);
 				irqIsSet = false;
-				if (_DEBUG_SSI263 > 0)
+				if constexpr (_DEBUG_SSI263 > 0)
 					std::cerr << "Generating P:" << phoneme << " Dur:" << phonemeDuration << std::endl;
 				GeneratePhonemeSamples();
 			}
@@ -116,7 +116,7 @@ void SSI263::LoadRegister()
 				inflection &= ~(0x00FF << 3);
 				inflection |= (byteData << 3);
 				irqIsSet = false;
-				if (_DEBUG_SSI263 > 0)
+				if constexpr (_DEBUG_SSI263 > 0)
 					std::cerr << "I1:" << inflection << std::endl;
 			}
 			break;
@@ -132,7 +132,7 @@ void SSI263::LoadRegister()
 				// top 4 bits are the speech rate
 				speechRate = (byteData >> 4);
 				irqIsSet = false;
-				if (_DEBUG_SSI263 > 0)
+				if constexpr (_DEBUG_SSI263 > 0)
 					std::cerr << "I2:" << inflection << " SpeechRate:" << speechRate << std::endl;
 
 			}
@@ -141,7 +141,7 @@ void SSI263::LoadRegister()
 			{
 				amplitude = byteData & 0b1111;
 				articulationRate = (byteData >> 4) & 0b111;
-				if (_DEBUG_SSI263 > 0)
+				if constexpr (_DEBUG_SSI263 > 0)
 					std::cerr << "Amp:" << amplitude << " Artic:" << articulationRate << std::endl;
 
 				// if CTL goes from high to low:
@@ -167,14 +167,14 @@ void SSI263::LoadRegister()
 					}
 
 					SDL_PauseAudioDevice(audioDevice, regCTL);
-					if (_DEBUG_SSI263 > 0)
+					if constexpr (_DEBUG_SSI263 > 0)
 						std::cerr << "CTL:" << regCTL << " PAUSE is 1!" << std::endl;
 				}
 			}
 			break;
 		default:	// Anything 0b1xx
 			filterFrequency = byteData;
-			if (_DEBUG_SSI263 > 0)
+			if constexpr (_DEBUG_SSI263 > 0)
 				std::cerr << "FF:" << filterFrequency << std::endl;
 			break;
 	}
@@ -284,7 +284,7 @@ void SSI263::GeneratePhonemeSamples()
 		v_samples.push_back((_newSample >> 8) & 0xFF);
 	}
 	SDL_UnlockAudioDevice(audioDevice);
-	if (_DEBUG_SSI263 > 0)
+	if constexpr (_DEBUG_SSI263 > 0)
 		std::cerr << "Added samples: " << _basePhonemeLength << std::endl;
 }
 
@@ -297,7 +297,7 @@ void SSI263::AudioCallback(void* userdata, uint8_t* stream, int len) {
 	int samples_to_copy = len;
 	samples_to_copy = std::min(samples_to_copy, static_cast<int>(_vecS.size()) - _currIdx);
 
-	if (_DEBUG_SSI263 > 1)
+	if constexpr (_DEBUG_SSI263 > 1)
 		std::cerr << "samples: " << samples_to_copy << " / " << _currIdx << " / " << _vecS.size() << std::endl;
 
 	SDL_memcpy(stream, _vecS.data() + _currIdx, samples_to_copy);

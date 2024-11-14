@@ -58,10 +58,10 @@ public:
 
 	A2WindowBeam(A2VideoModeBeam_e _video_mode, const char* shaderVertexPath, const char* shaderFragmentPath);
 	~A2WindowBeam();
-	const uint32_t GetWidth();
-	const uint32_t GetHeight();
+	uint32_t GetWidth() const;
+	uint32_t GetHeight() const;
 	void SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vertical);
-	GLuint GetOutputTextureId();
+	GLuint GetOutputTextureId() const;
 	GLuint Render(bool shouldUpdateDataInGPU);	// returns the output texture id
 
 	Shader* GetShader() { return &shader; };

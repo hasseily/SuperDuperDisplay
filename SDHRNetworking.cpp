@@ -361,7 +361,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	}
 #endif
 	
-	int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	auto sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd < 0) {
 		std::cerr << "Error opening socket" << std::endl;
 #ifdef __NETWORKING_WINDOWS__
