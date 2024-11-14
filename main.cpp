@@ -518,11 +518,11 @@ int main(int argc, char* argv[])
 				SDL_SetWindowSize(window, g_ww, g_wh);
 			}
 		}
+		std::cout << "Previous state loaded!" << std::endl;
 	} else {
 		std::cerr << "No saved Settings.json file" << std::endl;
 	}
 	
-	std::cout << "Previous state loaded!" << std::endl;
 
 	SDL_GetWindowPosition(window, &g_wx, &g_wy);
 	SDL_GetWindowSize(window, &g_ww, &g_wh);

@@ -246,7 +246,7 @@ void A2VideoManager::Initialize()
 		vrams_array[i].id = i;
 		vrams_array[i].frame_idx = current_frame_idx + i;
 		vrams_array[i].bWasRendered = true;		// otherwise it won't render the first frame
-		vrams_array[i].mode = A2Mode_e::LEGACY;
+		vrams_array[i].mode = A2Mode_e::NONE;
 		if (vrams_array[i].vram_legacy != nullptr)
 			delete[] vrams_array[i].vram_legacy;
 		if (vrams_array[i].vram_shr != nullptr)
