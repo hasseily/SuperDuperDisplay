@@ -56,6 +56,8 @@ public:
 	void ReadRecordingFile(std::ifstream& file);
 	// This method reads a text event file, generally used for debugging
 	void ReadTextEventsFromFile(std::ifstream& file);
+	// This method reads a PaintWorks Animations file, also for debugging
+	void ReadPaintWorksAnimationsFile(std::ifstream& file);
 	void StopReplay();
 	void StartReplay();
 

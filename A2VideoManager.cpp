@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <cstring>   // for std::memcmp
 #include <string>
 #include <algorithm>
 #include <system_error>
@@ -118,8 +119,8 @@ void A2VideoManager::DrawOverlayString(const std::string& text, uint8_t colors, 
 {
 	for (uint8_t i = 0; i < text.length(); ++i)
 	{
-		overlay_text[40 * y + x + i] = text.c_str()[i] + 0x80;
-		overlay_colors[40 * y + x + i] = colors;
+		overlay_text[_OVERLAY_CHAR_WIDTH * y + x + i] = text.c_str()[i] + 0x80;
+		overlay_colors[_OVERLAY_CHAR_WIDTH * y + x + i] = colors;
 	}
 	overlay_lines[y] = 1;
 }
@@ -129,8 +130,8 @@ void A2VideoManager::DrawOverlayString(const char* text, uint8_t len, uint8_t co
 	uint8_t i = 0;
 	while (text[i] != '\0')
 	{
-		overlay_text[40 * y + x + i] = text[i] + 0x80;
-		overlay_colors[40 * y+ + x + i] = colors;
+		overlay_text[_OVERLAY_CHAR_WIDTH * y + x + i] = text[i] + 0x80;
+		overlay_colors[_OVERLAY_CHAR_WIDTH * y+ + x + i] = colors;
 		++i;
 	}
 	overlay_lines[y] = 1;
@@ -138,27 +139,27 @@ void A2VideoManager::DrawOverlayString(const char* text, uint8_t len, uint8_t co
 
 void A2VideoManager::DrawOverlayCharacter(const char c, uint8_t colors, uint32_t x, uint32_t y)
 {
-	overlay_text[40 * y + x] = c + 0x80;
-	overlay_colors[40 * y + x] = colors;
+	overlay_text[_OVERLAY_CHAR_WIDTH * y + x] = c + 0x80;
+	overlay_colors[_OVERLAY_CHAR_WIDTH * y + x] = colors;
 	overlay_lines[y] = 1;
 }
 
 void A2VideoManager::EraseOverlayRange(uint8_t len, uint32_t x, uint32_t y)
 {
-	memset(overlay_text + (40 * y + x), 0, len);
+	memset(overlay_text + (_OVERLAY_CHAR_WIDTH * y + x), 0, len);
 	UpdateOverlayLine(y);
 }
 
 void A2VideoManager::EraseOverlayCharacter(uint32_t x, uint32_t y)
 {
-	overlay_text[40 * y + x] = 0;
+	overlay_text[_OVERLAY_CHAR_WIDTH * y + x] = 0;
 	UpdateOverlayLine(y);
 }
 
 inline void A2VideoManager::UpdateOverlayLine(uint32_t y)
 {
-	for (uint8_t i=0; i<40; ++i) {
-		if (overlay_text[40 * y + i] > 0)
+	for (uint8_t i=0; i< _OVERLAY_CHAR_WIDTH; ++i) {
+		if (overlay_text[_OVERLAY_CHAR_WIDTH * y + i] > 0)
 		{
 			overlay_lines[y] = 1;
 			return;
@@ -212,6 +213,8 @@ A2VideoManager::~A2VideoManager()
 			delete[] vrams_array[i].vram_legacy;
 		if (vrams_array[i].vram_shr != nullptr)
 			delete[] vrams_array[i].vram_shr;
+		if (vrams_array[i].vram_pal256 != nullptr)
+			delete[] vrams_array[i].vram_pal256;
 		if (vrams_array[i].offset_buffer != nullptr)
 			delete[] vrams_array[i].offset_buffer;
 		
@@ -243,15 +246,18 @@ void A2VideoManager::Initialize()
 		vrams_array[i].id = i;
 		vrams_array[i].frame_idx = current_frame_idx + i;
 		vrams_array[i].bWasRendered = true;		// otherwise it won't render the first frame
-		vrams_array[i].mode = A2Mode_e::LEGACY;
+		vrams_array[i].mode = A2Mode_e::NONE;
 		if (vrams_array[i].vram_legacy != nullptr)
 			delete[] vrams_array[i].vram_legacy;
 		if (vrams_array[i].vram_shr != nullptr)
 			delete[] vrams_array[i].vram_shr;
+		if (vrams_array[i].vram_pal256 != nullptr)
+				delete[] vrams_array[i].vram_pal256;
 		if (vrams_array[i].offset_buffer != nullptr)
 			delete[] vrams_array[i].offset_buffer;
 		vrams_array[i].vram_legacy = new uint8_t[GetVramSizeLegacy()];
 		vrams_array[i].vram_shr = new uint8_t[GetVramSizeSHR()];
+		vrams_array[i].vram_pal256 = new uint8_t[_A2VIDEO_SHR_BYTES_PER_LINE*2*_A2VIDEO_SHR_SCANLINES];
 		vrams_array[i].offset_buffer = new GLfloat[GetVramHeightSHR()];
 		memset(vrams_array[i].vram_legacy, 0, GetVramSizeLegacy());
 		memset(vrams_array[i].vram_shr, 0, GetVramSizeSHR());
@@ -303,7 +309,7 @@ void A2VideoManager::Initialize()
 		std::sort(font_roms_array.begin(), font_roms_array.end());
 	} catch (const std::filesystem::filesystem_error& e) {
 		std::cerr << "Error accessing directory: " << e.what() << std::endl;
-		exit;
+		exit(1);
 	}
 	
 	// Initialize windows
@@ -375,7 +381,7 @@ void A2VideoManager::ResetComputer()
     if (bIsRebooting == true)
         return;
     bIsRebooting = true;
-	SerializeState();
+	Initialize();
 	MemoryManager::GetInstance()->Initialize();
 	SoundManager::GetInstance()->Initialize();
 	MockingboardManager::GetInstance()->Initialize();
@@ -440,6 +446,8 @@ void A2VideoManager::StartNextFrame()
 	region_scanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
 	// For the merged mode
 	merge_last_change_y = UINT_MAX;
+	// Additional frame data resets
+	vrams_write->frameSHR4Modes = 0;
 }
 
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
@@ -575,7 +583,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		{
 			if (_x < CYCLES_SC_HBL || _y >= mode_scanlines)		// bounds check if mode changes midway
 				return;
-			uint32_t _toff = 40 * (_y/8) + (_x - CYCLES_SC_HBL);
+			uint32_t _toff = _OVERLAY_CHAR_WIDTH * (_y/8) + (_x - CYCLES_SC_HBL);
 			// Override when the byte is an overlay
 			if (overlay_text[_toff] > 0)
 			{
@@ -687,6 +695,20 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
 				   memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
 				   32);					// palette length is 32 bytes
+			
+			// Also here check all the palette reserved nibble values (high nibble of byte 2) to see
+			// what SHR4 modes are used in this line, if SHR4 is enabled via the magic bytes
+			
+			uint32_t magicBytes = reinterpret_cast<uint32_t*>(memPtr + _A2VIDEO_SHR_MAGIC_BYTES)[0];
+			if (magicBytes == _A2VIDEO_SHR_MAGIC_STRING)	// SHR4 mode is enabled
+			{
+				// Modes are 0,1,2,3 on the high nibble of the 2-byte palette. We need to switch to bits as per A2VideoSpecialMode_e
+				scanlineSHR4Modes = 0b00010000;	// Default SHR enabled for SHR4
+				for (uint8_t i = 0; i < 16; ++i) {
+					scanlineSHR4Modes |= (1 << ((lineStartPtr[2 + 2*i] >> 4) + 4));	// second byte of each palette color (skip SCB byte 1)
+				}
+				vrams_write->frameSHR4Modes |= scanlineSHR4Modes;	// Add to the frame's SHR4 modes the new modes found on this line
+			}
 		}
 		
 		switch (beamState)
@@ -733,6 +755,25 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 					if ((byteColor & 0x0F) == 0)
 						byteColor |= (byteColor >> 4);
 					lineStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i] = byteColor;
+				}
+			}
+			// Here deal with the new SHR4 mode PAL256, where each byte is an index into the full palette
+			// of 256 colors. We have to do it here because the palette can be dynamically modified while
+			// racing the beam.
+			if (((scanlineSHR4Modes & A2_VSM_SHR4PAL256) != 0) || (windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 3))
+			{
+				// calculate x value where x is 0-40 in the content area
+				auto _x_just_content = _x - CYCLES_SC_HBL;
+				auto pal256ByteStartPtr = vrams_write->vram_pal256 + (_y * _A2VIDEO_SHR_BYTES_PER_LINE + (4 * _x_just_content))*2;
+
+				for (uint32_t i = 0; i < 4; i++)
+				{
+					// get the byte value, a pointer to the palette color
+					auto byteColor = lineStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i];
+					// get the palette color (2 bytes), the palette being all 256 colors in a single palette
+					auto paletteColorStart = memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)byteColor * 2);
+					pal256ByteStartPtr[2*i] = paletteColorStart[0];
+					pal256ByteStartPtr[2*i + 1] = paletteColorStart[1];
 				}
 			}
 		}
@@ -1061,7 +1102,7 @@ void A2VideoManager::PrepareOffsetTexture() {
 		// Generate the texture if it doesn't exist
 		if (OFFSETTEX == UINT_MAX)
 			glGenTextures(1, &OFFSETTEX);
-		glActiveTexture(_TEXUNIT_DATABUFFER);
+		glActiveTexture(GL_TEXTURE10);
 		glBindTexture(GL_TEXTURE_2D, OFFSETTEX);
 
 		// Set texture parameters
@@ -1080,8 +1121,7 @@ void A2VideoManager::PrepareOffsetTexture() {
 	}
 	else {
 		// Update the texture
-		glActiveTexture(_TEXUNIT_DATABUFFER);
-		glBindTexture(GL_TEXTURE_2D, OFFSETTEX);
+		glActiveTexture(GL_TEXTURE10);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, GetVramHeightSHR(), GL_RED, GL_FLOAT, vrams_read->offset_buffer);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
@@ -1172,6 +1212,9 @@ GLuint A2VideoManager::Render()
 	// std::cerr << "--- Actual Render: " << vrams_read->frame_idx << std::endl;
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
 
+	// Set the magic bytes, currently only in SHR mode
+	windowsbeam[A2VIDEOBEAM_SHR]->specialModesMask |= vrams_read->frameSHR4Modes;
+
 	// ===============================================================================
 	// ============================== MERGED MODE RENDER ==============================
 	// ===============================================================================
@@ -1211,21 +1254,21 @@ GLuint A2VideoManager::Render()
 			return UINT32_MAX;
 		}
 
-		// Bind both Legacy and SHR textures to Tex 7 and 8 respectively
-		glActiveTexture(GL_TEXTURE7);
+		// Bind both Legacy and SHR textures to Tex 8 and 9 respectively
+		glActiveTexture(GL_TEXTURE8);
 		glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
-		shader_merge.setInt("legacyTex", GL_TEXTURE7 - GL_TEXTURE0);
+		shader_merge.setInt("legacyTex", GL_TEXTURE8 - GL_TEXTURE0);
 		shader_merge.setVec2("legacySize", legacy_width, legacy_height);
 		shader_merge.setInt("forceSHRWidth", bForceSHRWidth);
 
-		glActiveTexture(GL_TEXTURE8);
+		glActiveTexture(GL_TEXTURE9);
 		glBindTexture(GL_TEXTURE_2D, shr_texture_id);
-		shader_merge.setInt("shrTex", GL_TEXTURE8- GL_TEXTURE0);
+		shader_merge.setInt("shrTex", GL_TEXTURE9 - GL_TEXTURE0);
 		shader_merge.setVec2("shrSize", fb_width, fb_height);
 
 		// Point the uniform at the OFFSET texture
 		PrepareOffsetTexture();
-		shader_merge.setInt("OFFSETTEX", _TEXUNIT_DATABUFFER - GL_TEXTURE0);
+		shader_merge.setInt("OFFSETTEX", GL_TEXTURE10 - GL_TEXTURE0);
 
 		// Render the fullscreen quad
 		if (quadVAO == UINT_MAX) {
@@ -1400,7 +1443,7 @@ void A2VideoManager::DisplayImGuiLoadFileWindow(bool* p_open)
 			iImguiMemLoadPosition = std::clamp(iImguiMemLoadPosition, 0, 0xFFFF);
 			ImGui::Checkbox("Aux Bank", &bImguiMemLoadAuxBank);
 			ImGui::SameLine(); ImGui::Text("   "); ImGui::SameLine();
-			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank))
+			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank, sImguiLoadPath))
 				this->ForceBeamFullScreenRender();
 		}
 		ImGui::End();
@@ -1511,7 +1554,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 				this->ForceBeamFullScreenRender();
 			}
 			
-			ImGui::SeparatorText("[ EXTRA MODES ]");
+			ImGui::SeparatorText("[ LEGACY EXTRA MODES ]");
 			if (ImGui::Checkbox("HGR SPEC1", &bUseHGRSPEC1))
 				this->ForceBeamFullScreenRender();
 			ImGui::SetItemTooltip("A HGR mode that makes 11011 be black, found in the EVE RGB card");
@@ -1521,6 +1564,41 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			if (ImGui::Checkbox("DHGR COL140 Mixed", &bUseDHGRCOL140Mixed))
 				this->ForceBeamFullScreenRender();
 			ImGui::SetItemTooltip("A DHGR mode that mixes 16 colors and b/w, found in certain RGB cards");
+			
+			ImGui::Columns(2, "SHR_Columns", false);
+			ImGui::SeparatorText("[ SHR EXTRA MODES ]");
+			bool isNoneActive = (vrams_read->frameSHR4Modes == A2_VSM_NONE);
+			bool isSHR4SHRActive = (vrams_read->frameSHR4Modes & A2_VSM_SHR4SHR) != 0;
+			bool isSHR4RGGBActive = (vrams_read->frameSHR4Modes & A2_VSM_SHR4RGGB) != 0;
+			bool isSHR4PAL256Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4PAL256) != 0;
+			bool isSHR4R4G4B4Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4R4G4B4) != 0;
+			
+			ImGui::BeginDisabled();
+			ImGui::Checkbox("None##SHR4", &isNoneActive);
+			ImGui::Checkbox("SHR4 SHR", &isSHR4SHRActive);
+			ImGui::Checkbox("SHR4 RGGB", &isSHR4RGGBActive);
+			ImGui::Checkbox("SHR4 PAL256", &isSHR4PAL256Active);
+			ImGui::Checkbox("SHR4 R4G4B4", &isSHR4R4G4B4Active);
+			ImGui::EndDisabled();
+			
+			ImGui::NextColumn();
+			ImGui::SeparatorText("[ OVERRIDE ]");
+			if (ImGui::RadioButton("None##SHR4override", overrideSHR4Mode == 0))
+				overrideSHR4Mode = 0;
+			if (ImGui::RadioButton("Force SHR", overrideSHR4Mode == 1))
+				overrideSHR4Mode = 1;
+			if (ImGui::RadioButton("Force RGGB", overrideSHR4Mode == 2))
+				overrideSHR4Mode = 2;
+			if (ImGui::RadioButton("Force PAL256", overrideSHR4Mode == 3))
+				overrideSHR4Mode = 3;
+			if (ImGui::RadioButton("Force R4G4B4", overrideSHR4Mode == 4))
+				overrideSHR4Mode = 4;
+			if (windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode != overrideSHR4Mode)
+			{
+				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = overrideSHR4Mode;
+				this->ForceBeamFullScreenRender();
+			}
+			ImGui::Columns(1);
 		}
 		ImGui::End();
 	}

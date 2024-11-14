@@ -21,6 +21,8 @@
 #include <vector>
 
 // In main.cpp
+extern uint32_t Main_GetFPSLimit();
+extern void Main_SetFPSLimit(uint32_t fps);
 extern void Main_ResetFPSCalculations();
 extern SDL_DisplayMode Main_GetFullScreenMode();
 extern void Main_SetFullScreenMode(SDL_DisplayMode mode);
@@ -34,6 +36,7 @@ extern void Main_SetBGColor(const float newColor[4]);
 extern void Main_ResetA2SS();
 extern bool Main_IsFPSOverlay();
 extern void Main_SetFPSOverlay(bool isFPSOverlay);
+extern void Main_RequestAppQuit();
 
 class MainMenu::Gui {
 public:
@@ -43,6 +46,7 @@ public:
 
 	std::vector<SDL_DisplayMode> v_displayModes;
 
+	int iFPSLimiter = 0;
 	int iWindowWidth=1200;
 	int iWindowHeight=1000;
 	bool bShowAboutWindow = false;
@@ -322,7 +326,7 @@ void MainMenu::Render() {
 			ImGui::End();
 			
 		}
-		// Show the 16 textures loaded (which are always bound to GL_TEXTURE2 -> GL_TEXTURE18)
+		// Show the textures starting at _TEXUNIT_IMAGE_ASSETS_START
 		if (pGui->bShowTextureWindow)
 		{
 			ImGui::SetNextWindowSizeConstraints(ImVec2(300, 250), ImVec2(FLT_MAX, FLT_MAX));
@@ -537,8 +541,6 @@ void MainMenu::ShowSDDMenu() {
 #endif
 	int iMMVsync = Main_GetVsync();
 	bool bMMVsync = (iMMVsync == 0 ? 0 : 1);
-	// std::string _s_vsync = (iMMVsync == -1 ? "VSYNC (Adaptive)" : "VSYNC");
-	// if (ImGui::MenuItem(_s_vsync.c_str(), "", &bMMVsync)) {
 	if (ImGui::Checkbox("VSYNC", &bMMVsync)) {
 		Main_SetVsync(bMMVsync);
 		iMMVsync = Main_GetVsync();
@@ -553,6 +555,28 @@ void MainMenu::ShowSDDMenu() {
 			ImGui::Text("(Adaptive)");
 		}
 	}
+	if (bMMVsync)
+		ImGui::BeginDisabled(true);
+	if (ImGui::BeginMenu("FPS Limiter")) {
+		pGui->iFPSLimiter = Main_GetFPSLimit();
+		if (ImGui::RadioButton("Disabled##FPSLIMIT", &pGui->iFPSLimiter, UINT32_MAX))
+			Main_SetFPSLimit(UINT32_MAX);
+		if (ImGui::RadioButton("15 Hz##FPSLIMIT", &pGui->iFPSLimiter, 15))
+			Main_SetFPSLimit(15);
+		if (ImGui::RadioButton("20 Hz##FPSLIMIT", &pGui->iFPSLimiter, 20))
+			Main_SetFPSLimit(20);
+		if (ImGui::RadioButton("30 Hz##FPSLIMIT", &pGui->iFPSLimiter, 30))
+			Main_SetFPSLimit(30);
+		if (ImGui::RadioButton("45 Hz##FPSLIMIT", &pGui->iFPSLimiter, 45))
+			Main_SetFPSLimit(45);
+		if (ImGui::RadioButton("50 Hz##FPSLIMIT", &pGui->iFPSLimiter, 50))
+			Main_SetFPSLimit(50);
+		if (ImGui::RadioButton("60 Hz##FPSLIMIT", &pGui->iFPSLimiter, 60))
+			Main_SetFPSLimit(60);
+		ImGui::EndMenu();
+	}
+	if (bMMVsync)
+		ImGui::EndDisabled();
 	if (ImGui::BeginMenu("Background Color")) {
 		float windowBGColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 		Main_GetBGColor(windowBGColor);
@@ -571,8 +595,8 @@ void MainMenu::ShowSDDMenu() {
 	ImGui::Separator();
 	ImGui::MenuItem("About", "", &pGui->bShowAboutWindow);
 	ImGui::Separator();
-	if (ImGui::MenuItem("Quit", "Ctrl+C")) {
-		HandleQuit();
+	if (ImGui::MenuItem("Quit", "Alt+F4")) {
+		Main_RequestAppQuit();
 	}
 }
 
@@ -638,7 +662,7 @@ void MainMenu::ShowVideoMenu() {
 		Main_ResetFPSCalculations();
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
-	if (ImGui::MenuItem("Reset FPS", "")) {
+	if (ImGui::MenuItem("Reset FPS", "Shift+F8")) {
 		Main_ResetFPSCalculations();
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
@@ -665,7 +689,7 @@ void MainMenu::ShowSamplesMenu() {
 		memManager->SetSoftSwitch(A2SS_SHR, false);
 		memManager->SetSoftSwitch(A2SS_TEXT, true);
 		memManager->SetSoftSwitch(A2SS_HIRES, false);
-		MemoryLoad("scripts/tomahawk2_hgr.bin", 0, false);
+		MemoryLoad("samples/tomahawk2_hgr.bin", 0, false);
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
 	if (ImGui::MenuItem("DHGR")) {
@@ -676,8 +700,8 @@ void MainMenu::ShowSamplesMenu() {
 		memManager->SetSoftSwitch(A2SS_HIRES, true);
 		memManager->SetSoftSwitch(A2SS_DHGR, true);
 		memManager->SetSoftSwitch(A2SS_MIXED, true);
-		MemoryLoad("scripts/e0_ultima2_dhgr.bin", 0, false);
-		MemoryLoad("scripts/e1_ultima2_dhgr.bin", 0, true);
+		MemoryLoad("samples/e0_ultima2_dhgr.bin", 0, false);
+		MemoryLoad("samples/e1_ultima2_dhgr.bin", 0, true);
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
 	if (ImGui::MenuItem("GS Snapshot")) {
@@ -685,8 +709,8 @@ void MainMenu::ShowSamplesMenu() {
 		memManager->SetSoftSwitch(A2SS_SHR, true);
 		memManager->SetSoftSwitch(A2SS_TEXT, false);
 		memManager->SetSoftSwitch(A2SS_HIRES, true);
-		MemoryLoad("scripts/bank_e0_0_bfff.bin", 0, false);
-		MemoryLoad("scripts/bank_e1_0_bfff.bin", 0, true);
+		MemoryLoad("samples/bank_e0_0_bfff.bin", 0, false);
+		MemoryLoad("samples/bank_e1_0_bfff.bin", 0, true);
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
 	if (ImGui::MenuItem("HGR SPEC1")) {
@@ -695,7 +719,7 @@ void MainMenu::ShowSamplesMenu() {
 		memManager->SetSoftSwitch(A2SS_TEXT, false);
 		memManager->SetSoftSwitch(A2SS_HIRES, true);
 		a2VideoManager->bUseHGRSPEC1 = true;
-		MemoryLoadHGR("scripts/arcticfox.hgr");
+		MemoryLoadHGR("samples/arcticfox.hgr");
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
 	if (ImGui::MenuItem("DHGR Col140Mixed")) {
@@ -706,20 +730,44 @@ void MainMenu::ShowSamplesMenu() {
 		memManager->SetSoftSwitch(A2SS_HIRES, true);
 		memManager->SetSoftSwitch(A2SS_DHGR, true);
 		a2VideoManager->bUseDHGRCOL140Mixed = true;
-		MemoryLoadDHR("scripts/extasie0_140mix.dhr");
+		MemoryLoadDHR("samples/extasie0_140mix.dhr");
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
 	if (ImGui::MenuItem("SHR+Legacy")) {
 		Main_ResetA2SS();
 		memManager->SetSoftSwitch(A2SS_SHR, true);
-		MemoryLoadSHR("scripts/paintworks.shr");
-		std::ifstream legacydemo("./scripts/tomahawk2_hgr.bin", std::ios::binary);
+		MemoryLoadSHR("samples/paintworks.shr");
+		std::ifstream legacydemo("./samples/tomahawk2_hgr.bin", std::ios::binary);
 		legacydemo.seekg(0, std::ios::beg); // Go back to the start of the file
 		legacydemo.read(reinterpret_cast<char*>(MemoryManager::GetInstance()->GetApple2MemPtr()), 0x4000);
 		a2VideoManager->bDEMOMergedMode = true;
 		a2VideoManager->bForceSHRWidth = true;
 		a2VideoManager->bNoMergedModeWobble = true;
 		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("SHR RGGB (Bayer) 320@16")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, true);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_HIRES, false);
+		MemoryLoadSHR("samples/SHR RGGB/320_16_abstracteyear99#C10000.shr");
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("SHR RGGB (Bayer) 640@4")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, true);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_HIRES, false);
+		MemoryLoadSHR("samples/SHR RGGB/640_04_abstracteyear99#C10000.shr");
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("SHR Animation (PWA $C2)")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, true);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_HIRES, false);
+		std::ifstream animationFile("recordings/anim00032#c20000.shra", std::ios::binary);
+		eventRecorder->ReadPaintWorksAnimationsFile(animationFile);
 	}
 	if (ImGui::MenuItem("Run Karateka Demo", "", &pGui->bSampleRunKarateka)) {
 		if (pGui->bSampleRunKarateka) {
@@ -736,6 +784,9 @@ void MainMenu::ShowSamplesMenu() {
 		}
 		Main_ResetFPSCalculations();
 		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("Speech Demo")) {
+		MockingboardManager::GetInstance()->Util_SpeakDemoPhrase();
 	}
 }
 
@@ -801,12 +852,6 @@ void MainMenu::ShowDeveloperMenu() {
 	ImGui::EndDisabled();
 	ImGui::Separator();
 	ImGui::MenuItem("ImGui Metrics Window", "", &pGui->bShowImGuiMetricsWindow);
-}
-
-void MainMenu::HandleQuit() {
-	std::cout << "Quitting application" << std::endl;
-	SDL_Quit();
-	exit(0);
 }
 
 // UTILITY

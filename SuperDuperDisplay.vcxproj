@@ -107,6 +107,7 @@
       <AdditionalIncludeDirectories>imgui;imgui\backends;%SDL2_DIR%\include;$(VcpkgCurrentInstalledDir)include\SDL2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -115,6 +116,13 @@
       <SubSystem>Console</SubSystem>
       <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
+    <PreLinkEvent>
+      <Command>
+</Command>
+    </PreLinkEvent>
+    <PostBuildEvent>
+      <Command>xcopy /y /d "$(SDL2_DIR)\lib\x64\*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -146,17 +154,25 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>%SDL2_DIR%\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>opengl32.lib;SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
     </Link>
+    <PreLinkEvent>
+      <Command>
+</Command>
+    </PreLinkEvent>
+    <PostBuildEvent>
+      <Command>xcopy /y /d "$(SDL2_DIR)\lib\x64\*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="A2WindowBeam.cpp" />
@@ -186,6 +202,7 @@
     <ClCompile Include="A2VideoManager.cpp" />
     <ClCompile Include="shader.cpp" />
     <ClCompile Include="SoundManager.cpp" />
+    <ClCompile Include="SSI263.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="A2VideoManager.h" />
@@ -198,12 +215,12 @@
     <ClInclude Include="ConcurrentQueue.h" />
     <ClInclude Include="CycleCounter.h" />
     <ClInclude Include="EventRecorder.h" />
+    <ClInclude Include="extras\ImGuiFileDialog.h" />
+    <ClInclude Include="extras\ImGuiFileDialogConfig.h" />
     <ClInclude Include="extras\MemoryLoader.h" />
     <ClInclude Include="glad\glad.h" />
     <ClInclude Include="glad\khrplatform.h" />
     <ClInclude Include="GRAddr2XY.h" />
-    <ClInclude Include="ImGuiFileDialog.h" />
-    <ClInclude Include="ImGuiFileDialogConfig.h" />
     <ClInclude Include="imgui\backends\imgui_impl_opengl3.h" />
     <ClInclude Include="imgui\backends\imgui_impl_opengl3_loader.h" />
     <ClInclude Include="imgui\backends\imgui_impl_sdl2.h" />
@@ -211,6 +228,7 @@
     <ClInclude Include="imgui\imgui.h" />
     <ClInclude Include="imgui\imgui_internal.h" />
     <ClInclude Include="imgui_memory_editor.h" />
+    <ClInclude Include="m6522.h" />
     <ClInclude Include="MainMenu.h" />
     <ClInclude Include="MemoryManager.h" />
     <ClInclude Include="MockingboardManager.h" />
@@ -223,6 +241,7 @@
     <ClInclude Include="SDHRWindow.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="SoundManager.h" />
+    <ClInclude Include="SSI263.h" />
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
@@ -235,11 +254,11 @@
     <None Include="shaders\a2video_beam_legacy.frag" />
     <None Include="shaders\a2video_beam_merge.frag" />
     <None Include="shaders\a2video_beam_shr.frag" />
+    <None Include="shaders\a2video_beam_shr_raw.frag" />
     <None Include="shaders\a2video_dhgr.frag" />
     <None Include="shaders\a2video_hgr.frag" />
     <None Include="shaders\a2video_lgr.frag" />
     <None Include="shaders\a2video_postprocess.glsl" />
-    <None Include="shaders\a2video_postprocess2.glsl" />
     <None Include="shaders\a2video_shr.frag" />
     <None Include="shaders\a2video_text.frag" />
     <None Include="shaders\basic.frag" />
@@ -255,7 +274,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="textures\**">
+    <Content Include="assets\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -275,16 +294,12 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="packages\sdl2.nuget.redist.2.28.5\build\native\sdl2.nuget.redist.targets" Condition="Exists('packages\sdl2.nuget.redist.2.28.5\build\native\sdl2.nuget.redist.targets')" />
-    <Import Project="packages\sdl2.nuget.2.28.5\build\native\sdl2.nuget.targets" Condition="Exists('packages\sdl2.nuget.2.28.5\build\native\sdl2.nuget.targets')" />
     <Import Project="packages\zlib-msvc-x64.1.2.11.8900\build\native\zlib-msvc-x64.targets" Condition="Exists('packages\zlib-msvc-x64.1.2.11.8900\build\native\zlib-msvc-x64.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('packages\sdl2.nuget.redist.2.28.5\build\native\sdl2.nuget.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\sdl2.nuget.redist.2.28.5\build\native\sdl2.nuget.redist.targets'))" />
-    <Error Condition="!Exists('packages\sdl2.nuget.2.28.5\build\native\sdl2.nuget.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\sdl2.nuget.2.28.5\build\native\sdl2.nuget.targets'))" />
     <Error Condition="!Exists('packages\zlib-msvc-x64.1.2.11.8900\build\native\zlib-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\zlib-msvc-x64.1.2.11.8900\build\native\zlib-msvc-x64.targets'))" />
   </Target>
 </Project>

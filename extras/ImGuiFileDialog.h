@@ -4,6 +4,8 @@
 //
 //  Created by Henri Asseily on 17/01/2024.
 //
+// NOTE:	This class has been modified to support '#' file extensions in addition to '.'
+//			to allow support for CiderPress filetype extensions such as '#C10000' which is an SHR file
 
 #ifndef IMGUIFILEDIALOG_H
 #define IMGUIFILEDIALOG_H

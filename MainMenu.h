@@ -17,9 +17,7 @@ private:
 	void ShowSoundMenu();
 	void ShowSamplesMenu();
 	void ShowDeveloperMenu();
-	
-	void HandleQuit();
-	
+		
 	// utility
 	// FIXME: Put these in the custom imgui .h?
 	float CalcCenteredTextX(const char* text, float minX, float maxX);

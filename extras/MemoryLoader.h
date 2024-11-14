@@ -6,8 +6,8 @@
 #include <cstdint>
 #include <string>
 
-bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank);
-bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank);
+bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path);
+bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank, size_t fileSize = 0);
 bool MemoryLoadHGR(const std::string &filePath);
 bool MemoryLoadDHR(const std::string &filePath);
 bool MemoryLoadSHR(const std::string &filePath);

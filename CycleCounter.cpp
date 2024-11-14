@@ -3,6 +3,7 @@
 #include <iostream>
 #include <chrono>
 #include "A2VideoManager.h"
+#include "SoundManager.h"
 
 
 // below because "The declaration of a static data member in its class definition is not a definition"
@@ -104,12 +105,14 @@ void CycleCounter::SetVideoRegion(VideoRegion_e region)
 			m_region = VideoRegion_e::PAL;
 			cycles_total = CYCLES_TOTAL_PAL;
 			cycles_vblank = cycles_total - CYCLES_SCREEN;
+			SoundManager::GetInstance()->SetPAL(true);
 			std::cout << "Switched to PAL." << std::endl;
 			break;
 		case VideoRegion_e::NTSC:
 			m_region = VideoRegion_e::NTSC;
 			cycles_total = CYCLES_TOTAL_NTSC;
 			cycles_vblank = cycles_total - CYCLES_SCREEN;
+			SoundManager::GetInstance()->SetPAL(false);
 			std::cout << "Switched to NTSC." << std::endl;
 			break;
 		default:

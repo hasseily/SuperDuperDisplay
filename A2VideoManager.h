@@ -35,7 +35,7 @@ enum class BeamState_e
 	BEAMSTATE_TOTAL_COUNT
 };
 
-static std::string BeamStateToString(BeamState_e state) {
+[[maybe_unused]] static std::string BeamStateToString(BeamState_e state) {
 	switch(state) {
 		case BeamState_e::UNKNOWN: return "UNKNOWN";
 		case BeamState_e::NBHBLANK: return "NBHBLANK";
@@ -61,6 +61,8 @@ constexpr uint32_t _BORDER_HEIGHT_MAX_MULT8 = 3;	// 3*8 scanlines
 // Our arbitrary start of a new frame. It should be inside VBLANK and
 // after the maximum bottom border size, but before the top border
 constexpr uint32_t _SCANLINE_START_FRAME = 200 + (_BORDER_HEIGHT_MAX_MULT8 * 8) + 1;
+
+constexpr int _OVERLAY_CHAR_WIDTH = 40;		// Max width of overlay in chars (40 for TEXT)
 
 // Legacy mode VRAM is 4 bytes (main, aux, flags, colors)
 // for each "byte" of screen use
@@ -115,11 +117,13 @@ public:
 		A2Mode_e mode = A2Mode_e::NONE;
 		uint8_t* vram_legacy = nullptr;
 		uint8_t* vram_shr = nullptr;
+		uint8_t* vram_pal256 = nullptr;			// special vram for mode SHR4 PAL256. 2 bytes of color per byte of shr
 		uint8_t* vram_forced_text1 = nullptr;	// these force specific modes for debugging
 		uint8_t* vram_forced_text2 = nullptr;
 		uint8_t* vram_forced_hgr1 = nullptr;
 		uint8_t* vram_forced_hgr2 = nullptr;
 		GLfloat* offset_buffer = nullptr;
+		int frameSHR4Modes = 0;					// All SHR4 modes in the frame
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -191,6 +195,7 @@ public:
 	const uint32_t GetVRAMReadId() { return vrams_read->id; };
 	const uint8_t* GetLegacyVRAMReadPtr() { return vrams_read->vram_legacy; };
 	const uint8_t* GetSHRVRAMReadPtr() { return vrams_read->vram_shr; };
+	const uint8_t* GetPAL256VRAMReadPtr() { return vrams_read->vram_pal256; };
 	const uint8_t* GetTEXT1VRAMReadPtr() { return vrams_read->vram_forced_text1; };
 	const uint8_t* GetTEXT2VRAMReadPtr() { return vrams_read->vram_forced_text2; };
 	const uint8_t* GetHGR1VRAMReadPtr() { return vrams_read->vram_forced_hgr1; };
@@ -262,10 +267,13 @@ private:
 	bool bImguiLoadFileWindowIsOpen = false;
 	bool bImguiMemLoadAuxBank = false;
 	int iImguiMemLoadPosition = 0;
+	int overrideSHR4Mode = 0;				// Cached here to keep the value between A2WindowBeam resets
+	std::string sImguiLoadPath = ".";
 	
 	// beam render state variables
 	bool bBeamIsActive = false;				// Is the beam active?
 	BeamState_e beamState = BeamState_e::UNKNOWN;
+	int scanlineSHR4Modes = 0;			// All SHR4 modes in the scanline
 
 	// Double-buffered vrams
 	BeamRenderVRAMs* vrams_array;	// 2 buffers of legacy+shr vrams
@@ -318,8 +326,8 @@ private:
 	GLint output_height = 0;
 
 	// Overlay strings handling
-	uint8_t overlay_text[40*24];	// text for each overlay
-	uint8_t overlay_colors[40*24];
+	uint8_t overlay_text[_OVERLAY_CHAR_WIDTH *24];	// text for each overlay
+	uint8_t overlay_colors[_OVERLAY_CHAR_WIDTH *24];
 	uint8_t overlay_lines[24];
 	bool bWasSHRBeforeOverlay = false;
 	void UpdateOverlayLine(uint32_t y);

@@ -105,6 +105,9 @@
     <ClCompile Include="SoundManager.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="SSI263.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -173,12 +176,6 @@
     <ClInclude Include="imgui\backends\imgui_impl_sdl2.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="ImGuiFileDialog.h">
-      <Filter>headers</Filter>
-    </ClInclude>
-    <ClInclude Include="ImGuiFileDialogConfig.h">
-      <Filter>headers</Filter>
-    </ClInclude>
     <ClInclude Include="extras\MemoryLoader.h">
       <Filter>headers</Filter>
     </ClInclude>
@@ -210,6 +207,21 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="SoundManager.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MainMenu.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SSI263.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="m6522.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="extras\ImGuiFileDialog.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="extras\ImGuiFileDialogConfig.h">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>
@@ -271,7 +283,7 @@
     <None Include="shaders\a2video_beam_merge.frag">
       <Filter>shaders</Filter>
     </None>
-    <None Include="shaders\a2video_postprocess2.glsl">
+    <None Include="shaders\a2video_beam_shr_raw.frag">
       <Filter>shaders</Filter>
     </None>
   </ItemGroup>

@@ -83,6 +83,29 @@ void terminate_processing_thread()
 
 void process_single_event(SDHREvent& e)
 {
+	/*
+		Uncomment the below code to log specific events between 2 gates at 03FE and 03FF
+		For example, this would log all when the PC is between 0304 and 0308
+
+		0300  F8                         SED
+		0301  8D FE 03                   STA $03FE
+		0304  69 55                      ADC #$55
+		0306  E9 55                      SBC #$55
+		0308  8D FF 03                   STA $03FF
+		030B  60                         RTS
+	*/
+	/*
+	static bool _should_debug = false;
+	if (e.addr == 0x03fe)
+		_should_debug = true;
+	if (e.addr == 0x03ff)
+		_should_debug = false;
+	if (_should_debug)
+	{
+		std::cout << e.m2sel << " " << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
+	}
+	*/
+
 	// std::cout << e.is_iigs << " " << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
 	
 	eventRecorder = EventRecorder::GetInstance();
@@ -99,9 +122,14 @@ void process_single_event(SDHREvent& e)
 	 */
 	auto soundMgr = SoundManager::GetInstance();
 	soundMgr->EventReceived((e.addr & 0xFFF0) == 0xC030);
-	auto mockingboardMgr = MockingboardManager::GetInstance();
-	mockingboardMgr->EventReceived(e.addr, e.data);
 	
+	/*
+	 *********************************
+	 HANDLE MOCKINGBOARD EVENTS
+	 *********************************
+	 */
+	auto mockingboardMgr = MockingboardManager::GetInstance();
+	mockingboardMgr->EventReceived(e.addr, e.data, e.rw);
 	
 	if (e.is_iigs && e.m2sel) {
 		// ignore updates from iigs_mode firmware with m2sel high
@@ -115,7 +143,7 @@ void process_single_event(SDHREvent& e)
 	auto memMgr = MemoryManager::GetInstance();
 	auto sdhrMgr = SDHRManager::GetInstance();
 	auto a2VideoMgr = A2VideoManager::GetInstance();
-
+	
 	/*
 	 *********************************
 	 HANDLE SIMPLE MEMORY WRITE EVENTS

@@ -46,7 +46,7 @@ public:
 	 @param index index of the sound channel
 	 @param t_off 1 if the tone is off
 	 @param n_off 1 if the noise is off
-	 @param e_on 1 if the envalope is on
+	 @param e_on 1 if the envelope is on
 	 */
 	void SetMixer(int index, bool t_off, bool n_off, bool e_on);
 	/** @brief Sets the volume for the specified sound channel
@@ -72,10 +72,6 @@ public:
 	 */
 	void Process();
 	
-	uint8_t value_ora = 0;			// data channel
-	uint8_t value_orb = 0;			// command channel
-	uint8_t value_oddra = 0;		// data direction (a) -- should always be 0xFF after init
-	uint8_t value_oddrb = 0;		// data direction (b) -- should always be 0xFF after init
 	uint8_t latched_register = 0;	// currently latched register
 	
 	struct tone_channel {
@@ -125,7 +121,8 @@ public:
 
 	// this is public because of the Envelopes dispatch table
 	void ResetSegment();
-
+	// dummy variable to force MSVC to not merge hold_top() and hold_bottom()
+	volatile bool bHoldTop;
 private:
 	int UpdateTone(int index);
 	int UpdateNoise();

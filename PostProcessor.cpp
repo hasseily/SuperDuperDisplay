@@ -58,89 +58,91 @@ PostProcessor::~PostProcessor()
 nlohmann::json PostProcessor::SerializeState()
 {
 	nlohmann::json jsonState = {
-		{"p_postprocessing_level", p_postprocessing_level},
+		{"p_i_postprocessingLevel", p_i_postprocessingLevel},
 		{"bCRTFillWindow", bCRTFillWindow},
 		{"integer_scale", integer_scale},
 		{"bAutoScale", bAutoScale},
 		{"bCRTFillWindow", bCRTFillWindow},
-		{"p_bzl", p_bzl},
-		{"p_corner", p_corner},
-		{"p_ext_gamma", p_ext_gamma},
-		{"p_interlace", p_interlace},
-		{"p_potato", p_potato},
-		{"p_slot", p_slot},
-		{"p_vig", p_vig},
-		{"p_bgr", p_bgr},
-		{"p_black", p_black},
-		{"p_br_dep", p_br_dep},
-		{"p_brightness", p_brightness},
-		{"p_c_space", p_c_space},
-		{"p_c_str", p_c_str},
-		{"p_centerx", p_centerx},
-		{"p_centery", p_centery},
-		{"p_conv_b", p_conv_b},
-		{"p_conv_g", p_conv_g},
-		{"p_conv_r", p_conv_r},
-		{"p_gb", p_gb},
-		{"p_m_type", p_m_type},
-		{"p_maskh", p_maskh},
-		{"p_maskl", p_maskl},
-		{"p_msize", p_msize},
-		{"p_rb", p_rb},
-		{"p_rg", p_rg},
-		{"p_saturation", p_saturation},
-		{"p_scanline_weight", p_scanline_weight},
-		{"p_scanline_type", p_scanline_type},
-		{"p_slotw", p_slotw},
-		{"p_warpx", p_warpx},
-		{"p_warpy", p_warpy},
-		{"p_barrel_distortion", p_barrel_distortion},
-		{"p_zoomx", p_zoomx},
-		{"p_zoomy", p_zoomy}
+		{"p_f_corner", p_f_corner},
+		{"p_b_smoothCorner", p_b_smoothCorner},
+		{"p_b_extGamma", p_b_extGamma},
+		{"p_b_interlace", p_b_interlace},
+		{"p_b_potato", p_b_potato},
+		{"p_b_slot", p_b_slot},
+		{"p_b_vignette", p_b_vignette},
+		{"p_f_bgr", p_f_bgr},
+		{"p_f_black", p_f_black},
+		{"p_f_brDep", p_f_brDep},
+		{"p_f_brightness", p_f_brightness},
+		{"p_i_cSpace", p_i_cSpace},
+		{"p_f_cStr", p_f_cStr},
+		{"p_f_centerX", p_f_centerX},
+		{"p_f_centerY", p_f_centerY},
+		{"p_f_convB", p_f_convB},
+		{"p_f_convG", p_f_convG},
+		{"p_f_convR", p_f_convR},
+		{"p_f_hueGB", p_f_hueGB},
+		{"p_i_maskType", p_i_maskType},
+		{"p_f_maskHigh", p_f_maskHigh},
+		{"p_f_maskLow", p_f_maskLow},
+		{"p_f_maskSize", p_f_maskSize},
+		{"p_f_hueRB", p_f_hueRB},
+		{"p_f_hueRG", p_f_hueRG},
+		{"p_f_saturation", p_f_saturation},
+		{"p_f_scanlineWeight", p_f_scanlineWeight},
+		{"p_i_scanlineType", p_i_scanlineType},
+		{"p_f_slotW", p_f_slotW},
+		{"p_f_vignetteWeight", p_f_vignetteWeight},
+		{"p_f_warpX", p_f_warpX},
+		{"p_f_warpY", p_f_warpY},
+		{"p_f_barrelDistortion", p_f_barrelDistortion},
+		{"p_f_zoomX", p_f_zoomX},
+		{"p_f_zoomY", p_f_zoomY}
 	};
 	return jsonState;
 }
 
 void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 {
-	p_postprocessing_level = jsonState.value("p_postprocessing_level", p_postprocessing_level);
+	p_i_postprocessingLevel = jsonState.value("p_i_postprocessingLevel", p_i_postprocessingLevel);
 	bCRTFillWindow = jsonState.value("bCRTFillWindow", bCRTFillWindow);
 	integer_scale = jsonState.value("integer_scale", integer_scale);
 	bAutoScale = jsonState.value("bAutoScale", bAutoScale);
-	p_bzl = jsonState.value("p_bzl", p_bzl);
-	p_corner = jsonState.value("p_corner", p_corner);
-	p_ext_gamma = jsonState.value("p_ext_gamma", p_ext_gamma);
-	p_interlace = jsonState.value("p_interlace", p_interlace);
-	p_potato = jsonState.value("p_potato", p_potato);
-	p_slot = jsonState.value("p_slot", p_slot);
-	p_vig = jsonState.value("p_vig", p_vig);
-	p_bgr = jsonState.value("p_bgr", p_bgr);
-	p_black = jsonState.value("p_black", p_black);
-	p_br_dep = jsonState.value("p_br_dep", p_br_dep);
-	p_brightness = jsonState.value("p_brightness", p_brightness);
-	p_c_space = jsonState.value("p_c_space", p_c_space);
-	p_c_str = jsonState.value("p_c_str", p_c_str);
-	p_centerx = jsonState.value("p_centerx", p_centerx);
-	p_centery = jsonState.value("p_centery", p_centery);
-	p_conv_b = jsonState.value("p_conv_b", p_conv_b);
-	p_conv_g = jsonState.value("p_conv_g", p_conv_g);
-	p_conv_r = jsonState.value("p_conv_r", p_conv_r);
-	p_gb = jsonState.value("p_gb", p_gb);
-	p_m_type = jsonState.value("p_m_type", p_m_type);
-	p_maskh = jsonState.value("p_maskh", p_maskh);
-	p_maskl = jsonState.value("p_maskl", p_maskl);
-	p_msize = jsonState.value("p_msize", p_msize);
-	p_rb = jsonState.value("p_rb", p_rb);
-	p_rg = jsonState.value("p_rg", p_rg);
-	p_saturation = jsonState.value("p_saturation", p_saturation);
-	p_scanline_weight = jsonState.value("p_scanline_weight", p_scanline_weight);
-	p_scanline_type = jsonState.value("p_scanline_type", p_scanline_type);
-	p_slotw = jsonState.value("p_slotw", p_slotw);
-	p_warpx = jsonState.value("p_warpx", p_warpx);
-	p_warpy = jsonState.value("p_warpy", p_warpy);
-	p_barrel_distortion = jsonState.value("p_barrel_distortion", p_barrel_distortion);
-	p_zoomx = jsonState.value("p_zoomx", p_zoomx);
-	p_zoomy = jsonState.value("p_zoomy", p_zoomy);
+	p_f_corner = jsonState.value("p_f_corner", p_f_corner);
+	p_b_smoothCorner = jsonState.value("p_b_smoothCorner", p_b_smoothCorner);
+	p_b_extGamma = jsonState.value("p_b_extGamma", p_b_extGamma);
+	p_b_interlace = jsonState.value("p_b_interlace", p_b_interlace);
+	p_b_potato = jsonState.value("p_b_potato", p_b_potato);
+	p_b_slot = jsonState.value("p_b_slot", p_b_slot);
+	p_b_vignette = jsonState.value("p_b_vignette", p_b_vignette);
+	p_f_bgr = jsonState.value("p_f_bgr", p_f_bgr);
+	p_f_black = jsonState.value("p_f_black", p_f_black);
+	p_f_brDep = jsonState.value("p_f_brDep", p_f_brDep);
+	p_f_brightness = jsonState.value("p_f_brightness", p_f_brightness);
+	p_i_cSpace = jsonState.value("p_i_cSpace", p_i_cSpace);
+	p_f_cStr = jsonState.value("p_f_cStr", p_f_cStr);
+	p_f_centerX = jsonState.value("p_f_centerX", p_f_centerX);
+	p_f_centerY = jsonState.value("p_f_centerY", p_f_centerY);
+	p_f_convB = jsonState.value("p_f_convB", p_f_convB);
+	p_f_convG = jsonState.value("p_f_convG", p_f_convG);
+	p_f_convR = jsonState.value("p_f_convR", p_f_convR);
+	p_f_hueGB = jsonState.value("p_f_hueGB", p_f_hueGB);
+	p_i_maskType = jsonState.value("p_i_maskType", p_i_maskType);
+	p_f_maskHigh = jsonState.value("p_f_maskHigh", p_f_maskHigh);
+	p_f_maskLow = jsonState.value("p_f_maskLow", p_f_maskLow);
+	p_f_maskSize = jsonState.value("p_f_maskSize", p_f_maskSize);
+	p_f_hueRB = jsonState.value("p_f_hueRB", p_f_hueRB);
+	p_f_hueRG = jsonState.value("p_f_hueRG", p_f_hueRG);
+	p_f_saturation = jsonState.value("p_f_saturation", p_f_saturation);
+	p_f_scanlineWeight = jsonState.value("p_f_scanlineWeight", p_f_scanlineWeight);
+	p_i_scanlineType = jsonState.value("p_i_scanlineType", p_i_scanlineType);
+	p_f_slotW = jsonState.value("p_f_slotW", p_f_slotW);
+	p_f_vignetteWeight = jsonState.value("p_f_vignetteWeight", p_f_vignetteWeight);
+	p_f_warpX = jsonState.value("p_f_warpX", p_f_warpX);
+	p_f_warpY = jsonState.value("p_f_warpY", p_f_warpY);
+	p_f_barrelDistortion = jsonState.value("p_f_barrelDistortion", p_f_barrelDistortion);
+	p_f_zoomX = jsonState.value("p_f_zoomX", p_f_zoomX);
+	p_f_zoomY = jsonState.value("p_f_zoomY", p_f_zoomY);
 }
 
 void PostProcessor::SaveState(int profile_id) {
@@ -167,14 +169,15 @@ void PostProcessor::LoadState(int profile_id) {
 void PostProcessor::SelectShader()
 {
 	// Choose the shader
-	switch (p_postprocessing_level)
+	// Frame count is always set, outside of the shader selection
+	switch (p_i_postprocessingLevel)
 	{
 	case 0:	// basic passthrough shader with optional scanlines
 	case 1:
 		shaderProgram = v_ppshaders.at(0);
 		shaderProgram.use();
 		shaderProgram.setInt("Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
-		shaderProgram.setFloat("POSTPROCESSING_LEVEL", (float)p_postprocessing_level);
+		shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
 		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 		break;
 	case 2:	// CRT shader
@@ -182,49 +185,49 @@ void PostProcessor::SelectShader()
 		shaderProgram.use();
 		// common
 		shaderProgram.setInt("A2Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
-		shaderProgram.setInt("FrameCount", frame_count);
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
 		shaderProgram.setVec2("InputSize", glm::vec2(texWidth, texHeight));
 		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
 		shaderProgram.setVec4("VideoRect", quadViewportCoords);
-		shaderProgram.setFloat("POSTPROCESSING_LEVEL", (float)p_postprocessing_level);
+		shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
 
 		// shader specific
-		shaderProgram.setFloat("SCANLINE_TYPE", (float)p_scanline_type);
-		shaderProgram.setFloat("SCANLINE_WEIGHT", p_scanline_weight);
-		shaderProgram.setFloat("INTERLACE", p_interlace ? 1.0f : 0.0f);
-		shaderProgram.setFloat("M_TYPE", (float)p_m_type);
-		shaderProgram.setFloat("MSIZE", p_msize);
-		shaderProgram.setFloat("SLOT", p_slot ? 1.0f : 0.0f);
-		shaderProgram.setFloat("SLOTW", p_slotw);
-		shaderProgram.setFloat("BGR", p_bgr);
-		shaderProgram.setFloat("Maskl", p_maskl);
-		shaderProgram.setFloat("Maskh", p_maskh);
-		shaderProgram.setFloat("bzl", p_bzl ? 1.0f : 0.0f);
-		shaderProgram.setFloat("zoomx", p_zoomx);
-		shaderProgram.setFloat("zoomy", p_zoomy);
-		shaderProgram.setFloat("centerx", p_centerx);
-		shaderProgram.setFloat("centery", p_centery);
-		shaderProgram.setFloat("WARPX", p_warpx);
-		shaderProgram.setFloat("WARPY", p_warpy);
-		shaderProgram.setFloat("BARRELDISTORTION", p_barrel_distortion);
-		shaderProgram.setFloat("corner", p_corner / 10000);
-		shaderProgram.setFloat("vig", p_vig ? 1.0f : 0.0f);
-		shaderProgram.setFloat("BR_DEP", p_br_dep);
-		shaderProgram.setFloat("c_space", (float)p_c_space);
-		shaderProgram.setFloat("EXT_GAMMA", p_ext_gamma ? 1.0f : 0.0f);
-		shaderProgram.setFloat("SATURATION", p_saturation);
-		shaderProgram.setFloat("BRIGHTNESs", p_brightness);
-		shaderProgram.setFloat("BLACK", p_black);
-		shaderProgram.setFloat("RG", p_rg);
-		shaderProgram.setFloat("RB", p_rb);
-		shaderProgram.setFloat("GB", p_gb);
-		shaderProgram.setFloat("C_STR", p_c_str);
-		shaderProgram.setFloat("CONV_R", p_conv_r);
-		shaderProgram.setFloat("CONV_G", p_conv_g);
-		shaderProgram.setFloat("CONV_B", p_conv_b);
-		shaderProgram.setFloat("POTATO", p_potato ? 1.0f : 0.0f);
+		shaderProgram.setBool("bCORNER_SMOOTH", p_b_smoothCorner);
+		shaderProgram.setBool("bEXT_GAMMA", p_b_extGamma);
+		shaderProgram.setBool("bINTERLACE", p_b_interlace);
+		shaderProgram.setBool("bPOTATO", p_b_potato);
+		shaderProgram.setBool("bSLOT", p_b_slot);
+		shaderProgram.setBool("bVIGNETTE", p_b_vignette);
+		shaderProgram.setFloat("BARRELDISTORTION", p_f_barrelDistortion);
+		shaderProgram.setFloat("BGR", p_f_bgr);
+		shaderProgram.setFloat("BLACK", p_f_black);
+		shaderProgram.setFloat("BR_DEP", p_f_brDep);
+		shaderProgram.setFloat("BRIGHTNESs", p_f_brightness);
+		shaderProgram.setFloat("C_STR", p_f_cStr);
+		shaderProgram.setFloat("CENTERX", p_f_centerX);
+		shaderProgram.setFloat("CENTERY", p_f_centerY);
+		shaderProgram.setFloat("CONV_B", p_f_convB);
+		shaderProgram.setFloat("CONV_G", p_f_convG);
+		shaderProgram.setFloat("CONV_R", p_f_convR);
+		shaderProgram.setFloat("CORNER", p_f_corner / 10000);
+		shaderProgram.setFloat("GB", p_f_hueGB);
+		shaderProgram.setFloat("MASKH", p_f_maskHigh);
+		shaderProgram.setFloat("MASKL", p_f_maskLow);
+		shaderProgram.setFloat("MSIZE", p_f_maskSize);
+		shaderProgram.setFloat("RB", p_f_hueRB);
+		shaderProgram.setFloat("RG", p_f_hueRG);
+		shaderProgram.setFloat("SATURATION", p_f_saturation);
+		shaderProgram.setFloat("SCANLINE_WEIGHT", p_f_scanlineWeight);
+		shaderProgram.setFloat("SLOTW", p_f_slotW);
+		shaderProgram.setFloat("VIGNETTE_WEIGHT", p_f_vignetteWeight);
+		shaderProgram.setFloat("WARPX", p_f_warpX);
+		shaderProgram.setFloat("WARPY", p_f_warpY);
+		shaderProgram.setFloat("ZOOMX", p_f_zoomX);
+		shaderProgram.setFloat("ZOOMY", p_f_zoomY);
+		shaderProgram.setInt("iCOLOR_SPACE", p_i_cSpace);
+		shaderProgram.setInt("iM_TYPE", p_i_maskType);
+		shaderProgram.setInt("iSCANLINE_TYPE", p_i_scanlineType);
 		break;
 	}
 }
@@ -267,16 +270,21 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	_scale = std::min(_scale, static_cast<float>(viewportHeight) / static_cast<float>(texHeight));
 	if (_scale > 1.0f)
 		_scale = std::floor(_scale);
-	max_integer_scale = std::max(1, static_cast<int>(_scale) + 3);	// allow for manual further zoom
-	integer_scale = std::min(integer_scale, max_integer_scale);
+	max_integer_scale = std::max(1, static_cast<int>(_scale) + 10);	// allow for manual further zoom
 	if (!bAutoScale)
+	{
+		integer_scale = std::min(integer_scale, max_integer_scale);
 		_scale = static_cast<float>(integer_scale);
+	}
+	else {
+		integer_scale = static_cast<int>(_scale);
+	}
 
 	// Determine the quad's origin
 	quadWidth = static_cast<int>(_scale * texWidth);
 	quadHeight = static_cast<int>(_scale * texHeight);
 
-	if (bCRTFillWindow && p_postprocessing_level > 1)
+	if (bCRTFillWindow && p_i_postprocessingLevel > 1)
 	{
 		quadViewportCoords.x = -1.0;		// left
 		quadViewportCoords.y = -1.0;	// top
@@ -311,11 +319,18 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 		// only update the shader parameters in certain cases
 		// as it may be very costly for rPi and slow CPUs
 		this->SelectShader();
+		last_bound_texture = inputTextureId;
+		prev_texWidth = texWidth;
+		prev_texHeight = texHeight;
 	}
 	else
 	{
 		shaderProgram.use();
 	}
+
+	// Always set the frame count!
+	shaderProgram.setInt("FrameCount", frame_count);
+	shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 2: " << glerr << std::endl;
@@ -437,86 +452,105 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		// PP Type
 		ImGui::Separator();
 		ImGui::Text("[ POSTPROCESSING LEVEL ]");
-		ImGui::RadioButton("None##PPLEVEL", &p_postprocessing_level, 0); ImGui::SameLine();
-		ImGui::RadioButton("Scanline only##PPLEVEL", &p_postprocessing_level, 1); ImGui::SameLine();
-		ImGui::RadioButton("Full CRT##PPLEVEL", &p_postprocessing_level, 2);
+		ImGui::RadioButton("None##PPLEVEL", &p_i_postprocessingLevel, 0); ImGui::SameLine();
+		ImGui::SetItemTooltip("No postprocessing, fast");
+		ImGui::RadioButton("Scanline only##PPLEVEL", &p_i_postprocessingLevel, 1); ImGui::SameLine();
+		ImGui::SetItemTooltip("Simple alternating scanlines, fastest");
+		ImGui::RadioButton("Full CRT##PPLEVEL", &p_i_postprocessingLevel, 2);
+		ImGui::SetItemTooltip("Customizable CRT shader, slow");
 		ImGui::Separator();
 		ImGui::Text("[ BASE INTEGER SCALE ]");
 		ImGui::Checkbox("Auto", &bAutoScale);
+		ImGui::SetItemTooltip("Automatically selects the largest output possible, with pixel perfect scaling");
 		if (bAutoScale)
 			ImGui::BeginDisabled();
 		ImGui::SliderInt("Integer Scale", &integer_scale, 1, max_integer_scale, "%d");
 		if (bAutoScale)
 			ImGui::EndDisabled();
 
-		if (p_postprocessing_level == 2) {
+		if (p_i_postprocessingLevel == 2) {
 			ImGui::Separator();
 			// Scanline and Interlacing
 			ImGui::Text("[ SCANLINE TYPE ]");
-			ImGui::RadioButton("None##SCANLINETYPE", &p_scanline_type, 0); ImGui::SameLine();
-			ImGui::RadioButton("Simple##SCANLINETYPE", &p_scanline_type, 1); ImGui::SameLine();
-			ImGui::RadioButton("Complex##SCANLINETYPE", &p_scanline_type, 2);
-			if (p_scanline_type == 2) {
-				ImGui::SliderFloat("Scanline Weight", &p_scanline_weight, 0.001f, 0.5f, "%.2f");
-				ImGui::Checkbox("Vignette", &p_vig);
-				ImGui::Checkbox("Interlacing On/Off", &p_interlace);
+			if (ImGui::RadioButton("None##SCANLINETYPE", &p_i_scanlineType, 0))
+			{
+				p_f_scanlineWeight = 0.3f;
+			}
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Simple##SCANLINETYPE", &p_i_scanlineType, 1))
+			{
+				p_f_scanlineWeight = 0.3f;
+			}
+			ImGui::SameLine();
+			ImGui::RadioButton("Complex##SCANLINETYPE", &p_i_scanlineType, 2);
+			ImGui::SetItemTooltip("You should generally increase the brightness (further down) when using the complex scanline type");
+			if (p_i_scanlineType == 2)
+			{
+				ImGui::SliderFloat("Scanline Weight", &p_f_scanlineWeight, 0.03f, 0.7f, "%.2f");
+				ImGui::Checkbox("Scanline Vignette", &p_b_vignette);
+				ImGui::SetItemTooltip("Darker sides of the scanlines, works better when there's distortion");
+				if (p_b_vignette)
+					ImGui::SliderFloat("Vignette Weight", &p_f_vignetteWeight, 0.1, 5.0, "%.2f");
+				ImGui::Checkbox("Interlacing", &p_b_interlace);
+				ImGui::SetItemTooltip("If you really want to feel the pain of bad refresh rates, disable VSYNC and set a low FPS limit like 30 Hz");
 			}
 			
 			ImGui::Separator();
 			
 			// Mask Settings
 			ImGui::Text("[ MASK SETTINGS ]");
-			ImGui::RadioButton("None##Mask", &p_m_type, 0); ImGui::SameLine();
-			ImGui::RadioButton("CGWG##Mask", &p_m_type, 1); ImGui::SameLine();
-			ImGui::RadioButton("RGB##Mask", &p_m_type, 2);
-			ImGui::SliderFloat("Mask Size", &p_msize, 1.0f, 2.0f, "%.1f");
-			ImGui::Checkbox("Slot Mask On/Off", &p_slot);
-			ImGui::SliderFloat("Slot Mask Width", &p_slotw, 2.0f, 3.0f, "%.1f");
-			ImGui::SliderFloat("Subpixels BGR/RGB", &p_bgr, 0.0f, 1.0f, "%.1f");
-			ImGui::SliderFloat("Mask Brightness Dark", &p_maskl, 0.0f, 1.0f, "%.2f");
-			ImGui::SliderFloat("Mask Brightness Bright", &p_maskh, 0.0f, 1.0f, "%.2f");
+			ImGui::RadioButton("None##Mask", &p_i_maskType, 0); ImGui::SameLine();
+			ImGui::RadioButton("CGWG##Mask", &p_i_maskType, 1); ImGui::SameLine();
+			ImGui::RadioButton("RGB##Mask", &p_i_maskType, 2);
+			ImGui::SliderFloat("Mask Size", &p_f_maskSize, 1.0f, 2.0f, "%.1f");
+			ImGui::Checkbox("Slot Mask On/Off", &p_b_slot);
+			ImGui::SliderFloat("Slot Mask Width", &p_f_slotW, 2.0f, 3.0f, "%.1f");
+			ImGui::SliderFloat("Subpixels BGR/RGB", &p_f_bgr, 0.0f, 1.0f, "%.1f");
+			ImGui::SliderFloat("Mask Brightness Dark", &p_f_maskLow, 0.0f, 1.0f, "%.2f");
+			ImGui::SliderFloat("Mask Brightness Bright", &p_f_maskHigh, 0.0f, 1.0f, "%.2f");
 			ImGui::Separator();
 			
 			// Geometry Settings
 			ImGui::Text("[ GEOMETRY SETTINGS ]");
 			if (ImGui::Checkbox("Fill Window", &bCRTFillWindow))
 			{
-				p_zoomx = 0;
-				p_zoomy = 0;
-				p_centerx = 0;
-				p_centery = 0;
+				p_f_zoomX = 0;
+				p_f_zoomY = 0;
+				p_f_centerX = 0;
+				p_f_centerY = 0;
 
 			}
-			ImGui::SliderFloat("Zoom Image X", &p_zoomx, -2.0f, 2.0f, "%.3f");
-			ImGui::SliderFloat("Zoom Image Y", &p_zoomy, -2.0f, 2.0f, "%.3f");
-			ImGui::SliderFloat("Image Center X", &p_centerx, -100.0f, 100.0f, "%.2f");
-			ImGui::SliderFloat("Image Center Y", &p_centery, -100.0f, 100.0f, "%.2f");
-			ImGui::SliderFloat("Curvature Horizontal", &p_warpx, 0.00f, 0.25f, "%.2f");
-			ImGui::SliderFloat("Curvature Vertical", &p_warpy, 0.00f, 0.25f, "%.2f");
-			ImGui::SliderFloat("Barrel Distortion", &p_barrel_distortion, -0.30f, 5.00f, "%.2f");
-			ImGui::SliderFloat("Corners Cut", &p_corner, 0.f, 90.f, "%.3f");
+			ImGui::SliderFloat("Zoom Image X", &p_f_zoomX, -2.0f, 2.0f, "%.3f");
+			ImGui::SliderFloat("Zoom Image Y", &p_f_zoomY, -2.0f, 2.0f, "%.3f");
+			ImGui::SliderFloat("Image Center X", &p_f_centerX, -100.0f, 100.0f, "%.2f");
+			ImGui::SliderFloat("Image Center Y", &p_f_centerY, -100.0f, 100.0f, "%.2f");
+			ImGui::SliderFloat("Curvature Horizontal", &p_f_warpX, 0.00f, 0.25f, "%.2f");
+			ImGui::SliderFloat("Curvature Vertical", &p_f_warpY, 0.00f, 0.25f, "%.2f");
+			ImGui::SliderFloat("Barrel Distortion", &p_f_barrelDistortion, -0.30f, 5.00f, "%.2f");
+			ImGui::SliderFloat("Corners Cut", &p_f_corner, 0.f, 90.f, "%.3f");
+			ImGui::Spacing();ImGui::SameLine();ImGui::Checkbox("Smooth Corners", &p_b_smoothCorner);
 			ImGui::Separator();
 			
 			// Color Settings
 			ImGui::Text("[ COLOR SETTINGS ]");
-			ImGui::SliderFloat("Scan/Mask Brightness Dependence", &p_br_dep, 0.0f, 0.5f, "%.3f");
-			ImGui::SliderInt("Color Space: sRGB,PAL,NTSC-U,NTSC-J", &p_c_space, 0, 3, "%1d");
-			ImGui::SliderFloat("Saturation", &p_saturation, 0.0f, 2.0f, "%.2f");
-			ImGui::SliderFloat("Brightness", &p_brightness, 0.0f, 4.0f, "%.2f");
-			ImGui::SliderFloat("Black Level", &p_black, -0.20f, 0.20f, "%.2f");
-			ImGui::SliderFloat("Green <-to-> Red Hue", &p_rg, -0.25f, 0.25f, "%.2f");
-			ImGui::SliderFloat("Blue <-to-> Red Hue", &p_rb, -0.25f, 0.25f, "%.2f");
-			ImGui::SliderFloat("Blue <-to-> Green Hue", &p_gb, -0.25f, 0.25f, "%.2f");
-			ImGui::Checkbox("External Gamma In (Glow etc)", &p_ext_gamma);
+			ImGui::SliderFloat("Scan/Mask Brightness Dependence", &p_f_brDep, 0.0f, 0.5f, "%.3f");
+			ImGui::SliderInt("Color Space: sRGB,PAL,NTSC-U,NTSC-J", &p_i_cSpace, 0, 3, "%1d");
+			ImGui::SliderFloat("Saturation", &p_f_saturation, 0.0f, 2.0f, "%.2f");
+			ImGui::SliderFloat("Brightness", &p_f_brightness, 0.0f, 4.0f, "%.2f");
+			ImGui::SliderFloat("Black Level", &p_f_black, -0.20f, 0.20f, "%.2f");
+			ImGui::SliderFloat("Green <-to-> Red Hue", &p_f_hueRG, -0.25f, 0.25f, "%.2f");
+			ImGui::SliderFloat("Blue <-to-> Red Hue", &p_f_hueRB, -0.25f, 0.25f, "%.2f");
+			ImGui::SliderFloat("Blue <-to-> Green Hue", &p_f_hueGB, -0.25f, 0.25f, "%.2f");
+			ImGui::Checkbox("External Gamma In (Glow etc)", &p_b_extGamma);
 			ImGui::Separator();
 			
 			// Convergence Settings
 			ImGui::Text("[ CONVERGENCE SETTINGS ]");
-			ImGui::SliderFloat("Convergence Overall Strength", &p_c_str, 0.0f, 0.5f, "%.2f");
-			ImGui::SliderFloat("Convergence Red X-Axis", &p_conv_r, -3.0f, 3.0f, "%.2f");
-			ImGui::SliderFloat("Convergence Green X-axis", &p_conv_g, -3.0f, 3.0f, "%.2f");
-			ImGui::SliderFloat("Convergence Blue X-Axis", &p_conv_b, -3.0f, 3.0f, "%.2f");
-			ImGui::Checkbox("Potato Boost(Simple Gamma, adjust Mask)", &p_potato);
+			ImGui::SliderFloat("Convergence Overall Strength", &p_f_cStr, 0.0f, 0.5f, "%.2f");
+			ImGui::SliderFloat("Convergence Red X-Axis", &p_f_convR, -3.0f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Convergence Green X-axis", &p_f_convG, -3.0f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Convergence Blue X-Axis", &p_f_convB, -3.0f, 3.0f, "%.2f");
+			ImGui::Checkbox("Potato Boost(Simple Gamma, adjust Mask)", &p_b_potato);
 		}
 
 		ImGui::PopItemWidth();

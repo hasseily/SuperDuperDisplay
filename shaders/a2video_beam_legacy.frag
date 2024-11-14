@@ -50,13 +50,14 @@ uniform sampler2D a2ModesTex2;			// LGR
 uniform sampler2D a2ModesTex3;			// HGR
 uniform sampler2D a2ModesTex4;			// DHGR
 
-// Special modes mask is
+// Special modes mask for legacy only is
 // enum A2VideoSpecialMode_e
 // {
 // 		A2_VSM_NONE 			= 0b0000,
 // 		A2_VSM_DHGRCOL140Mixed 	= 0b0001,
 //		A2_VSM_HGRSPEC1			= 0b0010,
 //		A2_VSM_HGRSPEC2		 	= 0b0100,
+//		...
 // };
 uniform int specialModesMask;
 

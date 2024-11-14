@@ -59,11 +59,11 @@ static void slide_down(Ayumi* ay) {
 }
 
 static void hold_top(Ayumi* ay) {
-	(void) ay;
+	ay->bHoldTop = true;
 }
 
 static void hold_bottom(Ayumi* ay) {
-	(void) ay;
+	ay->bHoldTop = false;
 }
 
 static void (* const Envelopes[][2])(Ayumi*) = {
@@ -153,20 +153,17 @@ void Ayumi::ResetRegisters() {
 	SetTone(1, 0);			// reg 2 & 3
 	SetTone(2, 0);			// reg 4 & 5
 	SetNoise(0);			// reg 6
-	channels[0].t_off = 1;	// reg 5
-	channels[1].t_off = 1;
-	channels[2].t_off = 1;
-	channels[0].n_off = 1;
-	channels[1].n_off = 1;
-	channels[2].n_off = 1;
-	SetVolume(0, 0);		// reg 8
+	SetMixer(0, 0, 0, 0);	// reg 7
+	SetMixer(1, 0, 0, 0);
+	SetMixer(2, 0, 0, 0);
+	SetVolume(0, 0);		// reg 10
 	channels[0].e_on = 0;
-	SetVolume(1, 0);		// reg 9
+	SetVolume(1, 0);		// reg 11
 	channels[1].e_on = 0;
-	SetVolume(2, 0);		// reg 10
+	SetVolume(2, 0);		// reg 12
 	channels[2].e_on = 0;
-	SetEnvelope(0);			// reg 11 & 12
-	SetEnvelopeShape(0);	// reg 13
+	SetEnvelope(0);			// reg 13 & 14
+	SetEnvelopeShape(0);	// reg 15
 }
 
 void Ayumi::Process() {
@@ -251,13 +248,25 @@ int Ayumi::UpdateEnvelope() {
 void Ayumi::UpdateMixer() {
 	int i;
 	int out;
-	int noise = UpdateNoise();
-	int envelope = UpdateEnvelope();
+	int _noise = UpdateNoise();
+	int _envelope = UpdateEnvelope();
 	left = 0;
 	right = 0;
 	for (i = 0; i < AYUMI_TONE_CHANNELS; i += 1) {
-		out = (UpdateTone(i) | channels[i].t_off) & (noise | channels[i].n_off);
-		out *= channels[i].e_on ? envelope : channels[i].volume * 2 + 1;
+		/*
+		// Old code, uses bit masking on differing types
+		out = (UpdateTone(i) | channels[i].t_off) & (_noise | channels[i].n_off);
+		out *= channels[i].e_on ? _envelope : channels[i].volume * 2 + 1;
+		*/
+
+		bool isToneActive = !channels[i].t_off && UpdateTone(i);
+		bool isNoiseActive = !channels[i].n_off && _noise;
+		bool isOutputActive = isToneActive || isNoiseActive;
+
+		out = isOutputActive
+			? (channels[i].e_on ? _envelope : channels[i].volume * 2 + 1)
+			: 0;
+
 		left += dac_table[out] * channels[i].pan_left;
 		right += dac_table[out] * channels[i].pan_right;
 	}

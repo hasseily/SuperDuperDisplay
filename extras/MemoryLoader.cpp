@@ -11,8 +11,9 @@
 #include <iostream>
 #include "../MemoryManager.h"
 #include "ImGuiFileDialog.h"
+#include <locale.h>
 
-bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank) {
+bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank, size_t fileSize) {
 	bool res = false;
 	
 	uint8_t* pMem;
@@ -24,16 +25,19 @@ bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank) {
 	std::ifstream file(filePath, std::ios::binary);
 	if (file) {
 		// Move to the end to get the file size
-		file.seekg(0, std::ios::end);
-		size_t fileSize = file.tellg();
+		if (fileSize == 0) {
+			file.seekg(0, std::ios::end);
+			fileSize = file.tellg();
+		}
 		
-		if (fileSize > 0 && (position + fileSize) <= (_A2_MEMORY_SHADOW_END)) {
+		if (fileSize == 0) {
+			std::cerr << "Error: File size is zero." << std::endl;
+		} else {
+			if ((position + fileSize) > (_A2_MEMORY_SHADOW_END))
+				fileSize = _A2_MEMORY_SHADOW_END - position;
 			file.seekg(0, std::ios::beg); // Go back to the start of the file
 			file.read(reinterpret_cast<char*>(pMem), fileSize);
 			res = true;
-		} else {
-			// Handle the error: file is too big or other issues
-			std::cerr << "Error: File is too large or other issue." << std::endl;
 		}
 		file.close();
 	} else {
@@ -43,14 +47,16 @@ bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank) {
 	return res;
 }
 
-bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
+bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) {
+	setlocale(LC_ALL, ".UTF8");
 	bool res = false;
 	if (ImGui::Button("Load File"))
 	{
 		ImGui::SetNextWindowSize(ImVec2(800, 400));
 		IGFD::FileDialogConfig config;
-		config.path = ".";
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", ".bin,.txt,.hgr,.dhr,.shr", config);
+		config.path = (path.empty() ? "." : path);
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File",
+			".bin,.txt,.hgr,.dhr,.shr, #C10000", config);
 	}
 	
 	// Display the file dialog
@@ -58,14 +64,16 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank) {
 		// Check if a file was selected
 		if (ImGuiFileDialog::Instance()->IsOk()) {
 			std::string filePath = ImGuiFileDialog::Instance()->GetFilePathName();
+			path = ImGuiFileDialog::Instance()->GetCurrentPath();
 			if (filePath.length() >= 4) {
-				// Extract the last 4 characters
-				std::string extension = filePath.substr(filePath.length() - 4, 4);
+				std::string extension = ImGuiFileDialog::Instance()->GetCurrentFilter();
 				if (extension == ".hgr")
 					res = MemoryLoadHGR(filePath);
 				else if (extension == ".dhr")
 					res =  MemoryLoadDHR(filePath);
 				else if (extension == ".shr")
+					res = MemoryLoadSHR(filePath);
+				else if (extension == "#C10000")
 					res = MemoryLoadSHR(filePath);
 				if (res)
 				{

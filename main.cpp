@@ -41,11 +41,12 @@
 #include <libgen.h>
 #endif
 
-static uint32_t fbWidth = 0;
-static uint32_t fbHeight = 0;
 static bool g_swapInterval = true;  // VSYNC
 static bool g_adaptiveVsync = true;
+static bool g_quitIsRequested = false;
+static uint32_t g_fpsLimit = UINT32_MAX;
 float window_bgcolor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
+int g_wx = 100, g_wy = 100, g_ww = 800, g_wh = 600;	// window dimensions when not in fullscreen
 
 static SDL_Window* window;
 static MainMenu* menu = nullptr;
@@ -55,19 +56,13 @@ static SDL_DisplayMode g_fullscreenMode;
 // For FPS calculations
 static float fps_worst = 1000000.f;
 static uint64_t fps_frame_count = 0;
-static auto fps_start_time = SDL_GetTicks();
+static uint64_t fps_last_counter_display = 0;
 static char fps_str_buf[40];
 
-bool _M8DBG_bDisableVideoRender = false;
-bool _M8DBG_bDisablePPRender = false;
+bool _bDisableVideoRender = false;
+bool _bDisablePPRender = false;
 bool bDisplayFPSOnScreen = false;
-float _M8DBG_average_fps_window = 1.f;	// in seconds
-bool _M8DBG_bShowF8Window = true;
-bool _M8DBG_bRunKarateka = false;
-bool _M8DBG_bKaratekaLoadFailed = false;
-bool _m8ssSHR = false;
-int _M8DBG_windowWidth = 800;
-int _M8DBG_windowHeight = 600;
+float _fpsAverageTimeWindow = 1.f;	// in seconds
 
 // OpenGL Debug callback function
 void GLAPIENTRY DebugCallbackKHR(GLenum source,
@@ -93,11 +88,25 @@ bool initialize_glad() {
 	return true;
 }
 
+void Main_RequestAppQuit()
+{
+	g_quitIsRequested = true;
+}
+
 void Main_ResetFPSCalculations()
 {
 	fps_worst = 100000.f;
 	fps_frame_count = 0;
-	fps_start_time = SDL_GetTicks();
+}
+
+uint32_t Main_GetFPSLimit()
+{
+	return g_fpsLimit;
+}
+
+void Main_SetFPSLimit(uint32_t fps)
+{
+	g_fpsLimit = fps;
 }
 
 int Main_GetVsync()
@@ -111,7 +120,9 @@ void Main_SetVsync(bool _on)
 	if (_on)
 	{
 		g_adaptiveVsync = (SDL_GL_SetSwapInterval(-1) == 0);	// adaptive
-		if (!g_adaptiveVsync) {
+		if (g_adaptiveVsync) {
+			g_swapInterval = true;
+		} else {
 			g_swapInterval = (SDL_GL_SetSwapInterval(1) == 0);	// VSYNC
 		}
 	}
@@ -137,10 +148,10 @@ void Main_DrawFPSOverlay()
 	if (bDisplayFPSOnScreen)
 	{
 		a2VideoManager->DrawOverlayString("AVERAGE FPS: ", 13, 0b11010010, 0, 0);
-		a2VideoManager->DrawOverlayString("WORST FPS: ", 11, 0b11010010, 2, 1);
+		// a2VideoManager->DrawOverlayString("WORST FPS: ", 11, 0b11010010, 2, 1);
 	} else {
 		a2VideoManager->EraseOverlayRange(20, 0, 0);
-		a2VideoManager->EraseOverlayRange(20, 0, 1);
+		// a2VideoManager->EraseOverlayRange(20, 0, 1);
 	}
 	a2VideoManager->ForceBeamFullScreenRender();
 }
@@ -181,19 +192,28 @@ void Main_SetFullScreen(bool bWantFullscreen) {
 	// Do nothing if it's Apple. Let the user maximize via the OSX UI
 	// Because if the user sets fullscreen via the OSX UI we won't know,
 	// and later setting fullscreen crashes SDL
-#if defined(__APPLE__)
-	return;
-#endif
+#if !defined(__APPLE__)
 	auto _flags = SDL_GetWindowFlags(window);
 	// Don't do anything if the window isn't resizable
 	if ((_flags & SDL_WINDOW_RESIZABLE) == 0)
 		return;
 	
 	if (bWantFullscreen)
+	{
 		SDL_SetWindowDisplayMode(window, &g_fullscreenMode);
+		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+	}
+	else {
+		SDL_SetWindowFullscreen(window, 0);
+		SDL_SetWindowSize(window, g_ww, g_wh);
+		SDL_SetWindowPosition(window, g_wx, g_wy);
+		SDL_SetWindowBordered(window, SDL_TRUE);
+		SDL_SetWindowResizable(window, SDL_TRUE);
+	}
 
-	SDL_SetWindowFullscreen(window, bWantFullscreen ? SDL_WINDOW_FULLSCREEN : 0);
 	Main_ResetFPSCalculations();
+#endif
+
 }
 
 SDL_DisplayMode Main_GetFullScreenMode() {
@@ -320,6 +340,10 @@ int main(int argc, char* argv[])
 		window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
 			| SDL_WINDOW_FULLSCREEN | SDL_WINDOW_ALLOW_HIGHDPI
 			| SDL_WINDOW_SHOWN);
+		g_ww = g_fullscreenMode.w;
+		g_wh = g_fullscreenMode.h;
+		g_wx = 0;
+		g_wy = 0;
 	}
 #endif
 
@@ -337,7 +361,7 @@ int main(int argc, char* argv[])
 #endif
 
     window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		g_fullscreenMode.w, g_fullscreenMode.h, window_flags);
+		g_ww, g_wh, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
 
@@ -382,27 +406,24 @@ int main(int argc, char* argv[])
 
 	static bool bShouldTerminateNetworking = false;
 	static bool bShouldTerminateProcessing = false;
-    bool show_demo_window = false;
     bool show_metrics_window = false;
 	bool show_texture_window = false;
 	bool show_a2video_window = true;
 	bool show_postprocessing_window = false;
 	bool show_recorder_window = false;
-	int _slotnum = 0;
-	int vbl_region = 2;		// Default to NTSC. 0 is auto, 1 is PAL, 2 is NTSC
-	int vbl_slider_val;
+	VideoRegion_e vbl_region = VideoRegion_e::NTSC;		// videoregion_e::Unknown is auto
 
 	// Get the instances of all singletons before creating threads
 	// This ensures thread safety
 	// The OpenGLHelper instance is already acquired
-	auto memManager = MemoryManager::GetInstance();
-	auto sdhrManager = SDHRManager::GetInstance();
-    auto a2VideoManager = A2VideoManager::GetInstance();
-	auto postProcessor = PostProcessor::GetInstance();
-	auto eventRecorder = EventRecorder::GetInstance();
-	auto cycleCounter = CycleCounter::GetInstance();
-	auto soundManager = SoundManager::GetInstance();
-	auto mockingboardManager = MockingboardManager::GetInstance();
+	[[maybe_unused]] auto memManager = MemoryManager::GetInstance();
+	[[maybe_unused]] auto sdhrManager = SDHRManager::GetInstance();
+	[[maybe_unused]] auto a2VideoManager = A2VideoManager::GetInstance();
+	[[maybe_unused]] auto postProcessor = PostProcessor::GetInstance();
+	[[maybe_unused]] auto eventRecorder = EventRecorder::GetInstance();
+	[[maybe_unused]] auto cycleCounter = CycleCounter::GetInstance();
+	[[maybe_unused]] auto soundManager = SoundManager::GetInstance();
+	[[maybe_unused]] auto mockingboardManager = MockingboardManager::GetInstance();
 
 	std::cout << "Renderer Initializing..." << std::endl;
 	while (!a2VideoManager->IsReady())
@@ -410,11 +431,6 @@ int main(int argc, char* argv[])
 		// Wait for shaders to compile
 	}
 	std::cout << "Renderer Ready!" << std::endl;
-
-	// Run the network thread that will update the internal state as well as the apple 2 memory
-	std::thread thread_server(socket_server_thread, (uint16_t)_SDHR_SERVER_PORT, &bShouldTerminateNetworking);
-    // And run the processing thread
-	std::thread thread_processor(process_events_thread, &bShouldTerminateProcessing);
 
     // Delta Time
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
@@ -450,15 +466,15 @@ int main(int argc, char* argv[])
 			mockingboardManager->DeserializeState(settingsState["Mockingboard"]);
 		}
 		if (settingsState.contains("Main")) {
-			int _wx, _wy, _ww, _wh;
-			SDL_GetWindowPosition(window, &_wx, &_wy);
-			SDL_GetWindowSize(window, &_ww, &_wh);
+			SDL_GetWindowPosition(window, &g_wx, &g_wy);
+			SDL_GetWindowSize(window, &g_ww, &g_wh);
 			auto _sm = settingsState["Main"];
 			int _displayIndex = _sm.value("display index", 0);
-			_wx = _sm.value("window x", _wx);
-			_wy = _sm.value("window y", _wy);
-			_ww = _sm.value("window width", _ww);
-			_wh = _sm.value("window height", _wh);
+			g_wx = _sm.value("window x", g_wx);
+			g_wy = _sm.value("window y", g_wy);
+			g_ww = _sm.value("window width", g_ww);
+			g_wh = _sm.value("window height", g_wh);
+			g_fpsLimit = _sm.value("fps limit", g_fpsLimit);
 			g_swapInterval = _sm.value("vsync", g_swapInterval);
 			Main_SetVsync(g_swapInterval);
 			// make sure the requested mode is acceptable
@@ -467,15 +483,20 @@ int main(int argc, char* argv[])
 			newMode.h = _sm.value("fullscreen height", g_fullscreenMode.h);
 			newMode.refresh_rate = _sm.value("fullscreen refresh rate", g_fullscreenMode.refresh_rate);
 			SDL_GetClosestDisplayMode(_displayIndex, &newMode, &g_fullscreenMode);
+			// Make sure the windowed mode shows the menu bar
+			if (g_wy == 0)
+				g_wy = 23;
+			if ((g_wh + g_wy) > g_fullscreenMode.h)
+				g_wh = g_fullscreenMode.h - g_wy;
 			Main_SetFullScreen(_sm.value("fullscreen", false));
-			vbl_region = _sm.value("videoregion", vbl_region);
-			if (vbl_region == 0)
+			vbl_region = (VideoRegion_e)_sm.value("videoregion", vbl_region);
+			if (vbl_region == VideoRegion_e::Unknown)
 			{
 				cycleCounter->isVideoRegionDynamic = true;
 			}
 			else {
 				cycleCounter->isVideoRegionDynamic = false;
-				cycleCounter->SetVideoRegion(vbl_region == 1 ? VideoRegion_e::PAL : VideoRegion_e::NTSC);
+				cycleCounter->SetVideoRegion(vbl_region);
 			}
 			if (_sm.value("show F1 window", true))
 				Main_ToggleImGui(gl_context);
@@ -492,24 +513,30 @@ int main(int argc, char* argv[])
 			// update the main window accordingly
 			SDL_Rect displayBounds;
 			if (SDL_GetDisplayBounds(_displayIndex, &displayBounds) == 0) {
-				if ((_wx < (displayBounds.x + displayBounds.w)) && (_wy < (displayBounds.y + displayBounds.h)))
-					SDL_SetWindowPosition(window, _wx, _wy);
-				SDL_SetWindowSize(window, _ww, _wh);
+				if ((g_wx < (displayBounds.x + displayBounds.w)) && (g_wy < (displayBounds.y + displayBounds.h)))
+					SDL_SetWindowPosition(window, g_wx, g_wy);
+				SDL_SetWindowSize(window, g_ww, g_wh);
 			}
 		}
+		std::cout << "Previous state loaded!" << std::endl;
 	} else {
 		std::cerr << "No saved Settings.json file" << std::endl;
 	}
 	
-	std::cout << "Previous state loaded!" << std::endl;
 
-	SDL_GetWindowSize(window, &_M8DBG_windowWidth, &_M8DBG_windowHeight);
+	SDL_GetWindowPosition(window, &g_wx, &g_wy);
+	SDL_GetWindowSize(window, &g_ww, &g_wh);
 		
 	// Load up the first screen in SHR, with green border color
 	Main_DisplaySplashScreen();
 
 	if (bDisplayFPSOnScreen)
 		Main_DrawFPSOverlay();
+
+	// Run the network thread that will update the internal state as well as the apple 2 memory
+	std::thread thread_server(socket_server_thread, (uint16_t)_SDHR_SERVER_PORT, &bShouldTerminateNetworking);
+	// And run the processing thread
+	std::thread thread_processor(process_events_thread, &bShouldTerminateProcessing);
 
     while (!done)
 	{
@@ -520,10 +547,6 @@ int main(int argc, char* argv[])
 			a2VideoManager->bShouldReboot = false;
 			a2VideoManager->ResetComputer();
 		}
-
-        dt_LAST = dt_NOW;
-        dt_NOW = SDL_GetPerformanceCounter();
-		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)SDL_GetPerformanceFrequency());
 
 		if (!eventRecorder->IsInReplayMode())
 			eventRecorder->StartReplay();
@@ -544,9 +567,19 @@ int main(int argc, char* argv[])
             case SDL_WINDOWEVENT:
 			{
 				if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-					int width = event.window.data1;
-					int height = event.window.data2;
-					glViewport(0, 0, width, height);
+					glViewport(0, 0, event.window.data1, event.window.data2);
+					if (!Main_IsFullScreen())
+					{
+						g_ww = event.window.data1;
+						g_wh = event.window.data2;
+					}
+				}
+				if (event.window.event == SDL_WINDOWEVENT_MOVED) {
+					if (!Main_IsFullScreen())
+					{
+						g_wx = event.window.data1;
+						g_wy = event.window.data2;
+					}
 				}
 				if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
 					done = true;
@@ -564,8 +597,8 @@ int main(int argc, char* argv[])
                 break;
             case SDL_KEYDOWN:
 			{
-				if (event.key.keysym.sym == SDLK_c) {  // Quit on Ctrl-c
-					if (SDL_GetModState() & KMOD_CTRL) {
+				if (event.key.keysym.sym == SDLK_F4) {  // Quit on ALT-F4
+					if (SDL_GetModState() & KMOD_ALT) {
 						done = true;
 						break;
 					}
@@ -574,7 +607,13 @@ int main(int argc, char* argv[])
 					Main_ToggleImGui(gl_context);
 				}
 				else if (event.key.keysym.sym == SDLK_F8) {
-					Main_SetFPSOverlay(!Main_IsFPSOverlay());
+					if (SDL_GetModState() & KMOD_SHIFT) {
+						// Reset FPS on Shift-F8
+						Main_ResetFPSCalculations();
+					}
+					else {
+						Main_SetFPSOverlay(!Main_IsFPSOverlay());
+					}
 				}
 				else if (event.key.keysym.sym == SDLK_F10) {
 					a2VideoManager->ForceBeamFullScreenRender();
@@ -620,7 +659,7 @@ int main(int argc, char* argv[])
 			
         }   // while SDL_PollEvent
 
-		if (!_M8DBG_bDisableVideoRender)
+		if (!_bDisableVideoRender)
 		{
 			if (sdhrManager->IsSdhrEnabled())
 				out_tex_id = sdhrManager->Render();
@@ -640,7 +679,7 @@ int main(int argc, char* argv[])
 			window_bgcolor[3]);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		if (!_M8DBG_bDisablePPRender)
+		if (!_bDisablePPRender)
 			postProcessor->Render(window, out_tex_id);
 		
 		if (Main_IsImGuiOn())
@@ -659,37 +698,51 @@ int main(int argc, char* argv[])
 
 		SDL_GL_SwapWindow(window);
 
-		// FPS overlay - Calculate frame rates
+		// FRAME COUNTS, FREQUENCY AND RATES
 		fps_frame_count++;
-		uint32_t currentTime = SDL_GetTicks();
-		uint32_t elapsedTime = currentTime - fps_start_time;
-		// Calculate frame rate every second
-		if (elapsedTime > (_M8DBG_average_fps_window * 1000))
+		dt_LAST = dt_NOW;
+		auto _pfreq = SDL_GetPerformanceFrequency();
+		if (!g_swapInterval)
 		{
-			float fps = fps_frame_count / (elapsedTime / 1000.0f);
+			// Allow for custom FPS when not in VSYNC
+			while (true)
+			{
+				if ((SDL_GetPerformanceCounter() - dt_LAST) >=
+					(_pfreq / g_fpsLimit))
+					break;
+			}
+		}
+		dt_NOW = SDL_GetPerformanceCounter();
+		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)_pfreq);
+		// Calculate and display frame rate every second
+		auto _fps_delta = dt_NOW - fps_last_counter_display;
+		if (_fps_delta > (_fpsAverageTimeWindow * _pfreq))
+		{
+			float fps = fps_frame_count / (_fps_delta / _pfreq);
 			if ((fps_worst > fps) && (fps > 0))
 				fps_worst = fps;
 
-			//if (false)
 			if (bDisplayFPSOnScreen)
 			{
 				snprintf(fps_str_buf, 10,  "%.0f ", fps);
 				a2VideoManager->EraseOverlayRange(6, 13, 0);
 				a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b11010010, 13, 0);
-				snprintf(fps_str_buf, 10, "%.0f ", fps_worst);
-				a2VideoManager->EraseOverlayRange(6, 13, 1);
-				a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b10010010, 13, 1);
+				// snprintf(fps_str_buf, 10, "%.0f ", fps_worst);
+				// a2VideoManager->EraseOverlayRange(6, 13, 1);
+				// a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b10010010, 13, 1);
 			}
-
-
 			// Reset for next calculation
-			fps_start_time = currentTime;
 			fps_frame_count = 0;
+			fps_last_counter_display = dt_NOW;
 		}
 
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL end of render error: " << glerr << std::endl;
 		}
+
+		if (g_quitIsRequested)
+			done = true;
+
     }
 
 	eventRecorder->StopReplay();
@@ -704,6 +757,10 @@ int main(int argc, char* argv[])
 
 	// Serialize settings and save them
 	{
+		// before serializing settings, remove fullscreen to save correct window size
+		bool _isFullscreen = Main_IsFullScreen();
+		if (_isFullscreen)
+			Main_SetFullScreen(false);
 		int _wx, _wy, _ww, _wh;
 		SDL_GetWindowPosition(window, &_wx, &_wy);
 		SDL_GetWindowSize(window, &_ww, &_wh);
@@ -720,9 +777,10 @@ int main(int argc, char* argv[])
 			{"fullscreen width", g_fullscreenMode.w},
 			{"fullscreen height", g_fullscreenMode.h},
 			{"fullscreen refresh rate", g_fullscreenMode.refresh_rate},
-			{"fullscreen", Main_IsFullScreen()},
+			{"fullscreen", _isFullscreen},
+			{"fps limit", g_fpsLimit},
 			{"vsync", g_swapInterval},
-			{"videoregion", vbl_region},
+			{"videoregion", (int)cycleCounter->GetVideoRegion()},
 			{"window background color", window_bgcolor},
 			{"show F1 window", Main_IsImGuiOn()},
 			{"show Apple 2 Video window", show_a2video_window},

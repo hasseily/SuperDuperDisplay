@@ -1005,6 +1005,8 @@ void IGFD::FilterInfos::addCollectionFilter(const std::string& vFilter, const bo
 		filters.try_add(vFilter);
 		filters_optimized.try_add(Utils::LowerCaseString(vFilter));
 		auto _count_dots = Utils::GetCharCountInString(vFilter, '.');
+		if (_count_dots == 0)
+			_count_dots = Utils::GetCharCountInString(vFilter, '#');
 		if (_count_dots > count_dots) {
 			count_dots = _count_dots;
 		}
@@ -1128,7 +1130,7 @@ void IGFD::FilterManager::ParseFilters(const char* vFilters) {
 					word += c;
 				} else {
 					if (started) {
-						if (word.size() > 1U && word[0] == '.') {
+						if (word.size() > 1U && ((word[0] == '.') || (word[0] == '#'))) {
 							if (m_ParsedFilters.empty()) {
 								m_ParsedFilters.emplace_back();
 							}
@@ -1180,7 +1182,14 @@ void IGFD::FilterManager::ParseFilters(const char* vFilters) {
 					filter_name += c;
 				}
 				last_split_char = c;
-			} else if (c == '.') {
+			}
+			else if (c == '.') {
+				word += c;
+				if (!started) {
+					filter_name += c;
+				}
+				last_split_char = c;
+			} else if (c == '#') {
 				word += c;
 				if (!started) {
 					filter_name += c;
@@ -1193,13 +1202,13 @@ void IGFD::FilterManager::ParseFilters(const char* vFilters) {
 					filter_name.clear();
 				} else {
 					if (started) {
-						if (word.size() > 1U && word[0] == '.') {
+						if (word.size() > 1U && ((word[0] == '.') || (word[0] == '#'))) {
 							m_ParsedFilters.back().addCollectionFilter(word, false);
 							word.clear();
 							filter_name.clear();
 						}
 					} else {
-						if (word.size() > 1U && word[0] == '.') {
+						if (word.size() > 1U && ((word[0] == '.') || (word[0] == '#'))) {
 							m_ParsedFilters.emplace_back();
 							m_ParsedFilters.back().addFilter(word, false);
 							word.clear();
@@ -1226,7 +1235,7 @@ void IGFD::FilterManager::ParseFilters(const char* vFilters) {
 			} else {
 				m_ParsedFilters.clear();
 			}
-		} else if (word.size() > 1U && word[0] == '.') {
+		} else if (word.size() > 1U && ((word[0] == '.') || (word[0] == '#'))) {
 			m_ParsedFilters.emplace_back();
 			m_ParsedFilters.back().addFilter(word, false);
 			word.clear();
@@ -1478,9 +1487,13 @@ std::string IGFD::FilterManager::ReplaceExtentionWithCurrentFilterIfNeeded(const
 					return vFileName;
 				}
 				case IGFD_ResultMode_OverwriteFileExt: {
-					const auto& count_dots = Utils::GetCharCountInString(vFileName, '.');
+					auto count_dots = Utils::GetCharCountInString(vFileName, '.');
+					if (count_dots == 0)
+						count_dots = Utils::GetCharCountInString(vFileName, '#');
 					const auto& min_dots   = ImMin<size_t>(count_dots, m_SelectedFilter.count_dots);
-					const auto& lp         = Utils::GetLastCharPosWithMinCharCount(vFileName, '.', min_dots);
+					auto lp         = Utils::GetLastCharPosWithMinCharCount(vFileName, '.', min_dots);
+					if (lp == std::string::npos)
+						lp = Utils::GetLastCharPosWithMinCharCount(vFileName, '#', min_dots);
 					if (lp != std::string::npos) {  // there is a user extention
 						const auto& file_name_without_user_ext = vFileName.substr(0, lp);
 						result                                 = file_name_without_user_ext + current_filter;
@@ -1490,9 +1503,13 @@ std::string IGFD::FilterManager::ReplaceExtentionWithCurrentFilterIfNeeded(const
 					break;
 				}
 				case IGFD_ResultMode_AddIfNoFileExt: {
-					const auto& count_dots = Utils::GetCharCountInString(vFileName, '.');
+					auto count_dots = Utils::GetCharCountInString(vFileName, '.');
+					if (count_dots == 0)
+						count_dots = Utils::GetCharCountInString(vFileName, '#');
 					const auto& min_dots   = ImMin<size_t>(count_dots, m_SelectedFilter.count_dots);
-					const auto& lp         = Utils::GetLastCharPosWithMinCharCount(vFileName, '.', min_dots);
+					auto lp         = Utils::GetLastCharPosWithMinCharCount(vFileName, '.', min_dots);
+					if (lp == std::string::npos)
+						lp = Utils::GetLastCharPosWithMinCharCount(vFileName, '#', min_dots);
 					if (lp == std::string::npos ||        // there is no user extention
 						lp == (vFileName.size() - 1U)) {  // or this pos is also the last char => considered like no user extention
 						const auto& file_name_without_user_ext = vFileName.substr(0, lp);
@@ -1603,7 +1620,12 @@ bool IGFD::FileInfos::SearchForExts(const std::string& vComaSepExts, const bool&
 
 bool IGFD::FileInfos::FinalizeFileTypeParsing(const size_t& vMaxDotToExtract) {
 	if (fileType.isFile() || fileType.isLinkToUnknown()) {  // link can have the same extention of a file
+		bool bIsHashExt = false;
 		countExtDot = Utils::GetCharCountInString(fileNameExt, '.');
+		if (countExtDot == 0U) {
+			countExtDot = Utils::GetCharCountInString(fileNameExt, '#');
+			bIsHashExt = true;
+		}
 		size_t lpt  = 0U;
 		if (countExtDot > 1U) {  // multi layer ext
 			size_t max_dot_to_extract = vMaxDotToExtract;
@@ -1612,7 +1634,7 @@ bool IGFD::FileInfos::FinalizeFileTypeParsing(const size_t& vMaxDotToExtract) {
 			}
 			lpt = Utils::GetLastCharPosWithMinCharCount(fileNameExt, '.', max_dot_to_extract);
 		} else {
-			lpt = fileNameExt.find_first_of('.');
+			lpt = fileNameExt.find_first_of(bIsHashExt ? '#' : '.');
 		}
 		if (lpt != std::string::npos) {
 			size_t lvl                   = 0U;
@@ -1623,9 +1645,10 @@ bool IGFD::FileInfos::FinalizeFileTypeParsing(const size_t& vMaxDotToExtract) {
 			if (countExtDot > 1U) {  // multi layer ext
 				auto count = countExtDot;
 				while (count > 0 && lpt != std::string::npos && lvl < fileExtLevels.size()) {
-					++lpt, ++lvl;
+					++lpt;
+					++lvl;
 					if (fileNameExt.size() > lpt) {
-						lpt = fileNameExt.find_first_of('.', lpt);
+						lpt = fileNameExt.find_first_of(bIsHashExt ? '#' : '.', lpt);
 						if (lpt != std::string::npos) {
 							fileNameLevels[lvl]          = fileNameExt.substr(0, lpt);
 							fileNameLevels[lvl]          = Utils::LowerCaseString(fileNameLevels[lvl]);
@@ -1862,7 +1885,7 @@ void IGFD::FileManager::m_AddFile(const FileDialogInternal& vFileDialogInternal,
 		return;
 	}
 
-	if (infos->fileNameExt != ".." && (vFileDialogInternal.getDialogConfig().flags & ImGuiFileDialogFlags_DontShowHiddenFiles) && infos->fileNameExt[0] == '.') {  // dont show hidden files
+	if (infos->fileNameExt != ".." && (vFileDialogInternal.getDialogConfig().flags & ImGuiFileDialogFlags_DontShowHiddenFiles) && (infos->fileNameExt[0] == '.' || infos->fileNameExt[0] == '#')) {  // dont show hidden files
 		if (!vFileDialogInternal.filterManager.dLGFilters.empty() || (vFileDialogInternal.filterManager.dLGFilters.empty() && infos->fileNameExt != ".")) {  // except "." if in directory mode //-V728
 			return;
 		}
@@ -1897,7 +1920,7 @@ void IGFD::FileManager::m_AddPath(const FileDialogInternal& vFileDialogInternal,
 		return;
 	}
 
-	if (infos->fileNameExt != ".." && (vFileDialogInternal.getDialogConfig().flags & ImGuiFileDialogFlags_DontShowHiddenFiles) && infos->fileNameExt[0] == '.') {           // dont show hidden files
+	if (infos->fileNameExt != ".." && (vFileDialogInternal.getDialogConfig().flags & ImGuiFileDialogFlags_DontShowHiddenFiles) && (infos->fileNameExt[0] == '.' || infos->fileNameExt[0] == '#')) {           // dont show hidden files
 		if (!vFileDialogInternal.filterManager.dLGFilters.empty() || (vFileDialogInternal.filterManager.dLGFilters.empty() && infos->fileNameExt != ".")) {  // except "." if in directory mode //-V728
 			return;
 		}
