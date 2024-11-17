@@ -637,7 +637,8 @@ void main()
 				// Determine pixel position, which determines which 2 bytes to fetch
 				// We've already fetched one byte, but we need to fetch either the previous or next byte as well
 				// to get all 3 RGB colors and apply to the pixel
-				uint tripletPos = (xpos >> 1) % 6u;		// it is in 320 mode so need to divide by 2 first
+				uint xpos_noborder = xpos - uint(hborder*16);
+				uint tripletPos = (xpos_noborder >> 1) % 6u;		// it is in 320 mode so need to divide by 2 first
 				if (tripletPos < 2u)	// AB
 				{
 					// get the next byte and take only the high nibble (C)
