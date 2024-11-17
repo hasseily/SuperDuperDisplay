@@ -31,7 +31,7 @@ SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl2.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
-LINUX_GL_LIBS = -lGL
+LINUX_GL_LIBS = -lGL -lftd3xx
 
 CXXFLAGS = -std=c++17 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -Iglad
 CXXFLAGS += -Wall -Wformat -Wno-unused-function -Wno-unknown-pragmas
@@ -46,7 +46,7 @@ LIBS =
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	CXXFLAGS += -DIMGUI_IMPL_OPENGL_ES2
-	LINUX_GL_LIBS = -lGLESv2
+	LINUX_GL_LIBS = -lGLESv2 -lftd3xx
 endif
 ## If you're on a Raspberry Pi and want to use the legacy drivers,
 ## use the following instead:

@@ -64,6 +64,7 @@ enum class ENET_RES
 // It loops infinitely and waits for packets
 // And puts it in an events queue
 int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking);
+int usb_server_thread(uint16_t port, bool* shouldTerminateNetworking);
 
 // Call this method as a new thread
 // It loops indefinitely and processes the packets queue
@@ -72,6 +73,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking);
 // When it parses a SDHR_PROCESS_EVENTS event, it calls SDHRManager
 // which itself processes the command_buffer
 int process_events_thread(bool* shouldTerminateProcessing);
+int process_usb_events_thread(bool* shouldTerminateProcessing);
 void process_single_event(SDHREvent& e);
 void terminate_processing_thread();
 
