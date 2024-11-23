@@ -224,6 +224,9 @@
     <ClInclude Include="extras\ImGuiFileDialogConfig.h">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="Ft3xxTypes.h">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />

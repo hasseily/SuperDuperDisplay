@@ -118,7 +118,7 @@
     </Link>
     <PreLinkEvent>
       <Command>
-</Command>
+      </Command>
     </PreLinkEvent>
     <PostBuildEvent>
       <Command>xcopy /y /d "$(SDL2_DIR)\lib\x64\*.dll" "$(OutDir)"</Command>
@@ -168,7 +168,7 @@
     </Link>
     <PreLinkEvent>
       <Command>
-</Command>
+      </Command>
     </PreLinkEvent>
     <PostBuildEvent>
       <Command>xcopy /y /d "$(SDL2_DIR)\lib\x64\*.dll" "$(OutDir)"</Command>
@@ -218,6 +218,7 @@
     <ClInclude Include="extras\ImGuiFileDialog.h" />
     <ClInclude Include="extras\ImGuiFileDialogConfig.h" />
     <ClInclude Include="extras\MemoryLoader.h" />
+    <ClInclude Include="Ft3xxTypes.h" />
     <ClInclude Include="glad\glad.h" />
     <ClInclude Include="glad\khrplatform.h" />
     <ClInclude Include="GRAddr2XY.h" />
