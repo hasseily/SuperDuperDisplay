@@ -1382,17 +1382,6 @@ GLuint A2VideoManager::GetOutputTextureId()
 	return output_texture_id;
 }
 
-void A2VideoManager::ActivateBeam()
-{
-	bBeamIsActive = true;
-}
-
-void A2VideoManager::DeactivateBeam()
-{
-	bBeamIsActive = false;
-}
-
-
 ///
 ///
 /// ImGUI Interface

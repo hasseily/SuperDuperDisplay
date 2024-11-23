@@ -205,8 +205,6 @@ public:
 	uint8_t* GetSHRVRAMWritePtr() { return vrams_write->vram_shr; };
 	GLfloat* GetOffsetBufferWritePtr() { return vrams_write->offset_buffer; };
 	GLuint GetOutputTextureId();	// merged output
-	void ActivateBeam();	// The apple 2 is rendering!
-	void DeactivateBeam();	// We don't have a connection to the Apple 2!
 	GLuint Render();		// render whatever mode is active (enabled windows)
 
 	inline uint32_t GetVramWidthLegacy() { return (40 + (2 * borders_w_cycles)); };	// in 4 bytes!
@@ -271,7 +269,6 @@ private:
 	std::string sImguiLoadPath = ".";
 	
 	// beam render state variables
-	bool bBeamIsActive = false;				// Is the beam active?
 	BeamState_e beamState = BeamState_e::UNKNOWN;
 	int scanlineSHR4Modes = 0;			// All SHR4 modes in the scanline
 

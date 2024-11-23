@@ -634,23 +634,11 @@ void EventRecorder::SetState(EventRecorderStates_e _state)
 	if (_state == m_state)
 		return;
 	m_state = _state;
+	/*
+	// do things based on state
 	switch (m_state) {
-		case EventRecorderStates_e::DISABLED:
-			A2VideoManager::GetInstance()->ActivateBeam();
-			break;
-		case EventRecorderStates_e::STOPPED:
-			A2VideoManager::GetInstance()->DeactivateBeam();
-			break;
-		case EventRecorderStates_e::PAUSED:
-			A2VideoManager::GetInstance()->DeactivateBeam();
-			break;
-		case EventRecorderStates_e::PLAYING:
-			A2VideoManager::GetInstance()->ActivateBeam();
-			break;
-		case EventRecorderStates_e::RECORDING:
-			A2VideoManager::GetInstance()->ActivateBeam();
-			break;
-		case EventRecorderStates_e::TOTAL_COUNT:
+	default:
 			break;
 	}
+	*/
 }
