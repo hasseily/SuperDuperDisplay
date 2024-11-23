@@ -260,11 +260,13 @@ int process_usb_events_thread(bool* shouldTerminateProcessing) {
 					uint16_t addr = (event >> 16) & 0xffff;
 					uint8_t misc = (event) & 0x0f;
 					uint8_t data = (event >> 4) & 0xff;
-					bool rw = (misc & 0x01) == 0x01;
-					bool reset = (misc & 0x02) == 0x02;
-					if (reset == 0) {
+					bool rw = ((misc & 0x01) == 0x01);
+					static bool event_reset = ((misc & 0x02) == 0x02);
+                    static bool event_reset_prev = 1;
+					if ((event_reset == 0) && (event_reset_prev == 1)) {
 						A2VideoManager::GetInstance()->bShouldReboot = true;
 					}
+                    event_reset_prev = event_reset;
 					SDHREvent ev(0, 0, 0, rw, addr, data);
 					process_single_event(ev);
 				}
