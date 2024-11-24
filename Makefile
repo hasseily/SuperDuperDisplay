@@ -67,6 +67,7 @@ endif
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
 	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `/opt/homebrew/bin/sdl2-config --libs` -lz
+	LIBS += -framework CoreFoundation -lftd3xx
 	LIBS += -L/usr/local/lib -L/opt/homebrew/lib
 
 	CXXFLAGS += `/opt/homebrew/bin/sdl2-config --cflags`
