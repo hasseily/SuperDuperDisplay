@@ -82,16 +82,12 @@ void SoundManager::BeginPlay() {
 
 void SoundManager::StopPlay() {
 	// flush the last sounds
-	std::memset(beeper_samples + beeper_samples_idx, 0, SM_BEEPER_BUFFER_SIZE - beeper_samples_idx);
-	bool is_queue_empty = false;
-	while (!is_queue_empty) {
-		if (SDL_GetQueuedAudioSize(audioDevice) == 0) {
-			is_queue_empty = true;
-		}
-		SDL_Delay(5);
-	}
+	bool _enabledState = bIsEnabled;
+	bIsEnabled = false;	 // disable event handling until everything is flushed
 	SDL_PauseAudioDevice(audioDevice, 1);
+	SDL_ClearQueuedAudio(audioDevice);
 	bIsPlaying = false;
+	bIsEnabled = _enabledState;
 }
 
 bool SoundManager::IsPlaying() {
