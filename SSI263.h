@@ -62,6 +62,9 @@ class SSI263 {
 public:
 	SSI263();
 	~SSI263();
+	bool IsEnabled() { return bIsEnabled; };
+	void Enable() { bIsEnabled = true; };
+	void Disable() { bIsEnabled = false; };
 	void Update();
 	void ResetRegisters();
 	void SetRegisterSelect(int val);	// Set RS2->RS0 (A2->A0)
@@ -78,6 +81,8 @@ public:
 	// IRQ triggers again)
 	bool WasIRQTriggered();
 private:
+	bool bIsEnabled = false;
+
 	// CONTROL data
 	// All the below have immediate effect
 	int speechRate;

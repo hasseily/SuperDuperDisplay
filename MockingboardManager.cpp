@@ -40,14 +40,18 @@ void MockingboardManager::Initialize()
 		audioSpec.userdata = this;
 		
 		audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
-
-		for (uint8_t viaidx = 0; viaidx < 4; viaidx++)
-		{
-			m6522_init(&m6522[viaidx]);
+		if (audioDevice == 0) {
+			std::cerr << "Failed to open audio device: " << SDL_GetError() << std::endl;
+			bIsEnabled = false;
+		}
+		else {
+			for (uint8_t viaidx = 0; viaidx < 4; viaidx++)
+			{
+				m6522_init(&m6522[viaidx]);
+			}
 		}
 	}
 	else {
-		// std::cerr << "Stopping and clearing Mockingboard Audio" << std::endl;
 		SDL_PauseAudioDevice(audioDevice, 1);
 		SDL_ClearQueuedAudio(audioDevice);
 
@@ -57,27 +61,11 @@ void MockingboardManager::Initialize()
 		}
 	}
 	
-	if (audioDevice == 0) {
-		std::cerr << "Failed to open audio device: " << SDL_GetError() << std::endl;
-		SDL_Quit();
-		throw std::runtime_error("SDL_OpenAudioDevice failed");
-	}
-	
-	// Reset registers
-	/*
-	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
-	{
-		ay[ayidx].ResetRegisters();
-		ay[ayidx].value_ora = 0;
-		ay[ayidx].value_orb = 0;
-		ay[ayidx].value_oddra = 0xFF;
-		ay[ayidx].value_oddrb = 0xFF;
-		ay[ayidx].latched_register = 0;		
-	}
-	*/
 	for(uint8_t ssiidx = 0; ssiidx < 4; ssiidx++)
 	{
 		ssi[ssiidx].ResetRegisters();
+		// TODO: XXX: DISABLED SSI-263 CHIPS UNTIL WORKING CORRECTLY
+		ssi[ssiidx].Disable();
 	}
 	
 	bIsPlaying = false;
@@ -291,11 +279,14 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 	}
 
 	// Update the valid SSI chip
-	ssip->SetData(val);
-	ssip->SetRegisterSelect(addr & 0b11);
-	ssip->SetReadMode(rw);
-	ssip->SetCS0(1);
-	ssip->Update();
+	if (ssip->IsEnabled())
+	{
+		ssip->SetData(val);
+		ssip->SetRegisterSelect(addr & 0b11);
+		ssip->SetReadMode(rw);
+		ssip->SetCS0(1);
+		ssip->Update();
+	}
 }
 
 void MockingboardManager::SetPan(uint8_t ay_idx, uint8_t channel_idx, double pan, bool isEqp)

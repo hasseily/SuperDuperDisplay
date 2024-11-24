@@ -17,6 +17,7 @@ SSI263::SSI263()
 		std::cerr << "Failed to initialize SDL Audio: " << SDL_GetError() << std::endl;
 		throw std::runtime_error("SDL_Init Audio failed");
 	}
+	bIsEnabled = false;
 	audioDevice = 0;
 	v_samples.reserve(2*SSI263_SAMPLE_RATE);
 	ResetRegisters();
@@ -29,6 +30,8 @@ SSI263::~SSI263()
 
 void SSI263::Update()
 {
+	if (!bIsEnabled)
+		return;
 	if (!pinCS0)
 		return;
 	bool isChanged = 
@@ -41,6 +44,27 @@ void SSI263::Update()
 
 void SSI263::ResetRegisters()
 {
+	bIsEnabled = false;
+	if (audioDevice == 0)
+	{
+		SDL_zero(audioSpec);
+		audioSpec.freq = SSI263_SAMPLE_RATE;
+		audioSpec.format = AUDIO_S16LSB;
+		audioSpec.channels = 1;
+		audioSpec.samples = 512;
+		audioSpec.callback = SSI263::AudioCallback;
+		audioSpec.userdata = this;
+
+		audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
+	}
+
+	if (audioDevice == 0) {
+		std::cerr << "Failed to open SSI263 audio device: " << SDL_GetError() << std::endl;
+		throw std::runtime_error("SDL_OpenAudioDevice SSI263 failed");
+	}
+	bIsEnabled = true;
+	SDL_ClearQueuedAudio(audioDevice);
+
 	// Reset all registers to their default values on power-on
 	speechRate = 0;
 	filterFrequency = 0xFF; // Register 4
@@ -60,27 +84,7 @@ void SSI263::ResetRegisters()
 	regCTL = true; // Power down
 	
 	v_samples.clear();
-	
-	if (audioDevice == 0)
-	{
-		SDL_zero(audioSpec);
-		audioSpec.freq = SSI263_SAMPLE_RATE;
-		audioSpec.format = AUDIO_S16LSB;
-		audioSpec.channels = 1;
-		audioSpec.samples = 512;
-		audioSpec.callback = SSI263::AudioCallback;
-		audioSpec.userdata = this;
-		
-		audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
-	} else {
-		SDL_ClearQueuedAudio(audioDevice);
-	}
-	
-	if (audioDevice == 0) {
-		std::cerr << "Failed to open SSI263 audio device: " << SDL_GetError() << std::endl;
-		SDL_Quit();
-		throw std::runtime_error("SDL_OpenAudioDevice SSI263 failed");
-	}
+
 }
 
 // Pins RS2->RS0 are mapped to the bus's A2->A0
@@ -226,6 +230,9 @@ void SSI263::GeneratePhonemeSamples()
 	//	- speech rate
 	// TODO: articulation rate (linear move to the new sample)
 	
+	if (!bIsEnabled)
+		return;
+
 	//v_samples.clear();
 	
 	int _basePhonemeLength = g_nPhonemeInfo[phoneme].nLength;
@@ -292,10 +299,12 @@ void SSI263::GeneratePhonemeSamples()
 // Contrary to the real SSI263, we do not replay the phoneme
 void SSI263::AudioCallback(void* userdata, uint8_t* stream, int len) {
 	SSI263* self = static_cast<SSI263*>(userdata);
+	if (!self->bIsEnabled)
+		return;
 	auto& _vecS = self->v_samples;
 	auto& _currIdx = self->m_currentSampleIdx;
 	int samples_to_copy = len;
-	samples_to_copy = std::min(samples_to_copy, static_cast<int>(_vecS.size()) - _currIdx);
+	samples_to_copy = std::min(samples_to_copy, std::max(0, static_cast<int>(_vecS.size()) - _currIdx));
 
 	if (_DEBUG_SSI263 > 1)
 		std::cerr << "samples: " << samples_to_copy << " / " << _currIdx << " / " << _vecS.size() << std::endl;
