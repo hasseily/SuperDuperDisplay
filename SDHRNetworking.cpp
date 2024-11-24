@@ -28,6 +28,10 @@ static uint64_t num_processed_packets = 0;
 static uint64_t duration_packet_processing_ns = 0;
 static uint64_t duration_network_processing_ns = 0;
 
+// Only do a single reset if a string of reset events arrive
+static bool event_reset = 1;
+static bool event_reset_prev = 1;
+
 static ConcurrentQueue<std::shared_ptr<Packet>> packetInQueue;
 static ConcurrentQueue<std::shared_ptr<Packet>> packetFreeQueue;
 
@@ -269,8 +273,7 @@ int process_usb_events_thread(std::atomic<bool>* shouldTerminateProcessing) {
 					uint8_t misc = (event) & 0x0f;
 					uint8_t data = (event >> 4) & 0xff;
 					bool rw = ((misc & 0x01) == 0x01);
-					static bool event_reset = ((misc & 0x02) == 0x02);
-                    static bool event_reset_prev = 1;
+					event_reset = ((misc & 0x02) == 0x02);
 					if ((event_reset == 0) && (event_reset_prev == 1)) {
 						A2VideoManager::GetInstance()->bShouldReboot = true;
 					}
