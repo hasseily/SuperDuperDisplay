@@ -10,6 +10,9 @@
 		BB006F532C3C2E49008BFFAF /* Ayumi.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB006F4F2C3C2E49008BFFAF /* Ayumi.cpp */; };
 		BB006F542C3C2E49008BFFAF /* MockingboardManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB006F522C3C2E49008BFFAF /* MockingboardManager.cpp */; };
 		BB01620B2B83643D00A3D503 /* assets in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBD102132B829BAE00360B33 /* assets */; };
+		BB044AC12CF37F900002F6FA /* libftd3xx-static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC02CF37F8F0002F6FA /* libftd3xx-static.a */; };
+		BB044AC52CF381F80002F6FA /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC42CF381F80002F6FA /* CoreFoundation.framework */; };
+		BB044AC72CF382620002F6FA /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC62CF382620002F6FA /* IOKit.framework */; };
 		BB6B2FDD2CD17D03008BC3F2 /* samples in CopyFiles */ = {isa = PBXBuildFile; fileRef = BB6B2FDC2CD17CD4008BC3F2 /* samples */; };
 		BB6BE3152CC3963B00901A03 /* libopencv_core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BB6BE3142CC395F000901A03 /* libopencv_core.a */; };
 		BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = BB96E3EA2B6650BA00A3077C /* libz.tbd */; };
@@ -84,6 +87,9 @@
 		BB044ABD2CEA74690002F6FA /* Ft3xxTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Ft3xxTypes.h; sourceTree = "<group>"; };
 		BB044ABE2CEA74690002F6FA /* ftd3xx.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ftd3xx.h; sourceTree = "<group>"; };
 		BB044ABF2CEA74690002F6FA /* m6522.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = m6522.h; sourceTree = "<group>"; };
+		BB044AC02CF37F8F0002F6FA /* libftd3xx-static.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libftd3xx-static.a"; path = "lib/OSX/libftd3xx-static.a"; sourceTree = "<group>"; };
+		BB044AC42CF381F80002F6FA /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		BB044AC62CF382620002F6FA /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		BB0E58192C7B2E8600B44B58 /* SSI263Phonemes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSI263Phonemes.h; sourceTree = "<group>"; };
 		BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MemoryLoader.h; path = extras/MemoryLoader.h; sourceTree = "<group>"; };
 		BB64A7D02C391D580044E05B /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -163,8 +169,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB044AC12CF37F900002F6FA /* libftd3xx-static.a in Frameworks */,
 				BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */,
 				BBB525292B664A7D00A65C62 /* OpenGL.framework in Frameworks */,
+				BB044AC72CF382620002F6FA /* IOKit.framework in Frameworks */,
+				BB044AC52CF381F80002F6FA /* CoreFoundation.framework in Frameworks */,
 				BBB5252B2B664A8F00A65C62 /* CoreVideo.framework in Frameworks */,
 				BB6BE3152CC3963B00901A03 /* libopencv_core.a in Frameworks */,
 				BB9F87242C4BEE920091F5C6 /* SDL2.framework in Frameworks */,
@@ -274,6 +283,9 @@
 		BBB525272B664A7D00A65C62 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				BB044AC62CF382620002F6FA /* IOKit.framework */,
+				BB044AC42CF381F80002F6FA /* CoreFoundation.framework */,
+				BB044AC02CF37F8F0002F6FA /* libftd3xx-static.a */,
 				BB6BE3142CC395F000901A03 /* libopencv_core.a */,
 				BB96E3EA2B6650BA00A3077C /* libz.tbd */,
 				BB9F87222C4BECEE0091F5C6 /* SDL2.framework */,
@@ -518,6 +530,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/homebrew/lib,
+					"$(PROJECT_DIR)/lib/OSX",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -535,6 +548,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/homebrew/lib,
+					"$(PROJECT_DIR)/lib/OSX",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
