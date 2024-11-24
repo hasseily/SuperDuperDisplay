@@ -444,7 +444,6 @@ int main(int argc, char* argv[])
 	const uint32_t cursorHideDelay = 3000; // After this delay, the mouse cursor disappears
 
     // Main loop
-    bool done = false;
 	GLuint out_tex_id = 0;
 	
 	// Get the saved states from previous runs
@@ -539,7 +538,7 @@ int main(int argc, char* argv[])
 	// And run the processing thread
 	std::thread thread_processor(process_usb_events_thread, &bShouldTerminateProcessing);
 
-    while (!done)
+    while (!g_quitIsRequested)
 	{
 		// Check if we should reboot
 		if (a2VideoManager->bShouldReboot)
@@ -563,7 +562,7 @@ int main(int argc, char* argv[])
 			}
             switch (event.type) {
             case SDL_QUIT:
-				done = true;
+				Main_RequestAppQuit();
                 break;
             case SDL_WINDOWEVENT:
 			{
@@ -583,7 +582,7 @@ int main(int argc, char* argv[])
 					}
 				}
 				if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
-					done = true;
+					Main_RequestAppQuit();
 			}
                 break;
             case SDL_MOUSEMOTION:
@@ -600,7 +599,7 @@ int main(int argc, char* argv[])
 			{
 				if (event.key.keysym.sym == SDLK_F4) {  // Quit on ALT-F4
 					if (SDL_GetModState() & KMOD_ALT) {
-						done = true;
+						Main_RequestAppQuit();
 						break;
 					}
 				}
@@ -657,8 +656,6 @@ int main(int argc, char* argv[])
             default:
                 break;
             }   // switch event.type
-		    if (done)
-                break;
         }   // while SDL_PollEvent
 
 		if (!_bDisableVideoRender)
@@ -741,11 +738,7 @@ int main(int argc, char* argv[])
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL end of render error: " << glerr << std::endl;
 		}
-
-		if (g_quitIsRequested)
-			done = true;
-
-    }
+    }	// main loop
 
 	eventRecorder->StopReplay();
 	soundManager->StopPlay();
