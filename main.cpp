@@ -657,7 +657,8 @@ int main(int argc, char* argv[])
             default:
                 break;
             }   // switch event.type
-			
+		    if (done)
+                break;
         }   // while SDL_PollEvent
 
 		if (!_bDisableVideoRender)
