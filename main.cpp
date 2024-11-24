@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <algorithm>
 #include <thread>
+#include <atomic>
 
 #include "common.h"
 #include "shader.h"
@@ -404,8 +405,8 @@ int main(int argc, char* argv[])
 	mem_edit_a2e.Open = false;
 	mem_edit_upload.Open = false;
 
-	static bool bShouldTerminateNetworking = false;
-	static bool bShouldTerminateProcessing = false;
+	std::atomic<bool> bShouldTerminateNetworking = false;
+	std::atomic<bool> bShouldTerminateProcessing = false;
     bool show_metrics_window = false;
 	bool show_texture_window = false;
 	bool show_a2video_window = true;

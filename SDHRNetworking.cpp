@@ -229,7 +229,7 @@ void process_single_event(SDHREvent& e)
 	}
 }
 
-int process_usb_events_thread(bool* shouldTerminateProcessing) {
+int process_usb_events_thread(std::atomic<bool>* shouldTerminateProcessing) {
 	std::cout << "starting usb processing thread" << std::endl;
 	bIsConnected = true;
 	while (!(*shouldTerminateProcessing)) {
@@ -285,7 +285,7 @@ int process_usb_events_thread(bool* shouldTerminateProcessing) {
 	return 0;
 }
 
-int usb_server_thread(bool* shouldTerminateNetworking) {
+int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 	eventRecorder = EventRecorder::GetInstance();
 	clear_queues();
 	std::cout << "Starting USB thread" << std::endl;
@@ -378,7 +378,9 @@ int usb_server_thread(bool* shouldTerminateNetworking) {
 		ftStatus = FT_ReadPipeEx(handle, 0, packet->data, PKT_BUFSZ, (ULONG*)&(packet->size), 1000);
 #endif
 		if (ftStatus != FT_OK) {
-			std::cerr << "Failed to read from FPGA usb packet pipe. Err " << (int)ftStatus << std::endl;
+			// FT_TIMEOUT means the Apple is off. No data is coming in
+			if (ftStatus != FT_TIMEOUT)
+				std::cerr << "Failed to read from FPGA usb packet pipe. Err " << (int)ftStatus << std::endl;
 			FT_AbortPipe(handle, FT_PIPE_READ_ID);
 			packetFreeQueue.push(std::move(packet));
 			continue;
