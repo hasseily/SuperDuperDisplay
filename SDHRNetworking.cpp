@@ -23,8 +23,6 @@
 #define FT_PIPE_READ_ID 0x82
 
 static EventRecorder* eventRecorder;
-static uint32_t prev_seqno;
-static bool bFirstDrop;
 static bool bIsConnected = false;
 static uint64_t num_processed_packets = 0;
 static uint64_t duration_packet_processing_ns = 0;
@@ -343,7 +341,7 @@ int usb_server_thread(bool* shouldTerminateNetworking) {
 				continue;
 			}
 
-			// Set pipe timeouts
+			// Set pipe timeouts. Probably only necessary on Windows
 			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_WRITE_ID, 1000);  // Pipe to write to
 			if (ftStatus != FT_OK) {
 				std::cerr << "Failed to set write pipe timeout. Err " << (int)ftStatus << std::endl;
@@ -351,7 +349,6 @@ int usb_server_thread(bool* shouldTerminateNetworking) {
 				handle = NULL;
 				continue;
 			}
-
 			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_READ_ID, 1000);  // Pipe to read from
 			if (ftStatus != FT_OK) {
 				std::cerr << "Failed to set read pipe timeout. Err " << (int)ftStatus << std::endl;
@@ -368,6 +365,7 @@ int usb_server_thread(bool* shouldTerminateNetworking) {
 				continue;
 			}
 			*/
+
 			std::cerr << "Connected to FPGA usb device" << std::endl;
 			connected = true;
 		}
