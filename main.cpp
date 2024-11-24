@@ -534,7 +534,7 @@ int main(int argc, char* argv[])
 		Main_DrawFPSOverlay();
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
-	std::thread thread_server(usb_server_thread, (uint16_t)_SDHR_SERVER_PORT, &bShouldTerminateNetworking);
+	std::thread thread_server(usb_server_thread, &bShouldTerminateNetworking);
 	// And run the processing thread
 	std::thread thread_processor(process_usb_events_thread, &bShouldTerminateProcessing);
 

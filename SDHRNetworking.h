@@ -63,7 +63,7 @@ enum class ENET_RES
 // Call this method as a new thread
 // It loops infinitely and waits for packets
 // And puts it in an events queue
-int usb_server_thread(uint16_t port, bool* shouldTerminateNetworking);
+int usb_server_thread(bool* shouldTerminateNetworking);
 
 // Call this method as a new thread
 // It loops indefinitely and processes the packets queue

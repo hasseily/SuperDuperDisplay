@@ -224,7 +224,7 @@
     <ClInclude Include="extras\ImGuiFileDialogConfig.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="Ft3xxTypes.h">
+    <ClInclude Include="ftd3xx_win.h">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>
@@ -323,5 +323,8 @@
     <Font Include="assets\ProggyTiny.ttf">
       <Filter>assets</Filter>
     </Font>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="lib\Win_x64\FTD3XX.lib" />
   </ItemGroup>
 </Project>

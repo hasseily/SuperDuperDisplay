@@ -72,7 +72,6 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 
 
 // DEFINITIONS OF SDHR SPECS
-#define _SDHR_SERVER_PORT 8080
 #define _SDHR_UPLOAD_REGION_SIZE 256*256*256	// Upload data region size (should be 16MB)
 #define _SDHR_MAX_WINDOWS 256
 #define _SDHR_MAX_TEXTURES (_TEXUNIT_POSTPROCESS - _TEXUNIT_IMAGE_ASSETS_START)	// Max # of image assets available

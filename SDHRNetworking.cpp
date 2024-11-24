@@ -10,7 +10,16 @@
 #include <time.h>
 #include <fcntl.h>
 #include <chrono>
+#ifdef __NETWORKING_WINDOWS__
+#define FTD3XX_STATIC
+// Write to Appletini
+#define FT_PIPE_WRITE_ID 0x02
+// Read from Appletini
+#define FT_PIPE_READ_ID 0x82
+#include "ftd3xx_win.h"
+#else
 #include "ftd3xx.h"
+#endif
 
 static EventRecorder* eventRecorder;
 static uint32_t prev_seqno;
@@ -277,29 +286,43 @@ int process_usb_events_thread(bool* shouldTerminateProcessing) {
 	return 0;
 }
 
-int usb_server_thread(uint16_t port, bool* shouldTerminateNetworking) {
+int usb_server_thread(bool* shouldTerminateNetworking) {
 	eventRecorder = EventRecorder::GetInstance();
 	clear_queues();
 	std::cout << "Starting USB thread" << std::endl;
 	FT_HANDLE handle = NULL;
 	bool connected = false;
 	std::chrono::steady_clock::time_point next_connect_timeout{};
+	FT_STATUS ftStatus;
 	while (!(*shouldTerminateNetworking)) {
 		if (!connected) {
 			if (next_connect_timeout > std::chrono::steady_clock::now()) {
 				continue;
 			}
 			next_connect_timeout = std::chrono::steady_clock::now() + std::chrono::milliseconds(1000);
-			uint32_t count;
+			unsigned long count;
 			FT_DEVICE_LIST_INFO_NODE nodes[16];
-			if (FT_OK != FT_CreateDeviceInfoList(&count)) {
-				std::cerr << "Failed to find FPGA usb device" << std::endl;
+
+			ftStatus = FT_CreateDeviceInfoList(&count);
+			if (ftStatus != FT_OK) {
+				std::cerr << "Failed to find FPGA usb device. Err " << (int)ftStatus << std::endl;
 				continue;
 			}
-			if (!count || (FT_OK != FT_GetDeviceInfoList(nodes, &count))) {
-				std::cerr << "Failed to iterate FPGA usb devices" << std::endl;
+			if (count == 0) {
+				std::cerr << "No FPGA usb devices found" << std::endl;
 				continue;
 			}
+
+			ftStatus = FT_GetDeviceInfoList(nodes, &count);
+			if (ftStatus != FT_OK) {
+				std::cerr << "Failed to get FPGA usb device info list. Err " << (int)ftStatus << std::endl;
+				continue;
+			}
+
+			// Open the first available device
+#ifdef __NETWORKING_WINDOWS__
+			ftStatus = FT_Create((PVOID)nodes[0].SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, &handle);
+#else
 			FT_TRANSFER_CONF conf;
 			memset(&conf, 0, sizeof(conf));
 			conf.wStructSize = sizeof(conf);
@@ -308,22 +331,56 @@ int usb_server_thread(uint16_t port, bool* shouldTerminateNetworking) {
 			for (uint32_t i = 0; i < 4; ++i) {
 				FT_SetTransferParams(&conf, i);
 			}
-			FT_Create(0, FT_OPEN_BY_INDEX, &handle);
-			if (!handle) {
-				std::cerr << "Failed to open FPGA usb device handle" << std::endl;
+			ftStatus = FT_Create(0, FT_OPEN_BY_INDEX, &handle);
+#endif
+			if (ftStatus != FT_OK) {
+				std::cerr << "Failed to open FPGA usb device handle. Err " << (int)ftStatus << std::endl;
 				continue;
 			}
-			std::cerr << "connected to FPGA usb device" << std::endl;
+
+			// Set pipe timeouts
+			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_WRITE_ID, 1000);  // Pipe to write to
+			if (ftStatus != FT_OK) {
+				std::cerr << "Failed to set write pipe timeout. Err " << (int)ftStatus << std::endl;
+				FT_Close(handle);
+				handle = NULL;
+				continue;
+			}
+
+			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_READ_ID, 1000);  // Pipe to read from
+			if (ftStatus != FT_OK) {
+				std::cerr << "Failed to set read pipe timeout. Err " << (int)ftStatus << std::endl;
+				FT_Close(handle);
+				handle = NULL;
+				continue;
+			}
+			/*
+			ftStatus = FT_SetStreamPipe(handle, true, true, 0, PKT_BUFSZ);
+			if (ftStatus != FT_OK) {
+				std::cerr << "Failed to set Stream pipe size" << std::endl;
+				FT_Close(handle);
+				handle = NULL;
+				continue;
+			}
+			*/
+			std::cerr << "Connected to FPGA usb device" << std::endl;
 			connected = true;
 		}
+
 		auto packet = packetFreeQueue.pop();
-		if (FT_OK != FT_ReadPipeEx(handle, 0, packet->data, PKT_BUFSZ, &(packet->size), 1000)) {
-			std::cerr << "Failed to read from FPGA usb packet pipe" << std::endl;
-			FT_Close(handle);
-			handle = NULL;
-			connected = false;
+		// Synchronous Read
+#ifdef __NETWORKING_WINDOWS__
+		ftStatus = FT_ReadPipeEx(handle, FT_PIPE_READ_ID, packet->data, PKT_BUFSZ, (ULONG*)&(packet->size), NULL);
+#else
+		ftStatus = FT_ReadPipeEx(handle, 0, packet->data, PKT_BUFSZ, (ULONG*)&(packet->size), 1000);
+#endif
+		if (ftStatus != FT_OK) {
+			std::cerr << "Failed to read from FPGA usb packet pipe. Err " << (int)ftStatus << std::endl;
+			FT_AbortPipe(handle, FT_PIPE_READ_ID);
+			packetFreeQueue.push(std::move(packet));
 			continue;
 		}
+
 		if (!eventRecorder->IsInReplayMode()) {
 			packetInQueue.push(std::move(packet));
 		}
