@@ -12,14 +12,15 @@
 #include <chrono>
 #ifdef __NETWORKING_WINDOWS__
 #define FTD3XX_STATIC
-// Write to Appletini
-#define FT_PIPE_WRITE_ID 0x02
-// Read from Appletini
-#define FT_PIPE_READ_ID 0x82
 #include "ftd3xx_win.h"
 #else
 #include "ftd3xx.h"
 #endif
+
+// Write to Appletini
+#define FT_PIPE_WRITE_ID 0x02
+// Read from Appletini
+#define FT_PIPE_READ_ID 0x82
 
 static EventRecorder* eventRecorder;
 static uint32_t prev_seqno;
@@ -300,7 +301,11 @@ int usb_server_thread(bool* shouldTerminateNetworking) {
 				continue;
 			}
 			next_connect_timeout = std::chrono::steady_clock::now() + std::chrono::milliseconds(1000);
+#ifdef __NETWORKING_WINDOWS__
 			unsigned long count;
+#else
+			uint32_t count;
+#endif
 			FT_DEVICE_LIST_INFO_NODE nodes[16];
 
 			ftStatus = FT_CreateDeviceInfoList(&count);
