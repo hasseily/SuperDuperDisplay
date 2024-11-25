@@ -14,6 +14,7 @@
 #include "PostProcessor.h"
 #include "EventRecorder.h"
 #include "SDHRManager.h"
+#include "SDHRNetworking.h"
 #include "extras/MemoryLoader.h"
 #include "extras/ImGuiFileDialog.h"
 
@@ -45,9 +46,6 @@ public:
 	ImFont* fontLarge = nullptr;
 
 	std::vector<SDL_DisplayMode> v_displayModes;
-
-	std::string sTini;
-	std::string sTiniStatus;
 
 	int iFPSLimiter = 0;
 	int iWindowWidth=1200;
@@ -590,8 +588,8 @@ void MainMenu::ShowSDDMenu() {
 	}
 	ImGui::Separator();
 	if (ImGui::BeginMenu("Appletini")) {
-		ImGui::Text(pGui->sTini.c_str());
-		ImGui::Text(pGui->sTiniStatus.c_str());
+		ImGui::Text("%s", get_tini_name_string().c_str());
+		ImGui::Text("%s", get_last_error_string().c_str());
 		ImGui::EndMenu();
 	}
 	ImGui::Separator();
@@ -863,19 +861,6 @@ void MainMenu::ShowDeveloperMenu() {
 	ImGui::Separator();
 	ImGui::MenuItem("ImGui Metrics Window", "", &pGui->bShowImGuiMetricsWindow);
 }
-
-// Appletini USB data
- 
-void MainMenu::SetAppleTiniString(const char* tiniString)
-{
-	pGui->sTini = tiniString;
-}
-
-void MainMenu::SetAppleTiniStatusString(const char* tiniStatusString)
-{
-	pGui->sTiniStatus = tiniStatusString;
-}
-
 
 // UTILITY
 

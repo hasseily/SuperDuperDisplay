@@ -23,14 +23,13 @@
 // Read from Appletini
 #define FT_PIPE_READ_ID 0x82
 
-extern bool Main_IsImGuiOn();
-extern MainMenu* Main_GetMenuPtr();
-
 static EventRecorder* eventRecorder;
 static bool bIsConnected = false;
 static uint64_t num_processed_packets = 0;
 static uint64_t duration_packet_processing_ns = 0;
 static uint64_t duration_network_processing_ns = 0;
+static FT_STATUS ftStatus;	// latest FT60x status
+static FT_DEVICE_LIST_INFO_NODE activeNode;	// currently active USB device
 
 // Only do a single reset if a string of reset events arrive
 static bool event_reset = 1;
@@ -48,7 +47,7 @@ const size_t get_max_incoming_packets() { return packetInQueue.max_size(); };
 const std::string get_ft_status_message(FT_STATUS status) {
 	switch (status) {
 	case FT_OK:
-		return "Operation completed successfully";
+		return "OK";
 	case FT_INVALID_HANDLE:
 		return "Invalid handle";
 	case FT_DEVICE_NOT_FOUND:
@@ -117,6 +116,10 @@ const std::string get_ft_status_message(FT_STATUS status) {
 		return "Unknown status code";
 	}
 }
+
+const std::string get_tini_name_string() { return std::string(activeNode.Description); };
+const uint32_t get_last_error() { return (uint32_t)ftStatus; };
+const std::string get_last_error_string() { return get_ft_status_message(ftStatus); };
 
 const bool client_is_connected()
 {
@@ -372,7 +375,6 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 	FT_HANDLE handle = NULL;
 	bool connected = false;
 	std::chrono::steady_clock::time_point next_connect_timeout{};
-	FT_STATUS ftStatus;
 	while (!(*shouldTerminateNetworking)) {
 		if (!connected) {
 			if (next_connect_timeout > std::chrono::steady_clock::now()) {
@@ -386,27 +388,23 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 #endif
 			FT_DEVICE_LIST_INFO_NODE nodes[16];
 
-			Main_GetMenuPtr()->SetAppleTiniString("-");
+			activeNode = _FT_DEVICE_LIST_INFO_NODE();
+			std::copy(std::begin("NO DEVICE"), std::end("NO DEVICE"), activeNode.Description);
 
 			ftStatus = FT_CreateDeviceInfoList(&count);
 			if (ftStatus != FT_OK) {
 				// std::cerr << "Failed to list FPGA usb devices: " << get_ft_status_message(ftStatus) << std::endl;
-				if (Main_IsImGuiOn())
-					Main_GetMenuPtr()->SetAppleTiniStatusString("Error: Failed to list FPGA usb devices");
 				continue;
 			}
 			if (count == 0) {
+				ftStatus = FT_DEVICE_NOT_FOUND;
 				// std::cerr << "No FPGA usb devices found" << std::endl;
-				if (Main_IsImGuiOn())
-					Main_GetMenuPtr()->SetAppleTiniStatusString("No FPGA usb devices found");
 				continue;
 			}
 
 			ftStatus = FT_GetDeviceInfoList(nodes, &count);
 			if (ftStatus != FT_OK) {
 				// std::cerr << "Failed to get FPGA usb device info list: " << get_ft_status_message(ftStatus) << std::endl;
-				if (Main_IsImGuiOn())
-					Main_GetMenuPtr()->SetAppleTiniStatusString("Error: Failed to get FPGA usb device info list");
 				continue;
 			}
 
@@ -426,8 +424,6 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 #endif
 			if (ftStatus != FT_OK) {
 				std::cerr << "Failed to open FPGA usb device handle: " << get_ft_status_message(ftStatus) << std::endl;
-				if (Main_IsImGuiOn())
-					Main_GetMenuPtr()->SetAppleTiniStatusString("Error: Failed to open FPGA usb device handle");
 				continue;
 			}
 
@@ -435,8 +431,6 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_WRITE_ID, 1000);  // Pipe to write to
 			if (ftStatus != FT_OK) {
 				std::cerr << "Failed to set write pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
-				if (Main_IsImGuiOn())
-					Main_GetMenuPtr()->SetAppleTiniStatusString("Error: Failed to set write pipe timeout");
 				FT_Close(handle);
 				handle = NULL;
 				continue;
@@ -444,8 +438,6 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_READ_ID, 1000);  // Pipe to read from
 			if (ftStatus != FT_OK) {
 				std::cerr << "Failed to set read pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
-				if (Main_IsImGuiOn())
-					Main_GetMenuPtr()->SetAppleTiniStatusString("Error: Failed to set read pipe timeout");
 				FT_Close(handle);
 				handle = NULL;
 				continue;
@@ -460,8 +452,8 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 			}
 			*/
 
+			activeNode = nodes[0];
 			std::cerr << "Connected to FPGA usb device" << std::endl;
-			Main_GetMenuPtr()->SetAppleTiniString(nodes[0].Description);
 			connected = true;
 		}
 
@@ -477,20 +469,11 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 			if (ftStatus != FT_TIMEOUT)
 			{
 				std::cerr << "Failed to read from FPGA usb packet pipe: " << get_ft_status_message(ftStatus) << std::endl;
-				if (Main_IsImGuiOn())
-					Main_GetMenuPtr()->SetAppleTiniStatusString("Error: Failed to read from FPGA usb packet pipe");
-			}
-			else {
-				if (Main_IsImGuiOn())
-					Main_GetMenuPtr()->SetAppleTiniStatusString("No incoming data (Apple 2 is off?)");
 			}
 			FT_AbortPipe(handle, FT_PIPE_READ_ID);
 			packetFreeQueue.push(std::move(packet));
 			continue;
 		}
-
-		if (Main_IsImGuiOn())
-			Main_GetMenuPtr()->SetAppleTiniStatusString("");
 
 		if (!eventRecorder->IsInReplayMode()) {
 			packetInQueue.push(std::move(packet));
