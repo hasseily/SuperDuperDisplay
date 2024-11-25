@@ -118,8 +118,8 @@ const std::string get_ft_status_message(FT_STATUS status) {
 }
 
 const std::string get_tini_name_string() { return std::string(activeNode.Description); };
-const uint32_t get_last_error() { return (uint32_t)ftStatus; };
-const std::string get_last_error_string() { return get_ft_status_message(ftStatus); };
+const uint32_t get_tini_last_error() { return (uint32_t)ftStatus; };
+const std::string get_tini_last_error_string() { return get_ft_status_message(ftStatus); };
 
 const bool client_is_connected()
 {

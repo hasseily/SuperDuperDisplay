@@ -85,5 +85,5 @@ const size_t get_packet_pool_count();
 const size_t get_max_incoming_packets();
 const bool client_is_connected();
 const std::string get_tini_name_string();
-const uint32_t get_last_error();
-const std::string get_last_error_string();
+const uint32_t get_tini_last_error();
+const std::string get_tini_last_error_string();

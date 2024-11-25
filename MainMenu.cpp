@@ -589,7 +589,10 @@ void MainMenu::ShowSDDMenu() {
 	ImGui::Separator();
 	if (ImGui::BeginMenu("Appletini")) {
 		ImGui::Text("%s", get_tini_name_string().c_str());
-		ImGui::Text("%s", get_last_error_string().c_str());
+		if (get_tini_last_error() == 19)	// FT_TIMEOUT
+			ImGui::Text("%s", "No data (Apple 2 is off?)");
+		else
+			ImGui::Text("%s", get_tini_last_error_string().c_str());
 		ImGui::EndMenu();
 	}
 	ImGui::Separator();
