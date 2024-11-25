@@ -7,6 +7,7 @@
 #include "SDHRManager.h"
 #include "CycleCounter.h"
 #include "EventRecorder.h"
+#include "MainMenu.h"
 #include <time.h>
 #include <fcntl.h>
 #include <chrono>
@@ -21,6 +22,9 @@
 #define FT_PIPE_WRITE_ID 0x02
 // Read from Appletini
 #define FT_PIPE_READ_ID 0x82
+
+extern bool Main_IsImGuiOn();
+extern MainMenu* Main_GetMenuPtr();
 
 static EventRecorder* eventRecorder;
 static bool bIsConnected = false;
@@ -40,6 +44,79 @@ const uint64_t get_duration_packet_processing_ns() { return duration_packet_proc
 const uint64_t get_duration_network_processing_ns() { return duration_network_processing_ns; };
 const size_t get_packet_pool_count() { return packetFreeQueue.max_size(); };
 const size_t get_max_incoming_packets() { return packetInQueue.max_size(); };
+
+const std::string get_ft_status_message(FT_STATUS status) {
+	switch (status) {
+	case FT_OK:
+		return "Operation completed successfully";
+	case FT_INVALID_HANDLE:
+		return "Invalid handle";
+	case FT_DEVICE_NOT_FOUND:
+		return "Device not found";
+	case FT_DEVICE_NOT_OPENED:
+		return "Failed to open device";
+	case FT_IO_ERROR:
+		return "Input/output error";
+	case FT_INSUFFICIENT_RESOURCES:
+		return "Insufficient resources";
+	case FT_INVALID_PARAMETER:
+		return "Invalid parameter provided";
+	case FT_INVALID_BAUD_RATE:
+		return "Invalid baud rate specified";
+	case FT_DEVICE_NOT_OPENED_FOR_ERASE:
+		return "Device not opened for erase";
+	case FT_DEVICE_NOT_OPENED_FOR_WRITE:
+		return "Device not opened for write";
+	case FT_FAILED_TO_WRITE_DEVICE:
+		return "Failed to write to device";
+	case FT_EEPROM_READ_FAILED:
+		return "Failed to read from EEPROM";
+	case FT_EEPROM_WRITE_FAILED:
+		return "Failed to write to EEPROM";
+	case FT_EEPROM_ERASE_FAILED:
+		return "Failed to erase EEPROM";
+	case FT_EEPROM_NOT_PRESENT:
+		return "EEPROM not present on device";
+	case FT_EEPROM_NOT_PROGRAMMED:
+		return "EEPROM is not programmed";
+	case FT_INVALID_ARGS:
+		return "Invalid arguments provided";
+	case FT_NOT_SUPPORTED:
+		return "Operation not supported";
+	case FT_NO_MORE_ITEMS:
+		return "No more items available";
+	case FT_TIMEOUT:
+		return "Operation timed out";
+	case FT_OPERATION_ABORTED:
+		return "Operation was aborted";
+	case FT_RESERVED_PIPE:
+		return "A reserved pipe was accessed";
+	case FT_INVALID_CONTROL_REQUEST_DIRECTION:
+		return "Invalid control request direction";
+	case FT_INVALID_CONTROL_REQUEST_TYPE:
+		return "Invalid control request type";
+	case FT_IO_PENDING:
+		return "Input/output operation is pending";
+	case FT_IO_INCOMPLETE:
+		return "Input/output operation is incomplete";
+	case FT_HANDLE_EOF:
+		return "End of file handle reached";
+	case FT_BUSY:
+		return "Device is busy";
+	case FT_NO_SYSTEM_RESOURCES:
+		return "No system resources available";
+	case FT_DEVICE_LIST_NOT_READY:
+		return "Device list is not ready";
+	case FT_DEVICE_NOT_CONNECTED:
+		return "Device not connected";
+	case FT_INCORRECT_DEVICE_PATH:
+		return "Incorrect device path";
+	case FT_OTHER_ERROR:
+		return "Unknown error";
+	default:
+		return "Unknown status code";
+	}
+}
 
 const bool client_is_connected()
 {
@@ -309,19 +386,27 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 #endif
 			FT_DEVICE_LIST_INFO_NODE nodes[16];
 
+			Main_GetMenuPtr()->SetAppleTiniString("-");
+
 			ftStatus = FT_CreateDeviceInfoList(&count);
 			if (ftStatus != FT_OK) {
-				std::cerr << "Failed to find FPGA usb device. Err " << (int)ftStatus << std::endl;
+				// std::cerr << "Failed to list FPGA usb devices: " << get_ft_status_message(ftStatus) << std::endl;
+				if (Main_IsImGuiOn())
+					Main_GetMenuPtr()->SetAppleTiniStatusString("Error: Failed to list FPGA usb devices");
 				continue;
 			}
 			if (count == 0) {
-				std::cerr << "No FPGA usb devices found" << std::endl;
+				// std::cerr << "No FPGA usb devices found" << std::endl;
+				if (Main_IsImGuiOn())
+					Main_GetMenuPtr()->SetAppleTiniStatusString("No FPGA usb devices found");
 				continue;
 			}
 
 			ftStatus = FT_GetDeviceInfoList(nodes, &count);
 			if (ftStatus != FT_OK) {
-				std::cerr << "Failed to get FPGA usb device info list. Err " << (int)ftStatus << std::endl;
+				// std::cerr << "Failed to get FPGA usb device info list: " << get_ft_status_message(ftStatus) << std::endl;
+				if (Main_IsImGuiOn())
+					Main_GetMenuPtr()->SetAppleTiniStatusString("Error: Failed to get FPGA usb device info list");
 				continue;
 			}
 
@@ -340,21 +425,27 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 			ftStatus = FT_Create(0, FT_OPEN_BY_INDEX, &handle);
 #endif
 			if (ftStatus != FT_OK) {
-				std::cerr << "Failed to open FPGA usb device handle. Err " << (int)ftStatus << std::endl;
+				std::cerr << "Failed to open FPGA usb device handle: " << get_ft_status_message(ftStatus) << std::endl;
+				if (Main_IsImGuiOn())
+					Main_GetMenuPtr()->SetAppleTiniStatusString("Error: Failed to open FPGA usb device handle");
 				continue;
 			}
 
 			// Set pipe timeouts. Probably only necessary on Windows
 			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_WRITE_ID, 1000);  // Pipe to write to
 			if (ftStatus != FT_OK) {
-				std::cerr << "Failed to set write pipe timeout. Err " << (int)ftStatus << std::endl;
+				std::cerr << "Failed to set write pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
+				if (Main_IsImGuiOn())
+					Main_GetMenuPtr()->SetAppleTiniStatusString("Error: Failed to set write pipe timeout");
 				FT_Close(handle);
 				handle = NULL;
 				continue;
 			}
 			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_READ_ID, 1000);  // Pipe to read from
 			if (ftStatus != FT_OK) {
-				std::cerr << "Failed to set read pipe timeout. Err " << (int)ftStatus << std::endl;
+				std::cerr << "Failed to set read pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
+				if (Main_IsImGuiOn())
+					Main_GetMenuPtr()->SetAppleTiniStatusString("Error: Failed to set read pipe timeout");
 				FT_Close(handle);
 				handle = NULL;
 				continue;
@@ -370,6 +461,7 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 			*/
 
 			std::cerr << "Connected to FPGA usb device" << std::endl;
+			Main_GetMenuPtr()->SetAppleTiniString(nodes[0].Description);
 			connected = true;
 		}
 
@@ -383,11 +475,22 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 		if (ftStatus != FT_OK) {
 			// FT_TIMEOUT means the Apple is off. No data is coming in
 			if (ftStatus != FT_TIMEOUT)
-				std::cerr << "Failed to read from FPGA usb packet pipe. Err " << (int)ftStatus << std::endl;
+			{
+				std::cerr << "Failed to read from FPGA usb packet pipe: " << get_ft_status_message(ftStatus) << std::endl;
+				if (Main_IsImGuiOn())
+					Main_GetMenuPtr()->SetAppleTiniStatusString("Error: Failed to read from FPGA usb packet pipe");
+			}
+			else {
+				if (Main_IsImGuiOn())
+					Main_GetMenuPtr()->SetAppleTiniStatusString("No incoming data (Apple 2 is off?)");
+			}
 			FT_AbortPipe(handle, FT_PIPE_READ_ID);
 			packetFreeQueue.push(std::move(packet));
 			continue;
 		}
+
+		if (Main_IsImGuiOn())
+			Main_GetMenuPtr()->SetAppleTiniStatusString("");
 
 		if (!eventRecorder->IsInReplayMode()) {
 			packetInQueue.push(std::move(packet));

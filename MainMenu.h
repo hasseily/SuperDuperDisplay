@@ -9,7 +9,8 @@ public:
 	~MainMenu();
 	void Render();
 	bool HandleEvent(SDL_Event& event);
-	
+	void SetAppleTiniString(const char* tiniString);
+	void SetAppleTiniStatusString(const char* tiniStatusString);
 private:
 	void ShowSDDMenu();
 	void ShowMotherboardMenu();

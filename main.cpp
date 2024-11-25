@@ -235,6 +235,11 @@ bool Main_IsImGuiOn()
 	return (menu != nullptr);
 }
 
+MainMenu* Main_GetMenuPtr()
+{
+	return menu;
+}
+
 void Main_GetBGColor(float outColor[4]) {
 	for (int i = 0; i < 4; ++i) {
 		outColor[i] = window_bgcolor[i];

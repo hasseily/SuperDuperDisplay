@@ -46,6 +46,9 @@ public:
 
 	std::vector<SDL_DisplayMode> v_displayModes;
 
+	std::string sTini;
+	std::string sTiniStatus;
+
 	int iFPSLimiter = 0;
 	int iWindowWidth=1200;
 	int iWindowHeight=1000;
@@ -586,6 +589,13 @@ void MainMenu::ShowSDDMenu() {
 		ImGui::EndMenu();
 	}
 	ImGui::Separator();
+	if (ImGui::BeginMenu("Appletini")) {
+		ImGui::Text(pGui->sTini.c_str());
+		ImGui::Text(pGui->sTiniStatus.c_str());
+		ImGui::EndMenu();
+	}
+	ImGui::Separator();
+	ImGui::Separator();
 	if (ImGui::MenuItem("Reset SDD")) {
 		auto switch_c034 = MemoryManager::GetInstance()->switch_c034;
 		A2VideoManager::GetInstance()->ResetComputer();
@@ -853,6 +863,19 @@ void MainMenu::ShowDeveloperMenu() {
 	ImGui::Separator();
 	ImGui::MenuItem("ImGui Metrics Window", "", &pGui->bShowImGuiMetricsWindow);
 }
+
+// Appletini USB data
+ 
+void MainMenu::SetAppleTiniString(const char* tiniString)
+{
+	pGui->sTini = tiniString;
+}
+
+void MainMenu::SetAppleTiniStatusString(const char* tiniStatusString)
+{
+	pGui->sTiniStatus = tiniStatusString;
+}
+
 
 // UTILITY
 
