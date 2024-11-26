@@ -278,7 +278,8 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 {
 	using namespace std::chrono;
 	// Duration of an Apple 2 clock cycle (not stretched)
-	auto targetDuration = duration_cast<high_resolution_clock::duration>(duration<double, std::nano>(slowdownMultiplier * 979.926864));
+	auto duration_ns = 1'000'000'000 / (bIsPAL ? _A2_CPU_FREQUENCY_PAL : _A2_CPU_FREQUENCY_NTSC);
+	auto targetDuration = duration_cast<high_resolution_clock::duration>(duration<double, std::nano>(slowdownMultiplier * duration_ns));
 	auto startTime = high_resolution_clock::now();
 	auto nextTime = startTime;
 
@@ -401,6 +402,14 @@ void EventRecorder::LoadTextEventsFromFile()
 //////////////////////////////////////////////////////////////////////////
 // Public methods
 //////////////////////////////////////////////////////////////////////////
+
+void EventRecorder::SetPAL(bool isPal) {
+	if (m_state == EventRecorderStates_e::RECORDING)
+		StopRecording();
+	if (m_state == EventRecorderStates_e::PLAYING)
+		StopReplay();
+	bIsPAL = isPal;
+}
 
 void EventRecorder::RecordEvent(SDHREvent* sdhr_event)
 {

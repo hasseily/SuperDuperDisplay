@@ -780,7 +780,9 @@ void MainMenu::ShowSamplesMenu() {
 		std::ifstream animationFile("recordings/anim00032#c20000.shra", std::ios::binary);
 		eventRecorder->ReadPaintWorksAnimationsFile(animationFile);
 	}
-	if (ImGui::MenuItem("Run Karateka Demo", "", &pGui->bSampleRunKarateka)) {
+	auto _smtext = (pGui->bSampleRunKarateka ? "Stop Karateka Demo" : "Run Karateka Demo");
+	if (ImGui::MenuItem(_smtext)) {
+		pGui->bSampleRunKarateka = !pGui->bSampleRunKarateka;
 		if (pGui->bSampleRunKarateka) {
 			std::ifstream karatekafile("./recordings/karateka.vcr", std::ios::binary);
 			Main_ResetA2SS();

@@ -33,7 +33,7 @@ extern "C" {
 #endif
 	
 	// error-accumulation precision boost
-#define BEEPER_FIXEDPOINT_SCALE (100)
+#define BEEPER_FIXEDPOINT_SCALE (1000)
 	// DC adjust buffer size
 #define BEEPER_DCADJ_BUFLEN (256)
 	
