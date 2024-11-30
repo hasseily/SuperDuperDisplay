@@ -45,6 +45,8 @@ public:
 	const uint32_t GetScreenCycles();
 	// Shift the VBL start. It effectively moves the current cycle.
 	void SetVBLStart(uint32_t _vblStart);
+	// Get cycles since reset
+	uint64_t GetCyclesSinceReset() { return m_cycles_since_reset; };
 	
 	// public singleton code
 	static CycleCounter* GetInstance()
@@ -70,6 +72,7 @@ private:
 	uint32_t m_prev_vbl_start = 0;	// debug to know when we think vbl started previously
 	size_t m_tstamp_init = 0;		// tstamp at initalization, as microseconds since epoch
 	size_t m_tstamp_cycle = 0;		// current tstamp of cycle, as microseconds since m_tstamp_init
+	uint64_t m_cycles_since_reset = 0;	// total cycles since computer reset
 
 };
 

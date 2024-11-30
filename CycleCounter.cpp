@@ -41,6 +41,8 @@ void CycleCounter::Initialize()
 	m_region = VideoRegion_e::NTSC;
 	cycles_total = CYCLES_TOTAL_NTSC;
 	cycles_vblank = cycles_total - CYCLES_SCREEN;
+
+	m_cycles_since_reset = 0;
 }
 
 void CycleCounter::Reset()
@@ -53,6 +55,7 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 	m_tstamp_cycle = GetCurrentTimeInMicroseconds() - m_tstamp_init;
 	m_cycle += inc;
 	m_cycle = (m_cycle % cycles_total);
+	m_cycles_since_reset += inc;
 
 	// Update VBL and region automatically with 0xC019
 	if (isVideoRegionDynamic && isVBL)
