@@ -162,6 +162,10 @@ void SoundManager::DisplayImGuiChunk()
 	ImGui::SliderFloat("Volume", &beeper.volume, 0.f, 1.f);
 	ImGui::Separator();
 	ImGui::Text("Queued Samples: %d", (int)(SDL_GetQueuedAudioSize(audioDevice) / sizeof(float)));
+	for (int i = 0; i < SDL_GetNumAudioDevices(0); ++i) {
+		ImGui::Text("Audio device %d: %s\n", i, SDL_GetAudioDeviceName(i, 0));
+	}
+	ImGui::Text("Current audio driver: %s\n", SDL_GetCurrentAudioDriver());
 }
 
 nlohmann::json SoundManager::SerializeState()
