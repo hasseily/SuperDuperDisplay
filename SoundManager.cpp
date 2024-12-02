@@ -77,10 +77,11 @@ void SoundManager::BeginPlay() {
 	beeper_reset(&beeper);
 	curr_tick = 0;
 	curr_freq = 0.f;
-	beeper_samples_idx_read = 0;
+	beeper_samples_idx_read = SM_BEEPER_BUFFER_SIZE - SM_AUDIO_BUFLEN;
 	beeper_samples_idx_write = 0;
 	dcadj_pos = 0;
 	dcadj_sum = 0;
+	memset(beeper_samples, 0, sizeof(beeper_samples));
 	memset(dcadj_buf, 0, sizeof(dcadj_buf));
 	bIsPlaying = true;
 	MockingboardManager::GetInstance()->BeginPlay();
@@ -91,6 +92,7 @@ void SoundManager::StopPlay() {
 	bool _enabledState = bIsEnabled;
 	bIsEnabled = false;	 // disable event handling until everything is flushed
 	MockingboardManager::GetInstance()->StopPlay();
+	SDL_Delay(100);
 	bIsPlaying = false;
 	bIsEnabled = _enabledState;
 }
@@ -196,10 +198,10 @@ void SoundManager::DisplayImGuiChunk()
 	}
 	ImGui::SliderFloat("Volume", &beeper_volume, 0.f, 1.f);
 	ImGui::Separator();
-	static int sm_imgui_queued_audio_size = 0;
-	if ((SDL_GetTicks64() & 0x80) == 0)
-		sm_imgui_queued_audio_size = (int)(SDL_GetQueuedAudioSize(audioDevice) / sizeof(float));
-	ImGui::Text("Queued Samples: %d", sm_imgui_queued_audio_size);
+	static int sm_imgui_samples_delay = (SM_BEEPER_BUFFER_SIZE + beeper_samples_idx_write - beeper_samples_idx_read) % SM_BEEPER_BUFFER_SIZE;
+	if ((SDL_GetTicks64() & 0xC0) == 0)
+		sm_imgui_samples_delay = (SM_BEEPER_BUFFER_SIZE + beeper_samples_idx_write - beeper_samples_idx_read) % SM_BEEPER_BUFFER_SIZE;
+	ImGui::Text("Write-Read Samples Delay: %d", sm_imgui_samples_delay);
 	ImGui::Text("Current Audio Driver: %s\n", SDL_GetCurrentAudioDriver());
 }
 

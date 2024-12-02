@@ -18,7 +18,7 @@
 
 const uint32_t SM_AUDIO_BUFLEN = 256;					// number of SDL_Audio samples in callback
 const uint32_t SM_BUFFER_DRIFT_LIMIT = 4096;			// Size to start trying to reduce the drift. At least 4096
-const uint32_t SM_BEEPER_BUFFER_SIZE = SM_AUDIO_BUFLEN * 3;	// circular buffer
+const uint32_t SM_BEEPER_BUFFER_SIZE = SM_AUDIO_BUFLEN * 10;	// circular buffer
 const uint32_t SM_BEEPER_DCADJ_BUFLEN = 256;
 const float SM_BASE_VOLUME_ADJUSTMENT = 0.6f;			// beeper base volume adjustment
 
