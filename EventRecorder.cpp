@@ -241,7 +241,6 @@ void EventRecorder::StopReplay()
 		if (thread_replay.joinable())
 			thread_replay.join();
 	}
-	MockingboardManager::GetInstance()->StopPlay();
 }
 
 void EventRecorder::StartReplay()
@@ -253,7 +252,6 @@ void EventRecorder::StartReplay()
 	bShouldStopReplay = false;
 	SetState(EventRecorderStates_e::PLAYING);
 	ApplyRAMSnapshot(0);
-	MockingboardManager::GetInstance()->BeginPlay();
 	thread_replay = std::thread(&EventRecorder::replay_events_thread, this,
 		&bShouldPauseReplay, &bShouldStopReplay);
 }
@@ -261,10 +259,6 @@ void EventRecorder::StartReplay()
 void EventRecorder::PauseReplay(bool pause)
 {
 	bShouldPauseReplay = pause;
-	if (pause)
-		MockingboardManager::GetInstance()->StopPlay();
-	else
-		MockingboardManager::GetInstance()->BeginPlay();
 }
 
 void EventRecorder::RewindReplay()

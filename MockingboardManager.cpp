@@ -1,7 +1,6 @@
 #include "MockingboardManager.h"
 #include <iostream>
 #include <vector>
-#include "common.h"
 #include "imgui.h"
 
 #define CHIPS_IMPL
@@ -11,54 +10,21 @@ m6522_t m6522[4];
 // below because "The declaration of a static data member in its class definition is not a definition"
 MockingboardManager* MockingboardManager::s_instance;
 
-MockingboardManager::MockingboardManager(uint32_t sampleRate, uint32_t bufferSize)
-: sampleRate(sampleRate), bufferSize(bufferSize),
+MockingboardManager::MockingboardManager(uint32_t sampleRate)
+: sampleRate(sampleRate),
 	ay{ Ayumi(false, _A2_CPU_FREQUENCY_NTSC, sampleRate),
 		Ayumi(false, _A2_CPU_FREQUENCY_NTSC, sampleRate),
 		Ayumi(false, _A2_CPU_FREQUENCY_NTSC, sampleRate),
 		Ayumi(false, _A2_CPU_FREQUENCY_NTSC, sampleRate) } {
-	if (SDL_Init(SDL_INIT_AUDIO) < 0) {
-		std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
-		throw std::runtime_error("SDL_Init failed");
-	}
-	audioDevice = 0;
 	Initialize();
 }
 
 void MockingboardManager::Initialize()
 {
-	// NOTE: SSI263 objects have their own audioDevice
 	// This here is for mixing the AYs
-	if (audioDevice == 0)
+	for (uint8_t viaidx = 0; viaidx < 4; viaidx++)
 	{
-		SDL_zero(audioSpec);
-		audioSpec.freq = sampleRate;
-		audioSpec.format = AUDIO_F32SYS;
-		audioSpec.channels = 2;
-		audioSpec.samples = bufferSize;
-		audioSpec.callback = MockingboardManager::AudioCallback;
-		audioSpec.userdata = this;
-		
-		audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
-		if (audioDevice == 0) {
-			std::cerr << "Failed to open audio device: " << SDL_GetError() << std::endl;
-			bIsEnabled = false;
-		}
-		else {
-			for (uint8_t viaidx = 0; viaidx < 4; viaidx++)
-			{
-				m6522_init(&m6522[viaidx]);
-			}
-		}
-	}
-	else {
-		SDL_PauseAudioDevice(audioDevice, 1);
-		SDL_ClearQueuedAudio(audioDevice);
-
-		for (uint8_t viaidx = 0; viaidx < 4; viaidx++)
-		{
-			m6522_reset(&m6522[viaidx]);
-		}
+		m6522_reset(&m6522[viaidx]);
 	}
 	
 	for(uint8_t ssiidx = 0; ssiidx < 4; ssiidx++)
@@ -72,15 +38,12 @@ void MockingboardManager::Initialize()
 }
 
 MockingboardManager::~MockingboardManager() {
-	SDL_CloseAudioDevice(audioDevice);
-	SDL_Quit();
 }
 
 void MockingboardManager::BeginPlay() {
 	if (!bIsEnabled)
 		return;
 	UpdateAllPans();
-	SDL_PauseAudioDevice(audioDevice, 0); // Start audio playback
 	bIsPlaying = true;
 	mb_event_count = 0;
 }
@@ -93,8 +56,6 @@ void MockingboardManager::StopPlay() {
 		ay[ayidx].SetVolume(1, 0);
 		ay[ayidx].SetVolume(2, 0);
 	}
-	SDL_PauseAudioDevice(audioDevice, 1);
-	SDL_ClearQueuedAudio(audioDevice);
 	bIsPlaying = false;
 }
 
@@ -102,29 +63,21 @@ bool MockingboardManager::IsPlaying() {
 	return bIsPlaying;
 }
 
-void MockingboardManager::AudioCallback(void* userdata, uint8_t* stream, int len) {
-	MockingboardManager* self = static_cast<MockingboardManager*>(userdata);
-	int samples = len / (sizeof(float) * 2); 	// Number of samples to fill
-	
-	for (int i = 0; i < samples; ++i) {
-		uint8_t ay_ct = (self->bIsDual ? 4 : 2);
-		for(uint8_t ayidx = 0; ayidx < ay_ct; ayidx++)
-		{
-			self->ay[ayidx].Process();
-		}
-		if (self->bIsDual)
-		{
-			self->audioCallbackBuffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left + self->ay[2].left + self->ay[3].left) / 4.0f;
-			self->audioCallbackBuffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right + self->ay[2].right + self->ay[3].right) / 4.0f;
-		} else {
-			self->audioCallbackBuffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left) / 2.0f;
-			self->audioCallbackBuffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right) / 2.0f;
-		}
+void MockingboardManager::GetSamples(float& left, float& right) {
+	uint8_t ay_ct = (bIsDual ? 4 : 2);
+	for (uint8_t ayidx = 0; ayidx < ay_ct; ayidx++)
+	{
+		ay[ayidx].Process();
 	}
-	
-	// Copy the buffer to the stream
-	SDL_memcpy(stream, self->audioCallbackBuffer, len);
-	SDL_memset(self->audioCallbackBuffer, 0, len);
+	if (bIsDual)
+	{
+		left = static_cast<float>(ay[0].left + ay[1].left + ay[2].left + ay[3].left) / 4.0f;
+		right = static_cast<float>(ay[0].right + ay[1].right + ay[2].right + ay[3].right) / 4.0f;
+	}
+	else {
+		left = static_cast<float>(ay[0].left + ay[1].left) / 2.0f;
+		right = static_cast<float>(ay[0].right + ay[1].right) / 2.0f;
+	}
 }
 
 void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)

@@ -70,6 +70,8 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _TEXUNIT_IMAGE_ASSETS_START GL_TEXTURE3	// Start of the image assets
 #define _TEXUNIT_POSTPROCESS GL_TEXTURE15		// input texunit the PP will use to generate the final output
 
+// AUDIO
+#define _AUDIO_SAMPLE_RATE 44100
 
 // DEFINITIONS OF SDHR SPECS
 #define _SDHR_UPLOAD_REGION_SIZE 256*256*256	// Upload data region size (should be 16MB)
