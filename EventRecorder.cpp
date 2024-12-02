@@ -301,7 +301,6 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			// These events can be run at max speed
 			auto snapshot_index = currentReplayEvent / m_current_snapshot_cycles;
 			ApplyRAMSnapshot(snapshot_index);
-			bool isVBL = false;
 			auto first_event_index = snapshot_index * m_current_snapshot_cycles;
 			for (auto i = first_event_index; i < currentReplayEvent; i++)
 			{
@@ -394,10 +393,7 @@ void EventRecorder::LoadTextEventsFromFile()
 //////////////////////////////////////////////////////////////////////////
 
 void EventRecorder::SetPAL(bool isPal) {
-	if (m_state == EventRecorderStates_e::RECORDING)
-		StopRecording();
-	if (m_state == EventRecorderStates_e::PLAYING)
-		StopReplay();
+	// Don't stop playing here because this may be called from the playing thread
 	bIsPAL = isPal;
 }
 
