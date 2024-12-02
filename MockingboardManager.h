@@ -83,7 +83,7 @@ public:
 	void EventReceived(uint16_t addr, uint8_t val, bool rw);
 	
 	// Audio callback
-	void MockingboardManager::GetSamples(float& left, float& right);
+	void GetSamples(float& left, float& right);
 
 	// Set the panning of a channel in an AY
 	// Pan is 0.0-1.0, left to right
