@@ -47,6 +47,7 @@
 #include <stdio.h>
 #include <vector>
 #include <SDL.h>
+#include <mutex>
 
 constexpr int SSI263_SAMPLE_RATE = 22050;
 
@@ -65,7 +66,9 @@ public:
 	bool IsEnabled() { return bIsEnabled; };
 	void Enable() { bIsEnabled = true; };
 	void Disable() { bIsEnabled = false; };
+	bool IsPowered() { return !regCTL; };	// When regCTL is high, the chip is in "Power Down" mode
 	void Update();
+	float GetSample();
 	void ResetRegisters();
 	void SetRegisterSelect(int val);	// Set RS2->RS0 (A2->A0)
 	void SetData(int data);				// Set D7->D0 data pins
@@ -74,7 +77,6 @@ public:
 	void SetCS1(bool pinState);			// !IOSELECT
 	bool GetAR();						// Returns value of A/!R pin
 	int GetData();						// 0x00 or 0x80, only in read mode (reads D7)
-	bool IsPlaying();
 	
 	// Call WasIRQTriggered() on every update. Guaranteed to only
 	// return true once per IRQ (if true, subsequent calls are false until
@@ -116,12 +118,10 @@ private:
 
 	void LoadRegister();
 
-	SDL_AudioSpec audioSpec;
-	SDL_AudioDeviceID audioDevice;
-	std::vector<uint8_t> v_samples;
+	std::vector<float> v_samples;
 	int m_currentSampleIdx = 0;
+	std::mutex	d_mutex_accessing_phoneme;
 	void GeneratePhonemeSamples();
-	static void AudioCallback(void* userdata, uint8_t* stream, int len);
 };
 
 #endif /* SSI263_H */

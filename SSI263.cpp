@@ -7,6 +7,7 @@
 
 #include "SSI263.h"
 #include "SSI263Phonemes.h"
+#include "common.h"
 #include <iostream>
 
 #define _DEBUG_SSI263 0
@@ -18,8 +19,7 @@ SSI263::SSI263()
 		throw std::runtime_error("SDL_Init Audio failed");
 	}
 	bIsEnabled = false;
-	audioDevice = 0;
-	v_samples.reserve(2*SSI263_SAMPLE_RATE);
+	v_samples.reserve(2*SSI263_SAMPLE_RATE);	// To accommodate for slower speech rate
 	ResetRegisters();
 }
 
@@ -44,27 +44,6 @@ void SSI263::Update()
 
 void SSI263::ResetRegisters()
 {
-	bIsEnabled = false;
-	if (audioDevice == 0)
-	{
-		SDL_zero(audioSpec);
-		audioSpec.freq = SSI263_SAMPLE_RATE;
-		audioSpec.format = AUDIO_S16LSB;
-		audioSpec.channels = 1;
-		audioSpec.samples = 512;
-		audioSpec.callback = SSI263::AudioCallback;
-		audioSpec.userdata = this;
-
-		audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
-	}
-
-	if (audioDevice == 0) {
-		std::cerr << "Failed to open SSI263 audio device: " << SDL_GetError() << std::endl;
-		throw std::runtime_error("SDL_OpenAudioDevice SSI263 failed");
-	}
-	bIsEnabled = true;
-	SDL_ClearQueuedAudio(audioDevice);
-
 	// Reset all registers to their default values on power-on
 	speechRate = 0;
 	filterFrequency = 0xFF; // Register 4
@@ -84,7 +63,7 @@ void SSI263::ResetRegisters()
 	regCTL = true; // Power down
 	
 	v_samples.clear();
-
+	bIsEnabled = true;
 }
 
 // Pins RS2->RS0 are mapped to the bus's A2->A0
@@ -99,6 +78,8 @@ void SSI263::SetData(int data)
 	// The chip reads the pin values when any of R/!W, CS0 or !CS1 changes
 	// and the final result is 0,1,0
 	byteData = data & 0xFF;
+	if (_DEBUG_SSI263 > 1)
+		std::cerr << "Set Data:" << std::hex << byteData << std::dec << std::endl;
 }
 
 void SSI263::LoadRegister()
@@ -170,7 +151,6 @@ void SSI263::LoadRegister()
 						irqIsSet = false;
 					}
 
-					SDL_PauseAudioDevice(audioDevice, regCTL);
 					if (_DEBUG_SSI263 > 0)
 						std::cerr << "CTL:" << regCTL << " PAUSE is 1!" << std::endl;
 				}
@@ -217,11 +197,6 @@ bool SSI263::WasIRQTriggered()
 	return false;
 }
 
-bool SSI263::IsPlaying()
-{
-	return (SDL_GetAudioDeviceStatus(audioDevice) == SDL_AUDIO_PLAYING);
-}
-
 void SSI263::GeneratePhonemeSamples()
 {
 	// Generate the actual phoneme samples based on:
@@ -232,8 +207,6 @@ void SSI263::GeneratePhonemeSamples()
 	
 	if (!bIsEnabled)
 		return;
-
-	//v_samples.clear();
 	
 	int _basePhonemeLength = g_nPhonemeInfo[phoneme].nLength;
 	auto _offset = g_nPhonemeInfo[phoneme].nOffset;
@@ -251,16 +224,18 @@ void SSI263::GeneratePhonemeSamples()
 		_speedFactor = (4096.f - 2048)/(4096.f - inflection);
 	}
 	// Apply speech rate
-	// Should be (16.f - speechRate) but that's too big a change so we attenuate
-	_speedFactor *= (1024.f - speechRate)/(1024.f - SSI263_PHONEME_SPEECH_RATE);
+	if (SSI263_PHONEME_SPEECH_RATE > 15.5f)
+		_speedFactor *= 16.f - speechRate;
+	else
+		_speedFactor *= (16.f - speechRate)/(16.f - SSI263_PHONEME_SPEECH_RATE);
 
 	int _phonemeLength = (int)(_basePhonemeLength / _speedFactor);
 
 	// Apply phoneme duration
 	// Phoneme duration is 0->3, which maps to 100%,75%,50%,25% of default duration
 	_phonemeLength /= (1 + phonemeDuration);
-	
-	SDL_LockAudioDevice(audioDevice);
+
+	std::unique_lock<std::mutex> lock(this->d_mutex_accessing_phoneme);
 	v_samples.clear();
 	m_currentSampleIdx = 0;
 	for (int i=0; i<_phonemeLength; ++i) {
@@ -269,71 +244,56 @@ void SSI263::GeneratePhonemeSamples()
 		int _iIndex = (int)_fIndex;
 		float _frac = _fIndex - _iIndex;
 		
-		int32_t _newSample;	// Resampled sample!
+		float _newSample;	// Resampled sample!
 		if (_iIndex + 1 < (_basePhonemeLength / (1 + phonemeDuration))) {
-			int16_t sample1 = g_nPhonemeData[_offset + _iIndex];
-			int16_t sample2 = g_nPhonemeData[_offset + _iIndex + 1];
-			_newSample = static_cast<uint32_t>(sample1 + _frac * (sample2 - sample1));
+			float sample1 = static_cast<float>(g_nPhonemeData[_offset + _iIndex]) / UINT16_MAX;
+			int32_t sample2 = static_cast<float>(g_nPhonemeData[_offset + _iIndex + 1]) / UINT16_MAX;
+			_newSample = sample1 + _frac * (sample2 - sample1);
 		} else {
-			_newSample = g_nPhonemeData[_offset + _iIndex];
+			_newSample = static_cast<float>(g_nPhonemeData[_offset + _iIndex]) / UINT16_MAX;
 		}
-		
+		_newSample = (2.f * _newSample) - 1.f;
 		// Apply the amplitude (0 to 16, typically 10)
-		_newSample = (_newSample * amplitude) / 16;
-		
-		// Clamp the result to stay within 16-bit signed integer range
-		// and more.
-		// TODO:  Clamping at 32768 creates artifacts
-		if (_newSample > 32768) _newSample = 32768;
-		if (_newSample < -32768) _newSample = -32768;
-		
-		v_samples.push_back(_newSample & 0xFF);
-		v_samples.push_back((_newSample >> 8) & 0xFF);
+		_newSample = (_newSample * amplitude) / 16.f;
+		if (_newSample > 1.f) _newSample = 1.f;
+		if (_newSample < -1.f) _newSample = -1.f;
+
+		v_samples.push_back(_newSample);
 	}
-	SDL_UnlockAudioDevice(audioDevice);
 	if (_DEBUG_SSI263 > 0)
 		std::cerr << "Added samples: " << _basePhonemeLength << std::endl;
 }
 
-// The audio callback sets the IRQ when the phoneme is done playing.
-// Contrary to the real SSI263, we do not replay the phoneme
-void SSI263::AudioCallback(void* userdata, uint8_t* stream, int len) {
-	SSI263* self = static_cast<SSI263*>(userdata);
-	if (!self->bIsEnabled)
-		return;
-	auto& _vecS = self->v_samples;
-	auto& _currIdx = self->m_currentSampleIdx;
-	int samples_to_copy = len;
-	samples_to_copy = std::min(samples_to_copy, std::max(0, static_cast<int>(_vecS.size()) - _currIdx));
+// Call GetSample on every audio callback from the main audio stream
+// It sets the IRQ when the phoneme is done playing.
+// Like the real SSI263, the phoneme is replayed when it reaches the end (after the IRQ is triggered)
+float SSI263::GetSample() {
+	if ((!bIsEnabled) || regCTL)
+		return 0.f;
+	std::unique_lock<std::mutex> lock(this->d_mutex_accessing_phoneme);
+	if (v_samples.size() == 0) {
+		return 0.f;
+	}
 
-	if (_DEBUG_SSI263 > 1)
-		std::cerr << "samples: " << samples_to_copy << " / " << _currIdx << " / " << _vecS.size() << std::endl;
-
-	SDL_memcpy(stream, _vecS.data() + _currIdx, samples_to_copy);
-	_currIdx += samples_to_copy;
-	
-	// rollover
-	if (samples_to_copy < len) {
-		// TODO: CHECK WHICH IS HAPPENING IN THE REAL MOCKINGBOARD
-		// HARDCODED LAST SAMPLES
-		_currIdx = static_cast<int>(_vecS.size()) - self->audioSpec.samples*2;
-		SDL_memcpy(stream + samples_to_copy, _vecS.data() + _currIdx, (len - samples_to_copy));
-		// LAST X SAMPLES
-		// _currIdx = static_cast<int>(_vecS.size()) - (len - samples_to_copy);
-		// SDL_memcpy(stream + samples_to_copy, _vecS.data() + _currIdx, (len - samples_to_copy));
-		// ROLL OVER
-		// SDL_memcpy(stream + samples_to_copy, _vecS.data(), (len - samples_to_copy));
-		// _currIdx = (len - samples_to_copy);
-		
-		// Determine if we need to trigger the IRQ
-		if (self->durationMode != SSI263DR_DISABLED_AR)
+	// Right now the samples are at 22,050 Hz, which is half the sample size of the main audio stream (44,100)
+	// So each sample will be duplicated.
+	const int freq_mult = _AUDIO_SAMPLE_RATE / SSI263_SAMPLE_RATE;
+	float sample_to_return = v_samples[m_currentSampleIdx/freq_mult];
+	if (_DEBUG_SSI263 > 3)
+		std::cerr << "Getting sample: " << m_currentSampleIdx / freq_mult << " of " << v_samples.size() << " val: " << sample_to_return << std::endl;
+	++m_currentSampleIdx;
+	if (m_currentSampleIdx == (v_samples.size() * freq_mult))
+	{
+		// this was the second call to the last sample of the phoneme, so trigger the IRQ if needed
+		if (durationMode != SSI263DR_DISABLED_AR)
 		{
-			if (!self->irqIsSet)
+			if (!irqIsSet)
 			{
-				self->irqIsSet = true;
-				self->irqShouldProcess = true;
+				irqIsSet = true;
+				irqShouldProcess = true;
 			}
 		}
+		m_currentSampleIdx = 0;	// reset to replay the phoneme
 	}
-	
+	return sample_to_return;
 }

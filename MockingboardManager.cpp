@@ -30,8 +30,6 @@ void MockingboardManager::Initialize()
 	for(uint8_t ssiidx = 0; ssiidx < 4; ssiidx++)
 	{
 		ssi[ssiidx].ResetRegisters();
-		// TODO: XXX: DISABLED SSI-263 CHIPS UNTIL WORKING CORRECTLY
-		ssi[ssiidx].Disable();
 	}
 	
 	bIsPlaying = false;
@@ -65,19 +63,21 @@ bool MockingboardManager::IsPlaying() {
 
 void MockingboardManager::GetSamples(float& left, float& right) {
 	uint8_t ay_ct = (bIsDual ? 4 : 2);
+	uint8_t ssi_ct = 0;
 	for (uint8_t ayidx = 0; ayidx < ay_ct; ayidx++)
 	{
 		ay[ayidx].Process();
+		left += ay[ayidx].left;
+		right += ay[ayidx].right;
+		if (ssi[ayidx].IsPowered()) {
+			// speech is mono
+			++ssi_ct;
+			left += ssi[ayidx].GetSample();
+			right += ssi[ayidx].GetSample();
+		}
 	}
-	if (bIsDual)
-	{
-		left = static_cast<float>(ay[0].left + ay[1].left + ay[2].left + ay[3].left) / 4.0f;
-		right = static_cast<float>(ay[0].right + ay[1].right + ay[2].right + ay[3].right) / 4.0f;
-	}
-	else {
-		left = static_cast<float>(ay[0].left + ay[1].left) / 2.0f;
-		right = static_cast<float>(ay[0].right + ay[1].right) / 2.0f;
-	}
+	left /= static_cast<float>(ay_ct + ssi_ct);
+	right /= static_cast<float>(ay_ct + ssi_ct);
 }
 
 void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
@@ -415,7 +415,8 @@ void MockingboardManager::Util_SpeakDemoPhrase()
 		0xE8, 0xFF, 0xA8, 0x39, 0x00,	// PAUSE
 		0xE8, 0x7B, 0xA8, 0x47, 0xFF,	// LB
 	};
-	ssi[0].ResetRegisters();
+	// The active SSI263 chip is at index 1
+	ssi[1].ResetRegisters();
 	// Raise CTL, set TRANSITIONED_INFLECTION, and lower CTL
 	EventReceived(0xC443, 0x80, 0);	// Reg 3, raise CTL
 	EventReceived(0xC440, 0xC0, 0);	// Set TRANSITIONED_INFLECTION
@@ -429,10 +430,13 @@ void MockingboardManager::Util_SpeakDemoPhrase()
 		
 		if (i < (sizeof(phrase) - 1))
 		{
-			while (!ssi[0].WasIRQTriggered() && ssi[0].IsPlaying())
+			if (ssi[1].IsPowered())	// When unpowered there won't be an IRQ
 			{
-				// haven't finished yet, wait for irq to send next phoneme
-				SDL_Delay(1);
+				while (!ssi[1].WasIRQTriggered())
+				{
+					// haven't finished yet, wait for irq to send next phoneme
+					SDL_Delay(1);
+				}
 			}
 		}
 	}
