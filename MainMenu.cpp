@@ -777,7 +777,7 @@ void MainMenu::ShowSamplesMenu() {
 		memManager->SetSoftSwitch(A2SS_SHR, true);
 		memManager->SetSoftSwitch(A2SS_TEXT, false);
 		memManager->SetSoftSwitch(A2SS_HIRES, false);
-		std::ifstream animationFile("recordings/anim00032#c20000.shra", std::ios::binary);
+		std::ifstream animationFile("recordings/anim00032#C20000", std::ios::binary);
 		eventRecorder->ReadPaintWorksAnimationsFile(animationFile);
 	}
 	auto _smtext = (pGui->bSampleRunKarateka ? "Stop Karateka Demo" : "Run Karateka Demo");
