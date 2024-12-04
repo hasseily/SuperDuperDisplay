@@ -50,6 +50,7 @@
 #include <mutex>
 
 constexpr int SSI263_SAMPLE_RATE = 22050;
+constexpr int SSI263_DCADJ_BUFLEN = 256;
 
 enum SSI263DurationModes_e
 {
@@ -122,6 +123,12 @@ private:
 	int m_currentSampleIdx = 0;
 	std::mutex	d_mutex_accessing_phoneme;
 	void GeneratePhonemeSamples();
+
+	// DC Filter
+	float dcadj_sum;
+	uint32_t dcadj_pos;
+	float dcadj_buf[SSI263_DCADJ_BUFLEN];
+	float DCAdjust(float sample);
 };
 
 #endif /* SSI263_H */

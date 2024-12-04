@@ -197,6 +197,15 @@ bool SSI263::WasIRQTriggered()
 	return false;
 }
 
+float SSI263::DCAdjust(float sample)
+{
+	dcadj_sum -= dcadj_buf[dcadj_pos];
+	dcadj_sum += sample;
+	dcadj_buf[dcadj_pos] = sample;
+	dcadj_pos = (dcadj_pos + 1) & (SSI263_DCADJ_BUFLEN-1);
+	return (dcadj_sum / SSI263_DCADJ_BUFLEN);
+}
+
 void SSI263::GeneratePhonemeSamples()
 {
 	// Generate the actual phoneme samples based on:
@@ -258,7 +267,7 @@ void SSI263::GeneratePhonemeSamples()
 		if (_newSample > 1.f) _newSample = 1.f;
 		if (_newSample < -1.f) _newSample = -1.f;
 
-		v_samples.push_back(_newSample);
+		v_samples.push_back(DCAdjust(_newSample));
 	}
 	if (_DEBUG_SSI263 > 0)
 		std::cerr << "Added samples: " << _basePhonemeLength << std::endl;
