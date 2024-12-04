@@ -761,7 +761,7 @@ void MainMenu::ShowSamplesMenu() {
 		memManager->SetSoftSwitch(A2SS_SHR, true);
 		memManager->SetSoftSwitch(A2SS_TEXT, false);
 		memManager->SetSoftSwitch(A2SS_HIRES, false);
-		MemoryLoadSHR("samples/SHR RGGB/320_16_abstracteyear99#C10000.shr");
+		MemoryLoadSHR("samples/SHR RGGB/320_16_abstracteyear99#C10000");
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
 	if (ImGui::MenuItem("SHR RGGB (Bayer) 640@4")) {
@@ -769,7 +769,7 @@ void MainMenu::ShowSamplesMenu() {
 		memManager->SetSoftSwitch(A2SS_SHR, true);
 		memManager->SetSoftSwitch(A2SS_TEXT, false);
 		memManager->SetSoftSwitch(A2SS_HIRES, false);
-		MemoryLoadSHR("samples/SHR RGGB/640_04_abstracteyear99#C10000.shr");
+		MemoryLoadSHR("samples/SHR RGGB/640_04_abstracteyear99#C10000");
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
 	if (ImGui::MenuItem("SHR Animation (PWA $C2)")) {
