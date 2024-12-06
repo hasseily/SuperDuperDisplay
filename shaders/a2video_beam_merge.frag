@@ -24,7 +24,6 @@ This shader expects as input a OFFSETTEX texture that has the following features
 uniform COMPAT_PRECISION int ticks;				// ms since start
 uniform sampler2D OFFSETTEX;					// Offset texture
 uniform COMPAT_PRECISION int forceSHRWidth;		// force legacy to be shr width
-uniform COMPAT_PRECISION int shrScanlineCount;	// amount of SHR scanlines (size of OFFSETTEX)
 
 uniform sampler2D legacyTex;					// legacy output texture
 uniform COMPAT_PRECISION vec2 legacySize;

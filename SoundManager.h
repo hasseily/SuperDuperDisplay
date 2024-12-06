@@ -71,7 +71,7 @@ private:
 	uint64_t ticks_per_sample;	// Depends on NTSC/PAL
 	uint64_t curr_tick = 0;	// tick value since the beginning of the sample
 	float curr_freq = -1.f;	// current frequency for the sample
-	float beeper_volume = 0.f;	// main sound volume
+	float beeper_volume = 1.f;	// main sound volume
 	int ticks_drift_adjustment;	// change to ticks_per_sample to compensate for drift
 	int sm_imgui_queued_audio_size = 0;	// for ImGui
 

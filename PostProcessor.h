@@ -105,7 +105,7 @@ private:
 	float p_f_zoomY = 0.0f;
 	int p_i_cSpace = 0;
 	int p_i_maskType = 0;
-	int p_i_postprocessingLevel = 1;
+	int p_i_postprocessingLevel = 0;
 	int p_i_scanlineType = 2;
 
 };

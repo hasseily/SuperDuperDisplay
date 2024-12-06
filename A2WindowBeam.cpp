@@ -196,12 +196,16 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 			case A2VIDEOBEAM_SHR:
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_w_with_border * 4), _A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines), GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				// Don't update the interlace part if unnecessary
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_w_with_border * 4),
+								(_A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines)) * (1 + 1),	// TODO: REPLACE 1 WITH interlaceSHRMode XXX
+								GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
 				if (((specialModesMask & A2_VSM_SHR4PAL256) != 0) || (overrideSHR4Mode == 2))
 				{
 					glActiveTexture(_TEXUNIT_PAL256BUFFER);
 					glBindTexture(GL_TEXTURE_2D, PAL256TEX);
-					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _A2VIDEO_SHR_BYTES_PER_LINE, _A2VIDEO_SHR_SCANLINES, GL_RED_INTEGER, GL_UNSIGNED_SHORT, (uint16_t*)(A2VideoManager::GetInstance()->GetPAL256VRAMReadPtr()));
+					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _A2VIDEO_SHR_BYTES_PER_LINE, _A2VIDEO_SHR_SCANLINES * (interlaceSHRMode + 1),
+									GL_RED_INTEGER, GL_UNSIGNED_SHORT, (uint16_t*)(A2VideoManager::GetInstance()->GetPAL256VRAMReadPtr()));
 					glActiveTexture(_TEXUNIT_DATABUFFER);
 				}
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
@@ -228,11 +232,17 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 			case A2VIDEOBEAM_SHR:
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, _COLORBYTESOFFSET + (cycles_w_with_border * 4), _A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines), 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+				// the size of the SHR texture is Scanlines+2xBorderHeight, doubled for interlace
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, _COLORBYTESOFFSET + (cycles_w_with_border * 4),
+							 (_A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines)) * _INTERLACE_MULTIPLIER, 0,
+							 GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
 				// Create the PAL256TEX texture
 				glActiveTexture(_TEXUNIT_PAL256BUFFER);
 				glBindTexture(GL_TEXTURE_2D, PAL256TEX);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, _A2VIDEO_SHR_BYTES_PER_LINE, _A2VIDEO_SHR_SCANLINES, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, (uint16_t*)(A2VideoManager::GetInstance()->GetPAL256VRAMReadPtr()));
+				// The size of the PAL256 texture is 2 bytes per SHR byte. Add the interlacing and that's 4x scanlines
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, _A2VIDEO_SHR_BYTES_PER_LINE,
+							 2 * _A2VIDEO_SHR_SCANLINES * _INTERLACE_MULTIPLIER, 0,
+							 GL_RED_INTEGER, GL_UNSIGNED_SHORT, (uint16_t*)(A2VideoManager::GetInstance()->GetPAL256VRAMReadPtr()));
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				break;
 			case A2VIDEOBEAM_FORCED_TEXT1:
@@ -273,6 +283,8 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	{
 		shader.setInt("PAL256TEX", _TEXUNIT_PAL256BUFFER - GL_TEXTURE0);
 		shader.setInt("overrideSHR4Mode", overrideSHR4Mode);
+		shader.setInt("interlaceSHRYOffset", interlaceSHRMode * (_A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines)));
+		shader.setInt("interlacePal256YOffset", interlaceSHRMode * (_A2VIDEO_SHR_SCANLINES));
 	}
 	else {
 		shader.setInt("a2ModesTex0", _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0);	// D/TEXT font regular

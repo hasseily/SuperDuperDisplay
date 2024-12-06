@@ -153,12 +153,15 @@ bool MemoryLoadSHR(const std::string &filePath) {
 		file.seekg(0, std::ios::end);
 		size_t fileSize = file.tellg();
 		
-		if (fileSize == 0x8000) {
+		if (fileSize >= 0x8000) {
 			file.seekg(0, std::ios::beg); // Go back to the start of the file
-			file.read(reinterpret_cast<char*>(pMem), fileSize);
+			file.read(reinterpret_cast<char*>(pMem), 0x8000);
 			res = true;
-		} else {
-			std::cerr << "Error: SHR file is not the correct size." << std::endl;
+			if (fileSize > 0x8000) {
+				// load the rest as "interlaced" SHR in main memory
+				pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x2000;
+				file.read(reinterpret_cast<char*>(pMem), fileSize < (0x8000 * 2) ? fileSize - 0x8000 : 0x8000);
+			}
 		}
 	}
 	return res;

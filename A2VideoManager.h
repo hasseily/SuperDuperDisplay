@@ -64,6 +64,8 @@ constexpr uint32_t _SCANLINE_START_FRAME = 200 + (_BORDER_HEIGHT_MAX_MULT8 * 8) 
 
 constexpr int _OVERLAY_CHAR_WIDTH = 40;		// Max width of overlay in chars (40 for TEXT)
 
+constexpr int _INTERLACE_MULTIPLIER = 2;	// How much to multiply the size of buffers for interlacing
+
 // Legacy mode VRAM is 4 bytes (main, aux, flags, colors)
 // for each "byte" of screen use
 // colors are 4-bit each of fg and bg colors as in the Apple 2gs
@@ -124,6 +126,7 @@ public:
 		uint8_t* vram_forced_hgr2 = nullptr;
 		GLfloat* offset_buffer = nullptr;
 		int frameSHR4Modes = 0;					// All SHR4 modes in the frame
+		uint8_t interlaceSHRMode = 0;			// 0: standard SHR, 1: interlaced SHR with E0 (main) $2000-9FFF used for odd lines
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -195,6 +198,7 @@ public:
 	const uint32_t GetVRAMReadId() { return vrams_read->id; };
 	const uint8_t* GetLegacyVRAMReadPtr() { return vrams_read->vram_legacy; };
 	const uint8_t* GetSHRVRAMReadPtr() { return vrams_read->vram_shr; };
+	const uint8_t* GetSHRVRAMInterlacedReadPtr() { return vrams_read->vram_shr + sizeof(vrams_read->vram_shr) / _INTERLACE_MULTIPLIER; };
 	const uint8_t* GetPAL256VRAMReadPtr() { return vrams_read->vram_pal256; };
 	const uint8_t* GetTEXT1VRAMReadPtr() { return vrams_read->vram_forced_text1; };
 	const uint8_t* GetTEXT2VRAMReadPtr() { return vrams_read->vram_forced_text2; };
@@ -203,6 +207,7 @@ public:
 	const GLfloat* GetOffsetBufferReadPtr() { return vrams_read->offset_buffer; };
 	uint8_t* GetLegacyVRAMWritePtr() { return vrams_write->vram_legacy; };
 	uint8_t* GetSHRVRAMWritePtr() { return vrams_write->vram_shr; };
+	uint8_t* GetSHRVRAMInterlacedWritePtr() { return vrams_write->vram_shr + sizeof(vrams_write->vram_shr) / _INTERLACE_MULTIPLIER; };
 	GLfloat* GetOffsetBufferWritePtr() { return vrams_write->offset_buffer; };
 	GLuint GetOutputTextureId();	// merged output
 	GLuint Render();		// render whatever mode is active (enabled windows)
@@ -213,7 +218,7 @@ public:
 
 	inline uint32_t GetVramWidthSHR() { return (_COLORBYTESOFFSET + (2 * borders_w_cycles * 4) + 160); };	// in 4 bytes!
 	inline uint32_t GetVramHeightSHR() { return  (200 + (2 * borders_h_scanlines)); };
-	inline uint32_t GetVramSizeSHR() { return (GetVramWidthSHR() * GetVramHeightSHR() * 4); };	// in bytes
+	inline uint32_t GetVramSizeSHR() { return (GetVramWidthSHR() * GetVramHeightSHR() * _INTERLACE_MULTIPLIER); };	// in bytes
 
 	// Changing borders reinitializes everything
 	// Pass in a cycle for width (7 or 8 (SHR) lines per increment)
@@ -259,6 +264,7 @@ private:
     bool bIsRebooting = false;              // Rebooting semaphore
 	bool bIsSwitchingToMergedMode = false;	// True when refreshing earlier scanlines for merged mode
 	bool bMirrorRepeatOutputTexture = false;	// Choose to mirror repeat texture wrap, or not
+	bool bShouldInterlace = false;			// Handles interlacing override
 
 	// imgui vars
 	bool bImguiWindowIsOpen = false;
@@ -266,6 +272,7 @@ private:
 	bool bImguiMemLoadAuxBank = false;
 	int iImguiMemLoadPosition = 0;
 	int overrideSHR4Mode = 0;				// Cached here to keep the value between A2WindowBeam resets
+	bool overrideSHRInterlace = 0;			// Cached here to keep the value between A2WindowBeam resets
 	std::string sImguiLoadPath = ".";
 	
 	// beam render state variables

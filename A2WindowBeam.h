@@ -74,6 +74,7 @@ public:
 	
 	int specialModesMask = A2_VSM_NONE;		// Or'ed A2VideoSpecialMode_e
 	int overrideSHR4Mode = 0;				// Debugging to override the SHR4 modes in the shader
+	int interlaceSHRMode = 0;				// Interlacing? 0: off, 1: on
 	int monitorColorType = A2_MON_COLOR;	// Monitor color type A2VideoMonitorType_e
 
 private:

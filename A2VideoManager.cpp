@@ -257,7 +257,7 @@ void A2VideoManager::Initialize()
 			delete[] vrams_array[i].offset_buffer;
 		vrams_array[i].vram_legacy = new uint8_t[GetVramSizeLegacy()];
 		vrams_array[i].vram_shr = new uint8_t[GetVramSizeSHR()];
-		vrams_array[i].vram_pal256 = new uint8_t[_A2VIDEO_SHR_BYTES_PER_LINE*2*_A2VIDEO_SHR_SCANLINES];
+		vrams_array[i].vram_pal256 = new uint8_t[_A2VIDEO_SHR_BYTES_PER_LINE*2*_A2VIDEO_SHR_SCANLINES*_INTERLACE_MULTIPLIER];
 		vrams_array[i].offset_buffer = new GLfloat[GetVramHeightSHR()];
 		memset(vrams_array[i].vram_legacy, 0, GetVramSizeLegacy());
 		memset(vrams_array[i].vram_shr, 0, GetVramSizeSHR());
@@ -448,6 +448,7 @@ void A2VideoManager::StartNextFrame()
 	merge_last_change_y = UINT_MAX;
 	// Additional frame data resets
 	vrams_write->frameSHR4Modes = 0;
+	vrams_write->interlaceSHRMode = 0;
 }
 
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
@@ -487,6 +488,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 
 	auto memMgr = MemoryManager::GetInstance();
 	uint32_t mode_scanlines = (memMgr->IsSoftSwitch(A2SS_SHR) ? 200 : 192);
+	auto vramInterlaceOffset = GetVramSizeSHR() / 2;	// Offset to 2nd half of the vram
 
 	// The Apple 2gs drawing is shifted 6 scanlines down
 	// Let's realign it to match the 2e
@@ -606,9 +608,11 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	// Also check if the mode has switched in the middle of the frame
 	if (_x == 0)
 	{
+		// Set both regular and interlaced areas SCBs
 		vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
+		vrams_write->vram_shr[vramInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
 
-		if ((vrams_write->mode == A2Mode_e::MERGED) && _TR_ANY_Y < (200 + 2*borders_h_scanlines))
+		if ((vrams_write->mode == A2Mode_e::MERGED) && _TR_ANY_Y < (_A2VIDEO_SHR_SCANLINES + 2*borders_h_scanlines))
 		{
 			// Merge mode calculations
 			// determine the mode switch and update merge_last_change_mode and merge_last_change_y
@@ -684,18 +688,22 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		auto memPtr = memMgr->GetApple2MemAuxPtr();
 		uint8_t* lineStartPtr = vrams_write->vram_shr + GetVramWidthSHR() * _TR_ANY_Y;
 
+		// For the additional interlacing mode data, use main mem and the second part of vram_shr
+		auto memInterlacePtr = memMgr->GetApple2MemPtr();				// main mem (E0)
+		uint8_t* lineInterlaceStartPtr = vrams_write->vram_shr + vramInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y;
+
 		// get the SCB and palettes if we're starting a line
 		// and it's part of the content area. The top & bottom border areas don't care about SCB
 		// We may or may not have a border, so at this point the beamstate is either BORDER_LEFT or CONTENT
 		if ((_TR_ANY_X == 0) && (_y < mode_scanlines))
 		{
 			lineStartPtr[0] = memPtr[_A2VIDEO_SHR_SCB_START + _y];
-			vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = memPtr[_A2VIDEO_SHR_SCB_START + _y];
+			vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = lineStartPtr[0];
 			// Get the palette
 			memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
 				   memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
 				   32);					// palette length is 32 bytes
-			
+
 			// Also here check all the palette reserved nibble values (high nibble of byte 2) to see
 			// what SHR4 modes are used in this line, if SHR4 is enabled via the magic bytes
 			
@@ -709,8 +717,21 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 				}
 				vrams_write->frameSHR4Modes |= scanlineSHR4Modes;	// Add to the frame's SHR4 modes the new modes found on this line
 			}
+
+			// Do the SCB and palettes for interlacing if requested
+			vrams_write->interlaceSHRMode = (memPtr + _A2VIDEO_SHR_MAGIC_BYTES - 1)[0];
+			bShouldInterlace = ( overrideSHRInterlace ? !vrams_write->interlaceSHRMode : vrams_write->interlaceSHRMode);
+			if (bShouldInterlace)
+			{
+				lineInterlaceStartPtr[0] = memInterlacePtr[_A2VIDEO_SHR_SCB_START + _y];
+				vrams_write->vram_shr[vramInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y] = lineInterlaceStartPtr[0];
+				// Get the palette
+				memcpy(lineInterlaceStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
+					   memInterlacePtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineInterlaceStartPtr[0] & 0xFu) * 32),
+					   32);					// palette length is 32 bytes
+			}
 		}
-		
+
 		switch (beamState)
 		{
 		case BeamState_e::UNKNOWN:
@@ -726,6 +747,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		case BeamState_e::BORDER_TOP:
 		case BeamState_e::BORDER_BOTTOM:
 			memset(lineStartPtr + _COLORBYTESOFFSET + (_TR_ANY_X * 4), (uint8_t)memMgr->switch_c034, 4);
+			if (bShouldInterlace)
+				memset(lineInterlaceStartPtr + _COLORBYTESOFFSET + (_TR_ANY_X * 4), (uint8_t)memMgr->switch_c034, 4);
 			break;
 		case BeamState_e::CONTENT:
 		{
@@ -776,6 +799,51 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 					pal256ByteStartPtr[2*i + 1] = paletteColorStart[1];
 				}
 			}
+
+			// Do the exact same thing for interlacing if necessary, getting the data from main RAM
+			if (bShouldInterlace)
+			{
+				scb = lineInterlaceStartPtr[0];
+				memcpy(lineInterlaceStartPtr + _COLORBYTESOFFSET + _TR_ANY_X * 4,
+					   memInterlacePtr + _A2VIDEO_SHR_START + _y * _A2VIDEO_SHR_BYTES_PER_LINE + xfb, 4);
+				if (!(scb & 0x80u) && (scb & 0x20u))	// 320 mode and colorfill
+				{
+					// Pre-calculate colorfill, so that the shader doesn't have to do it
+					// It's completely wasted on the shader. Here it's much more efficient
+					for (uint32_t i = 0; i < 4; i++)
+					{
+						auto byteColor = lineInterlaceStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i];
+						// if the first color of the byte is 0, give it the last color of the previous byte
+						// assuming this is not the first byte of the line
+						if (((byteColor & 0xF0) == 0) && ((xfb + i) != 0))
+							byteColor |= (lineInterlaceStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i - 1] & 0b1111) << 4;
+						// if the second color of the byte is 0, give it the first color of the byte
+						if ((byteColor & 0x0F) == 0)
+							byteColor |= (byteColor >> 4);
+						lineInterlaceStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i] = byteColor;
+					}
+				}
+				// Here deal with the new SHR4 mode PAL256, where each byte is an index into the full palette
+				// of 256 colors. We have to do it here because the palette can be dynamically modified while
+				// racing the beam.
+				if (((scanlineSHR4Modes & A2_VSM_SHR4PAL256) != 0) || (windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 3))
+				{
+					// calculate x value where x is 0-40 in the content area
+					// move to the offset to the interlace area which is the second half of the vram (i.e. slide down by _A2VIDEO_SHR_SCANLINES)
+					auto _x_just_content = _x - CYCLES_SC_HBL;
+					auto pal256ByteStartPtr = vrams_write->vram_pal256 + ((_y + _A2VIDEO_SHR_SCANLINES) * _A2VIDEO_SHR_BYTES_PER_LINE + (4 * _x_just_content))*2;
+
+					for (uint32_t i = 0; i < 4; i++)
+					{
+						// get the byte value, a pointer to the palette color
+						auto byteColor = lineInterlaceStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i];
+						// get the palette color (2 bytes), the palette being all 256 colors in a single palette
+						auto paletteColorStart = memInterlacePtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)byteColor * 2);
+						pal256ByteStartPtr[2*i] = paletteColorStart[0];
+						pal256ByteStartPtr[2*i + 1] = paletteColorStart[1];
+					}
+				}
+			}	// end interlacing
 		}
 			break;
 		default:
@@ -1214,6 +1282,7 @@ GLuint A2VideoManager::Render()
 
 	// Set the magic bytes, currently only in SHR mode
 	windowsbeam[A2VIDEOBEAM_SHR]->specialModesMask |= vrams_read->frameSHR4Modes;
+	windowsbeam[A2VIDEOBEAM_SHR]->interlaceSHRMode = ( overrideSHRInterlace ? !vrams_read->interlaceSHRMode : vrams_read->interlaceSHRMode);
 
 	// ===============================================================================
 	// ============================== MERGED MODE RENDER ==============================
@@ -1248,7 +1317,6 @@ GLuint A2VideoManager::Render()
 		// Use the shader program
 		shader_merge.use();
 		shader_merge.setInt("ticks", SDL_GetTicks());
-		shader_merge.setInt("shrScanlineCount", (int)GetVramHeightSHR());
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
 			return UINT32_MAX;
@@ -1561,13 +1629,15 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			bool isSHR4RGGBActive = (vrams_read->frameSHR4Modes & A2_VSM_SHR4RGGB) != 0;
 			bool isSHR4PAL256Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4PAL256) != 0;
 			bool isSHR4R4G4B4Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4R4G4B4) != 0;
-			
+			bool isSHRInterlaced = (bool)vrams_read->interlaceSHRMode;
+
 			ImGui::BeginDisabled();
 			ImGui::Checkbox("None##SHR4", &isNoneActive);
 			ImGui::Checkbox("SHR4 SHR", &isSHR4SHRActive);
 			ImGui::Checkbox("SHR4 RGGB", &isSHR4RGGBActive);
 			ImGui::Checkbox("SHR4 PAL256", &isSHR4PAL256Active);
 			ImGui::Checkbox("SHR4 R4G4B4", &isSHR4R4G4B4Active);
+			ImGui::Checkbox("SHR Interlacing", &isSHRInterlaced);
 			ImGui::EndDisabled();
 			
 			ImGui::NextColumn();
@@ -1585,6 +1655,13 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			if (windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode != overrideSHR4Mode)
 			{
 				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = overrideSHR4Mode;
+				this->ForceBeamFullScreenRender();
+			}
+			auto _interlaceText = "Force Interlace";
+			if (vrams_read->interlaceSHRMode != 0)
+				_interlaceText = "Force De-interlace";
+			if (ImGui::Checkbox(_interlaceText, &overrideSHRInterlace))
+			{
 				this->ForceBeamFullScreenRender();
 			}
 			ImGui::Columns(1);
