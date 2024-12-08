@@ -254,9 +254,14 @@ float applyFilterToColor(mat4 filterMatrix, mat4 colors) {
 void main()
 {
     uint scanline = uint(vFragPos.y) >> 1;  // Divide by 2
-	uint interlaceline = uint(vFragPos.y) - (scanline << 1);	// 0 if not an interlace line, 1 if an interlace line
-	uint yOffsetLines = interlaceline * interlaceSHRYOffset;	// # of scanlines to shift down the texture to get the interlace data of origin pixel
-	uint yOtherOffsetLines = (1u - interlaceline) * interlaceSHRYOffset;	// scanline shift for odd lines compared to origin pixel
+
+	int interlaceOn = 0;	// interlace flag
+	uint yOffsetLines = 0;	// # of scanlines to shift down the texture to get the interlace data of origin pixel
+	if (interlaceSHRYOffset != 0)
+	{
+		interlaceOn = 1;
+		yOffsetLines = interlaceSHRYOffset;
+	}
 
     // first do the borders
     if ((vFragPos.y < float(vborder*2)) || (vFragPos.y >= float(vborder*2+400)) || 
@@ -367,6 +372,20 @@ void main()
                           X
      
                  */
+
+				// Y Offsets for the 5 RGGB scanlines in case of:
+				// no interlace, interlace when in even lines, interlace when in odd lines
+				int RGGBYOffsets[5] = int[5](-2,-1,0,1,2);
+				if (interlaceOn == 1)
+				{
+					if ((ypos & 1u) == 0u)	// even row
+					{
+						RGGBYOffsets = int[5](-1, interlaceSHRYOffset - 1, 0, interlaceSHRYOffset, 1);
+					} else {	// odd row
+						RGGBYOffsets = int[5](interlaceSHRYOffset - 1, 0, interlaceSHRYOffset, 1, interlaceSHRYOffset + 1);
+					}
+				}
+
                 // Let's use matrices to store the colors. We need to store exactly 13 colors.
                 // So we can use a 4x4 matrix and keep the last values 0.
                 mat4 colors = mat4(0.0);
@@ -396,30 +415,30 @@ void main()
                     uint byteColorsD[4];  // The 4 colors of the byte on the rows below center
 
                     // Top and bottom row, just fetch the center byte and get the single pixel color
-                    fetchByteColorsIdx640(originByte + ivec2(0, yOffsetLines-2), byteColorsU);
-                    fetchByteColorsIdx640(originByte + ivec2(0, yOffsetLines+2), byteColorsD);
+                    fetchByteColorsIdx640(originByte + ivec2(0, RGGBYOffsets[0]), byteColorsU);
+                    fetchByteColorsIdx640(originByte + ivec2(0, RGGBYOffsets[4]), byteColorsD);
                     colors[0][0] = float(byteColorsU[originLocalPixel]);    // 0
                     colors[3][0] = float(byteColorsD[originLocalPixel]);    // 12
 
                     // For rows 2 and 4, we need to fetch 3 consecutive pixels, which could be in different bytes
-                    fetchByteColorsIdx640(originByte + ivec2(0, yOtherOffsetLines-1), byteColorsU);
-                    fetchByteColorsIdx640(originByte + ivec2(0, yOtherOffsetLines+1), byteColorsD);
+                    fetchByteColorsIdx640(originByte + ivec2(0, RGGBYOffsets[1]), byteColorsU);
+                    fetchByteColorsIdx640(originByte + ivec2(0, RGGBYOffsets[3]), byteColorsD);
                     colors[0][2] = float(byteColorsU[originLocalPixel]);      // 2
                     colors[2][2] = float(byteColorsD[originLocalPixel]);     // 10
                     if (originLocalPixel == 0u)  // needs the left bytes
                     {
                         colors[0][3] = float(byteColorsU[originLocalPixel+1u]);  // 3 right side
                         colors[2][3] = float(byteColorsD[originLocalPixel+1u]); // 11
-                        fetchByteColorsIdx640(originByte + ivec2(-1, yOtherOffsetLines-1), byteColorsU);
-                        fetchByteColorsIdx640(originByte + ivec2(-1, yOtherOffsetLines+1), byteColorsD);
+                        fetchByteColorsIdx640(originByte + ivec2(-1, RGGBYOffsets[1]), byteColorsU);
+                        fetchByteColorsIdx640(originByte + ivec2(-1, RGGBYOffsets[3]), byteColorsD);
                         colors[0][1] = float(byteColorsU[3]);  // 1 left side
                         colors[2][1] = float(byteColorsD[3]);  // 9
                     } else if (originLocalPixel == 3u) // needs the right bytes
                     {
                         colors[0][1] = float(byteColorsU[originLocalPixel-1u]);  // 1 left side
                         colors[2][1] = float(byteColorsD[originLocalPixel-1u]);  // 9
-                        fetchByteColorsIdx640(originByte + ivec2(+1, yOtherOffsetLines-1), byteColorsU);
-                        fetchByteColorsIdx640(originByte + ivec2(+1, yOtherOffsetLines+1), byteColorsD);
+                        fetchByteColorsIdx640(originByte + ivec2(+1, RGGBYOffsets[1]), byteColorsU);
+                        fetchByteColorsIdx640(originByte + ivec2(+1, RGGBYOffsets[3]), byteColorsD);
                         colors[0][3] = float(byteColorsU[0]);  // 3 right side
                         colors[2][3] = float(byteColorsD[0]); // 11
                     } else {    // no need for another fetch
@@ -439,10 +458,10 @@ void main()
                         if (originLocalPixel == 1u)
                         {
                             colors[1][1] = float(byteColorsU[0]);  // 5
-                            fetchByteColorsIdx640(originByte + ivec2(-1, yOffsetLines), byteColorsU);
+                            fetchByteColorsIdx640(originByte + ivec2(-1, RGGBYOffsets[2]), byteColorsU);
                             colors[1][0] = float(byteColorsU[3]);  // 4 left side
                         } else {
-                            fetchByteColorsIdx640(originByte + ivec2(-1, yOffsetLines), byteColorsU);
+                            fetchByteColorsIdx640(originByte + ivec2(-1, RGGBYOffsets[2]), byteColorsU);
                             colors[1][0] = float(byteColorsU[2]);  // 4 left side
                             colors[1][1] = float(byteColorsU[3]);  // 5
                         }
@@ -453,18 +472,19 @@ void main()
                         if (originLocalPixel == 2u)
                         {
                             colors[1][3] = float(byteColorsU[3]);  // 7 right side
-                            fetchByteColorsIdx640(originByte + ivec2(+1, yOffsetLines), byteColorsU);
+                            fetchByteColorsIdx640(originByte + ivec2(+1, RGGBYOffsets[2]), byteColorsU);
                             colors[2][0] = float(byteColorsU[0]);  // 8
                         } else {
-                            fetchByteColorsIdx640(originByte + ivec2(+1, yOffsetLines), byteColorsU);
+                            fetchByteColorsIdx640(originByte + ivec2(+1, RGGBYOffsets[2]), byteColorsU);
                             colors[1][3] = float(byteColorsU[0]);  // 7 right side
                             colors[2][0] = float(byteColorsU[1]);  // 8
                         }
                     }
                     // The `colors` mat4 now contains the color values around the origin pixel
 
-                    // Switch to 640x200, from 640x400
-                    ypos = ypos >> 1;   // divide by 2
+                    // Switch to 640x200, from 640x400 if not interlaced
+					if (interlaceSHRYOffset == 0)
+						ypos = ypos >> 1;
                     if (((xpos & 1u) == 0u) && ((ypos & 1u) == 0u))
                     {
                         // top left corner: red location, even row
@@ -501,30 +521,30 @@ void main()
                     uint byteColorsD[2];  // The 2 colors of the byte on the rows below center
 
                     // Top and bottom row, just fetch the center byte and get the single pixel color
-                    fetchByteColorsIdx320(originByte + ivec2(0, yOffsetLines-2), byteColorsU);
-                    fetchByteColorsIdx320(originByte + ivec2(0, yOffsetLines+2), byteColorsD);
+                    fetchByteColorsIdx320(originByte + ivec2(0, RGGBYOffsets[0]), byteColorsU);
+                    fetchByteColorsIdx320(originByte + ivec2(0, RGGBYOffsets[4]), byteColorsD);
                     colors[0][0] = float(byteColorsU[originLocalPixel]);    // 0
                     colors[3][0] = float(byteColorsD[originLocalPixel]);    // 12
 
                     // For rows 2 and 4, we need to fetch 3 consecutive pixels, which could be in different bytes
-                    fetchByteColorsIdx320(originByte + ivec2(0, yOtherOffsetLines-1), byteColorsU);
-                    fetchByteColorsIdx320(originByte + ivec2(0, yOtherOffsetLines+1), byteColorsD);
+                    fetchByteColorsIdx320(originByte + ivec2(0, RGGBYOffsets[1]), byteColorsU);
+                    fetchByteColorsIdx320(originByte + ivec2(0, RGGBYOffsets[3]), byteColorsD);
                     colors[0][2] = float(byteColorsU[originLocalPixel]);      // 2
                     colors[2][2] = float(byteColorsD[originLocalPixel]);     // 10
                     if (originLocalPixel == 0u)  // needs the left bytes
                     {
                         colors[0][3] = float(byteColorsU[1]);  // 3 right side
                         colors[2][3] = float(byteColorsD[1]); // 11
-                        fetchByteColorsIdx320(originByte + ivec2(-1, yOtherOffsetLines-1), byteColorsU);
-                        fetchByteColorsIdx320(originByte + ivec2(-1, yOtherOffsetLines+1), byteColorsD);
+                        fetchByteColorsIdx320(originByte + ivec2(-1, RGGBYOffsets[1]), byteColorsU);
+                        fetchByteColorsIdx320(originByte + ivec2(-1, RGGBYOffsets[3]), byteColorsD);
                         colors[0][1] = float(byteColorsU[1]);  // 1 left side
                         colors[2][1] = float(byteColorsD[1]);  // 9
                     } else // needs the right bytes
                     {
                         colors[0][1] = float(byteColorsU[0]);  // 1 left side
                         colors[2][1] = float(byteColorsD[0]);  // 9
-                        fetchByteColorsIdx320(originByte + ivec2(+1, yOtherOffsetLines-1), byteColorsU);
-                        fetchByteColorsIdx320(originByte + ivec2(+1, yOtherOffsetLines+1), byteColorsD);
+                        fetchByteColorsIdx320(originByte + ivec2(+1, RGGBYOffsets[1]), byteColorsU);
+                        fetchByteColorsIdx320(originByte + ivec2(+1, RGGBYOffsets[3]), byteColorsD);
                         colors[0][3] = float(byteColorsU[0]);  // 3 right side
                         colors[2][3] = float(byteColorsD[0]); // 11
                     }
@@ -535,26 +555,27 @@ void main()
                     if (originLocalPixel == 0u)  // needs the full left byte and half of the right byte
                     {
                         colors[1][3] = float(byteColorsU[1]);  // 7 right side
-                        fetchByteColorsIdx320(originByte + ivec2(+1, yOffsetLines), byteColorsU);
+                        fetchByteColorsIdx320(originByte + ivec2(+1, RGGBYOffsets[2]), byteColorsU);
                         colors[2][0] = float(byteColorsU[0]);  // 8
-                        fetchByteColorsIdx320(originByte + ivec2(-1, yOffsetLines), byteColorsU);
+                        fetchByteColorsIdx320(originByte + ivec2(-1, RGGBYOffsets[2]), byteColorsU);
                         colors[1][0] = float(byteColorsU[0]);  // 4 left side
                         colors[1][1] = float(byteColorsU[1]);  // 5
                     } else // needs the the full right byte and half of the left byte
                     {
                         colors[1][1] = float(byteColorsU[0]);  // 5 left side
-                        fetchByteColorsIdx320(originByte + ivec2(-1, yOffsetLines), byteColorsU);
+                        fetchByteColorsIdx320(originByte + ivec2(-1, RGGBYOffsets[2]), byteColorsU);
                         colors[1][0] = float(byteColorsU[1]);  // 4
-                        fetchByteColorsIdx320(originByte + ivec2(+1, yOffsetLines), byteColorsU);
+                        fetchByteColorsIdx320(originByte + ivec2(+1, RGGBYOffsets[2]), byteColorsU);
                         colors[1][3] = float(byteColorsU[0]);  // 7 right side
                         colors[2][0] = float(byteColorsU[1]);  // 8
                     }
     
                     // The `colors` mat4 now contains the color values around the origin pixel
 
-                    // Switch to 320x200, from 640x400
+                    // Switch to 320x200 or 320x400 (interlaced), from 640x400
                     xpos = xpos >> 1;
-                    ypos = ypos >> 1;
+					if (interlaceSHRYOffset == 0)
+						ypos = ypos >> 1;
                     if (((xpos & 1u) == 0u) && ((ypos & 1u) == 0u))
                     {
                         // top left corner: red location, even row
@@ -599,6 +620,7 @@ void main()
 				// Both pixels use the same color. PAL256TEX is a R16UI
 				// The reason the CPU pregenerates the colors is that they depend on the state of
 				// all the palettes at the time of the beam cycle.
+				uint interlaceline = uint(vFragPos.y) - (scanline << 1);	// 0 if not an interlace line, 1 if an interlace line
 				uint yPal256OffsetLines = interlaceline * interlacePal256YOffset;	// # of scanlines to shift down the texture if in an odd interlace line
 				uint xpos_noborder = xpos - uint(hborder*16);
 				uint ypos_noborder = ypos - uint(vborder*2);
