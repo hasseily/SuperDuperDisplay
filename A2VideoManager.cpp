@@ -1546,7 +1546,11 @@ void A2VideoManager::DisplayImGuiLoadFileWindow(bool* p_open)
 			ImGui::Checkbox("Aux Bank", &bImguiMemLoadAuxBank);
 			ImGui::SameLine(); ImGui::Text("   "); ImGui::SameLine();
 			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank, sImguiLoadPath))
+			{
+				// Force a double render because the top border is part of the previous beam scan
 				this->ForceBeamFullScreenRender();
+				this->ForceBeamFullScreenRender();
+			}
 		}
 		ImGui::End();
 	}
