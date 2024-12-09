@@ -488,7 +488,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 
 	auto memMgr = MemoryManager::GetInstance();
 	uint32_t mode_scanlines = (memMgr->IsSoftSwitch(A2SS_SHR) ? 200 : 192);
-	auto vramInterlaceOffset = GetVramSizeSHR() / 2;	// Offset to 2nd half of the vram
 
 	// The Apple 2gs drawing is shifted 6 scanlines down
 	// Let's realign it to match the 2e
@@ -602,6 +601,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		}
 	}
 
+	auto vramInterlaceOffset = GetVramSizeSHR() / _INTERLACE_MULTIPLIER;	// Offset to 2nd half of the vram
+
 	// Always at the start of the row, set the SHR SCB to 0x10
 	// Because we check bit 4 of the SCB to know if that line is drawn as SHR
 	// The 2gs will always set bit 4 to 0 when sending it over
@@ -698,7 +699,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		if ((_TR_ANY_X == 0) && (_y < mode_scanlines))
 		{
 			lineStartPtr[0] = memPtr[_A2VIDEO_SHR_SCB_START + _y];
-			vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = lineStartPtr[0];
 			// Get the palette
 			memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
 				   memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
@@ -716,15 +716,16 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 					scanlineSHR4Modes |= (1 << ((lineStartPtr[2 + 2*i] >> 4) + 4));	// second byte of each palette color (skip SCB byte 1)
 				}
 				vrams_write->frameSHR4Modes |= scanlineSHR4Modes;	// Add to the frame's SHR4 modes the new modes found on this line
+				vrams_write->interlaceSHRMode = (memPtr + _A2VIDEO_SHR_MAGIC_BYTES - 1)[0];
+			} else {
+				vrams_write->interlaceSHRMode = 0;	// Interlace mode can only be enabled in SHR4 mode
 			}
 
 			// Do the SCB and palettes for interlacing if requested
-			vrams_write->interlaceSHRMode = (memPtr + _A2VIDEO_SHR_MAGIC_BYTES - 1)[0];
 			bShouldInterlace = ( overrideSHRInterlace ? !vrams_write->interlaceSHRMode : vrams_write->interlaceSHRMode);
 			if (bShouldInterlace)
 			{
 				lineInterlaceStartPtr[0] = memInterlacePtr[_A2VIDEO_SHR_SCB_START + _y];
-				vrams_write->vram_shr[vramInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y] = lineInterlaceStartPtr[0];
 				// Get the palette
 				memcpy(lineInterlaceStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
 					   memInterlacePtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineInterlaceStartPtr[0] & 0xFu) * 32),

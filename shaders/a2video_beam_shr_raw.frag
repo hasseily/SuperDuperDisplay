@@ -72,6 +72,7 @@ uniform usampler2D PAL256TEX;	// Video RAM texture of all colors when in PAL256 
 uniform int ticks;              // ms since start
 uniform int specialModesMask;	// type of SHR format
 uniform int overrideSHR4Mode;	// SHR4 mode override
+uniform int interlaceSHRMode;	// 0: no interlace (200 scanlines), 1: interlace (400 scanlines) using MAIN mem for odd lines
 uniform int interlaceSHRYOffset;	// Y offset to get interlaced data from in VRAMTEX. 0 mean no interlace
 uniform int interlacePal256YOffset;	// Y offset to get interlaced data from in PAL256TEX. 0 means no interlace
 uniform int monitorColorType;
@@ -214,11 +215,11 @@ uint extractColorIdx320(uint byteVal, int localPixel) {
 }
 
 // Function to fetch 4 or 2 color indexes from a byte
-// In the VRAM there bytes are for each line: 1 SCB, 32 palette, 4*hborder, 192 SHR, 4*hborder
+// In the VRAM there bytes are for each line: 1 SCB, 32 palette, 4*hborder, 160 SHR, 4*hborder
 // And there are vborder lines above and below
 void fetchByteColorsIdx640(ivec2 byteCoord, out uint colors[4]) {
     bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)),
-							   lessThanEqual(byteCoord, ivec2(33+192+hborder*4, 199+vborder)));
+							   lessThanEqual(byteCoord, ivec2(33+159+hborder*4, 199*(interlaceSHRMode+1)+vborder)));
     if (!all(withinBounds)) {
         colors = uint[4](0u, 0u, 0u, 0u);
         return;
@@ -231,7 +232,7 @@ void fetchByteColorsIdx640(ivec2 byteCoord, out uint colors[4]) {
 
 void fetchByteColorsIdx320(ivec2 byteCoord, out uint colors[2]) {
 	bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)),
-							   lessThanEqual(byteCoord, ivec2(33+192+hborder*4, 199+vborder)));
+							   lessThanEqual(byteCoord, ivec2(33+159+hborder*4, 199*(interlaceSHRMode+1)+vborder)));
     if (!all(withinBounds)) {
         colors = uint[2](0u, 0u);
         return;
@@ -253,21 +254,16 @@ float applyFilterToColor(mat4 filterMatrix, mat4 colors) {
 
 void main()
 {
-    uint scanline = uint(vFragPos.y) >> 1;  // Divide by 2
-
-	int interlaceOn = 0;	// interlace flag
-	uint yOffsetLines = 0;	// # of scanlines to shift down the texture to get the interlace data of origin pixel
-	if (interlaceSHRYOffset != 0)
-	{
-		interlaceOn = 1;
-		yOffsetLines = interlaceSHRYOffset;
-	}
+	uint xpos = uint(vFragPos.x);
+	uint ypos = uint(vFragPos.y);
+    uint scanline = ypos >> 1;  // Divide by 2, there are 200 scanlines
+	uint yOffsetLines = uint(interlaceSHRYOffset) * (ypos & 1u);	// 0 for even lines, interlaceSHRYOffset for odd lines
 
     // first do the borders
-    if ((vFragPos.y < float(vborder*2)) || (vFragPos.y >= float(vborder*2+400)) || 
-        (vFragPos.x < float(hborder*16)) || (vFragPos.x >= float(640+hborder*16)))
+    if ((ypos < uint(vborder*2)) || (ypos >= uint(vborder*2+400)) ||
+        (xpos < uint(hborder*16)) || (xpos >= uint(640+hborder*16)))
     {
-        fragColor = bordercolors[texelFetch(VRAMTEX, ivec2(33u + (uint(vFragPos.x) >> 2), scanline + yOffsetLines), 0).r & 0x0Fu];
+        fragColor = bordercolors[texelFetch(VRAMTEX, ivec2(33u + (xpos >> 2), scanline + yOffsetLines), 0).r & 0x0Fu];
         if (monitorColorType > 0)
             fragColor = GetMonochromeValue(fragColor, monitorcolors[monitorColorType]);
         return;
@@ -285,8 +281,6 @@ void main()
         return;
     }
 
-    uint xpos = uint(vFragPos.x);
-    uint ypos = uint(vFragPos.y);
     uint fragOffset = 3u - (xpos & 3u);	// reversed so that palette calc is easier
 	// (&3u is equivalent to %4u)
       
@@ -375,8 +369,9 @@ void main()
 
 				// Y Offsets for the 5 RGGB scanlines in case of:
 				// no interlace, interlace when in even lines, interlace when in odd lines
+				// Offset 2 is the center line where the frag pixel is
 				int RGGBYOffsets[5] = int[5](-2,-1,0,1,2);
-				if (interlaceOn == 1)
+				if (interlaceSHRMode == 1)
 				{
 					if ((ypos & 1u) == 0u)	// even row
 					{
@@ -483,7 +478,7 @@ void main()
                     // The `colors` mat4 now contains the color values around the origin pixel
 
                     // Switch to 640x200, from 640x400 if not interlaced
-					if (interlaceSHRYOffset == 0)
+					if (interlaceSHRMode == 0)
 						ypos = ypos >> 1;
                     if (((xpos & 1u) == 0u) && ((ypos & 1u) == 0u))
                     {
@@ -574,7 +569,7 @@ void main()
 
                     // Switch to 320x200 or 320x400 (interlaced), from 640x400
                     xpos = xpos >> 1;
-					if (interlaceSHRYOffset == 0)
+					if (interlaceSHRMode == 0)
 						ypos = ypos >> 1;
                     if (((xpos & 1u) == 0u) && ((ypos & 1u) == 0u))
                     {

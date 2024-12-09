@@ -126,7 +126,7 @@ public:
 		uint8_t* vram_forced_hgr2 = nullptr;
 		GLfloat* offset_buffer = nullptr;
 		int frameSHR4Modes = 0;					// All SHR4 modes in the frame
-		uint8_t interlaceSHRMode = 0;			// 0: standard SHR, 1: interlaced SHR with E0 (main) $2000-9FFF used for odd lines
+		int interlaceSHRMode = 0;			// 0: standard SHR, 1: interlaced SHR with E0 (main) $2000-9FFF used for odd lines
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -216,7 +216,7 @@ public:
 	inline uint32_t GetVramHeightLegacy() { return  (192 + (2 * borders_h_scanlines)); };
 	inline uint32_t GetVramSizeLegacy() { return (GetVramWidthLegacy() * GetVramHeightLegacy() * 4); };	// in bytes
 
-	inline uint32_t GetVramWidthSHR() { return (_COLORBYTESOFFSET + (2 * borders_w_cycles * 4) + 160); };	// in 4 bytes!
+	inline uint32_t GetVramWidthSHR() { return (_COLORBYTESOFFSET + (2 * borders_w_cycles * 4) + 160); };	// in bytes
 	inline uint32_t GetVramHeightSHR() { return  (200 + (2 * borders_h_scanlines)); };
 	inline uint32_t GetVramSizeSHR() { return (GetVramWidthSHR() * GetVramHeightSHR() * _INTERLACE_MULTIPLIER); };	// in bytes
 
