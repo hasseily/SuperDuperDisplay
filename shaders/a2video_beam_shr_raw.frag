@@ -218,12 +218,12 @@ uint extractColorIdx320(uint byteVal, int localPixel) {
 // In the VRAM there bytes are for each line: 1 SCB, 32 palette, 4*hborder, 160 SHR, 4*hborder
 // And there are vborder lines above and below
 void fetchByteColorsIdx640(ivec2 byteCoord, out uint colors[4]) {
-    bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)),
-							   lessThanEqual(byteCoord, ivec2(33+159+hborder*4, 199*(interlaceSHRMode+1)+vborder)));
-    if (!all(withinBounds)) {
-        colors = uint[4](0u, 0u, 0u, 0u);
-        return;
-    }
+//    bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)),
+//							   lessThanEqual(byteCoord, ivec2(33+159+hborder*4, 199*(interlaceSHRMode+1)+vborder)));
+//    if (!all(withinBounds)) {
+//        colors = uint[4](0u, 0u, 0u, 0u);
+//        return;
+//    }
     uint byteVal = texelFetch(VRAMTEX, byteCoord, 0).r;
     for (int i = 0; i < 4; i++) {
         colors[i] = extractColorIdx640(byteVal, i);
@@ -231,12 +231,12 @@ void fetchByteColorsIdx640(ivec2 byteCoord, out uint colors[4]) {
 }
 
 void fetchByteColorsIdx320(ivec2 byteCoord, out uint colors[2]) {
-	bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)),
-							   lessThanEqual(byteCoord, ivec2(33+159+hborder*4, 199*(interlaceSHRMode+1)+vborder)));
-    if (!all(withinBounds)) {
-        colors = uint[2](0u, 0u);
-        return;
-    }
+//    bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)),
+//							   lessThanEqual(byteCoord, ivec2(33+159+hborder*4, 199*(interlaceSHRMode+1)+vborder)));
+//    if (!all(withinBounds)) {
+//        colors = uint[4](0u, 0u, 0u, 0u);
+//        return;
+//    }
     uint byteVal = texelFetch(VRAMTEX, byteCoord, 0).r;
     for (int i = 0; i < 2; i++) {
         colors[i] = extractColorIdx320(byteVal, i);
@@ -287,11 +287,12 @@ void main()
     // Also we're running at 640x400 so each byte is 4x2 pixels unless it's interlaced in which case it's 4x1 pixels
     // And each color is 2x2 pixels (or 2x1 pixels interlaced) because we have 2 colors per byte
     ivec2 originByte = ivec2(33u + (xpos >> 2), (ypos >> 1));
+    ivec2 originOffsetByte = ivec2(originByte.x, originByte.y + yOffsetLines);  // corrected byte using interlace offsets
 
     // Grab the scanline color byte value
     // The scanline color byte value gives the color for either 4 dots in 640 mode,
     // or 2 doubled dots in 320 mode
-    uint byteVal = texelFetch(VRAMTEX,ivec2(originByte.x, originByte.y + yOffsetLines),0).r;
+    uint byteVal = texelFetch(VRAMTEX,originOffsetByte,0).r;
 
     uint colorIdx = 0u;
     
@@ -305,7 +306,7 @@ void main()
     }
 
     // Get the second palette byte, we need it to determine if it's standard SHR or not
-    paletteColorB2 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u + 1u, originByte.y + yOffsetLines), 0).r;
+    paletteColorB2 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u + 1u, originOffsetByte.y), 0).r;
 	if (overrideSHR4Mode > 0)
 	{
 		paletteColorB2 = (paletteColorB2 & 0xFu) | (uint(overrideSHR4Mode - 1) << 4);
@@ -317,7 +318,7 @@ void main()
             case 0u:    // Standard SHR
             {
                 // get the missing first palette byte and fetch the color
-                paletteColorB1 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u, originByte.y + yOffsetLines), 0).r;
+                paletteColorB1 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u, originOffsetByte.y), 0).r;
                 fragColor = ConvertIIgs2RGB((paletteColorB2 << 8) + paletteColorB1);
                 break;
             }
@@ -444,7 +445,7 @@ void main()
                     }
 
                     // Finally, the center row. We need to fetch 5 consecutive pixels, which could be in different bytes
-                    fetchByteColorsIdx640(originByte, byteColorsU);
+                    fetchByteColorsIdx640(originOffsetByte, byteColorsU);
                     colors[1][2] = float(byteColorsU[originLocalPixel]);
                     if (originLocalPixel < 2u)  // needs the left byte
                     {
@@ -545,7 +546,7 @@ void main()
                     }
 
                     // Finally, the center row. We need to fetch 5 consecutive pixels, which will be in different bytes
-                    fetchByteColorsIdx320(originByte, byteColorsU);
+                    fetchByteColorsIdx320(originOffsetByte, byteColorsU);
                     colors[1][2] = float(byteColorsU[originLocalPixel]);    // 6 center pixel
                     if (originLocalPixel == 0u)  // needs the full left byte and half of the right byte
                     {
@@ -564,7 +565,7 @@ void main()
                         colors[1][3] = float(byteColorsU[0]);  // 7 right side
                         colors[2][0] = float(byteColorsU[1]);  // 8
                     }
-    
+
                     // The `colors` mat4 now contains the color values around the origin pixel
 
                     // Switch to 320x200 or 320x400 (interlaced), from 640x400
@@ -640,27 +641,27 @@ void main()
 				if (tripletPos < 2u)	// AB
 				{
 					// get the next byte and take only the high nibble (C)
-					ivec2 otherByte = originByte + ivec2(1, 0);
-					uint otherByteVal = texelFetch(VRAMTEX,ivec2(otherByte.x, otherByte.y + yOffsetLines),0).r; 	// CD
+					ivec2 otherOffsetByte = originOffsetByte + ivec2(1, 0);
+					uint otherByteVal = texelFetch(VRAMTEX,otherOffsetByte,0).r; 	// CD
 
 					fragColor = ConvertIIgs2RGB3Col(byteVal >> 4, byteVal & 0xFu, otherByteVal >> 4);	// A B C
 				} else if (tripletPos == 2u)	// C
 				{
 					// get the previous byte
-					ivec2 otherByte = originByte + ivec2(-1, 0);
-					uint otherByteVal = texelFetch(VRAMTEX,ivec2(otherByte.x, otherByte.y + yOffsetLines),0).r;	// AB
+					ivec2 otherOffsetByte = originOffsetByte + ivec2(-1, 0);
+					uint otherByteVal = texelFetch(VRAMTEX,otherOffsetByte,0).r;	// AB
 					fragColor = ConvertIIgs2RGB3Col(otherByteVal >> 4, otherByteVal & 0xFu, byteVal >> 4);	// A B C
 				} else if (tripletPos == 3u)	// D
 				{
 					// get the next byte
-					ivec2 otherByte = originByte + ivec2(1, 0);
-					uint otherByteVal = texelFetch(VRAMTEX,ivec2(otherByte.x, otherByte.y + yOffsetLines),0).r;	// EF
+					ivec2 otherOffsetByte = originOffsetByte + ivec2(1, 0);
+					uint otherByteVal = texelFetch(VRAMTEX,otherOffsetByte,0).r;	// EF
 					fragColor = ConvertIIgs2RGB3Col(byteVal & 0xFu, otherByteVal >> 4, otherByteVal & 0xFu);	// D E F
 				} else	// EF
 				{
 					// get the previous byte and take only the low nibble (D)
-					ivec2 otherByte = originByte + ivec2(-1, 0);
-					uint otherByteVal = texelFetch(VRAMTEX,ivec2(otherByte.x, otherByte.y + yOffsetLines),0).r;	// CD
+					ivec2 otherOffsetByte = originOffsetByte + ivec2(-1, 0);
+					uint otherByteVal = texelFetch(VRAMTEX,otherOffsetByte,0).r;	// CD
 					fragColor = ConvertIIgs2RGB3Col(otherByteVal & 0xFu, byteVal >> 4, byteVal & 0xFu);	// D E F
 				}
                 break;

@@ -236,11 +236,11 @@ void A2VideoManager::Initialize()
 {
 	// Here do not reinitialize bBeamIsActive. It could still be active from earlier.
 	// The initialization process can be triggered from a ctrl-reset on the Apple 2.
+	bIsReady = false;
 
 	ResetGLData();
 	
 	auto oglHelper = OpenGLHelper::GetInstance();
-	bIsReady = false;
 	for (int i = 0; i < 2; i++)
 	{
 		vrams_array[i].id = i;
@@ -248,13 +248,25 @@ void A2VideoManager::Initialize()
 		vrams_array[i].bWasRendered = true;		// otherwise it won't render the first frame
 		vrams_array[i].mode = A2Mode_e::NONE;
 		if (vrams_array[i].vram_legacy != nullptr)
+		{
 			delete[] vrams_array[i].vram_legacy;
+			vrams_array[i].vram_legacy = nullptr;
+		}
 		if (vrams_array[i].vram_shr != nullptr)
+		{
 			delete[] vrams_array[i].vram_shr;
+			vrams_array[i].vram_shr = nullptr;
+		}
 		if (vrams_array[i].vram_pal256 != nullptr)
-				delete[] vrams_array[i].vram_pal256;
+		{
+			delete[] vrams_array[i].vram_pal256;
+			vrams_array[i].vram_pal256 = nullptr;
+		}
 		if (vrams_array[i].offset_buffer != nullptr)
+		{
 			delete[] vrams_array[i].offset_buffer;
+			vrams_array[i].offset_buffer = nullptr;
+		}
 		vrams_array[i].vram_legacy = new uint8_t[GetVramSizeLegacy()];
 		vrams_array[i].vram_shr = new uint8_t[GetVramSizeSHR()];
 		vrams_array[i].vram_pal256 = new uint8_t[_A2VIDEO_SHR_BYTES_PER_LINE*2*_A2VIDEO_SHR_SCANLINES*_INTERLACE_MULTIPLIER];
@@ -265,13 +277,25 @@ void A2VideoManager::Initialize()
 		
 		// the debugging special vrams
 		if (vrams_array[i].vram_forced_text1 != nullptr)
+		{
 			delete[] vrams_array[i].vram_forced_text1;
+			vrams_array[i].vram_forced_text1 = nullptr;
+		}
 		if (vrams_array[i].vram_forced_text2 != nullptr)
+		{
 			delete[] vrams_array[i].vram_forced_text2;
+			vrams_array[i].vram_forced_text2 = nullptr;
+		}
 		if (vrams_array[i].vram_forced_hgr1 != nullptr)
+		{
 			delete[] vrams_array[i].vram_forced_hgr1;
+			vrams_array[i].vram_forced_hgr1 = nullptr;
+		}
 		if (vrams_array[i].vram_forced_hgr2 != nullptr)
+		{
 			delete[] vrams_array[i].vram_forced_hgr2;
+			vrams_array[i].vram_forced_hgr2 = nullptr;
+		}
 		vrams_array[i].vram_forced_text1 = new uint8_t[40 * 192 * 4];
 		vrams_array[i].vram_forced_text2 = new uint8_t[40 * 192 * 4];
 		vrams_array[i].vram_forced_hgr1 = new uint8_t[40 * 192 * 4];
@@ -405,6 +429,8 @@ void A2VideoManager::ToggleA2Video(bool value)
 
 void A2VideoManager::SetBordersWithReinit(uint8_t width_cycles, uint8_t height_8s)
 {
+	while (bBeamIsCalculating) {};
+	bIsReady = false;
 	if (width_cycles > _BORDER_WIDTH_MAX_CYCLES)
 		width_cycles = _BORDER_WIDTH_MAX_CYCLES;
 	if (height_8s > _BORDER_WIDTH_MAX_CYCLES)
@@ -485,6 +511,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 
 	if (!bIsReady)
 		return;
+
+	bBeamIsCalculating = true;
 
 	auto memMgr = MemoryManager::GetInstance();
 	uint32_t mode_scanlines = (memMgr->IsSoftSwitch(A2SS_SHR) ? 200 : 192);
@@ -583,7 +611,10 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		if (beamState == BeamState_e::CONTENT)
 		{
 			if (_x < CYCLES_SC_HBL || _y >= mode_scanlines)		// bounds check if mode changes midway
+			{
+				bBeamIsCalculating = false;
 				return;
+			}
 			uint32_t _toff = _OVERLAY_CHAR_WIDTH * (_y/8) + (_x - CYCLES_SC_HBL);
 			// Override when the byte is an overlay
 			if (overlay_text[_toff] > 0)
@@ -596,6 +627,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 					byteStartPtr[2] = 0b1000;
 					byteStartPtr[3] = overlay_colors[_toff];
 				}
+				bBeamIsCalculating = false;
 				return;
 			}
 		}
@@ -609,55 +641,59 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	// Also check if the mode has switched in the middle of the frame
 	if (_x == 0)
 	{
-		// Set both regular and interlaced areas SCBs
-		vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
-		vrams_write->vram_shr[vramInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
-
-		if ((vrams_write->mode == A2Mode_e::MERGED) && _TR_ANY_Y < (_A2VIDEO_SHR_SCANLINES + 2*borders_h_scanlines))
+		if (_TR_ANY_Y < (_A2VIDEO_SHR_SCANLINES + 2 * borders_h_scanlines))
 		{
-			// Merge mode calculations
-			// determine the mode switch and update merge_last_change_mode and merge_last_change_y
-			auto _curr_mode = (memMgr->IsSoftSwitch(A2SS_SHR) ? A2Mode_e::SHR : A2Mode_e::LEGACY);
-			if ((merge_last_change_mode == A2Mode_e::LEGACY) && (_curr_mode == A2Mode_e::SHR))
-			{
-				// 14 -> 16MHz
-				merge_last_change_y = _TR_ANY_Y;
-				// std::cerr << "merge to 16 " << merge_last_change_y << std::endl;
-			}
-			else if ((merge_last_change_mode == A2Mode_e::SHR) && (_curr_mode == A2Mode_e::LEGACY))
-			{
-				// 16 -> 14MHz
-				merge_last_change_y = _TR_ANY_Y;
-				// std::cerr << "merge to 14 " << merge_last_change_y << std::endl;
-			}
-			merge_last_change_mode = _curr_mode;
+			// Set both regular and interlaced areas SCBs
+			vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
+			vrams_write->vram_shr[vramInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
 
-			// Finally set the offset
-			// NOTE: We add 10.f to the offset so that the shader can know which mode to apply
-			//		 If it's negative, it's SHR. Positive, legacy.
-			if (bNoMergedModeWobble)
+			if ((vrams_write->mode == A2Mode_e::MERGED))
 			{
-				vrams_write->offset_buffer[_TR_ANY_Y] = (_curr_mode == A2Mode_e::LEGACY ? -10.f : 10.f);
-			}
-			else
-			{
-				if (_TR_ANY_Y < merge_last_change_y					// the switch happened last frame
-					|| (_TR_ANY_Y - merge_last_change_y) > 15)		// the switch has been recovered
+				// Merge mode calculations
+				// determine the mode switch and update merge_last_change_mode and merge_last_change_y
+				auto _curr_mode = (memMgr->IsSoftSwitch(A2SS_SHR) ? A2Mode_e::SHR : A2Mode_e::LEGACY);
+				if ((merge_last_change_mode == A2Mode_e::LEGACY) && (_curr_mode == A2Mode_e::SHR))
+				{
+					// 14 -> 16MHz
+					merge_last_change_y = _TR_ANY_Y;
+					// std::cerr << "merge to 16 " << merge_last_change_y << std::endl;
+				}
+				else if ((merge_last_change_mode == A2Mode_e::SHR) && (_curr_mode == A2Mode_e::LEGACY))
+				{
+					// 16 -> 14MHz
+					merge_last_change_y = _TR_ANY_Y;
+					// std::cerr << "merge to 14 " << merge_last_change_y << std::endl;
+				}
+				merge_last_change_mode = _curr_mode;
+
+				// Finally set the offset
+				// NOTE: We add 10.f to the offset so that the shader can know which mode to apply
+				//		 If it's negative, it's SHR. Positive, legacy.
+				if (bNoMergedModeWobble)
 				{
 					vrams_write->offset_buffer[_TR_ANY_Y] = (_curr_mode == A2Mode_e::LEGACY ? -10.f : 10.f);
 				}
 				else
 				{
-					// If the change is to 28 MHz, shift negative (left). Otherwise, shift positive (right)
-					float pixelShift = (GLfloat)glm::pow(1.1205, merge_last_change_y - _TR_ANY_Y + 28) - 4.0;
-					if (_curr_mode == A2Mode_e::LEGACY)
-						vrams_write->offset_buffer[_TR_ANY_Y] = -(10.f + pixelShift / 560.f);
+					if (_TR_ANY_Y < merge_last_change_y					// the switch happened last frame
+						|| (_TR_ANY_Y - merge_last_change_y) > 15)		// the switch has been recovered
+					{
+						vrams_write->offset_buffer[_TR_ANY_Y] = (_curr_mode == A2Mode_e::LEGACY ? -10.f : 10.f);
+					}
 					else
-						vrams_write->offset_buffer[_TR_ANY_Y] = 10.f + pixelShift / 640.f;
+					{
+						// If the change is to 28 MHz, shift negative (left). Otherwise, shift positive (right)
+						float pixelShift = (GLfloat)glm::pow(1.1205, merge_last_change_y - _TR_ANY_Y + 28) - 4.0;
+						if (_curr_mode == A2Mode_e::LEGACY)
+							vrams_write->offset_buffer[_TR_ANY_Y] = -(10.f + pixelShift / 560.f);
+						else
+							vrams_write->offset_buffer[_TR_ANY_Y] = 10.f + pixelShift / 640.f;
+					}
+					// std::cerr << "Offset: " << vrams_write->offset_buffer[_TR_ANY_Y] << " y: " << _TR_ANY_Y << std::endl;
 				}
-				// std::cerr << "Offset: " << vrams_write->offset_buffer[_TR_ANY_Y] << " y: " << _TR_ANY_Y << std::endl;
 			}
 		}
+
 	}
 
 	// Now we get rid of all the non-border BLANK areas to avoid an overflow on the vertical border areas.
@@ -666,9 +702,15 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	// complicating the state machine.
 	
 	if (_x >= borders_w_cycles && _x < (CYCLES_SC_HBL - borders_w_cycles))
+	{
+		bBeamIsCalculating = false;
 		return;
+	}
 	if (_y >= (mode_scanlines + borders_h_scanlines) && _y < (region_scanlines - borders_h_scanlines))
+	{
+		bBeamIsCalculating = false;
 		return;
+	}
 	
 	// Now generate the VRAMs themselves
 
@@ -850,6 +892,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		default:
 			break;
 		}
+		bBeamIsCalculating = false;
 		return;
 	}	// if (memMgr->IsSoftSwitch(A2SS_SHR))
 
@@ -1022,6 +1065,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	default:
 		break;
 	}
+	bBeamIsCalculating = false;
 }
 
 // When we learn we're in merged mode, we need to update all previous scanlines
