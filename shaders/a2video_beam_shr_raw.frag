@@ -287,7 +287,7 @@ void main()
     // Also we're running at 640x400 so each byte is 4x2 pixels unless it's interlaced in which case it's 4x1 pixels
     // And each color is 2x2 pixels (or 2x1 pixels interlaced) because we have 2 colors per byte
     ivec2 originByte = ivec2(33u + (xpos >> 2), (ypos >> 1));
-    ivec2 originOffsetByte = ivec2(originByte.x, originByte.y + yOffsetLines);  // corrected byte using interlace offsets
+    ivec2 originOffsetByte = ivec2(originByte.x, originByte.y + int(yOffsetLines));  // corrected byte using interlace offsets
 
     // Grab the scanline color byte value
     // The scanline color byte value gives the color for either 4 dots in 640 mode,
@@ -617,7 +617,7 @@ void main()
 				// The reason the CPU pregenerates the colors is that they depend on the state of
 				// all the palettes at the time of the beam cycle.
 				uint interlaceline = uint(vFragPos.y) - (scanline << 1);	// 0 if not an interlace line, 1 if an interlace line
-				uint yPal256OffsetLines = interlaceline * interlacePal256YOffset;	// # of scanlines to shift down the texture if in an odd interlace line
+				uint yPal256OffsetLines = interlaceline * uint(interlacePal256YOffset);	// # of scanlines to shift down the texture if in an odd interlace line
 				uint xpos_noborder = xpos - uint(hborder*16);
 				uint ypos_noborder = ypos - uint(vborder*2);
 				uint pal256Word = texelFetch(PAL256TEX,ivec2(xpos_noborder >> 2, (ypos_noborder >> 1) + yPal256OffsetLines),0).r;
@@ -671,7 +671,7 @@ void main()
     }	// end SHR4 is active
     else {  // ((specialModesMask & 0xF0) == 0)	// Standard SHR
         // get the missing first palette byte and fetch the color
-        paletteColorB1 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u, originByte.y + yOffsetLines), 0).r;
+        paletteColorB1 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u, originByte.y + int(yOffsetLines)), 0).r;
         fragColor = ConvertIIgs2RGB((paletteColorB2 << 8) + paletteColorB1);
 		// same as: (TODO: check speed difference)
 		// fragColor = ConvertIIgs2RGB3Col(paletteColorB2 & 0xFu, paletteColorB1 >> 4, paletteColorB1 & 0xFu);
