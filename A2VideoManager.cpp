@@ -647,7 +647,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
 			vrams_write->vram_shr[vramInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
 
-			if ((vrams_write->mode == A2Mode_e::MERGED))
+			if (vrams_write->mode == A2Mode_e::MERGED)
 			{
 				// Merge mode calculations
 				// determine the mode switch and update merge_last_change_mode and merge_last_change_y
