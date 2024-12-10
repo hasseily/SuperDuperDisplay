@@ -141,6 +141,7 @@ void Main_DisplaySplashScreen()
 	}
 	// Run a refresh to show the first screen
 	A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 }
 
 void Main_DrawFPSOverlay()
