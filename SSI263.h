@@ -125,8 +125,8 @@ private:
 	void GeneratePhonemeSamples();
 
 	// DC Filter
-	float dcadj_sum;
-	uint32_t dcadj_pos;
+	float dcadj_sum = 0.0;
+	uint32_t dcadj_pos = 0;
 	float dcadj_buf[SSI263_DCADJ_BUFLEN];
 	float DCAdjust(float sample);
 };
