@@ -1,4 +1,3 @@
-//? #version 300 es // for GLSL extension in Visual Studio
 #ifdef GL_ES
 #define COMPAT_PRECISION mediump
 precision mediump float;
@@ -224,7 +223,7 @@ void fetchByteColorsIdx640(ivec2 byteCoord, out uint colors[4]) {
     bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,0)),
 							   lessThan(byteCoord, ivec2(33+160+hborder*4, 1000)));
     if (!all(withinBounds)) {
-        colors = uint[4](0u);
+        colors = uint[4](0u, 0u, 0u, 0u);
         return;
     }
     uint byteVal = texelFetch(VRAMTEX, byteCoord, 0).r;
@@ -237,7 +236,7 @@ void fetchByteColorsIdx320(ivec2 byteCoord, out uint colors[2]) {
     bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,0)),
 							   lessThan(byteCoord, ivec2(33+160+hborder*4, 1000)));
     if (!all(withinBounds)) {
-        colors = uint[2](0u);
+        colors = uint[2](0u, 0u);
         return;
     }
     uint byteVal = texelFetch(VRAMTEX, byteCoord, 0).r;
