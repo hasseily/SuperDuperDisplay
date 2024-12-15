@@ -228,9 +228,10 @@ public:
 	inline uint32_t GetVramSizeSHR() { return (GetVramWidthSHR() * GetVramHeightSHR() * _INTERLACE_MULTIPLIER); };	// in bytes
 
 	// Changing borders reinitializes everything
-	// Pass in a cycle for width (7 or 8 (SHR) lines per increment)
+	// Cycle for width (7 or 8 (SHR) lines per increment)
 	// And a height (8 lines per increment)
-	void SetBordersWithReinit(uint8_t width_cycles, uint8_t height_8s);
+	// Call CheckSetBordersWithReinit() at the start of the main loop
+	void CheckSetBordersWithReinit();
 	uint32_t GetBordersWidthCycles() const { return borders_w_cycles; }
 	uint32_t GetBordersHeightScanlines() const { return borders_h_scanlines; }
 
@@ -266,7 +267,6 @@ private:
 	// Internal data
 	//////////////////////////////////////////////////////////////////////////
 	bool bIsReady = false;
-	bool bBeamIsCalculating = false;
 	bool bA2VideoEnabled = true;			// Is standard Apple 2 video enabled?
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
 	bool bIsRebooting = false;              // Rebooting semaphore
@@ -330,6 +330,10 @@ private:
 	// it has 8 less bottom border scanlines than legacy.
 	uint32_t borders_w_cycles = 3;
 	uint32_t borders_h_scanlines = 8 * 2;	// multiple of 8
+	// Requested border sizes from the UI. Main thread checks if the border
+	// is different than the requested size and sets the borders
+	int border_w_slider_val = 0;
+	int border_h_slider_val = 0;
 
 	// The merged framebuffer width is going to be shr + border
 	GLint fb_width = 0;

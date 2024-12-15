@@ -449,7 +449,6 @@ int main(int argc, char* argv[])
 	uint32_t lastMouseMoveTime = SDL_GetTicks();
 	const uint32_t cursorHideDelay = 3000; // After this delay, the mouse cursor disappears
 
-    // Main loop
 	GLuint out_tex_id = 0;
 	
 	// Get the saved states from previous runs
@@ -553,6 +552,7 @@ int main(int argc, char* argv[])
 			a2VideoManager->bShouldReboot = false;
 			a2VideoManager->ResetComputer();
 		}
+		a2VideoManager->CheckSetBordersWithReinit();
 
 		if (!eventRecorder->IsInReplayMode())
 			eventRecorder->StartReplay();
