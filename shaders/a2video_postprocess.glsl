@@ -275,9 +275,9 @@ void main() {
 	float corn = 1.0;
 	if (CORNER > 0.000001) {
 		vec2 halfRes = 0.5 * OutputSize.xy;
-		float b = 1.0 - roundCorners(pos.xy * OutputSize.xy - halfRes, halfRes, abs(CORNER * OutputSize.x * 30));
+		float b = 1.0 - roundCorners(pos.xy * OutputSize.xy - halfRes, halfRes, abs(CORNER * OutputSize.x * 30.0));
 		if (bCORNER_SMOOTH)
-			corn = b/10;	// if we want it smooth
+			corn = b/10.0;	// if we want it smooth
 		else
 			if (b < CORNER)
 				discard;
