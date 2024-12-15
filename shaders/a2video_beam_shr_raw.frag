@@ -1,3 +1,4 @@
+//? #version 300 es // for GLSL extension in Visual Studio
 #ifdef GL_ES
 #define COMPAT_PRECISION mediump
 precision mediump float;
@@ -217,13 +218,15 @@ uint extractColorIdx320(uint byteVal, int localPixel) {
 // Function to fetch 4 or 2 color indexes from a byte
 // In the VRAM there bytes are for each line: 1 SCB, 32 palette, 4*hborder, 160 SHR, 4*hborder
 // And there are vborder lines above and below
+// We've already made the y coords close to the vertical borders go totally negative,
+// so the y bounds are just set to 0 and 1000 for simplicity
 void fetchByteColorsIdx640(ivec2 byteCoord, out uint colors[4]) {
-//    bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)),
-//							   lessThanEqual(byteCoord, ivec2(33+159+hborder*4, 199*(interlaceSHRMode+1)+vborder)));
-//    if (!all(withinBounds)) {
-//        colors = uint[4](0u, 0u, 0u, 0u);
-//        return;
-//    }
+    bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,0)),
+							   lessThan(byteCoord, ivec2(33+160+hborder*4, 1000)));
+    if (!all(withinBounds)) {
+        colors = uint[4](0u);
+        return;
+    }
     uint byteVal = texelFetch(VRAMTEX, byteCoord, 0).r;
     for (int i = 0; i < 4; i++) {
         colors[i] = extractColorIdx640(byteVal, i);
@@ -231,12 +234,12 @@ void fetchByteColorsIdx640(ivec2 byteCoord, out uint colors[4]) {
 }
 
 void fetchByteColorsIdx320(ivec2 byteCoord, out uint colors[2]) {
-//    bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,vborder)),
-//							   lessThanEqual(byteCoord, ivec2(33+159+hborder*4, 199*(interlaceSHRMode+1)+vborder)));
-//    if (!all(withinBounds)) {
-//        colors = uint[4](0u, 0u, 0u, 0u);
-//        return;
-//    }
+    bvec4 withinBounds = bvec4(greaterThanEqual(byteCoord, ivec2(33+hborder*4,0)),
+							   lessThan(byteCoord, ivec2(33+160+hborder*4, 1000)));
+    if (!all(withinBounds)) {
+        colors = uint[2](0u);
+        return;
+    }
     uint byteVal = texelFetch(VRAMTEX, byteCoord, 0).r;
     for (int i = 0; i < 2; i++) {
         colors[i] = extractColorIdx320(byteVal, i);
@@ -314,6 +317,10 @@ void main()
 
     if (((specialModesMask & 0xF0) != 0) || (overrideSHR4Mode > 0))	        // Frame has SHR4 modes active
     {
+    
+  		uint xpos_noborder = xpos - uint(hborder*16);
+		uint ypos_noborder = ypos - uint(vborder*2);
+
         switch (paletteColorB2 >> 4) {
             case 0u:    // Standard SHR
             {
@@ -374,13 +381,24 @@ void main()
 				int RGGBYOffsets[5] = int[5](-2,-1,0,1,2);
 				if (interlaceSHRMode == 1)
 				{
-					if ((ypos & 1u) == 0u)	// even row
+					if ((ypos_noborder & 1u) == 0u)	// even row
 					{
 						RGGBYOffsets = int[5](-1, interlaceSHRYOffset - 1, 0, interlaceSHRYOffset, 1);
 					} else {	// odd row
 						RGGBYOffsets = int[5](interlaceSHRYOffset - 1, 0, interlaceSHRYOffset, 1, interlaceSHRYOffset + 1);
 					}
 				}
+                // Handle lines close to the vertical borders. Any offset that moves outside the boundaries of the image
+                // is set to a very negative number, which ends up triggering the boundary condition in
+                // the fetchByteColorsIdx functions, and returning the black color
+                if (ypos_noborder < 2u)
+                    RGGBYOffsets[0] = -5000;
+                if (ypos_noborder < 1u)
+                    RGGBYOffsets[1] = -5000;
+                if (ypos_noborder > 398u)
+                    RGGBYOffsets[3] = -5000;
+                if (ypos_noborder > 397u)
+                    RGGBYOffsets[4] = -5000;
 
                 // Let's use matrices to store the colors. We need to store exactly 13 colors.
                 // So we can use a 4x4 matrix and keep the last values 0.
@@ -616,10 +634,8 @@ void main()
 				// Both pixels use the same color. PAL256TEX is a R16UI
 				// The reason the CPU pregenerates the colors is that they depend on the state of
 				// all the palettes at the time of the beam cycle.
-				uint interlaceline = uint(vFragPos.y) - (scanline << 1);	// 0 if not an interlace line, 1 if an interlace line
+                uint interlaceline = (ypos_noborder & 1u);  	// 0 if not an interlace line, 1 if an interlace line
 				uint yPal256OffsetLines = interlaceline * uint(interlacePal256YOffset);	// # of scanlines to shift down the texture if in an odd interlace line
-				uint xpos_noborder = xpos - uint(hborder*16);
-				uint ypos_noborder = ypos - uint(vborder*2);
 				uint pal256Word = texelFetch(PAL256TEX,ivec2(xpos_noborder >> 2, (ypos_noborder >> 1) + yPal256OffsetLines),0).r;
 				fragColor = ConvertIIgs2RGB(pal256Word);
                 break;
@@ -637,7 +653,6 @@ void main()
 				// Determine pixel position, which determines which 2 bytes to fetch
 				// We've already fetched one byte, but we need to fetch either the previous or next byte as well
 				// to get all 3 RGB colors and apply to the pixel
-				uint xpos_noborder = xpos - uint(hborder*16);
 				uint tripletPos = (xpos_noborder >> 1) % 6u;		// it is in 320 mode so need to divide by 2 first
 				if (tripletPos < 2u)	// AB
 				{

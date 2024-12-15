@@ -77,13 +77,20 @@ constexpr int _INTERLACE_MULTIPLIER = 2;	// How much to multiply the size of buf
 // SHR mode VRAM looks like this:
 
 // SCB        PALETTE                    COLOR BYTES
-// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line 0
-// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line 1
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] [  TOP_BORDER ] [R_BORDER]]]	// line 0
+//                         .												// top border lines
+//                         .
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line top_border*8 + 0
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line top_border*8 + 1
 //                         .
 //                         .
 //                         .
 //                         .
-// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line 199
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line top_border*8 + 199
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] [ BOTM_BORDER ] [R_BORDER]]]	// line top_border*8 + 199 + bottom_border
+//                         .												// bottom border lines
+//                         .
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] [ BOTM_BORDER ] [R_BORDER]]]	// line top_border*8 + 199 + bottom_border*8 
 
 // The BORDER bytes have the exact border color in their lower 4 bits
 // Each SHR cycle is 4 bytes, and each byte is 4 pixels (2x2 when in 320 mode)
