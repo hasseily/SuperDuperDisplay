@@ -57,7 +57,7 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 // To access the AUX bank, add _A2_MEMORY_SHADOW_END to the
 // pointer of the start of the memory
 // Anything between 0 and _A2_MEMORY_SHADOW_BEGIN in each bank is unused
-#define _A2_MEMORY_SHADOW_BEGIN 0x200
+#define _A2_MEMORY_SHADOW_BEGIN 0x0000
 #define _A2_MEMORY_SHADOW_END 0xC000
 
 // For all modes!
