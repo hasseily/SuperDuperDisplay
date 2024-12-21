@@ -8,7 +8,7 @@
     "p_b_slot": false,
     "p_b_smoothCorner": true,
     "p_b_vignette": false,
-    "p_f_barrelDistortion": 0.6600000262260437,
+    "p_f_barrelDistortion": 0.0,
     "p_f_bgr": 0.0,
     "p_f_black": 0.0,
     "p_f_brDep": 0.0,
@@ -19,7 +19,7 @@
     "p_f_convB": 0.0,
     "p_f_convG": 0.0,
     "p_f_convR": 0.0,
-    "p_f_corner": 8.696000099182129,
+    "p_f_corner": 5.434999942779541,
     "p_f_hueGB": 0.0,
     "p_f_hueRB": 0.0,
     "p_f_hueRG": 0.0,
@@ -27,7 +27,7 @@
     "p_f_maskLow": 0.4099999964237213,
     "p_f_maskSize": 1.0,
     "p_f_saturation": 1.0,
-    "p_f_scanlineWeight": 0.23999999463558197,
+    "p_f_scanlineWeight": 0.36000001430511475,
     "p_f_slotW": 3.0,
     "p_f_vignetteWeight": 2.609999895095825,
     "p_f_warpX": 0.0,
@@ -38,5 +38,5 @@
     "p_i_maskType": 0,
     "p_i_postprocessingLevel": 2,
     "p_i_scanlineType": 2,
-    "preset_name": "Distorted TV"
+    "preset_name": "Light Scanlines"
 }

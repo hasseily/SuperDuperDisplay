@@ -39,6 +39,7 @@ void PostProcessor::Initialize()
 	Shader shader_pp = Shader();
 	shader_pp.build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");
 	v_ppshaders.push_back(shader_pp);
+	memset(preset_name_buffer, 0, sizeof(preset_name_buffer));
 }
 
 PostProcessor::~PostProcessor()
@@ -58,6 +59,7 @@ PostProcessor::~PostProcessor()
 nlohmann::json PostProcessor::SerializeState()
 {
 	nlohmann::json jsonState = {
+		{"preset_name", preset_name_buffer},
 		{"p_i_postprocessingLevel", p_i_postprocessingLevel},
 		{"bCRTFillWindow", bCRTFillWindow},
 		{"integer_scale", integer_scale},
@@ -104,6 +106,7 @@ nlohmann::json PostProcessor::SerializeState()
 
 void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 {
+	std::strncpy(preset_name_buffer, jsonState.value("preset_name", preset_name_buffer).c_str(), sizeof(preset_name_buffer) - 1);
 	p_i_postprocessingLevel = jsonState.value("p_i_postprocessingLevel", p_i_postprocessingLevel);
 	bCRTFillWindow = jsonState.value("bCRTFillWindow", bCRTFillWindow);
 	integer_scale = jsonState.value("integer_scale", integer_scale);
@@ -378,74 +381,59 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 	bImguiWindowIsOpen = p_open;
 	if (p_open)
 	{
-		ImGui::SetNextWindowSizeConstraints(ImVec2(400, 400), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(420, 400), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("Post Processing CRT Shader", p_open);
 		// Handle presets. Disable load/save if the chosen button is "Off"
 		ImGui::Text("[ PRESETS ]");
-		if (v_presets == 0)
+		if (idx_preset == 0)
 		{
 			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f); // Reduce button opacity
 			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true); // Disable button (and make it unclickable)
 		}
 		if (ImGui::Button("Load##Presets"))
 		{
-			this->LoadState(v_presets);
+			this->LoadState(idx_preset);
 		}
-		if (v_presets == 0)
+		if (idx_preset == 0)
 		{
 			ImGui::PopItemFlag();
 			ImGui::PopStyleVar();
 		}
 		ImGui::SameLine();
-		ImGui::Dummy(ImVec2(50.0f, 0.0f));
+		ImGui::Dummy(ImVec2(5.0f, 0.0f));
 		ImGui::SameLine();
-		ImGui::RadioButton("None##Presets", &v_presets, 0); ImGui::SameLine();
-		ImGui::RadioButton("1##Presets", &v_presets, 1); ImGui::SameLine();
-		ImGui::RadioButton("2##Presets", &v_presets, 2); ImGui::SameLine();
-		ImGui::RadioButton("3##Presets", &v_presets, 3);
+		ImGui::RadioButton("None##Presets", &idx_preset, 0); ImGui::SameLine();
+		ImGui::RadioButton("1##Presets", &idx_preset, 1); ImGui::SameLine();
+		ImGui::RadioButton("2##Presets", &idx_preset, 2); ImGui::SameLine();
+		ImGui::RadioButton("3##Presets", &idx_preset, 3); ImGui::SameLine();
+		ImGui::RadioButton("4##Presets", &idx_preset, 4); ImGui::SameLine();
+		ImGui::RadioButton("5##Presets", &idx_preset, 5); ImGui::SameLine();
+		ImGui::RadioButton("6##Presets", &idx_preset, 6); ImGui::SameLine();
+		ImGui::RadioButton("7##Presets", &idx_preset, 7);
 		ImGui::SameLine();
-		ImGui::Dummy(ImVec2(50.0f, 0.0f));
+		ImGui::Dummy(ImVec2(5.0f, 0.0f));
 		ImGui::SameLine();
 		
-		if (v_presets == 0)
+		if (idx_preset == 0)
 		{
 			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f); // Reduce button opacity
 			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true); // Disable button (and make it unclickable)
 		}
 		if (ImGui::Button("Save##Presets"))
 		{
-			this->SaveState(v_presets);
+			this->SaveState(idx_preset);
 		}
-		if (v_presets == 0)
+		if (idx_preset == 0)
 		{
 			ImGui::PopItemFlag();
 			ImGui::PopStyleVar();
 		}
-
-		 // enable to reload the shader
-		if (ImGui::Button("Reload Shader"))
-		{
-			auto ppshader = v_ppshaders.at(1);
-			v_ppshaders.at(1).build(ppshader.GetVertexPath().c_str(), ppshader.GetFragmentPath().c_str());
+		if (std::strlen(preset_name_buffer) == 0) {
+			std::strncpy(preset_name_buffer, "Unnamed", sizeof(preset_name_buffer) - 1);
 		}
-		
-		// Enable to choose the shader
-		if (ImGui::Button("Slot 1 Shader"))
-		{
-			IGFD::FileDialogConfig config;
-			config.path = "./shaders/";
-			ImGuiFileDialog::Instance()->OpenDialog("ChooseShader1DlgKey", "Choose File", ".glsl,", config);
-		}
-		if (ImGuiFileDialog::Instance()->Display("ChooseShader1DlgKey")) {
-			// Check if a file was selected
-			if (ImGuiFileDialog::Instance()->IsOk()) {
-				v_ppshaders.at(1).build(
-					ImGuiFileDialog::Instance()->GetFilePathName().c_str(),
-					ImGuiFileDialog::Instance()->GetFilePathName().c_str()
-				);
-			}
-			ImGuiFileDialog::Instance()->Close();
-		}
+		ImGui::PushItemWidth(200);
+		ImGui::InputText("Preset Name", preset_name_buffer, sizeof(preset_name_buffer));
+		ImGui::PopItemWidth();
 
 		ImGui::PushItemWidth(200);
 
@@ -459,6 +447,37 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		ImGui::RadioButton("Full CRT##PPLEVEL", &p_i_postprocessingLevel, 2);
 		ImGui::SetItemTooltip("Customizable CRT shader, slow");
 		ImGui::Separator();
+		if (p_i_postprocessingLevel == 2) {
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Shader Programming: ");
+			ImGui::SameLine();
+			// enable to reload the shader
+			if (ImGui::Button("Reload"))
+			{
+				auto ppshader = v_ppshaders.at(1);
+				v_ppshaders.at(1).build(ppshader.GetVertexPath().c_str(), ppshader.GetFragmentPath().c_str());
+			}
+			// Enable to choose the shader
+			ImGui::SameLine();
+			if (ImGui::Button("Select"))
+			{
+				IGFD::FileDialogConfig config;
+				config.path = "./shaders/";
+				ImGuiFileDialog::Instance()->OpenDialog("ChooseShader1DlgKey", "Choose File", ".glsl,", config);
+			}
+			if (ImGuiFileDialog::Instance()->Display("ChooseShader1DlgKey")) {
+				// Check if a file was selected
+				if (ImGuiFileDialog::Instance()->IsOk()) {
+					v_ppshaders.at(1).build(
+						ImGuiFileDialog::Instance()->GetFilePathName().c_str(),
+						ImGuiFileDialog::Instance()->GetFilePathName().c_str()
+					);
+				}
+				ImGuiFileDialog::Instance()->Close();
+			}
+
+			ImGui::Separator();
+		}
 		ImGui::Text("[ BASE INTEGER SCALE ]");
 		ImGui::Checkbox("Auto", &bAutoScale);
 		ImGui::SetItemTooltip("Automatically selects the largest output possible, with pixel perfect scaling");

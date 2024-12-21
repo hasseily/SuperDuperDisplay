@@ -65,7 +65,8 @@ private:
 	GLint prev_texWidth = INT_MAX, prev_texHeight = INT_MAX;
 
 	int frame_count = 0;	// Frame count for interlacing
-	int v_presets = 0;		// Preset chosen
+	int idx_preset = 0;		// Preset chosen
+	char preset_name_buffer[28];	// Preset's name
 	int max_integer_scale = 1;	// Maximum possible integer scale given screen size
 	int integer_scale = 1;		// Base integer scale used
 	bool bAutoScale = true;		// Automatically scale to max scale?
