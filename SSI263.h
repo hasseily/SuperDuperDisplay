@@ -71,7 +71,7 @@ public:
 	void Update();
 	float GetSample();
 	void ResetRegisters();
-	void SetRegisterSelect(int val);	// Set RS2->RS0 (A2->A0)
+	void SetRegisterSelect(int addr);	// Set RS2->RS0 (A2->A0)
 	void SetData(int data);				// Set D7->D0 data pins
 	void SetReadMode(bool pinState);	// R/W mode, true for R
 	void SetCS0(bool pinState);			// Linked to A6 (1st SSI) or A5 (2nd SSI)

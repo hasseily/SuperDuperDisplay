@@ -235,7 +235,7 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 	if (ssip->IsEnabled())
 	{
 		ssip->SetData(val);
-		ssip->SetRegisterSelect(addr & 0b11);
+		ssip->SetRegisterSelect(addr);
 		ssip->SetReadMode(rw);
 		ssip->SetCS0(1);
 		ssip->Update();

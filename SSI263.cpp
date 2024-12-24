@@ -67,9 +67,9 @@ void SSI263::ResetRegisters()
 }
 
 // Pins RS2->RS0 are mapped to the bus's A2->A0
-void SSI263::SetRegisterSelect(int val)
+void SSI263::SetRegisterSelect(int addr)
 {
-	registerSelect = val & 0b111;	// RS3->RS0
+	registerSelect = addr & 0b111;	// RS3->RS0
 }
 
 void SSI263::SetData(int data)
