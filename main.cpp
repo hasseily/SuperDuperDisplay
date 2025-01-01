@@ -496,13 +496,7 @@ int main(int argc, char* argv[])
 			Main_SetFullScreen(_sm.value("fullscreen", false));
 			vbl_region = (VideoRegion_e)_sm.value("videoregion", vbl_region);
 			if (vbl_region == VideoRegion_e::Unknown)
-			{
-				cycleCounter->isVideoRegionDynamic = true;
-			}
-			else {
-				cycleCounter->isVideoRegionDynamic = false;
-				cycleCounter->SetVideoRegion(vbl_region);
-			}
+				cycleCounter->SetVideoRegion(VideoRegion_e::NTSC);
 			if (_sm.value("show F1 window", true))
 				Main_ToggleImGui(gl_context);
 			show_a2video_window = _sm.value("show Apple 2 Video window", show_a2video_window);

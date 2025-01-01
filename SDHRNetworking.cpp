@@ -182,8 +182,15 @@ void process_single_event(SDHREvent& e)
 	if (eventRecorder->IsRecording())
 		eventRecorder->RecordEvent(&e);
 	// Update the cycle counting and VBL hit
-	bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == (e.is_iigs ? 1 : 0)));
-	CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
+	VBLState_e vblState = VBLState_e::Unknown;
+	if ((e.addr == 0xC019) && e.rw)
+	{
+		if ((e.data >> 7) == (e.is_iigs ? 1 : 0))
+			vblState = VBLState_e::On;
+		else
+			vblState = VBLState_e::Off;
+	}
+	CycleCounter::GetInstance()->IncrementCycles(1, vblState);
 
 	/*
 	 *********************************
@@ -211,8 +218,6 @@ void process_single_event(SDHREvent& e)
 	}
 
 	auto memMgr = MemoryManager::GetInstance();
-	auto sdhrMgr = SDHRManager::GetInstance();
-	auto a2VideoMgr = A2VideoManager::GetInstance();
 
 	/*
 	 *********************************
@@ -242,6 +247,8 @@ void process_single_event(SDHREvent& e)
 	 *********************************
 	 */
 	 //std::cerr << "cmd " << e.addr << " " << (uint32_t) e.data << std::endl;
+	auto sdhrMgr = SDHRManager::GetInstance();
+	auto a2VideoMgr = A2VideoManager::GetInstance();
 	SDHRCtrl_e _ctrl;
 	switch (e.addr & 0x0f)
 	{

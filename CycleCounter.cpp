@@ -50,7 +50,7 @@ void CycleCounter::Reset()
 	Initialize();
 }
 
-void CycleCounter::IncrementCycles(int inc, bool isVBL)
+void CycleCounter::IncrementCycles(int inc, VBLState_e vblState)
 {
 	m_tstamp_cycle = GetCurrentTimeInMicroseconds() - m_tstamp_init;
 	m_cycle += inc;
@@ -58,35 +58,32 @@ void CycleCounter::IncrementCycles(int inc, bool isVBL)
 	m_cycles_since_reset += inc;
 
 	// Update VBL and region automatically with 0xC019
-	if (isVideoRegionDynamic && isVBL)
+	if ((m_cycle < CYCLES_SCREEN) && (vblState == VBLState_e::On))
 	{
-		if (m_cycle < CYCLES_SCREEN)
+		m_prev_vbl_start = m_cycle;
+		while (m_cycle < CYCLES_SCREEN)	// move m_cycle to end of screen
 		{
-			m_cycle_alignments++;
-			// determine the region
-			if ((m_cycle_alignments > 1) && (m_cycle < (CYCLES_SCREEN - cycles_vblank)))
-			{
-				// If we've already done one cycle alignment at least, then if we're in the
-				// correct region we're certain that the VBL is beyond (CYCLES_SCREEN - cycles_vblank).
-				// Hence here we've demonstrated that we're in the wrong region and should switch region.
-				std::cout << "	VBL in cycle: " << m_cycle << ". " << std::endl;
-				if (m_region == VideoRegion_e::NTSC)
-					SetVideoRegion(VideoRegion_e::PAL);
-				else
-					SetVideoRegion(VideoRegion_e::NTSC);
-			}
-
-			m_prev_vbl_start = m_cycle;
-			while (m_cycle < CYCLES_SCREEN)	// move m_cycle to VBLANK start
-			{
-				bIsVBL = false;
-				bIsHBL = (GetByteXPos() < CYCLES_SC_HBL);
-				A2VideoManager::GetInstance()->BeamIsAtPosition(GetByteXPos(), GetScanline());
-				++m_cycle;
-			}
-			std::cout << "VBL Alignment " << m_cycle_alignments
-				<< ": " << m_prev_vbl_start << " ---> " << m_cycle << std::endl;
+			bIsVBL = false;
+			bIsHBL = (GetByteXPos() < CYCLES_SC_HBL);
+			A2VideoManager::GetInstance()->BeamIsAtPosition(GetByteXPos(), GetScanline());
+			++m_cycle;
 		}
+		m_cycle_alignments++;
+		std::cout << "VBL Alignment " << m_cycle_alignments
+			<< ": " << m_prev_vbl_start << " ---> " << m_cycle << std::endl;
+	} else if ((m_cycle >= CYCLES_SCREEN) && (vblState == VBLState_e::Off))
+	{
+		m_prev_vbl_start = m_cycle;
+		while (m_cycle < cycles_total)	// move m_cycle to end of VBLANK
+		{
+			bIsVBL = true;
+			bIsHBL = (GetByteXPos() < CYCLES_SC_HBL);
+			A2VideoManager::GetInstance()->BeamIsAtPosition(GetByteXPos(), GetScanline());
+			++m_cycle;
+		}
+		m_cycle_alignments++;
+		std::cout << "!VBL Alignment " << m_cycle_alignments
+			<< ": " << m_prev_vbl_start << " ---> " << m_cycle << std::endl;
 	}
 
 	bIsVBL = (m_cycle >= CYCLES_SCREEN);

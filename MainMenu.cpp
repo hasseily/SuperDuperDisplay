@@ -609,41 +609,18 @@ void MainMenu::ShowMotherboardMenu() {
 	if (ImGui::BeginMenu("Region")) {
 		auto cycleCounter = CycleCounter::GetInstance();
 		int vbl_region;
-		if (cycleCounter->isVideoRegionDynamic)
-			vbl_region = 0;
-		else
-			vbl_region = (cycleCounter->GetVideoRegion() == VideoRegion_e::PAL ? 1 : 2);
+		vbl_region = (cycleCounter->GetVideoRegion() == VideoRegion_e::PAL ? 1 : 2);
 
-		if (ImGui::RadioButton("Auto##REGION", &vbl_region, 0))
-		{
-			cycleCounter->isVideoRegionDynamic = true;
-		}
-		if (vbl_region == 0)
-		{
-			ImGui::SameLine();
-			(cycleCounter->GetVideoRegion() == VideoRegion_e::PAL
-			 ? ImGui::Text(" (P)")
-			 : ImGui::Text(" (N)"));
-		}
-		ImGui::SameLine();
 		if (ImGui::RadioButton("PAL##REGION", &vbl_region, 1))
-		{
-			cycleCounter->isVideoRegionDynamic = false;
 			cycleCounter->SetVideoRegion(VideoRegion_e::PAL);
-		}
+
 		ImGui::SameLine();
 		if (ImGui::RadioButton("NTSC##REGION", &vbl_region, 2))
-		{
-			cycleCounter->isVideoRegionDynamic = false;
 			cycleCounter->SetVideoRegion(VideoRegion_e::NTSC);
-		}
-		if (!cycleCounter->isVideoRegionDynamic)
+		int vbl_slider_val = (int)cycleCounter->GetScreenCycles();
+		if (ImGui::InputInt("VBL Start Shift", &vbl_slider_val, 1, (CYCLES_TOTAL_PAL - CYCLES_TOTAL_NTSC) / 10))
 		{
-			int vbl_slider_val = (int)cycleCounter->GetScreenCycles();
-			if (ImGui::InputInt("VBL Start Shift", &vbl_slider_val, 1, (CYCLES_TOTAL_PAL-CYCLES_TOTAL_NTSC)/10))
-			{
-				cycleCounter->SetVBLStart(vbl_slider_val);
-			}
+			cycleCounter->SetVBLStart(vbl_slider_val);
 		}
 		ImGui::Separator();
 		ImGui::EndMenu();
