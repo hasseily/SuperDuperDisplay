@@ -232,8 +232,8 @@ void MainMenu::Render() {
 			ImGui::Separator();
 			ImGui::Text("Version: 0.5.0");
 			ImGui::Text("Software: Henri \"Rikkles\" Asseily");
-			ImGui::Text("Firmware: John \"Elltwo\" Flanagan");
-			ImGui::Text("Appletini design by Elltwo");
+			ImGui::Text("Design & Firmware: John \"Elltwo\" Flanagan");
+			ImGui::Text("Appletini logo by Rikkles+Fatdog");
 			ImGui::Separator();
 			
 			ImGui::TextWrapped("SuperDuperDisplay is a hybrid emulation frontend for Appletini, the Apple 2 Bus Card.");
