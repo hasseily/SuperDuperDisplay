@@ -14,10 +14,6 @@
 
 SSI263::SSI263()
 {
-	if (SDL_Init(SDL_INIT_AUDIO) < 0) {
-		std::cerr << "Failed to initialize SDL Audio: " << SDL_GetError() << std::endl;
-		throw std::runtime_error("SDL_Init Audio failed");
-	}
 	bIsEnabled = false;
 	v_samples.reserve(2*SSI263_SAMPLE_RATE);	// To accommodate for slower speech rate
 	ResetRegisters();
@@ -67,9 +63,9 @@ void SSI263::ResetRegisters()
 }
 
 // Pins RS2->RS0 are mapped to the bus's A2->A0
-void SSI263::SetRegisterSelect(int val)
+void SSI263::SetRegisterSelect(int addr)
 {
-	registerSelect = val & 0b111;	// RS3->RS0
+	registerSelect = addr & 0b111;	// RS3->RS0
 }
 
 void SSI263::SetData(int data)
@@ -270,7 +266,7 @@ void SSI263::GeneratePhonemeSamples()
 		v_samples.push_back(DCAdjust(_newSample));
 	}
 	if (_DEBUG_SSI263 > 0)
-		std::cerr << "Added samples: " << _basePhonemeLength << std::endl;
+		std::cerr << "Added phoneme " << phoneme << ", sample count: " << _basePhonemeLength << std::endl;
 }
 
 // Call GetSample on every audio callback from the main audio stream
@@ -293,6 +289,7 @@ float SSI263::GetSample() {
 	++m_currentSampleIdx;
 	if (m_currentSampleIdx == (v_samples.size() * freq_mult))
 	{
+		std::cerr << " --- Finished getting samples of phoneme --- " << std::endl;
 		// this was the second call to the last sample of the phoneme, so trigger the IRQ if needed
 		if (durationMode != SSI263DR_DISABLED_AR)
 		{
@@ -300,7 +297,11 @@ float SSI263::GetSample() {
 			{
 				irqIsSet = true;
 				irqShouldProcess = true;
+				std::cerr << " >> SETTING IRQ" << std::endl;
 			}
+		}
+		else {
+			std::cerr << " >> IRQ not set. Duration mode disabled " << std::endl;
 		}
 		m_currentSampleIdx = 0;	// reset to replay the phoneme
 	}

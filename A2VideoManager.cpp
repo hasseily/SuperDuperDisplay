@@ -239,6 +239,9 @@ void A2VideoManager::Initialize()
 	// The initialization process can be triggered from a ctrl-reset on the Apple 2.
 	bIsReady = false;
 
+	border_w_slider_val = (int)this->GetBordersWidthCycles();
+	border_h_slider_val = (int)this->GetBordersHeightScanlines() / 8;
+
 	ResetGLData();
 	
 	auto oglHelper = OpenGLHelper::GetInstance();
@@ -428,16 +431,18 @@ void A2VideoManager::ToggleA2Video(bool value)
 		bShouldInitializeRender = true;
 }
 
-void A2VideoManager::SetBordersWithReinit(uint8_t width_cycles, uint8_t height_8s)
+void A2VideoManager::CheckSetBordersWithReinit()
 {
-	while (bBeamIsCalculating) {};
+	if (border_w_slider_val > _BORDER_WIDTH_MAX_CYCLES)
+		border_w_slider_val = _BORDER_WIDTH_MAX_CYCLES;
+	if (border_h_slider_val > _BORDER_WIDTH_MAX_CYCLES)
+		border_h_slider_val = _BORDER_WIDTH_MAX_CYCLES;
+	if ((border_w_slider_val == borders_w_cycles)
+		&& (border_h_slider_val == (borders_h_scanlines / 8)))
+		return;
 	bIsReady = false;
-	if (width_cycles > _BORDER_WIDTH_MAX_CYCLES)
-		width_cycles = _BORDER_WIDTH_MAX_CYCLES;
-	if (height_8s > _BORDER_WIDTH_MAX_CYCLES)
-		height_8s = _BORDER_WIDTH_MAX_CYCLES;
-	borders_w_cycles = width_cycles;
-	borders_h_scanlines = height_8s * 8;	// Must be multiple of 8s
+	borders_w_cycles = border_w_slider_val;
+	borders_h_scanlines = border_h_slider_val * 8;	// Must be multiple of 8s
 	auto _mms = MemoryManager::GetInstance()->SerializeSwitches();
 	this->Initialize();
 	MemoryManager::GetInstance()->DeserializeSwitches(_mms);
@@ -512,8 +517,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 
 	if (!bIsReady)
 		return;
-
-	bBeamIsCalculating = true;
 
 	auto memMgr = MemoryManager::GetInstance();
 	uint32_t mode_scanlines = (memMgr->IsSoftSwitch(A2SS_SHR) ? 200 : 192);
@@ -612,10 +615,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		if (beamState == BeamState_e::CONTENT)
 		{
 			if (_x < CYCLES_SC_HBL || _y >= mode_scanlines)		// bounds check if mode changes midway
-			{
-				bBeamIsCalculating = false;
 				return;
-			}
+
 			uint32_t _toff = _OVERLAY_CHAR_WIDTH * (_y/8) + (_x - CYCLES_SC_HBL);
 			// Override when the byte is an overlay
 			if (overlay_text[_toff] > 0)
@@ -628,7 +629,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 					byteStartPtr[2] = 0b1000;
 					byteStartPtr[3] = overlay_colors[_toff];
 				}
-				bBeamIsCalculating = false;
 				return;
 			}
 		}
@@ -703,15 +703,9 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	// complicating the state machine.
 	
 	if (_x >= borders_w_cycles && _x < (CYCLES_SC_HBL - borders_w_cycles))
-	{
-		bBeamIsCalculating = false;
 		return;
-	}
 	if (_y >= (mode_scanlines + borders_h_scanlines) && _y < (region_scanlines - borders_h_scanlines))
-	{
-		bBeamIsCalculating = false;
 		return;
-	}
 	
 	// Now generate the VRAMs themselves
 
@@ -893,7 +887,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		default:
 			break;
 		}
-		bBeamIsCalculating = false;
 		return;
 	}	// if (memMgr->IsSoftSwitch(A2SS_SHR))
 
@@ -1066,7 +1059,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	default:
 		break;
 	}
-	bBeamIsCalculating = false;
 }
 
 // When we learn we're in merged mode, we need to update all previous scanlines
@@ -1631,8 +1623,6 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 		if (!ImGui::IsWindowCollapsed())
 		{
 			auto memManager = MemoryManager::GetInstance();
-			auto border_w_slider_val = (int)this->GetBordersWidthCycles();
-			auto border_h_slider_val = (int)this->GetBordersHeightScanlines() / 8;
 			ImGui::PushItemWidth(200);
 			
 			if (ImGui::Button("Run Vertical Refresh"))
@@ -1641,9 +1631,8 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			ImGui::Text("Frame ID: %d", this->GetVRAMReadId());
 			
 			ImGui::SeparatorText("[ BORDERS AND WIDTH ]");
-			if (ImGui::SliderInt("Horizontal Borders", &border_w_slider_val, 0, _BORDER_WIDTH_MAX_CYCLES, "%d", 1)
-				|| ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, _BORDER_HEIGHT_MAX_MULT8, "%d", 1))
-				this->SetBordersWithReinit(border_w_slider_val, border_h_slider_val);
+			ImGui::SliderInt("Horizontal Borders", &border_w_slider_val, 0, _BORDER_WIDTH_MAX_CYCLES, "%d", 1);
+			ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, _BORDER_HEIGHT_MAX_MULT8, "%d", 1);
 			if (ImGui::SliderInt("Border Color (0xC034)", &memManager->switch_c034, 0, 15))
 				this->ForceBeamFullScreenRender();
 			if (ImGui::Checkbox("Force SHR width in merged mode", &this->bForceSHRWidth))
@@ -1723,8 +1712,8 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 nlohmann::json A2VideoManager::SerializeState()
 {
 	nlohmann::json jsonState = {
-		{"borders_w_cycles", borders_w_cycles},
-		{"borders_h_8scanlines", borders_h_scanlines / 8},
+		{"borders_w_cycles", border_w_slider_val},
+		{"borders_h_8scanlines", border_h_slider_val},
 		{"borders_color", MemoryManager::GetInstance()->switch_c034},
 		{"monitor_type", eA2MonitorType},
 		{"enable_texture_repeat_mirroring", bMirrorRepeatOutputTexture},
@@ -1752,6 +1741,6 @@ void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 	font_rom_regular_idx = jsonState.value("font_rom_regular_index", font_rom_regular_idx);
 	font_rom_alternate_idx = jsonState.value("font_rom_slternate_index", font_rom_alternate_idx);
 
-	SetBordersWithReinit(jsonState.value("borders_w_cycles", borders_w_cycles),
-						 jsonState.value("borders_h_8scanlines", borders_h_scanlines / 8));
+	border_w_slider_val = jsonState.value("borders_w_cycles", border_w_slider_val);
+	border_h_slider_val = jsonState.value("borders_h_8scanlines", border_h_slider_val);
 }

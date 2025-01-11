@@ -23,14 +23,20 @@ enum class VideoRegion_e
 	PAL = 2
 };
 
+enum class VBLState_e
+{
+	Unknown = 0,
+	Off = 1,
+	On = 2
+};
+
 class CycleCounter
 {
 public:
-	void IncrementCycles(int inc, bool isVBL);
+	void IncrementCycles(int inc, VBLState_e vblState);
 	const bool IsVBL();
 	const bool IsHBL();
 	const bool IsInBlank();
-	bool isVideoRegionDynamic = true;		// Video region will reconfigure automatically as necessary
 	const VideoRegion_e GetVideoRegion();
 	void SetVideoRegion(VideoRegion_e region);
 	void Reset();

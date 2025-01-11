@@ -139,6 +139,11 @@ vec3 Mask(vec2 pos, float CGWG) {
 	return vec3(1.0);
 }
 
+float roundCorners(vec2 p, vec2 b, float r)
+{
+    return length(max(abs(p)-b+r,0.0))-r;
+}
+
 float scanlineWeights(float distance, vec3 color, float x) {
 	// "wid" controls the width of the scanline beam, for each RGB
 	// channel The "weights" lines basically specify the formula
@@ -252,8 +257,7 @@ void main() {
 	
 // zoom in and center screen for bezel
 	vec2 pos = Warp(TexCoords*vec2(1.0-ZOOMX,1.0-ZOOMY)-vec2(CENTERX,CENTERY)/100.0);
-	
-	
+
 // If people prefer the BarrelDistortion algo
 	pos = BarrelDistortion(pos);
 
@@ -267,6 +271,18 @@ void main() {
 	pos.y = (i.y + 4.0*f*f*f)*ps.y; // smooth
 	pos.x = mix(pos.x, i.x*ps.x, 0.2);
 
+// Rounded corners
+	float corn = 1.0;
+	if (CORNER > 0.000001) {
+		vec2 halfRes = 0.5 * OutputSize.xy;
+		float b = 1.0 - roundCorners(pos.xy * OutputSize.xy - halfRes, halfRes, abs(CORNER * OutputSize.x * 30.0));
+		if (bCORNER_SMOOTH)
+			corn = b/10.0;	// if we want it smooth
+		else
+			if (b < CORNER)
+				discard;
+	}
+
 
 // Convergence
 	vec3 res0 = texture(A2Texture,pos).rgb;
@@ -278,19 +294,9 @@ void main() {
 					res0.g*(1.0-C_STR) + resg*C_STR,
 					res0.b*(1.0-C_STR) + resb*C_STR
 					);
-
-	float corn;
-	if (CORNER > 0.000001) {
-		corn = pos.x * pos.y * (1.-pos.x) * (1.-pos.y);
-		if (bCORNER_SMOOTH)
-			res = res * smoothstep(0.0, CORNER, corn);	// if we want it smooth
-		else
-			if (corn < CORNER)						// if we want it cut
-				discard;
-	}
 	
 	float l = dot(vec3(BR_DEP),res);
- 
+
  // Color Spaces 
 	if(!bEXT_GAMMA)
 		res *= res;
@@ -359,7 +365,7 @@ void main() {
 	res -= vec3(BLACK);
 	res *= blck;
 
-	FragColor = vec4(res, 1.0);
+	FragColor = vec4(res, corn);
 }
 
 #endif

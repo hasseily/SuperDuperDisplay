@@ -72,8 +72,9 @@ void MockingboardManager::GetSamples(float& left, float& right) {
 		if (ssi[ayidx].IsPowered()) {
 			// speech is mono
 			++ssi_ct;
-			left += ssi[ayidx].GetSample();
-			right += ssi[ayidx].GetSample();
+			auto _s = ssi[ayidx].GetSample();
+			left += _s;
+			right += _s;
 		}
 	}
 	left /= static_cast<float>(ay_ct + ssi_ct);
@@ -84,6 +85,19 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 {
 	if (!bIsEnabled)
 		return;
+
+	uint8_t _addrhi = addr >> 8;
+	switch (_addrhi) {
+	case 0xC4:			// first MB
+		break;
+	case 0xC5:			// second MB
+		if (!bIsDual)
+			return;
+		break;
+	default:
+		return;
+	}
+
 
 	// Reset CS0 for all SSI chips
 	for (uint8_t ssiidx = 0; ssiidx < 4; ssiidx++)
@@ -118,13 +132,13 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 	a_pins_in[2] |= (1ULL << M6522_PIN_CS2);
 	a_pins_in[3] |= (1ULL << M6522_PIN_CS2);
 
-	if ((addr >> 8) == 0xC4)
+	if (_addrhi == 0xC4)
 	{
 		// FIRST MOCKINGBOARD, SLOT 4
 		a_pins_in[0] &= (~M6522_CS2);
 		a_pins_in[1] &= (~M6522_CS2);
 	}
-	else if ((addr >> 8) == 0xC5)
+	else if (_addrhi == 0xC5)
 	{
 		// SECOND MOCKINGBOARD, SLOT 5
 		if (this->bIsDual)
@@ -235,7 +249,7 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 	if (ssip->IsEnabled())
 	{
 		ssip->SetData(val);
-		ssip->SetRegisterSelect(addr & 0b11);
+		ssip->SetRegisterSelect(addr);
 		ssip->SetReadMode(rw);
 		ssip->SetCS0(1);
 		ssip->Update();

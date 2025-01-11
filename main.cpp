@@ -449,7 +449,6 @@ int main(int argc, char* argv[])
 	uint32_t lastMouseMoveTime = SDL_GetTicks();
 	const uint32_t cursorHideDelay = 3000; // After this delay, the mouse cursor disappears
 
-    // Main loop
 	GLuint out_tex_id = 0;
 	
 	// Get the saved states from previous runs
@@ -497,13 +496,7 @@ int main(int argc, char* argv[])
 			Main_SetFullScreen(_sm.value("fullscreen", false));
 			vbl_region = (VideoRegion_e)_sm.value("videoregion", vbl_region);
 			if (vbl_region == VideoRegion_e::Unknown)
-			{
-				cycleCounter->isVideoRegionDynamic = true;
-			}
-			else {
-				cycleCounter->isVideoRegionDynamic = false;
-				cycleCounter->SetVideoRegion(vbl_region);
-			}
+				cycleCounter->SetVideoRegion(VideoRegion_e::NTSC);
 			if (_sm.value("show F1 window", true))
 				Main_ToggleImGui(gl_context);
 			show_a2video_window = _sm.value("show Apple 2 Video window", show_a2video_window);
@@ -553,6 +546,7 @@ int main(int argc, char* argv[])
 			a2VideoManager->bShouldReboot = false;
 			a2VideoManager->ResetComputer();
 		}
+		a2VideoManager->CheckSetBordersWithReinit();
 
 		if (!eventRecorder->IsInReplayMode())
 			eventRecorder->StartReplay();
