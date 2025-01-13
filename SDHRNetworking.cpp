@@ -326,39 +326,31 @@ int process_usb_events_thread(std::atomic<bool>* shouldTerminateProcessing) {
 	while (!(*shouldTerminateProcessing)) {
 		auto packet = packetInQueue.pop();
 		uint32_t* p = (uint32_t*)packet->data;
+		if (packet->size % 4) {
+                    // this packet is garbage somehow, stop processing
+		    printf("invalid packet size: %u\n", packet->size);
+		    continue;
+		}
 		while ((uint8_t*)p < packet->data + packet->size) {
-			uint32_t hdr = *p;
-			uint32_t packet_len = hdr & 0x0000ffff;
-			uint32_t packet_version = (hdr & 0xff000000) >> 24;
-			uint32_t packet_type = (hdr & 0x00ff0000) >> 16;
-			if (packet_len == 0 || packet_len > 1024 || ((packet_len % 4) != 0)) {
-				printf("invalid packet len: %u\n", packet_len);
-				// this packet is garbage somehow, stop processing
-				break;
-			}
-			if ((uint8_t*)p + packet_len > packet->data + packet->size) {
+			uint32_t hdr = *p++;
+			uint32_t payload_len = hdr & 0x0000ff;
+			uint32_t packet_type = (hdr & 0x0000ff00) >> 8;
+			if (p + payload_len > (uint32_t*)(packet->data + packet->size)) {
 				// shouldn't happen, but also garbage condition
-				printf("packet len exceeds buffer\n");
+				printf("payload len exceeds buffer\n");
 				break;
-			}
-			if (packet_version != 1) {
-				// shouldn't happen
-				printf("packet error, version must be 1\n");
-				p += (packet_len / 4);
-				continue;
 			}
 			if (packet_type != 1) {
 				// when we start doing different messages we'd handle it here
-				p += (packet_len / 4);
+				p += payload_len;
 				continue;
 			}
 			else {
-				++p;
-				for (uint32_t i = 1; i < packet_len / 4; ++i) {
+				for (uint32_t i = 0; i < payload_len; ++i) {
 					uint32_t event = *p++;
-					uint16_t addr = (event >> 16) & 0xffff;
-					uint8_t misc = (event) & 0x0f;
-					uint8_t data = (event >> 4) & 0xff;
+					uint16_t addr = event & 0xffff;
+					uint8_t misc = (event >> 16) & 0x0f;
+					uint8_t data = (event >> 20) & 0xff;
 					bool rw = ((misc & 0x01) == 0x01);
 					event_reset = ((misc & 0x02) == 0x02);
 					if ((event_reset == 0) && (event_reset_prev == 1)) {
