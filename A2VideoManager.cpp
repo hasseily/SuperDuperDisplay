@@ -1247,7 +1247,10 @@ GLuint A2VideoManager::Render()
 
 	if (!bA2VideoEnabled)
 		return UINT32_MAX;
-	
+
+	if (bIsRebooting)
+		return UINT32_MAX;
+
 	GLenum glerr;
 	if (FBO_merged == UINT_MAX)
 	{
