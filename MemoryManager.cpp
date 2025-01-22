@@ -420,7 +420,10 @@ void MemoryManager::WriteToMemory(uint16_t addr, uint8_t val, bool m2b0, bool is
 	{
 		case 0b010:
 			// Only writes 0000-01FF to MAIN
-			bIsAux = true;
+			if (addr < 0x200)
+				bIsAux = false;
+			else
+				bIsAux = true;
 			break;
 		case 0b011:
 			// anything not page 1 (including 0000-01FFF goes to AUX
@@ -464,6 +467,23 @@ void MemoryManager::WriteToMemory(uint16_t addr, uint8_t val, bool m2b0, bool is
 	else {
 		a2mem[addr] = val;
 		a2mem_lastUpdate[addr] = CycleCounter::GetInstance()->GetCycleTimestamp();
+
+		// Handle Main ZERO PAGE data changes
+		if (addr < 0x100)
+		{
+			// Check for PR#1 (assuming the tini is in slot 1
+			// TODO: Have a way to get the tini to tell us its slot
+			if ((addr == 0x36) || (addr == 0x37))	// PR#x
+			{
+				if (a2mem[0x36] == 0x00 && a2mem[0x37] == 0xC1)	// PR#1 is called, COUT is going to $C001
+				{
+					// switch to the new video modes
+				}
+				else {
+					// switch to the standard Apple 2 video modes
+				}
+			}
+		}
 	}
 }
 
