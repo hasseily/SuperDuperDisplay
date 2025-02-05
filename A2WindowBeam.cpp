@@ -83,7 +83,7 @@ GLuint A2WindowBeam::GetOutputTextureId() const
 	return output_texture_id;
 }
 
-GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
+GLuint A2WindowBeam::Render()
 {
 	// std::cerr << "Rendering " << (int)video_mode << " - " << shouldUpdateDataInGPU << std::endl;
 	// std::cerr << "border w " << border_width_cycles << " - h " << border_height_scanlines << std::endl;
@@ -96,7 +96,10 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	if (VRAMTEX == UINT_MAX)
 	{
 		glGenTextures(1, &VRAMTEX);
-		glActiveTexture(_TEXUNIT_DATABUFFER);
+		if (video_mode == A2VIDEOBEAM_SHR)	// the SHR modes use a R8UI VRAM data buffer
+			glActiveTexture(_TEXUNIT_DATABUFFER_R8UI);
+		else
+			glActiveTexture(_TEXUNIT_DATABUFFER_RGBA8UI);
 		glBindTexture(GL_TEXTURE_2D, VRAMTEX);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -180,19 +183,22 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 
 	// Associate the texture VRAMTEX in TEXUNIT_DATABUFFER with the buffer
 	// This is the apple 2's memory which is mapped to a "texture"
-	// Always update that buffer in the GPU
-	if (shouldUpdateDataInGPU)
+	// Always update that buffer in the GPU because you don't know which window was previously updated
+
+	uint32_t cycles_w_with_border = 40 + (2 * border_width_cycles);
+
+	if (video_mode == A2VIDEOBEAM_SHR)	// the SHR modes use a R8UI VRAM data buffer
+		glActiveTexture(_TEXUNIT_DATABUFFER_R8UI);
+	else
+		glActiveTexture(_TEXUNIT_DATABUFFER_RGBA8UI);
+	glBindTexture(GL_TEXTURE_2D, VRAMTEX);
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "A2WindowBeam::Render 5 error: " << glerr << std::endl;
+	}
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	if (vramTextureExists)	// it exists, do a glTexSubImage2D() update
 	{
-		uint32_t cycles_w_with_border = 40 + (2 * border_width_cycles);
-		glActiveTexture(_TEXUNIT_DATABUFFER);
-		glBindTexture(GL_TEXTURE_2D, VRAMTEX);
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "A2WindowBeam::Render 5 error: " << glerr << std::endl;
-		}
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-		if (vramTextureExists)	// it exists, do a glTexSubImage2D() update
-		{
-			switch (video_mode) {
+		switch (video_mode) {
 			case A2VIDEOBEAM_SHR:
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -206,7 +212,7 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 					glBindTexture(GL_TEXTURE_2D, PAL256TEX);
 					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _A2VIDEO_SHR_BYTES_PER_LINE, _A2VIDEO_SHR_SCANLINES * (interlaceSHRMode + 1),
 									GL_RED_INTEGER, GL_UNSIGNED_SHORT, (uint16_t*)(A2VideoManager::GetInstance()->GetPAL256VRAMReadPtr()));
-					glActiveTexture(_TEXUNIT_DATABUFFER);
+					glActiveTexture(_TEXUNIT_DATABUFFER_R8UI);
 				}
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				break;
@@ -225,10 +231,10 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 			default:
 				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_w_with_border, 192 + (2 * border_height_scanlines), GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
-			}
 		}
-		else {	// texture doesn't exist, create it with glTexImage2D()
-			switch (video_mode) {
+	}
+	else {	// texture doesn't exist, create it with glTexImage2D()
+		switch (video_mode) {
 			case A2VIDEOBEAM_SHR:
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -260,9 +266,8 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 			default:
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_w_with_border, 192 + (2 * border_height_scanlines), 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
-			}
-			vramTextureExists = true;
 		}
+		vramTextureExists = true;
 	}
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -274,8 +279,11 @@ GLuint A2WindowBeam::Render(bool shouldUpdateDataInGPU)
 	shader.setInt("monitorColorType", monitorColorType);
 
 	// point the uniform at the VRAM texture
-	shader.setInt("VRAMTEX", _TEXUNIT_DATABUFFER - GL_TEXTURE0);
-	
+	if (video_mode == A2VIDEOBEAM_SHR)
+		shader.setInt("VRAMTEX", _TEXUNIT_DATABUFFER_R8UI - GL_TEXTURE0);
+	else
+		shader.setInt("VRAMTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
+
 	// And set all the modes textures that the shader will use
 	// 2 font textures + lgr, hgr, dhgr
 	// as well as any other unique mode data

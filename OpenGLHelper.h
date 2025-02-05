@@ -16,14 +16,16 @@
 class OpenGLHelper
 {
 public:
-	// public singleton code
-	static OpenGLHelper* GetInstance()
-	{
-		if (NULL == s_instance)
-			s_instance = new OpenGLHelper();
-		return s_instance;
-	}
-	~OpenGLHelper();
+	// An image asset is a texture with its metadata (width, height)
+	// The actual texture data is in the GPU memory
+	struct ImageAsset {
+		void AssignByFilename(const char* filename);
+
+		// image assets are full 32-bit bitmap files, uploaded from PNG
+		uint32_t image_xcount = 0;	// width and height of asset in pixels
+		uint32_t image_ycount = 0;
+		GLuint tex_id = UINT_MAX;	// Texture ID on the GPU that holds the image data
+	};
 
 	void set_gl_version();	// must be called after SDL_Init()
 	const std::string* get_glsl_version();	// returns the glsl version string
@@ -32,6 +34,15 @@ public:
 
 	// The created texture ids (max is _SDHR_MAX_TEXTURES)
 	std::vector<GLuint>v_texture_ids;
+
+	// public singleton code
+	static OpenGLHelper* GetInstance()
+	{
+		if (NULL == s_instance)
+			s_instance = new OpenGLHelper();
+		return s_instance;
+	}
+	~OpenGLHelper();
 
 private:
 //////////////////////////////////////////////////////////////////////////

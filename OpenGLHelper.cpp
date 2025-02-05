@@ -31,6 +31,38 @@ OpenGLHelper::~OpenGLHelper()
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Image Asset Methods
+//////////////////////////////////////////////////////////////////////////
+
+// NOTE:	The below image asset method uses OpenGL
+//			so it _must_ be called from the main thread
+void OpenGLHelper::ImageAsset::AssignByFilename(const char* filename) {
+	int width;
+	int height;
+	int channels;
+	unsigned char* data = stbi_load(filename, &width, &height, &channels, 4);
+	if (data == NULL) {
+		std::cerr << "ERROR: STBI load failure" << stbi_failure_reason() << std::endl;
+		return;
+	}
+	if (tex_id != UINT_MAX)
+	{
+		OpenGLHelper::GetInstance()->load_texture(data, width, height, channels, tex_id);
+		stbi_image_free(data);
+	}
+	else {
+		std::cerr << "ERROR: Could not bind texture, all slots filled!" << std::endl;
+		return;
+	}
+	GLenum glerr;
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "ImageAsset::AssignByFilename error: " << glerr << std::endl;
+	}
+	image_xcount = width;
+	image_ycount = height;
+}
+
+//////////////////////////////////////////////////////////////////////////
 // Methods
 //////////////////////////////////////////////////////////////////////////
 

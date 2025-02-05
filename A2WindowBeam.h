@@ -62,7 +62,7 @@ public:
 	uint32_t GetHeight() const;
 	void SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vertical);
 	GLuint GetOutputTextureId() const;
-	GLuint Render(bool shouldUpdateDataInGPU);	// returns the output texture id
+	GLuint Render();	// returns the output texture id
 
 	Shader* GetShader() { return &shader; };
 	void SetShaderPrograms(const char* shaderVertexPath, const char* shaderFragmentPath);

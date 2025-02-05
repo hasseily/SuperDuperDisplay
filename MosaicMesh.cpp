@@ -139,7 +139,7 @@ void MosaicMesh::updateMesh()
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tint));
 
 	// Associate the texture TBTEX with _TEXUNIT_DATABUFFER
-	glActiveTexture(_TEXUNIT_DATABUFFER);
+	glActiveTexture(_TEXUNIT_DATABUFFER_RGBA8UI);
 	glBindTexture(GL_TEXTURE_2D, TBTEX);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, cols, rows, 0, GL_RGBA, GL_FLOAT, &this->mosaicTiles[0]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -207,9 +207,9 @@ void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 	shaderProgram->setMat4("transform", mat_final);
 
 	// point the uniform at the tiles data texture (_TEXUNIT_DATABUFFER)
-	glActiveTexture(_TEXUNIT_DATABUFFER);
+	glActiveTexture(_TEXUNIT_DATABUFFER_RGBA8UI);
 	glBindTexture(GL_TEXTURE_2D, TBTEX);
-	shaderProgram->setInt("TBTEX", _TEXUNIT_DATABUFFER - GL_TEXTURE0);
+	shaderProgram->setInt("TBTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
 	// back to the output buffer to draw our scene
 	glActiveTexture(GL_TEXTURE0);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());

@@ -47,6 +47,7 @@
 		BBD102082B7CF23A00360B33 /* CycleCounter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBD102072B7CF23A00360B33 /* CycleCounter.cpp */; };
 		BBD102112B829B7C00360B33 /* EventRecorder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */; };
 		BBE17D862C81CDCB008EF443 /* SSI263.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBE17D842C81CDCB008EF443 /* SSI263.cpp */; };
+		BBE45C122D477211008D10A9 /* VidHdWindowBeam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBE45C112D477211008D10A9 /* VidHdWindowBeam.cpp */; };
 		BBF6D2C12C358F5000E85E1E /* SoundManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */; };
 		BBF6D2C82C35A1B900E85E1E /* recordings in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBF6D2C72C35A1AE00E85E1E /* recordings */; };
 /* End PBXBuildFile section */
@@ -159,6 +160,8 @@
 		BBD102132B829BAE00360B33 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = "<group>"; };
 		BBE17D842C81CDCB008EF443 /* SSI263.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSI263.cpp; sourceTree = "<group>"; };
 		BBE17D852C81CDCB008EF443 /* SSI263.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSI263.h; sourceTree = "<group>"; };
+		BBE45C102D477211008D10A9 /* VidHdWindowBeam.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VidHdWindowBeam.h; sourceTree = "<group>"; };
+		BBE45C112D477211008D10A9 /* VidHdWindowBeam.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = VidHdWindowBeam.cpp; sourceTree = "<group>"; };
 		BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SoundManager.cpp; sourceTree = "<group>"; };
 		BBF6D2C02C358F5000E85E1E /* SoundManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SoundManager.h; sourceTree = "<group>"; };
 		BBF6D2C72C35A1AE00E85E1E /* recordings */ = {isa = PBXFileReference; lastKnownFileType = folder; path = recordings; sourceTree = "<group>"; };
@@ -216,6 +219,8 @@
 		BB8330D82B6645B300071F38 /* SuperDuperDisplay */ = {
 			isa = PBXGroup;
 			children = (
+				BBE45C102D477211008D10A9 /* VidHdWindowBeam.h */,
+				BBE45C112D477211008D10A9 /* VidHdWindowBeam.cpp */,
 				BBB524FC2B6648A100A65C62 /* A2VideoManager.h */,
 				BBB525022B6648A200A65C62 /* A2VideoManager.cpp */,
 				BBB4E5C02B83ECCE00764C50 /* A2WindowBeam.h */,
@@ -376,6 +381,7 @@
 				BBB5251D2B6648A200A65C62 /* A2VideoManager.cpp in Sources */,
 				BBB5251F2B6648A200A65C62 /* SDHRManager.cpp in Sources */,
 				BBB525242B6648A200A65C62 /* SDHRNetworking.cpp in Sources */,
+				BBE45C122D477211008D10A9 /* VidHdWindowBeam.cpp in Sources */,
 				BBB525212B6648A200A65C62 /* OpenGLHelper.cpp in Sources */,
 				BB006F542C3C2E49008BFFAF /* MockingboardManager.cpp in Sources */,
 				BBE17D862C81CDCB008EF443 /* SSI263.cpp in Sources */,

@@ -65,10 +65,17 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 // The special SHR4 PAL256 vram is in tex2.
 // Image assets can be put in tex3 to tex7
 // Post processing input texture is always in tex15
-#define _TEXUNIT_DATABUFFER GL_TEXTURE1			// Texunit of the data buffer (vram for legacy, TBO for SDHR)
-#define _TEXUNIT_PAL256BUFFER GL_TEXTURE2		// Texunit of the SHR4 PAL256 vram
-#define _TEXUNIT_IMAGE_ASSETS_START GL_TEXTURE3	// Start of the image assets
+#define _TEXUNIT_DATABUFFER_R8UI GL_TEXTURE1	// Texunit of the data buffer (R8UI VRAM)
+#define _TEXUNIT_DATABUFFER_RGBA8UI GL_TEXTURE2	// Texunit of the data buffer (RGBA8UI VRAM)
+#define _TEXUNIT_PAL256BUFFER GL_TEXTURE3		// Texunit of the SHR4 PAL256 vram
+#define _TEXUNIT_IMAGE_ASSETS_START GL_TEXTURE4	// Start of the image assets
 #define _TEXUNIT_POSTPROCESS GL_TEXTURE15		// input texunit the PP will use to generate the final output
+// MERGE textures
+#define _TEXUNIT_MERGE_OFFSET GL_TEXTURE17		// Offset buffer
+#define _TEXUNIT_MERGE_LEGACY GL_TEXTURE18		// legacy output texture
+#define _TEXUNIT_MERGE_SHR GL_TEXTURE19			// SHR output texture
+#define _TEXUNIT_MERGE_VIDHD GL_TEXTURE20		// VidHD output texture
+
 
 // AUDIO
 #define _AUDIO_SAMPLE_RATE 44100
@@ -115,6 +122,7 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _SHADER_BEAM_LEGACY_FRAGMENT "shaders/a2video_beam_legacy.frag"
 #define _SHADER_BEAM_SHR_FRAGMENT "shaders/a2video_beam_shr_raw.frag"
 #define _SHADER_BEAM_MERGE_FRAGMENT "shaders/a2video_beam_merge.frag"
+#define _SHADER_VIDHD_TEXT_FRAGMENT "shaders/vidhd_beam_text.frag"
 
 #define _SHADER_SDHR_VERTEX_DEFAULT "shaders/sdhr_default_330.vert"
 #define _SHADER_SDHR_FRAGMENT_DEFAULT "shaders/sdhr_default_330.frag"

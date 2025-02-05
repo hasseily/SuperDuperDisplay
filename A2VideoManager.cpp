@@ -170,39 +170,6 @@ inline void A2VideoManager::UpdateOverlayLine(uint32_t y)
 }
 
 //////////////////////////////////////////////////////////////////////////
-// Image Asset Methods
-//////////////////////////////////////////////////////////////////////////
-
-// NOTE:	Both the below image asset methods use OpenGL 
-//			so they _must_ be called from the main thread
-void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const char* filename) {
-	(void)owner; // mark as unused
-	int width;
-	int height;
-	int channels;
-	unsigned char* data = stbi_load(filename, &width, &height, &channels, 4);
-	if (data == NULL) {
-		std::cerr << "ERROR: STBI load failure" << stbi_failure_reason() << std::endl;
-		return;
-	}
-	if (tex_id != UINT_MAX)
-	{
-		OpenGLHelper::GetInstance()->load_texture(data, width, height, channels, tex_id);
-		stbi_image_free(data);
-	}
-	else {
-		std::cerr << "ERROR: Could not bind texture, all slots filled!" << std::endl;
-		return;
-	}
-	GLenum glerr;
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "ImageAsset::AssignByFilename error: " << glerr << std::endl;
-	}
-	image_xcount = width;
-	image_ycount = height;
-}
-
-//////////////////////////////////////////////////////////////////////////
 // Manager Methods
 //////////////////////////////////////////////////////////////////////////
 
@@ -315,7 +282,7 @@ void A2VideoManager::Initialize()
 	// Set up the image assets (textures)
 	// Assign them their respective GPU texture id
 	*image_assets = {};
-	for (uint8_t i = 0; i < (sizeof(image_assets) / sizeof(ImageAsset)); i++)
+	for (uint8_t i = 0; i < (sizeof(image_assets) / sizeof(OpenGLHelper::ImageAsset)); i++)
 	{
 		image_assets[i].tex_id = oglHelper->get_texture_id_at_slot(i);
 	}
@@ -355,9 +322,11 @@ void A2VideoManager::Initialize()
 	windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->SetBorder(0, 0);
 	windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->SetBorder(0, 0);
 
+	vidhdWindowBeam = std::make_unique<VidHdWindowBeam>(VIDHDMODE_NONE);
 
-
-	// The merged framebuffer will have a size equal to the SHR buffer (including borders)
+	// The merged framebuffer will have by default
+	// a size equal to the SHR buffer (including borders).
+	// But that can change if the VidHD overlay is active
 	fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
 	fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
 
@@ -759,7 +728,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			}
 
 			// Do the SCB and palettes for interlacing if requested
-			bShouldInterlace = ( overrideSHRInterlace ? !vrams_write->interlaceSHRMode : vrams_write->interlaceSHRMode);
+			bShouldInterlace = ( bOverrideSHRInterlace ? !vrams_write->interlaceSHRMode : vrams_write->interlaceSHRMode);
 			if (bShouldInterlace)
 			{
 				lineInterlaceStartPtr[0] = memInterlacePtr[_A2VIDEO_SHR_SCB_START + _y];
@@ -1208,7 +1177,7 @@ void A2VideoManager::PrepareOffsetTexture() {
 		// Generate the texture if it doesn't exist
 		if (OFFSETTEX == UINT_MAX)
 			glGenTextures(1, &OFFSETTEX);
-		glActiveTexture(GL_TEXTURE10);
+		glActiveTexture(_TEXUNIT_MERGE_OFFSET);
 		glBindTexture(GL_TEXTURE_2D, OFFSETTEX);
 
 		// Set texture parameters
@@ -1227,7 +1196,7 @@ void A2VideoManager::PrepareOffsetTexture() {
 	}
 	else {
 		// Update the texture
-		glActiveTexture(GL_TEXTURE10);
+		glActiveTexture(_TEXUNIT_MERGE_OFFSET);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, GetVramHeightSHR(), GL_RED, GL_FLOAT, vrams_read->offset_buffer);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
@@ -1283,27 +1252,30 @@ GLuint A2VideoManager::Render()
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
 
-		// image asset 0: The apple 2e US font
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START);
 		if (font_rom_regular_idx >= font_roms_array.size())
 			font_rom_regular_idx = 0;
 		if (font_rom_regular_idx >= font_roms_array.size())
 			font_rom_alternate_idx = (int)font_roms_array.size() - 1;
-		image_assets[0].AssignByFilename(this, std::string(fontpath).append("/").append(font_roms_array[font_rom_regular_idx]).c_str());
+		// image asset 0: The apple 2e US font
+		image_assets[0].AssignByFilename(std::string(fontpath).append("/").append(font_roms_array[font_rom_regular_idx]).c_str());
 		// image asset 1: The alternate font
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 1);
-		image_assets[1].AssignByFilename(this, std::string(fontpath).append("/").append(font_roms_array[font_rom_alternate_idx]).c_str());
+		image_assets[1].AssignByFilename(std::string(fontpath).append("/").append(font_roms_array[font_rom_alternate_idx]).c_str());
 		// image asset 2: LGR texture (overkill for color, useful for dithered b/w)
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 2);
-		image_assets[2].AssignByFilename(this, "assets/Texture_composite_lgr.png");
+		image_assets[2].AssignByFilename("assets/Texture_composite_lgr.png");
 		// image asset 3: HGR texture
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 3);
-		image_assets[3].AssignByFilename(this, "assets/Texture_composite_hgr.png");
+		image_assets[3].AssignByFilename("assets/Texture_composite_hgr.png");
 		// image asset 4: DHGR texture
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 4);
-		image_assets[4].AssignByFilename(this, "assets/Texture_composite_dhgr.png");
+		image_assets[4].AssignByFilename("assets/Texture_composite_dhgr.png");
+		// image asset 5: 8x8 font for VidHD text modes
+		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 5);
+		image_assets[5].AssignByFilename("assets/VidHDFont8x8/00_US-Default.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL AssignByFilename error: " 
+			std::cerr << "OpenGL AssignByFilename error: "
 				<< 0 << " - " << glerr << std::endl;
 		}
 
@@ -1323,30 +1295,57 @@ GLuint A2VideoManager::Render()
 
 	// Set the magic bytes, currently only in SHR mode
 	windowsbeam[A2VIDEOBEAM_SHR]->specialModesMask |= vrams_read->frameSHR4Modes;
-	windowsbeam[A2VIDEOBEAM_SHR]->interlaceSHRMode = ( overrideSHRInterlace ? !vrams_read->interlaceSHRMode : vrams_read->interlaceSHRMode);
+	windowsbeam[A2VIDEOBEAM_SHR]->interlaceSHRMode = ( bOverrideSHRInterlace ? !vrams_read->interlaceSHRMode : vrams_read->interlaceSHRMode);
 
 	// ===============================================================================
 	// ============================== MERGED MODE RENDER ==============================
 	// ===============================================================================
 
-	// Now determine how we should merge both legacy and shr
-	if (vrams_read->mode == A2Mode_e::MERGED)
+	// Now determine how we should merge both legacy and shr and the vidhd modes
+	bool _bRenderVidhd = (vidhdWindowBeam->GetVideoMode() != VIDHDMODE_NONE);
+	if ((vrams_read->mode == A2Mode_e::MERGED) || _bRenderVidhd)
 	{
-		// Both are active in this frame, we need to do the merge
+		int _renderModes = 0;	// bit 0: LEGACY, bit 1: SHR, bit 2: VIDHD
+		_renderModes |= ((vrams_read->mode == A2Mode_e::LEGACY ? 1 : 0));
+		_renderModes |= ((vrams_read->mode == A2Mode_e::SHR ? 1 : 0) << 1);
+		_renderModes |= ((vrams_read->mode == A2Mode_e::MERGED ? 0b11 : 0));
+		_renderModes |= ((_bRenderVidhd? 1 : 0) << 2);
 
-		// first render Legacy in its viewport
+		GLuint legacy_texture_id = UINT_MAX;
+		GLuint shr_texture_id = UINT_MAX;
+		GLuint vidhd_texture_id = UINT_MAX;
+
 		uint32_t legacy_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
 		auto legacy_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
-		glViewport(0, 0, legacy_width, legacy_height);
-		// std::cerr << "Rendering merged legacy to viewport " << legacy_width << " x " << legacy_height << std::endl;
-		GLuint legacy_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
+		uint32_t shr_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
+		auto shr_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
 
-		// Then render SHR in our viewport which is the same as SHR
-		output_width = fb_width;
-		output_height = fb_height;
-		glViewport(0, 0, output_width, output_height);
-		// std::cerr << "Rendering merged SHR to viewport " << output_width << " x " << output_height << std::endl;
-		GLuint shr_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
+		if ((_renderModes & 0b1) == 0b1)	// legacy
+		{
+			// first render Legacy in its viewport
+			glViewport(0, 0, legacy_width, legacy_height);
+			std::cerr << "Rendering merged legacy to viewport " << legacy_width << " x " << legacy_height << std::endl;
+			legacy_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render();
+		}
+
+		if ((_renderModes & 0b10) == 0b10)	// SHR
+		{
+			// output_width = fb_width;
+			// output_height = fb_height;
+			// glViewport(0, 0, output_width, output_height);
+			glViewport(0, 0, shr_width, shr_height);
+			std::cerr << "Rendering merged SHR to viewport " << shr_width << " x " << shr_height << std::endl;
+			shr_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render();
+		}
+
+		if ((_renderModes & 0b100) == 0b100)	// VidHD
+		{
+			output_width = vidhdWindowBeam->GetWidth();
+			output_height = vidhdWindowBeam->GetHeight();
+			glViewport(0, 0, output_width, output_height);
+			std::cerr << "Rendering vidhd mode to viewport " << output_width << " x " << output_height << std::endl;
+			vidhd_texture_id = vidhdWindowBeam->Render();
+		}
 
 		// Setup for merged rendering
 		output_texture_id = merged_texture_id;
@@ -1363,21 +1362,47 @@ GLuint A2VideoManager::Render()
 			return UINT32_MAX;
 		}
 
-		// Bind both Legacy and SHR textures to Tex 8 and 9 respectively
-		glActiveTexture(GL_TEXTURE8);
-		glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
-		shader_merge.setInt("legacyTex", GL_TEXTURE8 - GL_TEXTURE0);
-		shader_merge.setVec2("legacySize", legacy_width, legacy_height);
-		shader_merge.setInt("forceSHRWidth", bForceSHRWidth);
+		if ((_renderModes & 0b1) == 0b1)	// legacy
+		{
+			glActiveTexture(_TEXUNIT_MERGE_LEGACY);
+			glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
+			shader_merge.setInt("LEGACYTEX", _TEXUNIT_MERGE_LEGACY - GL_TEXTURE0);
+			shader_merge.setVec2("legacySize", legacy_width, legacy_height);
+			shader_merge.setInt("forceSHRWidth", bForceSHRWidth);
+			std::cerr << "Bound LEGACY" << std::endl;
+		}
 
-		glActiveTexture(GL_TEXTURE9);
-		glBindTexture(GL_TEXTURE_2D, shr_texture_id);
-		shader_merge.setInt("shrTex", GL_TEXTURE9 - GL_TEXTURE0);
-		shader_merge.setVec2("shrSize", fb_width, fb_height);
+		if ((_renderModes & 0b10) == 0b10)	// SHR
+		{
+			glActiveTexture(_TEXUNIT_MERGE_SHR);
+			glBindTexture(GL_TEXTURE_2D, shr_texture_id);
+			shader_merge.setInt("SHRTEX", _TEXUNIT_MERGE_SHR - GL_TEXTURE0);
+			shader_merge.setVec2("shrSize", fb_width, fb_height);
+			std::cerr << "Bound SHR" << std::endl;
+		}
 
-		// Point the uniform at the OFFSET texture
-		PrepareOffsetTexture();
-		shader_merge.setInt("OFFSETTEX", GL_TEXTURE10 - GL_TEXTURE0);
+		if ((_renderModes & 0b11) == 0b11)	// SHR+LEGACY
+		{
+			// Point the uniform at the OFFSET texture
+			PrepareOffsetTexture();
+			shader_merge.setInt("OFFSETTEX", _TEXUNIT_MERGE_OFFSET - GL_TEXTURE0);
+			std::cerr << "Bound OFFSETTEX" << std::endl;
+		}
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "A2VideoManager merged render 01 error: " << glerr << std::endl;
+		}
+
+		if ((_renderModes & 0b100) == 0b100)	// VidHD
+		{
+			glActiveTexture(_TEXUNIT_MERGE_VIDHD);
+			glBindTexture(GL_TEXTURE_2D, vidhd_texture_id);
+			shader_merge.setInt("VIDHDTEX", _TEXUNIT_MERGE_VIDHD - GL_TEXTURE0);
+			shader_merge.setVec2("vidhdSize", vidhdWindowBeam->GetWidth(), vidhdWindowBeam->GetHeight());
+			std::cerr << "Bound VidHD" << std::endl;
+		}
+
+		// Tell the shaders which layers to merge, depending on which render modes are active
+		shader_merge.setInt("mergeLayers", _renderModes);
 
 		// Render the fullscreen quad
 		if (quadVAO == UINT_MAX) {
@@ -1418,7 +1443,7 @@ GLuint A2VideoManager::Render()
 
 		windowsbeam[A2VIDEOBEAM_LEGACY]->monitorColorType = eA2MonitorType;
 		
-		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
+		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render();
 		// std::cerr << "Rendering legacy to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "Legacy Mode draw error: " << glerr << std::endl;
@@ -1433,7 +1458,7 @@ GLuint A2VideoManager::Render()
 		output_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
 		glViewport(0, 0, output_width, output_height);
 		windowsbeam[A2VIDEOBEAM_SHR]->monitorColorType = eA2MonitorType;
-		output_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
+		output_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render();
 		// std::cerr << "Rendering SHR to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "SHR Mode draw error: " << glerr << std::endl;
@@ -1465,19 +1490,19 @@ GLuint A2VideoManager::Render()
 	// Render the debugging textures as necessary
 	if (bRenderTEXT1) {
 		glViewport(0, 0, 280*2, 192*2);
-		windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->Render(true);
+		windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->Render();
 	}
 	if (bRenderTEXT2) {
 		glViewport(0, 0, 280*2, 192*2);
-		windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->Render(true);
+		windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->Render();
 	}
 	if (bRenderHGR1) {
 		glViewport(0, 0, 280*2, 192*2);
-		windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->Render(true);
+		windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->Render();
 	}
 	if (bRenderHGR2) {
 		glViewport(0, 0, 280*2, 192*2);
-		windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->Render(true);
+		windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->Render();
 	}
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2VideoManager debugging textures render error: " << glerr << std::endl;
@@ -1652,7 +1677,17 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 				}
 				this->ForceBeamFullScreenRender();
 			}
-			
+
+			ImGui::SeparatorText("[ VIDHD TEXT MODES ]");
+			// VidHdMode_e
+			const char* vidHdModes[] = { "OFF", "40x24", "80x24", "80x45", "120x67", "240x135" };
+			overrideVidHDTextMode = (int)vidhdWindowBeam->GetVideoMode();
+			if (ImGui::Combo("VidHD Text Modes", &this->overrideVidHDTextMode, vidHdModes, IM_ARRAYSIZE(vidHdModes)))
+			{
+				vidhdWindowBeam->SetVideoMode((VidHdMode_e)overrideVidHDTextMode);
+				this->ForceBeamFullScreenRender();
+			}
+
 			ImGui::SeparatorText("[ LEGACY EXTRA MODES ]");
 			if (ImGui::Checkbox("HGR SPEC1", &bUseHGRSPEC1))
 				this->ForceBeamFullScreenRender();
@@ -1702,11 +1737,13 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			auto _interlaceText = "Force Interlace";
 			if (vrams_read->interlaceSHRMode != 0)
 				_interlaceText = "Force De-interlace";
-			if (ImGui::Checkbox(_interlaceText, &overrideSHRInterlace))
+			if (ImGui::Checkbox(_interlaceText, &bOverrideSHRInterlace))
 			{
 				this->ForceBeamFullScreenRender();
 			}
 			ImGui::Columns(1);
+
+			vidhdWindowBeam->DisplayImGuiWindow(p_open);
 		}
 		ImGui::End();
 	}

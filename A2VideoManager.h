@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "A2WindowBeam.h"
+#include "VidHdWindowBeam.h"
 #include "CycleCounter.h"
 #include "imgui.h"
 #include "imgui_memory_editor.h"
@@ -107,17 +108,6 @@ public:
 		// NOTE:	Anything labled "id" is an internal identifier by the GPU
 		//			Anything labled "index" is an actual array or vector index used by the code
 
-		// An image asset is a texture with its metadata (width, height)
-		// The actual texture data is in the GPU memory
-	struct ImageAsset {
-		void AssignByFilename(A2VideoManager* owner, const char* filename);
-
-		// image assets are full 32-bit bitmap files, uploaded from PNG
-		uint32_t image_xcount = 0;	// width and height of asset in pixels
-		uint32_t image_ycount = 0;
-		GLuint tex_id = UINT_MAX;	// Texture ID on the GPU that holds the image data
-	};
-
 	// We'll create 2 BeamRenderVRAMs objects, for double buffering
 	struct BeamRenderVRAMs {
 		uint32_t id = 0;
@@ -140,8 +130,9 @@ public:
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
 
-	ImageAsset image_assets[5];
+	OpenGLHelper::ImageAsset image_assets[6];
 	std::unique_ptr<A2WindowBeam> windowsbeam[A2VIDEOBEAM_TOTAL_COUNT];	// beam racing GPU render
+	std::unique_ptr<VidHdWindowBeam> vidhdWindowBeam;					// VidHD Text Modes GPU render
 
 	uint64_t current_frame_idx = 0;
 	uint64_t rendered_frame_idx = UINT64_MAX;
@@ -281,7 +272,8 @@ private:
 	bool bImguiMemLoadAuxBank = false;
 	int iImguiMemLoadPosition = 0;
 	int overrideSHR4Mode = 0;				// Cached here to keep the value between A2WindowBeam resets
-	bool overrideSHRInterlace = 0;			// Cached here to keep the value between A2WindowBeam resets
+	bool bOverrideSHRInterlace = 0;			// Cached here to keep the value between A2WindowBeam resets
+	int overrideVidHDTextMode = VIDHDMODE_NONE;
 	std::string sImguiLoadPath = ".";
 	
 	// beam render state variables
