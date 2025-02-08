@@ -377,6 +377,7 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 	while (!(*shouldTerminateNetworking)) {
 		if (!connected) {
 			if (next_connect_timeout > std::chrono::steady_clock::now()) {
+				SDL_Delay(200);
 				continue;
 			}
 			next_connect_timeout = std::chrono::steady_clock::now() + std::chrono::milliseconds(1000);
