@@ -133,8 +133,8 @@ void main()
 						+ ((1.f - tex) * tintcolors[targetTexel.g & 0x0Fu]);	// background (dot is off)
 
 		// Do the transparency
-		vidhdColor.a = (tex.r * float((targetTexel.a & 0xF0u) >> 4) / 16.0)		// foreground (dot is on)
-		+ ((1.f - tex.r) * float(targetTexel.a & 0x0Fu) / 16.0);				// background (dot is off)
+		vidhdColor.a = (tex.r * float((targetTexel.a & 0xF0u) >> 4) / 15.0)		// foreground (dot is on)
+		+ ((1.f - tex.r) * float(targetTexel.a & 0x0Fu) / 15.0);				// background (dot is off)
 
 	}	// isInBounds
 
