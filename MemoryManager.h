@@ -110,7 +110,7 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
-	uint8_t switch_c022;				// Exact value of the switch c022	fg/bg color
+	int switch_c022;					// Exact value of the switch c022	fg/bg color
 	int switch_c034;					// Exact value of the switch c034	border color
 	bool is2gs;
 

@@ -11,9 +11,6 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  Apple 2 video beam shader for merging Legacy and SHR
  in the case that both modes exist in the same frame.
 
- It also overlays the selected VidHD extended text mode when active. If it is active,
- then the size is automatically 1920x1080.
-
  This shader expects as input a OFFSETTEX texture that has the following features:
  - Type GL_R32F
  - One byte per line (Red channel only)
@@ -29,7 +26,7 @@ uniform COMPAT_PRECISION int ticks;				// ms since start
 // merge layers are the following bits:
 // 0: legacy
 // 1: SHR
-// 2: VidHD Text Modes
+// 2: VidHD Text Modes (this layer is added in the vidHD layer
 uniform int mergeLayers;
 
 uniform sampler2D OFFSETTEX;					// Offset texture
@@ -40,18 +37,13 @@ uniform sampler2D LEGACYTEX;					// legacy output texture
 uniform COMPAT_PRECISION vec2 legacySize;
 uniform sampler2D SHRTEX;						// shr output texture
 uniform COMPAT_PRECISION vec2 shrSize;
-uniform sampler2D VIDHDTEX;						// VidHD Text Mode output texture
-uniform COMPAT_PRECISION vec2 vidhdSize;
 
 in vec2 vTexCoords;								// The fragment relative position
 out vec4 fragColor;
 
 void main()
 {
-	// Use the vidhdSize if it's active, otherwise the shrSize;
 	vec2 finalSize = shrSize;
-	if ((mergeLayers & 0x4) == 0x4)
-		finalSize = vidhdSize;
 	vec4 fragColorMerged;	// the color of the Apple 2 modes
 	if ((mergeLayers & 0x3) == 0x3) {	// SHR+LEGACY
 		float xOffset = texelFetch(OFFSETTEX, ivec2(0, gl_FragCoord.y/2.0), 0).r;
@@ -79,12 +71,7 @@ void main()
 								  vec2(vTexCoords.x * finalSize.x/legacySize.x - (640.f-560.f)/(560.f*2.0f),
 									   vTexCoords.y * finalSize.y/legacySize.y - (400.f-384.f)/(384.f*2.0f)));
 	}	// SHR+LEGACY, SHR, LEGACY
+	
+	fragColor = fragColorMerged;
 
-	if ((mergeLayers & 0x4) == 0x4) {	// VIDHD
-		// Now add the vidhd overlay
-		vec4 fragColorVidhd = texture(VIDHDTEX, vTexCoords);
-		fragColor = mix(fragColorMerged, fragColorVidhd, fragColorVidhd.a);
-	} else {
-		fragColor = fragColorMerged;
-	}
 }

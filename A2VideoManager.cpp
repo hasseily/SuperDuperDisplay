@@ -1202,6 +1202,48 @@ void A2VideoManager::PrepareOffsetTexture() {
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	}
 }
+
+void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
+{
+	if (FBO_merged == UINT_MAX)
+	{
+		glGenFramebuffers(1, &FBO_merged);
+		glGenTextures(1, &merged_texture_id);
+	}
+
+	GLint fbWidth, fbHeight;
+	glBindTexture(GL_TEXTURE_2D, merged_texture_id);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &fbWidth);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &fbHeight);
+	if ((fbWidth == fb_width) && (fbHeight == fb_height))
+	{
+		glBindTexture(GL_TEXTURE_2D, 0);
+		return;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
+
+	glActiveTexture(_TEXUNIT_POSTPROCESS);
+	glBindTexture(GL_TEXTURE_2D, merged_texture_id);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, merged_texture_id, 0);
+
+	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status != GL_FRAMEBUFFER_COMPLETE)
+	{
+		std::cerr << "Framebuffer is not complete: " << status << std::endl;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE0);
+	std::cerr << "Generating FBO with size " << fb_width << " x " << fb_height << std::endl;
+}
+
 GLuint A2VideoManager::Render()
 {
 	// We first render both the legacy and shr "windows" as textures
@@ -1221,32 +1263,9 @@ GLuint A2VideoManager::Render()
 		return UINT32_MAX;
 
 	GLenum glerr;
+
 	if (FBO_merged == UINT_MAX)
-	{
-		glGenFramebuffers(1, &FBO_merged);
-		glGenTextures(1, &merged_texture_id);
-
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
-
-		glActiveTexture(_TEXUNIT_POSTPROCESS);
-		glBindTexture(GL_TEXTURE_2D, merged_texture_id);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, merged_texture_id, 0);
-
-		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-		if (status != GL_FRAMEBUFFER_COMPLETE) {
-			std::cerr << "Framebuffer is not complete: " << status << std::endl;
-		}
-
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		glActiveTexture(GL_TEXTURE0);
-		// std::cerr << "Generating FBO with size " << fb_width << " x " << fb_height << std::endl;
-	}
+		CreateOrResizeFramebuffer(fb_width, fb_height);
 
 	// Initialization routine runs only once on init (or re-init)
 	if (bShouldInitializeRender) {
@@ -1301,19 +1320,16 @@ GLuint A2VideoManager::Render()
 	// ============================== MERGED MODE RENDER ==============================
 	// ===============================================================================
 
-	// Now determine how we should merge both legacy and shr and the vidhd modes
-	bool _bRenderVidhd = (vidhdWindowBeam->GetVideoMode() != VIDHDMODE_NONE);
-	if ((vrams_read->mode == A2Mode_e::MERGED) || _bRenderVidhd)
+	// Now determine if we should merge both legacy and shr
+	if (vrams_read->mode == A2Mode_e::MERGED)
 	{
 		int _renderModes = 0;	// bit 0: LEGACY, bit 1: SHR, bit 2: VIDHD
 		_renderModes |= ((vrams_read->mode == A2Mode_e::LEGACY ? 1 : 0));
 		_renderModes |= ((vrams_read->mode == A2Mode_e::SHR ? 1 : 0) << 1);
 		_renderModes |= ((vrams_read->mode == A2Mode_e::MERGED ? 0b11 : 0));
-		_renderModes |= ((_bRenderVidhd? 1 : 0) << 2);
 
 		GLuint legacy_texture_id = UINT_MAX;
 		GLuint shr_texture_id = UINT_MAX;
-		GLuint vidhd_texture_id = UINT_MAX;
 
 		uint32_t legacy_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
 		auto legacy_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
@@ -1338,19 +1354,10 @@ GLuint A2VideoManager::Render()
 			shr_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render();
 		}
 
-		if ((_renderModes & 0b100) == 0b100)	// VidHD
-		{
-			output_width = vidhdWindowBeam->GetWidth();
-			output_height = vidhdWindowBeam->GetHeight();
-			glViewport(0, 0, output_width, output_height);
-			std::cerr << "Rendering vidhd mode to viewport " << output_width << " x " << output_height << std::endl;
-			vidhd_texture_id = vidhdWindowBeam->Render();
-		}
-
 		// Setup for merged rendering
 		output_texture_id = merged_texture_id;
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
-		// glViewport(0, 0, output_width, output_height);
+		glViewport(0, 0, output_width, output_height);
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
@@ -1390,15 +1397,6 @@ GLuint A2VideoManager::Render()
 		}
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "A2VideoManager merged render 01 error: " << glerr << std::endl;
-		}
-
-		if ((_renderModes & 0b100) == 0b100)	// VidHD
-		{
-			glActiveTexture(_TEXUNIT_MERGE_VIDHD);
-			glBindTexture(GL_TEXTURE_2D, vidhd_texture_id);
-			shader_merge.setInt("VIDHDTEX", _TEXUNIT_MERGE_VIDHD - GL_TEXTURE0);
-			shader_merge.setVec2("vidhdSize", vidhdWindowBeam->GetWidth(), vidhdWindowBeam->GetHeight());
-			std::cerr << "Bound VidHD" << std::endl;
 		}
 
 		// Tell the shaders which layers to merge, depending on which render modes are active
@@ -1464,6 +1462,18 @@ GLuint A2VideoManager::Render()
 			std::cerr << "SHR Mode draw error: " << glerr << std::endl;
 		}
 	}
+
+	bool _bRenderVidhd = (vidhdWindowBeam->GetVideoMode() != VIDHDMODE_NONE);
+	if (_bRenderVidhd)	// VidHD
+	{
+		glActiveTexture(_TEXUNIT_INPUT_VIDHD);
+		glBindTexture(GL_TEXTURE_2D, output_texture_id);
+		output_texture_id = vidhdWindowBeam->Render(_TEXUNIT_INPUT_VIDHD, glm::vec2(output_width, output_height));
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "VidHD draw error: " << glerr << std::endl;
+		}
+	}
+
 	glActiveTexture(_TEXUNIT_POSTPROCESS);
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
@@ -1661,6 +1671,8 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			ImGui::SeparatorText("[ BORDERS AND WIDTH ]");
 			ImGui::SliderInt("Horizontal Borders", &border_w_slider_val, 0, _BORDER_WIDTH_MAX_CYCLES, "%d", 1);
 			ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, _BORDER_HEIGHT_MAX_MULT8, "%d", 1);
+			if (ImGui::SliderInt("Text Colors (0xC022)", &memManager->switch_c022, 0, 255))
+				this->ForceBeamFullScreenRender();
 			if (ImGui::SliderInt("Border Color (0xC034)", &memManager->switch_c034, 0, 15))
 				this->ForceBeamFullScreenRender();
 			if (ImGui::Checkbox("Force SHR width in merged mode", &this->bForceSHRWidth))

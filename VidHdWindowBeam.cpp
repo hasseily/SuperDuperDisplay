@@ -10,10 +10,11 @@
 #include <SDL_timer.h>
 #include "A2VideoManager.h"
 #include "SDHRManager.h"
+#include "MemoryManager.h"
 
 VidHdWindowBeam::VidHdWindowBeam(VidHdMode_e _mode)
 {
-	vram_text = new uint8_t[_VIDHDMODES_TEXT_WIDTH*_VIDHDMODES_TEXT_HEIGHT];
+	vram_text = new uint32_t[_VIDHDMODES_TEXT_WIDTH*_VIDHDMODES_TEXT_HEIGHT];
 	shader = Shader();
 	shader.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_VIDHD_TEXT_FRAGMENT);
 	this->SetVideoMode(_mode);
@@ -47,7 +48,13 @@ void VidHdWindowBeam::WriteCharacter(uint8_t hpos, uint8_t vpos, uint8_t value)
 		return;
 	if (vpos >= _VIDHDMODES_TEXT_HEIGHT)
 		return;
-	vram_text[_VIDHDMODES_TEXT_WIDTH*vpos + hpos] = value;
+	VidHdVramTextEntry textEntry;
+	textEntry.character = value;
+	textEntry.unused = 0;
+	textEntry.color = MemoryManager::GetInstance()->switch_c022;
+	textEntry.backgroundTransparency = 0b1111;	// opaque
+	textEntry.foregroundTransparency = 0b1111;	// opaque
+	vram_text[_VIDHDMODES_TEXT_WIDTH*vpos + hpos] = *reinterpret_cast<uint32_t*>(&textEntry);
 }
 
 uint8_t VidHdWindowBeam::ReadCharacter(uint8_t hpos, uint8_t vpos)
@@ -56,7 +63,8 @@ uint8_t VidHdWindowBeam::ReadCharacter(uint8_t hpos, uint8_t vpos)
 		return 0;
 	if (vpos >= _VIDHDMODES_TEXT_HEIGHT)
 		return 0;
-	return vram_text[_VIDHDMODES_TEXT_WIDTH*vpos + hpos];
+	VidHdVramTextEntry* textEntry = reinterpret_cast<VidHdVramTextEntry*>(vram_text + _VIDHDMODES_TEXT_WIDTH*vpos + hpos);
+	return textEntry->character;
 }
 
 void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
@@ -75,7 +83,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 			mode_height = 24;
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(14,16);
-			fontScale = glm::vec2(2.0,2.0);
+			fontScale = glm::uvec2(2,2);
 			border = glm::vec2(400.0,156.0);
 			break;
 		case VIDHDMODE_TEXT_80X24:
@@ -83,7 +91,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 			mode_height = 24;
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(14,16);
-			fontScale = glm::vec2(1.0,2.0);
+			fontScale = glm::uvec2(1,2);
 			border = glm::vec2(400.0,156.0);
 			break;
 		case VIDHDMODE_TEXT_80X45:
@@ -91,7 +99,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 			mode_height = 45;
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(8,8);
-			fontScale = glm::vec2(3.0,3.0);
+			fontScale = glm::uvec2(3,3);
 			border = glm::vec2(0.0,0.0);
 			break;
 		case VIDHDMODE_TEXT_120X67:
@@ -99,7 +107,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 			mode_height = 67;
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(8,8);
-			fontScale = glm::vec2(2.0,2.0);
+			fontScale = glm::uvec2(2,2);
 			border = glm::vec2(0.0,0.0);
 			break;
 		case VIDHDMODE_TEXT_240X135:
@@ -107,7 +115,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 			mode_height = 135;
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(8,8);
-			fontScale = glm::vec2(1.0,1.0);
+			fontScale = glm::uvec2(1,1);
 			border = glm::vec2(0.0,0.0);
 			break;
 		default:
@@ -115,7 +123,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 			mode_height = 0;
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(14,16);
-			fontScale = glm::vec2(2.0,2.0);
+			fontScale = glm::uvec2(2,2);
 			border = glm::vec2(400.0,156.0);
 			break;
 	}
@@ -123,11 +131,11 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 	if (mode_width < _VIDHDMODES_TEXT_WIDTH)
 	{
 		for (int j = 0; j < mode_height; ++j) {
-			memset(vram_text+(_VIDHDMODES_TEXT_WIDTH*j + mode_width), 0, _VIDHDMODES_TEXT_WIDTH - mode_width);
+			memset(vram_text+(_VIDHDMODES_TEXT_WIDTH*j + mode_width), 0, (_VIDHDMODES_TEXT_WIDTH - mode_width) * sizeof(uint32_t));
 		}
 	}
-	// Clear all the row that are beyond the height of the mode
-	memset(vram_text+(mode_width*mode_height), 0, _VIDHDMODES_TEXT_WIDTH * (_VIDHDMODES_TEXT_HEIGHT - mode_height));
+	// Clear all the rows that are beyond the height of the mode
+	memset(vram_text+(mode_width*mode_height), 0, _VIDHDMODES_TEXT_WIDTH * (_VIDHDMODES_TEXT_HEIGHT - mode_height) * sizeof(uint32_t));
 }
 
 uint32_t VidHdWindowBeam::GetWidth() const
@@ -162,7 +170,7 @@ GLuint VidHdWindowBeam::GetOutputTextureId() const
 	return output_texture_id;
 }
 
-GLuint VidHdWindowBeam::Render()
+GLuint VidHdWindowBeam::Render(GLuint inputTexUnit, glm::vec2 inputSize)
 {
 	// std::cerr << "Rendering vidhd mode " << (int)video_mode  << std::endl;
 	if (video_mode == VIDHDMODE_NONE)
@@ -251,10 +259,10 @@ GLuint VidHdWindowBeam::Render()
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	if (bVramTextureExists)	// it exists, do a glTexSubImage2D() update
 	{
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 40, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, vram_text);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _VIDHDMODES_TEXT_WIDTH, _VIDHDMODES_TEXT_HEIGHT, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, vram_text);
 	}
 	else {	// texture doesn't exist, create it with glTexImage2D()
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, vram_text);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, _VIDHDMODES_TEXT_WIDTH, _VIDHDMODES_TEXT_HEIGHT, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, vram_text);
 		bVramTextureExists = true;
 	}
 
@@ -263,6 +271,7 @@ GLuint VidHdWindowBeam::Render()
 	}
 
 	shader.setInt("ticks", SDL_GetTicks());
+	shader.setVec2("inputSize", inputSize);	// Size could change depending on legacy or SHR
 	if (bModeDidChange)
 	{
 		bModeDidChange = false;
@@ -272,10 +281,13 @@ GLuint VidHdWindowBeam::Render()
 		shader.setInt("yheight", mode_height);
 		shader.setInt("fontTex", fontTex);
 		shader.setVec2u("glyphSize", glyphSize);
-		shader.setVec2("fontScale", fontScale);
+		shader.setVec2u("fontScale", fontScale);
 		shader.setVec2("border", border);
+
+		shader.setInt("inputTex", inputTexUnit - GL_TEXTURE0);
 	}
 
+	glViewport(0, 0, _VIDHDMODES_PIXEL_WIDTH, _VIDHDMODES_PIXEL_HEIGHT);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -310,6 +322,18 @@ void VidHdWindowBeam::DisplayImGuiWindow(bool* p_open)
 		WriteCharacter(static_cast<uint8_t>(x_pos),
 					   static_cast<uint8_t>(y_pos),
 					   static_cast<uint8_t>(ascii_value+128));
+		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	}
+	if (ImGui::Button("Test String"))
+	{
+		for (int xx = 0; xx < mode_width; ++xx) {
+			for (int yy = 0; yy < mode_height; ++yy) {
+				WriteCharacter(static_cast<uint8_t>(xx),
+							   static_cast<uint8_t>(yy),
+							   static_cast<uint8_t>((xx % 0x80) + 0x80));
+			}
+		}
+		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
 
 	// Display the character at the given position
@@ -340,28 +364,6 @@ void VidHdWindowBeam::DisplayImGuiWindow(bool* p_open)
 	if (ImGui::Button("Clear VRAM Text"))
 	{
 		memset(vram_text, 0, _VIDHDMODES_TEXT_WIDTH * _VIDHDMODES_TEXT_HEIGHT);
-	}
-
-	// --- Display a Preview of the VRAM Text Buffer ---
-	// For debugging, show the first several rows of the buffer.
-	ImGui::Separator();
-	ImGui::Text("VRAM Text Preview:");
-	// Limit the preview to a maximum of 24 rows (or less if mode_height is lower).
-	int preview_rows = (mode_height < 24) ? mode_height : 24;
-	for (int row = 0; row < preview_rows; ++row)
-	{
-		// Assume a maximum line width of 256 characters for display purposes.
-		char line[256] = { 0 };
-		int width = (mode_width < 256) ? mode_width : 256;
-		for (int col = 0; col < width; ++col)
-		{
-			uint8_t ch = ReadCharacter(static_cast<uint8_t>(col), static_cast<uint8_t>(row));
-			// Replace non-printable characters with a dot.
-			ch -= 128;
-			line[col] = (ch >= 32 && ch < 127) ? static_cast<char>(ch) : '.';
-		}
-		line[width] = '\0';
-		ImGui::Text("%s", line);
 	}
 
 	ImGui::End();

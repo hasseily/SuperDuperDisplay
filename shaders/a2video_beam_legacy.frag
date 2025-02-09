@@ -12,7 +12,7 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 Apple 2 video beam shader for legacy modes (not SHR).
 
 This shader expects as input a VRAMTEX texture that has the following features:
-- Type GL_RGB8UI, which is 4 bytes for each texel
+- Type GL_RGBA8UI, which is 4 bytes for each texel
 - Color R is the MAIN memory byte
 - Color G is the AUX memory byte
 - Color B is 8 bits of state, including the graphics mode and soft switches

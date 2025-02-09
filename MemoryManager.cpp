@@ -473,14 +473,17 @@ void MemoryManager::WriteToMemory(uint16_t addr, uint8_t val, bool m2b0, bool is
 		{
 			// Check for PR#1 (assuming the tini is in slot 1
 			// TODO: Have a way to get the tini to tell us its slot
+			// TODO: Have a way to get the tini to tell us to switch between the new modes
 			if ((addr == 0x36) || (addr == 0x37))	// PR#x
 			{
 				if (a2mem[0x36] == 0x00 && a2mem[0x37] == 0xC1)	// PR#1 is called, COUT is going to $C001
 				{
 					// switch to the new video modes
+					A2VideoManager::GetInstance()->vidhdWindowBeam->SetVideoMode(VIDHDMODE_TEXT_40X24);
 				}
 				else {
 					// switch to the standard Apple 2 video modes
+					A2VideoManager::GetInstance()->vidhdWindowBeam->SetVideoMode(VIDHDMODE_NONE);
 				}
 			}
 		}

@@ -273,6 +273,8 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	_scale = std::min(_scale, static_cast<float>(viewportHeight) / static_cast<float>(texHeight));
 	if (_scale > 1.0f)
 		_scale = std::floor(_scale);
+	else
+		_scale = 1.0f;
 	max_integer_scale = std::max(1, static_cast<int>(_scale) + 20);	// allow for manual further zoom
 	if (!bAutoScale)
 	{

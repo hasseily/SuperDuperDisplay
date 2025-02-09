@@ -71,6 +71,32 @@ constexpr uint32_t _VIDHDMODES_TEXT_HEIGHT = 135;
 // B is reserved for later
 // A is used as standard A, transparency
 
+#pragma pack(push, 1)
+struct VidHdVramTextEntry {	// 4 byte struct
+	uint8_t character;  // Byte 0 (R): Text value
+
+	// Byte 1 (G): Colors
+	union {
+		uint8_t color;  // Access the whole byte if needed
+		struct {
+			uint8_t backgroundColor : 4; // Lower 4 bits
+			uint8_t foregroundColor : 4; // Upper 4 bits
+		};
+	};
+
+	uint8_t unused;  // Byte 2 (B): Unused
+
+	// Byte 3 (A): Transparency
+	union {
+		uint8_t transparency;
+		struct {
+			uint8_t backgroundTransparency : 4; // Lower 4 bits
+			uint8_t foregroundTransparency : 4; // Upper 4 bits
+		};
+	};
+};
+#pragma pack(pop)
+
 class VidHdWindowBeam {
 public:
 	VidHdWindowBeam(VidHdMode_e _video_mode);
@@ -82,7 +108,7 @@ public:
 	uint32_t GetWidth() const;
 	uint32_t GetHeight() const;
 	GLuint GetOutputTextureId() const;
-	GLuint Render();	// returns the output texture id
+	GLuint Render(GLuint inputTexUnit, glm::vec2 inputSize);	// returns the output texture id
 	void DisplayImGuiWindow(bool* p_open);
 
 	std::vector<VidHdBeamVertex> vertices;	// Vertices with XYRelative and XYPixels
@@ -97,7 +123,11 @@ private:
 
 	unsigned int VRAMTEX = UINT_MAX;		// GL_R8UI VRAM buffer texture.
 
-	uint8_t* vram_text;						// 240x135 characters
+	uint32_t* vram_text;					// 240x135 characters
+											// byte 0: text value
+											// byte 1: fore and background colors, as specified in the C022 softswitch
+											// byte 2: unused for now
+											// byte 3: fore and background transparency levels (16 levels of transparency)
 
 	GLuint output_texture_id = UINT_MAX;	// the output texture for this object
 	GLuint FBO = UINT_MAX;					// the framebuffer for this object

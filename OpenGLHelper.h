@@ -31,6 +31,7 @@ public:
 	const std::string* get_glsl_version();	// returns the glsl version string
 	void load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID);
 	GLuint get_texture_id_at_slot(int slot);	// returns the opengl-generated texture id for this tex slot
+	glm::vec2 get_dpi_scaling_factors(SDL_Window* window);		// returns the scaling of width and height for high dpi screens
 
 	// The created texture ids (max is _SDHR_MAX_TEXTURES)
 	std::vector<GLuint>v_texture_ids;

@@ -74,7 +74,7 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _TEXUNIT_MERGE_OFFSET GL_TEXTURE17		// Offset buffer
 #define _TEXUNIT_MERGE_LEGACY GL_TEXTURE18		// legacy output texture
 #define _TEXUNIT_MERGE_SHR GL_TEXTURE19			// SHR output texture
-#define _TEXUNIT_MERGE_VIDHD GL_TEXTURE20		// VidHD output texture
+#define _TEXUNIT_INPUT_VIDHD GL_TEXTURE20		// Texture used as input to overlay the VidHD text modes on
 
 
 // AUDIO
