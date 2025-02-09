@@ -1671,8 +1671,6 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			ImGui::SeparatorText("[ BORDERS AND WIDTH ]");
 			ImGui::SliderInt("Horizontal Borders", &border_w_slider_val, 0, _BORDER_WIDTH_MAX_CYCLES, "%d", 1);
 			ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, _BORDER_HEIGHT_MAX_MULT8, "%d", 1);
-			if (ImGui::SliderInt("Text Colors (0xC022)", &memManager->switch_c022, 0, 255))
-				this->ForceBeamFullScreenRender();
 			if (ImGui::SliderInt("Border Color (0xC034)", &memManager->switch_c034, 0, 15))
 				this->ForceBeamFullScreenRender();
 			if (ImGui::Checkbox("Force SHR width in merged mode", &this->bForceSHRWidth))
@@ -1697,6 +1695,34 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			if (ImGui::Combo("VidHD Text Modes", &this->overrideVidHDTextMode, vidHdModes, IM_ARRAYSIZE(vidHdModes)))
 			{
 				vidhdWindowBeam->SetVideoMode((VidHdMode_e)overrideVidHDTextMode);
+				this->ForceBeamFullScreenRender();
+			}
+			c022TextColorForeNibble = memManager->switch_c022 >> 4;
+			c022TextColorBackNibble = memManager->switch_c022 & 0xF;
+			if (ImGui::SliderInt("Text Color FG (0xC022)", &c022TextColorForeNibble, 0, 15))
+			{
+				auto _color = (c022TextColorForeNibble << 4) | c022TextColorBackNibble;
+				memManager->switch_c022 = _color;
+				this->ForceBeamFullScreenRender();
+			}
+			if (ImGui::SliderInt("Text Color BG (0xC022)", &c022TextColorBackNibble, 0, 15))
+			{
+				auto _color = (c022TextColorForeNibble << 4) | c022TextColorBackNibble;
+				memManager->switch_c022 = _color;
+				this->ForceBeamFullScreenRender();
+			}
+			vidHdTextAlphaForeNibble = vidhdWindowBeam->GetAlpha() >> 4;
+			vidHdTextAlphaBackNibble = vidhdWindowBeam->GetAlpha() & 0xF;
+			if (ImGui::SliderInt("Text Alpha FG", &vidHdTextAlphaForeNibble, 0, 15))
+			{
+				auto _alpha = (vidHdTextAlphaForeNibble << 4) | vidHdTextAlphaBackNibble;
+				vidhdWindowBeam->SetAlpha(_alpha);
+				this->ForceBeamFullScreenRender();
+			}
+			if (ImGui::SliderInt("Text Alpha BG", &vidHdTextAlphaBackNibble, 0, 15))
+			{
+				auto _alpha = (vidHdTextAlphaForeNibble << 4) | vidHdTextAlphaBackNibble;
+				vidhdWindowBeam->SetAlpha(_alpha);
 				this->ForceBeamFullScreenRender();
 			}
 

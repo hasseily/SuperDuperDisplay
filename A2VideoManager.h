@@ -275,6 +275,10 @@ private:
 	int overrideSHR4Mode = 0;				// Cached here to keep the value between A2WindowBeam resets
 	bool bOverrideSHRInterlace = 0;			// Cached here to keep the value between A2WindowBeam resets
 	int overrideVidHDTextMode = VIDHDMODE_NONE;
+	int c022TextColorForeNibble = 0;
+	int c022TextColorBackNibble = 0;
+	int vidHdTextAlphaForeNibble = 0b1111;
+	int vidHdTextAlphaBackNibble = 0b1111;
 	std::string sImguiLoadPath = ".";
 	
 	// beam render state variables

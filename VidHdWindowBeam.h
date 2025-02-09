@@ -88,10 +88,10 @@ struct VidHdVramTextEntry {	// 4 byte struct
 
 	// Byte 3 (A): Transparency
 	union {
-		uint8_t transparency;
+		uint8_t alpha;
 		struct {
-			uint8_t backgroundTransparency : 4; // Lower 4 bits
-			uint8_t foregroundTransparency : 4; // Upper 4 bits
+			uint8_t backgroundAlpha : 4; // Lower 4 bits
+			uint8_t foregroundAlpha : 4; // Upper 4 bits
 		};
 	};
 };
@@ -103,6 +103,8 @@ public:
 	~VidHdWindowBeam();
 	void WriteCharacter(uint8_t hpos, uint8_t vpos, uint8_t value);	// COUT
 	uint8_t ReadCharacter(uint8_t hpos, uint8_t vpos);				// for completeness
+	void SetAlpha(uint8_t alpha);	// Sets future writes' transparency
+	uint8_t GetAlpha() { return textAlpha; };
 	void SetVideoMode(VidHdMode_e mode);
     VidHdMode_e GetVideoMode() const { return video_mode; }
 	uint32_t GetWidth() const;
@@ -132,6 +134,7 @@ private:
 	GLuint output_texture_id = UINT_MAX;	// the output texture for this object
 	GLuint FBO = UINT_MAX;					// the framebuffer for this object
 
+	uint8_t textAlpha = 0xFF;				// Fore and Back alpha (high and low nibble)
 	// Current mode information
 	bool bModeDidChange = true;
 	int mode_width = 0;

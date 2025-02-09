@@ -52,8 +52,7 @@ void VidHdWindowBeam::WriteCharacter(uint8_t hpos, uint8_t vpos, uint8_t value)
 	textEntry.character = value;
 	textEntry.unused = 0;
 	textEntry.color = MemoryManager::GetInstance()->switch_c022;
-	textEntry.backgroundTransparency = 0b1111;	// opaque
-	textEntry.foregroundTransparency = 0b1111;	// opaque
+	textEntry.alpha = textAlpha;
 	vram_text[_VIDHDMODES_TEXT_WIDTH*vpos + hpos] = *reinterpret_cast<uint32_t*>(&textEntry);
 }
 
@@ -65,6 +64,11 @@ uint8_t VidHdWindowBeam::ReadCharacter(uint8_t hpos, uint8_t vpos)
 		return 0;
 	VidHdVramTextEntry* textEntry = reinterpret_cast<VidHdVramTextEntry*>(vram_text + _VIDHDMODES_TEXT_WIDTH*vpos + hpos);
 	return textEntry->character;
+}
+
+void VidHdWindowBeam::SetAlpha(uint8_t alpha)
+{
+	textAlpha = alpha;
 }
 
 void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
@@ -341,24 +345,6 @@ void VidHdWindowBeam::DisplayImGuiWindow(bool* p_open)
 	// Only display printable characters; otherwise show a dot.
 	char display_char = (current_char >= (128+32) && current_char < 255) ? static_cast<char>(current_char-128) : '.';
 	ImGui::Text("Character at (%d, %d): '%c' (ASCII: %d)", x_pos, y_pos, display_char, current_char);
-
-	// --- Video Mode Selection ---
-	static int current_mode_index = 0;
-	const char* video_modes[] = { "TEXT 40x24", "TEXT 80x24", "TEXT 80x45", "TEXT 120x67", "TEXT 240x135", "None" };
-	if (ImGui::Combo("Video Mode", &current_mode_index, video_modes, IM_ARRAYSIZE(video_modes)))
-	{
-		VidHdMode_e new_mode;
-		switch (current_mode_index)
-		{
-			case 0: new_mode = VIDHDMODE_TEXT_40X24; break;
-			case 1: new_mode = VIDHDMODE_TEXT_80X24; break;
-			case 2: new_mode = VIDHDMODE_TEXT_80X45; break;
-			case 3: new_mode = VIDHDMODE_TEXT_120X67; break;
-			case 4: new_mode = VIDHDMODE_TEXT_240X135; break;
-			default: new_mode = VIDHDMODE_NONE; break;
-		}
-		SetVideoMode(new_mode);
-	}
 
 	// --- Button to Clear the Entire VRAM Text Buffer ---
 	if (ImGui::Button("Clear VRAM Text"))
