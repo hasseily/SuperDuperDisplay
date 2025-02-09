@@ -350,6 +350,7 @@ void VidHdWindowBeam::DisplayImGuiWindow(bool* p_open)
 	if (ImGui::Button("Clear VRAM Text"))
 	{
 		memset(vram_text, 0, _VIDHDMODES_TEXT_WIDTH * _VIDHDMODES_TEXT_HEIGHT * sizeof(uint32_t));
+		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
 
 	ImGui::End();
