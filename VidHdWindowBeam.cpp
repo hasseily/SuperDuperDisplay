@@ -349,7 +349,7 @@ void VidHdWindowBeam::DisplayImGuiWindow(bool* p_open)
 	// --- Button to Clear the Entire VRAM Text Buffer ---
 	if (ImGui::Button("Clear VRAM Text"))
 	{
-		memset(vram_text, 0, _VIDHDMODES_TEXT_WIDTH * _VIDHDMODES_TEXT_HEIGHT);
+		memset(vram_text, 0, _VIDHDMODES_TEXT_WIDTH * _VIDHDMODES_TEXT_HEIGHT * sizeof(uint32_t));
 	}
 
 	ImGui::End();
