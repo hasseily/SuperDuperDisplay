@@ -173,27 +173,34 @@ void PostProcessor::SelectShader()
 {
 	// Choose the shader
 	// Frame count is always set, outside of the shader selection
+	auto _texUnitCurrent  = ((frame_count & 1) == 0 ? _TEXUNIT_POSTPROCESS_0 : _TEXUNIT_POSTPROCESS_1);
+	auto _texUnitPrevious = ((frame_count & 1) == 0 ? _TEXUNIT_POSTPROCESS_1 : _TEXUNIT_POSTPROCESS_0);
 	switch (p_i_postprocessingLevel)
 	{
 	case 0:	// basic passthrough shader with optional scanlines
 	case 1:
 		shaderProgram = v_ppshaders.at(0);
 		shaderProgram.use();
-		shaderProgram.setInt("Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
 		shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
+		shaderProgram.setInt("A2TextureCurrent", _texUnitCurrent - GL_TEXTURE0);
+		shaderProgram.setInt("A2TexturePrevious", _texUnitPrevious - GL_TEXTURE0);
+		shaderProgram.setInt("GhostingPercent", p_i_ghostingPercent);
 		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
+
 		break;
 	case 2:	// CRT shader
 		shaderProgram = v_ppshaders.at(1);
 		shaderProgram.use();
 		// common
-		shaderProgram.setInt("A2Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
+		shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
+		shaderProgram.setInt("A2TextureCurrent", _texUnitCurrent - GL_TEXTURE0);
+		shaderProgram.setInt("A2TexturePrevious", _texUnitPrevious - GL_TEXTURE0);
+		shaderProgram.setInt("GhostingPercent", p_i_ghostingPercent);
+		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
 		shaderProgram.setVec2("InputSize", glm::vec2(texWidth, texHeight));
-		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
 		shaderProgram.setVec4("VideoRect", quadViewportCoords);
-		shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
 
 		// shader specific
 		shaderProgram.setBool("bCORNER_SMOOTH", p_b_smoothCorner);
@@ -251,9 +258,24 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 		std::cerr << "OpenGL error PP 0: " << glerr << std::endl;
 	}
 	
-	// Bind the texture we're given to our _POSTPROCESSOR_INPUT_TEXTURE
+	// Bind the texture we're given
 	// And get its actual size.
-	glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
+	// We assume we're working in slot 0 (even frames), then validate. If not slot 0,
+	// then we switch to slot 1 (odd frames). We don't use our own frame counter because
+	// it may not be synched with the A2Video frame generation
+	glActiveTexture(_TEXUNIT_POSTPROCESS_0);
+	auto _texUnitCurrent  = _TEXUNIT_POSTPROCESS_0;
+	auto _texUnitPrevious = _TEXUNIT_POSTPROCESS_1;
+	GLint boundTex = 0;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTex);
+	if (static_cast<GLuint>(boundTex) != inputTextureId)
+	{
+		// the input texture is in slot 1, let's move to slot 1
+		_texUnitCurrent  = _TEXUNIT_POSTPROCESS_1;
+		_texUnitPrevious = _TEXUNIT_POSTPROCESS_0;
+	}
+
+	glActiveTexture(_texUnitCurrent);
 	GLint last_bound_texture = 0;
 	glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_bound_texture);
 	glBindTexture(GL_TEXTURE_2D, inputTextureId);
@@ -372,7 +394,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	}
 	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
 	// revert the texture assignment
-	glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
+	glActiveTexture(_texUnitCurrent);
 	glBindTexture(GL_TEXTURE_2D, last_bound_texture);
 	glActiveTexture(GL_TEXTURE0);
 	++frame_count;
@@ -438,6 +460,10 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		ImGui::PopItemWidth();
 
 		ImGui::PushItemWidth(200);
+
+		// Just the ghosting, which applies everywhere
+		ImGui::Separator();
+		ImGui::SliderInt("Ghosting Weight", &p_i_ghostingPercent, 0, 99, 0);
 
 		// PP Type
 		ImGui::Separator();

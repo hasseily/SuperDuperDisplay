@@ -12,9 +12,6 @@
 #include "shader.h"
 #include <vector>
 
-// Link the output of the legacy, sdhr, ... renderers to the input of the postprocessor
-#define _PP_INPUT_TEXTURE_UNIT _TEXUNIT_POSTPROCESS
-
 class PostProcessor
 {
 public:
@@ -64,7 +61,7 @@ private:
 	GLint texWidth = 0, texHeight = 0;
 	GLint prev_texWidth = INT_MAX, prev_texHeight = INT_MAX;
 
-	int frame_count = 0;	// Frame count for interlacing
+	int frame_count = 0;	// Frame count for interlacing, it may not be aligned with A2Video frames
 	int idx_preset = 0;		// Preset chosen
 	char preset_name_buffer[28];	// Preset's name
 	int max_integer_scale = 1;	// Maximum possible integer scale given screen size
@@ -108,6 +105,7 @@ private:
 	int p_i_maskType = 0;
 	int p_i_postprocessingLevel = 0;
 	int p_i_scanlineType = 2;
+	int p_i_ghostingPercent = 0;	// Percentage of ghosting of previous frame. 0 means no ghosting
 
 };
 

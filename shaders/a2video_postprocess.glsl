@@ -59,7 +59,9 @@ uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
 uniform COMPAT_PRECISION vec2 ViewportSize;
 uniform COMPAT_PRECISION vec4 VideoRect;
-uniform sampler2D A2Texture;
+uniform sampler2D A2TextureCurrent;
+uniform sampler2D A2TexturePrevious;
+uniform COMPAT_PRECISION int GhostingPercent;
 in vec2 TexCoords;
 in vec2 scale;
 in vec2 ps;
@@ -230,15 +232,21 @@ vec2 BarrelDistortion(vec2 uv) {
 }
 
 void main() {
-	
+	if (GhostingPercent > 0)
+	{
+		FragColor = mix(texture(A2TextureCurrent, TexCoords),
+						texture(A2TexturePrevious, TexCoords),
+						float(GhostingPercent)/100.0);
+	} else {
+		FragColor = texture(A2TextureCurrent, TexCoords);
+	}
+
 	if (POSTPROCESSING_LEVEL == 0) {
-		FragColor = texture(A2Texture,TexCoords);
 		return;
 	}
 	
 // Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1) {
-		FragColor = texture(A2Texture,TexCoords);
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
 		return;
 	}
@@ -285,10 +293,10 @@ void main() {
 
 
 // Convergence
-	vec3 res0 = texture(A2Texture,pos).rgb;
-	float resr = texture(A2Texture,pos + dx*CONV_R).r;
-	float resg = texture(A2Texture,pos + dx*CONV_G).g;
-	float resb = texture(A2Texture,pos + dx*CONV_B).b;
+	vec3 res0 = FragColor.rgb;	// takes into account ghosting
+	float resr = texture(A2TextureCurrent,pos + dx*CONV_R).r;
+	float resg = texture(A2TextureCurrent,pos + dx*CONV_G).g;
+	float resb = texture(A2TextureCurrent,pos + dx*CONV_B).b;
 
 	vec3 res = vec3(res0.r*(1.0-C_STR) + resr*C_STR,
 					res0.g*(1.0-C_STR) + resg*C_STR,

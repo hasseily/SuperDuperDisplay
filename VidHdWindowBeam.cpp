@@ -208,7 +208,7 @@ GLuint VidHdWindowBeam::Render(GLuint inputTexUnit, glm::vec2 inputSize)
 		glGenFramebuffers(1, &FBO);
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 		glGenTextures(1, &output_texture_id);
-		glActiveTexture(_TEXUNIT_POSTPROCESS);
+		glActiveTexture(_TEXUNIT_INPUT_VIDHD);
 		glBindTexture(GL_TEXTURE_2D, output_texture_id);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_count.x, screen_count.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);

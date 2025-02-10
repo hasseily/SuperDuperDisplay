@@ -254,7 +254,15 @@ private:
 	void InitializeFullQuad();
 	void PrepareOffsetTexture();
 	void ResetGLData();
-	
+
+	// Helper functions to get the proper framebuffer and texture based on the frame count
+	GLuint GetFramebufferForFrame() const {
+		return (current_frame_idx % 2 == 0) ? FBO_merged0 : FBO_merged1;
+	}
+	GLuint GetTextureForFrame() const {
+		return (current_frame_idx % 2 == 0) ? merged_texture_id[0] : merged_texture_id[1];
+	}
+
 	//////////////////////////////////////////////////////////////////////////
 	// Internal data
 	//////////////////////////////////////////////////////////////////////////
@@ -302,9 +310,11 @@ private:
 	uint32_t region_scanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
 
 	GLint last_viewport[4];		// Previous viewport used, so we don't clobber it
-	GLuint merged_texture_id;	// the merged texture that merges both legacy+shr
+	// Even/odd frames generate alternatively to a FBO and texture.
+	// This way we always have the previous frame for postprocess effects (ghosting, etc...)
+	GLuint FBO_merged0 = UINT_MAX, FBO_merged1 = UINT_MAX;	// the framebuffer objects for the merge
+	GLuint merged_texture_id[2] = { UINT_MAX, UINT_MAX };	// the generated textures
 	GLuint output_texture_id;	// the actual output texture (could be legacy/shr/merged)
-	GLuint FBO_merged = UINT_MAX;		// the framebuffer object for the merge
 	GLuint quadVAO = UINT_MAX;
 	GLuint quadVBO = UINT_MAX;
 

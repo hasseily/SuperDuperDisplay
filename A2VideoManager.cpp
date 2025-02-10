@@ -362,15 +362,21 @@ void A2VideoManager::ResetGLData() {
 		glDeleteVertexArrays(1, &quadVAO);
 		glDeleteBuffers(1, &quadVBO);
 	}
-	if (FBO_merged != UINT_MAX)
+	if (FBO_merged0 != UINT_MAX)
 	{
-		glDeleteFramebuffers(1, &FBO_merged);
-		glDeleteTextures(1, &merged_texture_id);
+		glDeleteFramebuffers(1, &FBO_merged0);
+		glDeleteTextures(1, &merged_texture_id[0]);
+	}
+	if (FBO_merged1 != UINT_MAX)
+	{
+		glDeleteFramebuffers(1, &FBO_merged1);
+		glDeleteTextures(1, &merged_texture_id[1]);
 	}
 	OFFSETTEX = UINT_MAX;
 	quadVAO = UINT_MAX;
 	quadVBO = UINT_MAX;
-	FBO_merged = UINT_MAX;
+	FBO_merged0 = UINT_MAX;
+	FBO_merged1 = UINT_MAX;
 }
 
 void A2VideoManager::ResetComputer()
@@ -1205,43 +1211,73 @@ void A2VideoManager::PrepareOffsetTexture() {
 
 void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 {
-	if (FBO_merged == UINT_MAX)
-	{
-		glGenFramebuffers(1, &FBO_merged);
-		glGenTextures(1, &merged_texture_id);
-	}
+	// Create FBO and texture if they haven't been created yet
+	if (FBO_merged0 == UINT_MAX)
+		glGenFramebuffers(1, &FBO_merged0);
+	if (FBO_merged1 == UINT_MAX)
+		glGenFramebuffers(1, &FBO_merged1);
+	if (merged_texture_id[0] == UINT_MAX)
+		glGenTextures(1, &merged_texture_id[0]);
+	if (merged_texture_id[1] == UINT_MAX)
+		glGenTextures(1, &merged_texture_id[1]);
 
-	GLint fbWidth, fbHeight;
-	glBindTexture(GL_TEXTURE_2D, merged_texture_id);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &fbWidth);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &fbHeight);
-	if ((fbWidth == fb_width) && (fbHeight == fb_height))
+	glActiveTexture(_TEXUNIT_INPUT_VIDHD);	// TODO: use a temp active tex unit
+
+	// Check if the textures already have the desired dimensions.
+	GLint width0 = 0, height0 = 0, width1 = 0, height1 = 0;
+	glBindTexture(GL_TEXTURE_2D, merged_texture_id[0]);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width0);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height0);
+	glBindTexture(GL_TEXTURE_2D, merged_texture_id[1]);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width1);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height1);
+
+	if (width0 == fb_width && height0 == fb_height &&
+		width1 == fb_width && height1 == fb_height)
 	{
 		glBindTexture(GL_TEXTURE_2D, 0);
 		return;
 	}
 
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
-
-	glActiveTexture(_TEXUNIT_POSTPROCESS);
-	glBindTexture(GL_TEXTURE_2D, merged_texture_id);
+	// -----------------------------
+	// Setup FBO_merged0 (even frames)
+	// -----------------------------
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged0);
+	glBindTexture(GL_TEXTURE_2D, merged_texture_id[0]);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, merged_texture_id, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, merged_texture_id[0], 0);
 
-	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	if (status != GL_FRAMEBUFFER_COMPLETE)
+	GLenum status0 = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status0 != GL_FRAMEBUFFER_COMPLETE)
 	{
-		std::cerr << "Framebuffer is not complete: " << status << std::endl;
+		std::cerr << "Framebuffer 0 is not complete: " << status0 << std::endl;
+	}
+
+	// -----------------------------
+	// Setup FBO_merged1 (odd frames)
+	// -----------------------------
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged1);
+	glBindTexture(GL_TEXTURE_2D, merged_texture_id[1]);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, merged_texture_id[1], 0);
+
+	GLenum status1 = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status1 != GL_FRAMEBUFFER_COMPLETE)
+	{
+		std::cerr << "Framebuffer 1 is not complete: " << status1 << std::endl;
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glActiveTexture(GL_TEXTURE0);
-	std::cerr << "Generating FBO with size " << fb_width << " x " << fb_height << std::endl;
+
+	// std::cerr << "Generated two FBOs with size " << fb_width << " x " << fb_height << std::endl;
 }
 
 GLuint A2VideoManager::Render()
@@ -1264,7 +1300,11 @@ GLuint A2VideoManager::Render()
 
 	GLenum glerr;
 
-	if (FBO_merged == UINT_MAX)
+	// Select the proper framebuffer (even or odd)
+	GLuint currentFBO = GetFramebufferForFrame();
+	glBindFramebuffer(GL_FRAMEBUFFER, currentFBO);
+
+	if (currentFBO == UINT_MAX)
 		CreateOrResizeFramebuffer(fb_width, fb_height);
 
 	// Initialization routine runs only once on init (or re-init)
@@ -1355,8 +1395,9 @@ GLuint A2VideoManager::Render()
 		}
 
 		// Setup for merged rendering
-		output_texture_id = merged_texture_id;
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
+		output_texture_id = GetTextureForFrame();
+		std::cerr << "Current output tex id: " << output_texture_id << std::endl;
+		glBindFramebuffer(GL_FRAMEBUFFER, currentFBO);
 		glViewport(0, 0, output_width, output_height);
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -1474,7 +1515,7 @@ GLuint A2VideoManager::Render()
 		}
 	}
 
-	glActiveTexture(_TEXUNIT_POSTPROCESS);
+	glActiveTexture((current_frame_idx % 2 == 0) ? _TEXUNIT_POSTPROCESS_0 : _TEXUNIT_POSTPROCESS_1);
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
