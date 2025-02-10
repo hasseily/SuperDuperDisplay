@@ -203,6 +203,7 @@
     <ClCompile Include="shader.cpp" />
     <ClCompile Include="SoundManager.cpp" />
     <ClCompile Include="SSI263.cpp" />
+    <ClCompile Include="VidHdWindowBeam.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="A2VideoManager.h" />
@@ -244,6 +245,7 @@
     <ClInclude Include="SoundManager.h" />
     <ClInclude Include="SSI263.h" />
     <ClInclude Include="stb_image.h" />
+    <ClInclude Include="VidHdWindowBeam.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui\imgui\misc\debuggers\imgui.natstepfilter" />
@@ -268,6 +270,7 @@
     <None Include="shaders\sdhr_default_330.vert" />
     <None Include="shaders\sdhr_depixelize_330.frag" />
     <None Include="shaders\sdhr_depixelize_330.vert" />
+    <None Include="shaders\vidhd_beam_text.frag" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="shaders\**">
