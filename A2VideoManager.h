@@ -123,7 +123,7 @@ public:
 		uint8_t* vram_forced_hgr2 = nullptr;
 		GLfloat* offset_buffer = nullptr;
 		int frameSHR4Modes = 0;					// All SHR4 modes in the frame
-		int interlaceSHRMode = 0;			// 0: standard SHR, 1: interlaced SHR with E0 (main) $2000-9FFF used for odd lines
+		int doubleSHR4Mode = 0;			// DoubleSHR4Mode_e : may use E0 (main) $2000-9FFF for interlace or page flip
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -271,7 +271,7 @@ private:
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
 	bool bIsRebooting = false;              // Rebooting semaphore
 	bool bIsSwitchingToMergedMode = false;	// True when refreshing earlier scanlines for merged mode
-	bool bShouldInterlace = false;			// Handles interlacing override
+	bool bShouldDoubleSHR = false;			// Handles updating E0 (main) for double SHR
 
 	bool bMirrorRepeatOutputTexture = false;	// Choose to mirror repeat texture wrap, or not
 
@@ -281,7 +281,7 @@ private:
 	bool bImguiMemLoadAuxBank = false;
 	int iImguiMemLoadPosition = 0;
 	int overrideSHR4Mode = 0;				// Cached here to keep the value between A2WindowBeam resets
-	bool bOverrideSHRInterlace = 0;			// Cached here to keep the value between A2WindowBeam resets
+	int overrideDoubleSHR = 0;				// At 0, don't override. Above 0, substract 1 to get the override value
 	int overrideVidHDTextMode = VIDHDMODE_NONE;
 	int c022TextColorForeNibble = 0;
 	int c022TextColorBackNibble = 0;

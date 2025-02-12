@@ -455,7 +455,7 @@ void A2VideoManager::StartNextFrame()
 	merge_last_change_y = UINT_MAX;
 	// Additional frame data resets
 	vrams_write->frameSHR4Modes = 0;
-	vrams_write->interlaceSHRMode = 0;
+	vrams_write->doubleSHR4Mode = 0;
 }
 
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
@@ -728,14 +728,14 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 					scanlineSHR4Modes |= (1 << ((lineStartPtr[2 + 2*i] >> 4) + 4));	// second byte of each palette color (skip SCB byte 1)
 				}
 				vrams_write->frameSHR4Modes |= scanlineSHR4Modes;	// Add to the frame's SHR4 modes the new modes found on this line
-				vrams_write->interlaceSHRMode = (memPtr + _A2VIDEO_SHR_MAGIC_BYTES - 1)[0];
+				vrams_write->doubleSHR4Mode = (memPtr + _A2VIDEO_SHR_MAGIC_BYTES - 1)[0];	// the previous byte has the Double SHR4 information
 			} else {
-				vrams_write->interlaceSHRMode = 0;	// Interlace mode can only be enabled in SHR4 mode
+				vrams_write->doubleSHR4Mode = 0;	// double mode can only be enabled in SHR4 mode
 			}
 
 			// Do the SCB and palettes for interlacing if requested
-			bShouldInterlace = ( bOverrideSHRInterlace ? !vrams_write->interlaceSHRMode : vrams_write->interlaceSHRMode);
-			if (bShouldInterlace)
+			bShouldDoubleSHR = ( overrideDoubleSHR > 0 ? 1 : (vrams_write->doubleSHR4Mode > 0));
+			if (bShouldDoubleSHR)
 			{
 				lineInterlaceStartPtr[0] = memInterlacePtr[_A2VIDEO_SHR_SCB_START + _y];
 				// Get the palette
@@ -760,7 +760,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		case BeamState_e::BORDER_TOP:
 		case BeamState_e::BORDER_BOTTOM:
 			memset(lineStartPtr + _COLORBYTESOFFSET + (_TR_ANY_X * 4), (uint8_t)memMgr->switch_c034, 4);
-			if (bShouldInterlace)
+			if (bShouldDoubleSHR)
 				memset(lineInterlaceStartPtr + _COLORBYTESOFFSET + (_TR_ANY_X * 4), (uint8_t)memMgr->switch_c034, 4);
 			break;
 		case BeamState_e::CONTENT:
@@ -813,8 +813,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 				}
 			}
 
-			// Do the exact same thing for interlacing if necessary, getting the data from main RAM
-			if (bShouldInterlace)
+			// Do the exact same thing for double SHR if necessary, getting the data from main RAM
+			if (bShouldDoubleSHR)
 			{
 				scb = lineInterlaceStartPtr[0];
 				memcpy(lineInterlaceStartPtr + _COLORBYTESOFFSET + _TR_ANY_X * 4,
@@ -1298,6 +1298,13 @@ GLuint A2VideoManager::Render()
 	if (bIsRebooting)
 		return UINT32_MAX;
 
+
+	// Exit if we've already rendered the buffer
+	if ((rendered_frame_idx == vrams_read->frame_idx) && !bAlwaysRenderBuffer)
+		return output_texture_id;
+	if ((rendered_frame_idx == vrams_read->frame_idx) && bAlwaysRenderBuffer)
+		this->ForceBeamFullScreenRender();
+	
 	GLenum glerr;
 
 	// Select the proper framebuffer (even or odd)
@@ -1345,16 +1352,12 @@ GLuint A2VideoManager::Render()
 		rendered_frame_idx = UINT64_MAX;
 	}
 
-	// Exit if we've already rendered the buffer
-	if ((rendered_frame_idx == vrams_read->frame_idx) && !bAlwaysRenderBuffer)
-		return output_texture_id;
-
 	// std::cerr << "--- Actual Render: " << vrams_read->frame_idx << std::endl;
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
 
 	// Set the magic bytes, currently only in SHR mode
 	windowsbeam[A2VIDEOBEAM_SHR]->specialModesMask |= vrams_read->frameSHR4Modes;
-	windowsbeam[A2VIDEOBEAM_SHR]->interlaceSHRMode = ( bOverrideSHRInterlace ? !vrams_read->interlaceSHRMode : vrams_read->interlaceSHRMode);
+	windowsbeam[A2VIDEOBEAM_SHR]->doubleSHR4 = ( overrideDoubleSHR > 0 ? overrideDoubleSHR - 1 : vrams_read->doubleSHR4Mode);
 
 	// ===============================================================================
 	// ============================== MERGED MODE RENDER ==============================
@@ -1381,7 +1384,7 @@ GLuint A2VideoManager::Render()
 			// first render Legacy in its viewport
 			glViewport(0, 0, legacy_width, legacy_height);
 			std::cerr << "Rendering merged legacy to viewport " << legacy_width << " x " << legacy_height << std::endl;
-			legacy_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render();
+			legacy_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(current_frame_idx);
 		}
 
 		if ((_renderModes & 0b10) == 0b10)	// SHR
@@ -1391,7 +1394,7 @@ GLuint A2VideoManager::Render()
 			// glViewport(0, 0, output_width, output_height);
 			glViewport(0, 0, shr_width, shr_height);
 			std::cerr << "Rendering merged SHR to viewport " << shr_width << " x " << shr_height << std::endl;
-			shr_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render();
+			shr_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(current_frame_idx);
 		}
 
 		// Setup for merged rendering
@@ -1482,7 +1485,7 @@ GLuint A2VideoManager::Render()
 
 		windowsbeam[A2VIDEOBEAM_LEGACY]->monitorColorType = eA2MonitorType;
 		
-		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render();
+		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(current_frame_idx);
 		// std::cerr << "Rendering legacy to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "Legacy Mode draw error: " << glerr << std::endl;
@@ -1497,7 +1500,7 @@ GLuint A2VideoManager::Render()
 		output_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
 		glViewport(0, 0, output_width, output_height);
 		windowsbeam[A2VIDEOBEAM_SHR]->monitorColorType = eA2MonitorType;
-		output_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render();
+		output_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(current_frame_idx);
 		// std::cerr << "Rendering SHR to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "SHR Mode draw error: " << glerr << std::endl;
@@ -1541,19 +1544,19 @@ GLuint A2VideoManager::Render()
 	// Render the debugging textures as necessary
 	if (bRenderTEXT1) {
 		glViewport(0, 0, 280*2, 192*2);
-		windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->Render();
+		windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->Render(current_frame_idx);
 	}
 	if (bRenderTEXT2) {
 		glViewport(0, 0, 280*2, 192*2);
-		windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->Render();
+		windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->Render(current_frame_idx);
 	}
 	if (bRenderHGR1) {
 		glViewport(0, 0, 280*2, 192*2);
-		windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->Render();
+		windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->Render(current_frame_idx);
 	}
 	if (bRenderHGR2) {
 		glViewport(0, 0, 280*2, 192*2);
-		windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->Render();
+		windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->Render(current_frame_idx);
 	}
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2VideoManager debugging textures render error: " << glerr << std::endl;
@@ -1785,7 +1788,8 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			bool isSHR4RGGBActive = (vrams_read->frameSHR4Modes & A2_VSM_SHR4RGGB) != 0;
 			bool isSHR4PAL256Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4PAL256) != 0;
 			bool isSHR4R4G4B4Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4R4G4B4) != 0;
-			bool isSHRInterlaced = (bool)vrams_read->interlaceSHRMode;
+			bool isSHRInterlaced = (vrams_read->doubleSHR4Mode == DSHR4_INTERLACE);
+			bool isSHRPageFlip = (vrams_read->doubleSHR4Mode == DSHR4_PAGEFLIP);
 
 			ImGui::BeginDisabled();
 			ImGui::Checkbox("None##SHR4", &isNoneActive);
@@ -1794,6 +1798,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			ImGui::Checkbox("SHR4 PAL256", &isSHR4PAL256Active);
 			ImGui::Checkbox("SHR4 R4G4B4", &isSHR4R4G4B4Active);
 			ImGui::Checkbox("SHR Interlacing", &isSHRInterlaced);
+			ImGui::Checkbox("SHR Page Flip", &isSHRPageFlip);
 			ImGui::EndDisabled();
 			
 			ImGui::NextColumn();
@@ -1813,10 +1818,8 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = overrideSHR4Mode;
 				this->ForceBeamFullScreenRender();
 			}
-			auto _interlaceText = "Force Interlace";
-			if (vrams_read->interlaceSHRMode != 0)
-				_interlaceText = "Force De-interlace";
-			if (ImGui::Checkbox(_interlaceText, &bOverrideSHRInterlace))
+			const char* _doubleSHRModes[] = { "Default", "Disable", "Interlace", "Page Flip" };
+			if (ImGui::Combo("Force Double SHR", &this->overrideDoubleSHR, _doubleSHRModes, IM_ARRAYSIZE(_doubleSHRModes)))
 			{
 				this->ForceBeamFullScreenRender();
 			}

@@ -37,6 +37,15 @@ enum A2VideoSpecialMode_e
 	A2_VSM_SHR4R4G4B4		= 0b1000'0000,	// New SHR4 modes - r4G4B4 (see shader for details)
 };
 
+// Special double SHR4 modes that use both E0 and E1 banks
+enum DoubleSHR4Mode_e
+{
+	DSHR4_NONE = 0,
+	DSHR4_INTERLACE,
+	DSHR4_PAGEFLIP,
+	DSHR4_TOTAL_COUNT
+};
+
 // Monitor color type
 enum A2VideoMonitorType_e
 {
@@ -62,7 +71,7 @@ public:
 	uint32_t GetHeight() const;
 	void SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vertical);
 	GLuint GetOutputTextureId() const;
-	GLuint Render();	// returns the output texture id
+	GLuint Render(uint64_t frame_idx);	// returns the output texture id
 
 	Shader* GetShader() { return &shader; };
 	void SetShaderPrograms(const char* shaderVertexPath, const char* shaderFragmentPath);
@@ -71,10 +80,12 @@ public:
 	std::vector<A2BeamVertex> vertices;		// Vertices with XYRelative and XYPixels
 	unsigned int VAO = UINT_MAX;			// Vertex Array Object (holds buffers that are vertex related)
 	unsigned int VBO = UINT_MAX;			// Vertex Buffer Object (holds vertices)
-	
+
+	bool bIsMergedMode = false;				// Activate in case this frame has both SHR and Legacy at once
+
 	int specialModesMask = A2_VSM_NONE;		// Or'ed A2VideoSpecialMode_e
 	int overrideSHR4Mode = 0;				// Debugging to override the SHR4 modes in the shader
-	int interlaceSHRMode = 0;				// Interlacing? 0: off, 1: on
+	int doubleSHR4 = DSHR4_NONE;
 	int monitorColorType = A2_MON_COLOR;	// Monitor color type A2VideoMonitorType_e
 
 private:

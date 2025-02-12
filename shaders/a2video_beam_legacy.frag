@@ -37,10 +37,20 @@ The shader goes through the following phases:
 
 NOTE:	The special BORDER graphics mode is set only on border bytes. It only considers
 		bits 4-7 as the border color, picked from the LGR color palette.
+
+ In case this frame has both legacy and SHR (i.e. a "merged" mode):
+ This shader expects as input a OFFSETTEX texture that has the following features:
+ - Type GL_R32F
+ - One byte per line (Red channel only)
+ - Lines are the same count as the SHR lines (200 plus border)
+ - Each float is the x offset the pixel needs to take from the textures to display,
+ but needs to remove 10.f to get the actual offset. A negative offset is a legacy line
+ and a positive offset is a shr line
 */
 
 // Global uniforms
 uniform int ticks;						// ms since start
+uniform int frameIsOdd;					// 0 if even frame, 1 if odd frame
 uniform int hborder;					// horizontal border in cycles
 uniform int vborder;					// vertical border in scanlines
 uniform usampler2D VRAMTEX;				// Video RAM texture
@@ -49,6 +59,9 @@ uniform sampler2D a2ModesTex1;			// font 14x16 alternate
 uniform sampler2D a2ModesTex2;			// LGR
 uniform sampler2D a2ModesTex3;			// HGR
 uniform sampler2D a2ModesTex4;			// DHGR
+
+uniform bool bIsMergedMode;				// if on, then only display lines that are legacy
+uniform sampler2D OFFSETTEX;			// X Offset texture for merged mode
 
 // Special modes mask for legacy only is
 // enum A2VideoSpecialMode_e
@@ -114,10 +127,24 @@ uint ROL_NIB(uint x)
 
 void main()
 {
-	// first determine which VRAMTEX texel this fragment is part of, including
+	// First check if we're in merged mode. If so, determine if the line is a legacy line.
+	// If not, exit early. If it is legacy, then shift accordingly
+
+	float xOffsetMerge = 0.0;
+	if (bIsMergedMode) {
+		xOffsetMerge = texelFetch(OFFSETTEX, ivec2(0, vFragPos.y/2.0), 0).r;
+		if (xOffsetMerge < 0.0) {		// it is LEGACY, fix and use the offset
+			xOffsetMerge = xOffsetMerge + 10.0;
+		} else {						// it is SHR, discard the line
+			fragColor = vec4(0.0,0.0,0.0,0.0);
+			return;
+		}
+	}
+
+	// determine which VRAMTEX texel this fragment is part of, including
 	// the x and y offsets from the origin
 	// REMINDER: we're working on dots, with 560 dots per line. And lines are doubled
-	uvec2 uFragPos = uvec2(vFragPos);
+	uvec2 uFragPos = uvec2(vFragPos) + uvec2(xOffsetMerge, 0.0);
 	uvec4 targetTexel = texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0).rgba;
 	uvec2 fragOffset = uvec2(uFragPos.x % 14u, uFragPos.y % 16u);
 	// The fragOffsets are:

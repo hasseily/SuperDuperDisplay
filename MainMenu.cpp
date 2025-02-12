@@ -826,6 +826,9 @@ void MainMenu::ShowDeveloperMenu() {
 	auto a2VideoManager = A2VideoManager::GetInstance();
 	if (ImGui::MenuItem("Run Vertical Refresh", "F10"))
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	if (ImGui::MenuItem("Continuous Refresh", "Shift-F10", &a2VideoManager->bAlwaysRenderBuffer)) {
+		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	}
 	ImGui::MenuItem("Load File Into Memory", "", &pGui->bShowLoadFileWindow);
 	ImGui::Separator();
 	ImGui::MenuItem("Soft Switches", "F9", &pGui->bShowSSWindow);

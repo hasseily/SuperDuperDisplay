@@ -49,6 +49,9 @@ uniform int hborder;			// horizontal border in cycles
 uniform int vborder;			// vertical border in scanlines
 uniform usampler2D VRAMTEX;		// Video RAM texture
 
+uniform bool bIsMergedMode;				// if on, then only display lines that are SHR
+uniform sampler2D OFFSETTEX;			// X Offset texture for merged mode
+
 in vec2 vFragPos;       // The fragment position in pixels
 out vec4 fragColor;
 
@@ -130,12 +133,28 @@ vec4 GetMonochromeValue(vec4 aColor, vec4 monchromeColor)
 
 void main()
 {
+	// First check if we're in merged mode. If so, determine if the line is a SHR line.
+	// If not, exit early. If it is SHR, then shift accordingly
+	float xOffsetMerge = 0.0;
+	if (bIsMergedMode) {
+		xOffsetMerge = texelFetch(OFFSETTEX, ivec2(0, vFragPos.y/2.0), 0).r;
+		if (xOffsetMerge > 0.0) {		// it is SHR, fix and use the offset
+			xOffsetMerge = xOffsetMerge - 10.0;
+		} else {						// it is legacy, discard the line
+			fragColor = vec4(0.0,0.0,0.0,0.0);
+			return;
+		}
+	}
+
+	// Shift the X fragPos if the wobble is active
+	float vFragPosX = vFragPos.x + xOffsetMerge;
+
 	uint scanline = uint(vFragPos.y) / 2u;
 	// first do the borders
 	if ((vFragPos.y < float(vborder*2)) || (vFragPos.y >= float(vborder*2+400)) || 
-		(vFragPos.x < float(hborder*16)) || (vFragPos.x >= float(640+hborder*16)))
+		(vFragPosX < float(hborder*16)) || (vFragPosX >= float(640+hborder*16)))
 	{
-		fragColor = bordercolors[texelFetch(VRAMTEX, ivec2(33u + uint(float(vFragPos.x) / 4.0), scanline), 0).r & 0x0Fu];
+		fragColor = bordercolors[texelFetch(VRAMTEX, ivec2(33u + uint(float(vFragPosX) / 4.0), scanline), 0).r & 0x0Fu];
 		if (monitorColorType > 0)
 			fragColor = GetMonochromeValue(fragColor, monitorcolors[monitorColorType]);
 		return;
@@ -154,7 +173,7 @@ void main()
 	}
 	
 	// Determine the byte and the pixel for this byte
-	uint xpos = uint(vFragPos.x);
+	uint xpos = uint(vFragPosX);
 	uint fragOffset = 3u - (xpos % 4u);			// reversed so that palette calc is easier
 	
 	// Grab the scanline color byte value

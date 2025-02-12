@@ -616,6 +616,11 @@ int main(int argc, char* argv[])
 					}
 				}
 				else if (event.key.keysym.sym == SDLK_F10) {
+					if (SDL_GetModState() & KMOD_SHIFT) {
+						a2VideoManager->bAlwaysRenderBuffer = !a2VideoManager->bAlwaysRenderBuffer;
+					} else {
+						a2VideoManager->bAlwaysRenderBuffer = false;
+					}
 					a2VideoManager->ForceBeamFullScreenRender();
 				}
 				// Handle fullscreen toggle for Alt+Enter
