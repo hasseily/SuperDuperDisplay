@@ -25,6 +25,14 @@
 #include "GRAddr2XY.h"
 #include "imgui.h"
 
+// Aspect constraint callback to enforce a fixed aspect ratio for ImGui windows.
+// The aspect ratio is provided via the UserData pointer
+static inline void AspectConstraintCallback(ImGuiSizeCallbackData* data)
+{
+	float aspect_ratio = *(float*)data->UserData;
+	data->DesiredSize.y = data->DesiredSize.x / aspect_ratio;
+}
+
 static inline uint32_t SETRGBCOLOR(uint8_t r, uint8_t g, uint8_t b)
 {
 	return ((0xFF << 24) | (b << 16) | (g << 8) | r);
@@ -357,26 +365,33 @@ void A2VideoManager::Initialize()
 void A2VideoManager::ResetGLData() {
 	if (OFFSETTEX != UINT_MAX)
 		glDeleteTextures(1, &OFFSETTEX);
+
 	if (quadVAO != UINT_MAX)
 	{
 		glDeleteVertexArrays(1, &quadVAO);
 		glDeleteBuffers(1, &quadVBO);
 	}
-	if (FBO_merged0 != UINT_MAX)
+
+	if (FBO_A2Video != UINT_MAX)
 	{
-		glDeleteFramebuffers(1, &FBO_merged0);
-		glDeleteTextures(1, &merged_texture_id[0]);
+		glDeleteFramebuffers(1, &FBO_A2Video);
+		glDeleteTextures(1, &a2video_texture_id);
 	}
-	if (FBO_merged1 != UINT_MAX)
+	FBO_A2Video = UINT_MAX;
+
+	for (int i = 0; i < 4; i++)
 	{
-		glDeleteFramebuffers(1, &FBO_merged1);
-		glDeleteTextures(1, &merged_texture_id[1]);
+		if (FBO_debug[i] != UINT_MAX)
+		{
+			glDeleteFramebuffers(1, &FBO_debug[i]);
+			glDeleteTextures(1, &debug_texture_id[i]);
+		}
+		FBO_debug[i] = UINT_MAX;
 	}
+
 	OFFSETTEX = UINT_MAX;
 	quadVAO = UINT_MAX;
 	quadVBO = UINT_MAX;
-	FBO_merged0 = UINT_MAX;
-	FBO_merged1 = UINT_MAX;
 }
 
 void A2VideoManager::ResetComputer()
@@ -1212,65 +1227,65 @@ void A2VideoManager::PrepareOffsetTexture() {
 void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 {
 	// Create FBO and texture if they haven't been created yet
-	if (FBO_merged0 == UINT_MAX)
-		glGenFramebuffers(1, &FBO_merged0);
-	if (FBO_merged1 == UINT_MAX)
-		glGenFramebuffers(1, &FBO_merged1);
-	if (merged_texture_id[0] == UINT_MAX)
-		glGenTextures(1, &merged_texture_id[0]);
-	if (merged_texture_id[1] == UINT_MAX)
-		glGenTextures(1, &merged_texture_id[1]);
+	if (FBO_A2Video == UINT_MAX)
+	{
+		glGenFramebuffers(1, &FBO_A2Video);
+		glGenTextures(1, &a2video_texture_id);
+	}
 
-	glActiveTexture(_TEXUNIT_INPUT_VIDHD);	// TODO: use a temp active tex unit
+	// Create all the debug FBOs and textures, those have a static size and can be generated once only
+	if (FBO_debug[0] == UINT_MAX)
+	{
+		glGenFramebuffers(4, FBO_debug);
+		glGenTextures(4, debug_texture_id);
+		for (int i = 0; i < 4; i++)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[i]);
+			glBindTexture(GL_TEXTURE_2D, debug_texture_id[i]);
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, debug_texture_id[i], 0);
+
+			GLenum _statusFBO = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+			if (_statusFBO != GL_FRAMEBUFFER_COMPLETE)
+			{
+				std::cerr << "Debug Framebuffer " << i << " is not complete: " << _statusFBO << std::endl;
+			}
+		}
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+	glActiveTexture(_TEXUNIT_POSTPROCESS);	// this will go to postprocessing
 
 	// Check if the textures already have the desired dimensions.
-	GLint width0 = 0, height0 = 0, width1 = 0, height1 = 0;
-	glBindTexture(GL_TEXTURE_2D, merged_texture_id[0]);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width0);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height0);
-	glBindTexture(GL_TEXTURE_2D, merged_texture_id[1]);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width1);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height1);
+	GLint width = 0, height = 0;
+	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
 
-	if (width0 == fb_width && height0 == fb_height &&
-		width1 == fb_width && height1 == fb_height)
+	if (width == fb_width && height == fb_height)
 	{
 		glBindTexture(GL_TEXTURE_2D, 0);
 		return;
 	}
 
-	// -----------------------------
-	// Setup FBO_merged0 (even frames)
-	// -----------------------------
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged0);
-	glBindTexture(GL_TEXTURE_2D, merged_texture_id[0]);
+	// ------------------------
+	// Setup framebuffer object
+	// ------------------------
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
+	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, merged_texture_id[0], 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, a2video_texture_id, 0);
 
-	GLenum status0 = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	if (status0 != GL_FRAMEBUFFER_COMPLETE)
+	GLenum _statusFBO = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (_statusFBO != GL_FRAMEBUFFER_COMPLETE)
 	{
-		std::cerr << "Framebuffer 0 is not complete: " << status0 << std::endl;
-	}
-
-	// -----------------------------
-	// Setup FBO_merged1 (odd frames)
-	// -----------------------------
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged1);
-	glBindTexture(GL_TEXTURE_2D, merged_texture_id[1]);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, merged_texture_id[1], 0);
-
-	GLenum status1 = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	if (status1 != GL_FRAMEBUFFER_COMPLETE)
-	{
-		std::cerr << "Framebuffer 1 is not complete: " << status1 << std::endl;
+		std::cerr << "Framebuffer is not complete: " << _statusFBO << std::endl;
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1301,24 +1316,27 @@ GLuint A2VideoManager::Render()
 
 	// Exit if we've already rendered the buffer
 	if ((rendered_frame_idx == vrams_read->frame_idx) && !bAlwaysRenderBuffer)
-		return output_texture_id;
+		return _TEXUNIT_POSTPROCESS;
 	if ((rendered_frame_idx == vrams_read->frame_idx) && bAlwaysRenderBuffer)
 		this->ForceBeamFullScreenRender();
 	
 	GLenum glerr;
 
 	// Select the proper framebuffer (even or odd)
-	GLuint currentFBO = GetFramebufferForFrame();
-	glBindFramebuffer(GL_FRAMEBUFFER, currentFBO);
-
-	if (currentFBO == UINT_MAX)
+	if (FBO_A2Video == UINT_MAX)
 		CreateOrResizeFramebuffer(fb_width, fb_height);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "GL Framebuffer error: " << glerr << std::endl;
+	}
 
 	// Initialization routine runs only once on init (or re-init)
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
 
 		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START);
+
 		if (font_rom_regular_idx >= font_roms_array.size())
 			font_rom_regular_idx = 0;
 		if (font_rom_regular_idx >= font_roms_array.size())
@@ -1352,8 +1370,14 @@ GLuint A2VideoManager::Render()
 		rendered_frame_idx = UINT64_MAX;
 	}
 
-	// std::cerr << "--- Actual Render: " << vrams_read->frame_idx << std::endl;
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
+
+	glClearColor(0.f, 0.f, 0.f, 0.f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glActiveTexture(_TEXUNIT_POSTPROCESS);
+	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
 
 	// Set the magic bytes, currently only in SHR mode
 	windowsbeam[A2VIDEOBEAM_SHR]->specialModesMask |= vrams_read->frameSHR4Modes;
@@ -1384,7 +1408,7 @@ GLuint A2VideoManager::Render()
 			// first render Legacy in its viewport
 			glViewport(0, 0, legacy_width, legacy_height);
 			std::cerr << "Rendering merged legacy to viewport " << legacy_width << " x " << legacy_height << std::endl;
-			legacy_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(current_frame_idx);
+			windowsbeam[A2VIDEOBEAM_LEGACY]->Render(current_frame_idx);
 		}
 
 		if ((_renderModes & 0b10) == 0b10)	// SHR
@@ -1394,13 +1418,11 @@ GLuint A2VideoManager::Render()
 			// glViewport(0, 0, output_width, output_height);
 			glViewport(0, 0, shr_width, shr_height);
 			std::cerr << "Rendering merged SHR to viewport " << shr_width << " x " << shr_height << std::endl;
-			shr_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(current_frame_idx);
+			windowsbeam[A2VIDEOBEAM_SHR]->Render(current_frame_idx);
 		}
 
 		// Setup for merged rendering
-		output_texture_id = GetTextureForFrame();
-		std::cerr << "Current output tex id: " << output_texture_id << std::endl;
-		glBindFramebuffer(GL_FRAMEBUFFER, currentFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
 		glViewport(0, 0, output_width, output_height);
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -1485,7 +1507,9 @@ GLuint A2VideoManager::Render()
 
 		windowsbeam[A2VIDEOBEAM_LEGACY]->monitorColorType = eA2MonitorType;
 		
-		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(current_frame_idx);
+		QuadRect _qr = { -1.f,1.f,1.f,-1.f };
+		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_qr);
+		windowsbeam[A2VIDEOBEAM_LEGACY]->Render(current_frame_idx);
 		// std::cerr << "Rendering legacy to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "Legacy Mode draw error: " << glerr << std::endl;
@@ -1500,7 +1524,7 @@ GLuint A2VideoManager::Render()
 		output_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
 		glViewport(0, 0, output_width, output_height);
 		windowsbeam[A2VIDEOBEAM_SHR]->monitorColorType = eA2MonitorType;
-		output_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(current_frame_idx);
+		windowsbeam[A2VIDEOBEAM_SHR]->Render(current_frame_idx);
 		// std::cerr << "Rendering SHR to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "SHR Mode draw error: " << glerr << std::endl;
@@ -1510,16 +1534,17 @@ GLuint A2VideoManager::Render()
 	bool _bRenderVidhd = (vidhdWindowBeam->GetVideoMode() != VIDHDMODE_NONE);
 	if (_bRenderVidhd)	// VidHD
 	{
-		glActiveTexture(_TEXUNIT_INPUT_VIDHD);
-		glBindTexture(GL_TEXTURE_2D, output_texture_id);
-		output_texture_id = vidhdWindowBeam->Render(_TEXUNIT_INPUT_VIDHD, glm::vec2(output_width, output_height));
+		output_width = vidhdWindowBeam->GetWidth();
+		output_height = vidhdWindowBeam->GetHeight();
+		glViewport(0, 0, output_width, output_height);
+		vidhdWindowBeam->Render(_TEXUNIT_INPUT_VIDHD, glm::vec2(output_width, output_height));
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "VidHD draw error: " << glerr << std::endl;
 		}
 	}
 
-	glActiveTexture((current_frame_idx % 2 == 0) ? _TEXUNIT_POSTPROCESS_0 : _TEXUNIT_POSTPROCESS_1);
-	glBindTexture(GL_TEXTURE_2D, output_texture_id);
+	glActiveTexture(_TEXUNIT_POSTPROCESS);
+	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
 
@@ -1536,38 +1561,46 @@ GLuint A2VideoManager::Render()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2VideoManager glViewport error: " << glerr << std::endl;
 	}
-
-	// all done, the texture for this Apple 2 beam cycle frame is rendered
-	rendered_frame_idx = vrams_read->frame_idx;
-	vrams_read->bWasRendered = true;
 	
 	// Render the debugging textures as necessary
 	if (bRenderTEXT1) {
-		glViewport(0, 0, 280*2, 192*2);
+		glViewport(0, 0, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT);
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[0]);
+		glBindTexture(GL_TEXTURE_2D, debug_texture_id[0]);
 		windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->Render(current_frame_idx);
 	}
 	if (bRenderTEXT2) {
-		glViewport(0, 0, 280*2, 192*2);
+		glViewport(0, 0, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT);
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[1]);
+		glBindTexture(GL_TEXTURE_2D, debug_texture_id[1]);
 		windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->Render(current_frame_idx);
 	}
 	if (bRenderHGR1) {
-		glViewport(0, 0, 280*2, 192*2);
+		glViewport(0, 0, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT);
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[2]);
+		glBindTexture(GL_TEXTURE_2D, debug_texture_id[2]);
 		windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->Render(current_frame_idx);
 	}
 	if (bRenderHGR2) {
-		glViewport(0, 0, 280*2, 192*2);
+		glViewport(0, 0, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT);
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[3]);
+		glBindTexture(GL_TEXTURE_2D, debug_texture_id[3]);
 		windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->Render(current_frame_idx);
 	}
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2VideoManager debugging textures render error: " << glerr << std::endl;
 	}
 
-	return output_texture_id;
+	// all done, the texture for this Apple 2 beam cycle frame is rendered
+	rendered_frame_idx = vrams_read->frame_idx;
+	vrams_read->bWasRendered = true;
+
+	return _TEXUNIT_POSTPROCESS;
 }
 
 GLuint A2VideoManager::GetOutputTextureId()
 {
-	return output_texture_id;
+	return a2video_texture_id;
 }
 
 ///
@@ -1653,44 +1686,49 @@ void A2VideoManager::DisplayImGuiExtraWindows()
 	
 	// Show extra render windows
 	// The extra windows may not have been rendered yet so we may need to force a re-render
+	float _debug_aspect_ratio;
 	if (bRenderTEXT1)
 	{
-		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->GetOutputTextureId();
-		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		_debug_aspect_ratio = _A2VIDEO_LEGACY_ASPECT_RATIO;
+		ImGui::SetNextWindowSizeConstraints(
+			ImVec2(_A2VIDEO_LEGACY_WIDTH/2, _A2VIDEO_LEGACY_HEIGHT/2),
+			ImVec2(FLT_MAX, FLT_MAX),
+			AspectConstraintCallback, (void*)&_debug_aspect_ratio);
 		ImGui::Begin("TEXT1 Viewer", &bRenderTEXT1);
-		if (texid == UINT_MAX)
-			this->ForceBeamFullScreenRender();
-		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::Image(reinterpret_cast<void*>(debug_texture_id[0]), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
 		ImGui::End();
 	}
 	if (bRenderTEXT2)
 	{
-		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->GetOutputTextureId();
-		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		_debug_aspect_ratio = _A2VIDEO_LEGACY_ASPECT_RATIO;
+		ImGui::SetNextWindowSizeConstraints(
+			ImVec2(_A2VIDEO_LEGACY_WIDTH / 2, _A2VIDEO_LEGACY_HEIGHT / 2), 
+			ImVec2(FLT_MAX, FLT_MAX),
+			AspectConstraintCallback, (void*)&_debug_aspect_ratio);
 		ImGui::Begin("TEXT2 Viewer", &bRenderTEXT2);
-		if (texid == UINT_MAX)
-			this->ForceBeamFullScreenRender();
-		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::Image(reinterpret_cast<void*>(debug_texture_id[1]), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
 		ImGui::End();
 	}
 	if (bRenderHGR1)
 	{
-		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->GetOutputTextureId();
-		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		_debug_aspect_ratio = _A2VIDEO_LEGACY_ASPECT_RATIO;
+		ImGui::SetNextWindowSizeConstraints(
+			ImVec2(_A2VIDEO_LEGACY_WIDTH / 2, _A2VIDEO_LEGACY_HEIGHT / 2), 
+			ImVec2(FLT_MAX, FLT_MAX),
+			AspectConstraintCallback, (void*)&_debug_aspect_ratio);
 		ImGui::Begin("HGR1 Viewer", &bRenderHGR1);
-		if (texid == UINT_MAX)
-			this->ForceBeamFullScreenRender();
-		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::Image(reinterpret_cast<void*>(debug_texture_id[2]), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
 		ImGui::End();
 	}
 	if (bRenderHGR2)
 	{
-		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->GetOutputTextureId();
-		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		_debug_aspect_ratio = _A2VIDEO_LEGACY_ASPECT_RATIO;
+		ImGui::SetNextWindowSizeConstraints(
+			ImVec2(_A2VIDEO_LEGACY_WIDTH / 2, _A2VIDEO_LEGACY_HEIGHT / 2), 
+			ImVec2(FLT_MAX, FLT_MAX),
+			AspectConstraintCallback, (void*)&_debug_aspect_ratio);
 		ImGui::Begin("HGR2 Viewer", &bRenderHGR2);
-		if (texid == UINT_MAX)
-			this->ForceBeamFullScreenRender();
-		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::Image(reinterpret_cast<void*>(debug_texture_id[3]), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
 		ImGui::End();
 	}
 }

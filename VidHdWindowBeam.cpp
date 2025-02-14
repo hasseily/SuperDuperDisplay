@@ -30,11 +30,6 @@ VidHdWindowBeam::~VidHdWindowBeam()
 	}
 	if (VRAMTEX != UINT_MAX)
 		glDeleteTextures(1, &VRAMTEX);
-	if (FBO != UINT_MAX)
-	{
-		glDeleteFramebuffers(1, &FBO);
-		glDeleteTextures(1, &output_texture_id);
-	}
 	if (VAO != UINT_MAX)
 	{
 		glDeleteVertexArrays(1, &VAO);
@@ -168,21 +163,15 @@ void VidHdWindowBeam::UpdateVertexArray()
 	vertices.push_back(VidHdBeamVertex({ glm::vec2(1, -1), glm::ivec2(screen_count.x, 0) }));	// bottom right
 }
 
-
-GLuint VidHdWindowBeam::GetOutputTextureId() const
-{
-	return output_texture_id;
-}
-
-GLuint VidHdWindowBeam::Render(GLuint inputTexUnit, glm::vec2 inputSize)
+void VidHdWindowBeam::Render(GLuint inputTexUnit, glm::vec2 inputSize)
 {
 	// std::cerr << "Rendering vidhd mode " << (int)video_mode  << std::endl;
 	if (video_mode == VIDHDMODE_NONE)
-		return UINT32_MAX;
+		return;
 	if (!shader.isReady)
-		return UINT32_MAX;
+		return;
 	if (vertices.size() == 0)
-		return UINT32_MAX;
+		return;
 
 	GLenum glerr;
 	if (VRAMTEX == UINT_MAX)
@@ -203,36 +192,10 @@ GLuint VidHdWindowBeam::Render(GLuint inputTexUnit, glm::vec2 inputSize)
 		glGenBuffers(1, &VBO);
 	}
 
-	if (FBO == UINT_MAX)
-	{
-		glGenFramebuffers(1, &FBO);
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-		glGenTextures(1, &output_texture_id);
-		glActiveTexture(_TEXUNIT_INPUT_VIDHD);
-		glBindTexture(GL_TEXTURE_2D, output_texture_id);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_count.x, screen_count.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-		glActiveTexture(GL_TEXTURE0);
-		// glBindTexture(GL_TEXTURE_2D, 0);
-	}
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-	glClearColor(0.f, 0.f, 0.f, 0.f);
-	glClear(GL_COLOR_BUFFER_BIT);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL render VidHdWindowBeam setup error: " << glerr << std::endl;
-	}
-	// std::cerr << "VRAMTEX " << VRAMTEX << " VAO " << VAO << " FBO " << FBO << std::endl;
-
 	shader.use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL VidHdWindowBeam glUseProgram error: " << glerr << std::endl;
-		return UINT32_MAX;
+		return;
 	}
 
 	glBindVertexArray(VAO);
@@ -298,7 +261,7 @@ GLuint VidHdWindowBeam::Render(GLuint inputTexUnit, glm::vec2 inputSize)
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "VidHdWindowBeam render error: " << glerr << std::endl;
 	}
-	return output_texture_id;
+	return;
 }
 
 void VidHdWindowBeam::DisplayImGuiWindow(bool* p_open)

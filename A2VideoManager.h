@@ -208,7 +208,7 @@ public:
 	uint8_t* GetSHRVRAMInterlacedWritePtr() { return vrams_write->vram_shr + sizeof(vrams_write->vram_shr) / _INTERLACE_MULTIPLIER; };
 	GLfloat* GetOffsetBufferWritePtr() { return vrams_write->offset_buffer; };
 	GLuint GetOutputTextureId();	// merged output
-	GLuint Render();		// render whatever mode is active (enabled windows)
+	GLuint Render();				// returns the texture unit used
 
 	inline uint32_t GetVramWidthLegacy() { return (40 + (2 * borders_w_cycles)); };	// in 4 bytes!
 	inline uint32_t GetVramHeightLegacy() { return  (192 + (2 * borders_h_scanlines)); };
@@ -254,14 +254,6 @@ private:
 	void InitializeFullQuad();
 	void PrepareOffsetTexture();
 	void ResetGLData();
-
-	// Helper functions to get the proper framebuffer and texture based on the frame count
-	GLuint GetFramebufferForFrame() const {
-		return (current_frame_idx % 2 == 0) ? FBO_merged0 : FBO_merged1;
-	}
-	GLuint GetTextureForFrame() const {
-		return (current_frame_idx % 2 == 0) ? merged_texture_id[0] : merged_texture_id[1];
-	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// Internal data
@@ -310,12 +302,14 @@ private:
 	uint32_t region_scanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
 
 	GLint last_viewport[4];		// Previous viewport used, so we don't clobber it
-	// Even/odd frames generate alternatively to a FBO and texture.
-	// This way we always have the previous frame for postprocess effects (ghosting, etc...)
-	GLuint FBO_merged0 = UINT_MAX, FBO_merged1 = UINT_MAX;	// the framebuffer objects for the merge
-	GLuint merged_texture_id[2] = { UINT_MAX, UINT_MAX };	// the generated textures
-	GLuint output_texture_id;	// the actual output texture (could be legacy/shr/merged)
-	GLuint quadVAO = UINT_MAX;
+	GLuint FBO_A2Video = UINT_MAX;			// the framebuffer object
+	GLuint a2video_texture_id = UINT_MAX;	// the generated texture
+
+	// for debugging, displaying textures TEXT1/2, HGR1/2
+	GLuint FBO_debug[4] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
+	GLuint debug_texture_id[4] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
+
+	GLuint quadVAO = UINT_MAX;	// FOR MERGED MODE TODO: GET RID OF THAT
 	GLuint quadVBO = UINT_MAX;
 
 	// OFFSET buffer texture. Holds one signed int for each scanline to tell the shader

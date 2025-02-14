@@ -141,7 +141,6 @@ void Main_DisplaySplashScreen()
 	}
 	// Run a refresh to show the first screen
 	A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
-	A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 }
 
 void Main_DrawFPSOverlay()
@@ -448,8 +447,6 @@ int main(int argc, char* argv[])
 
 	uint32_t lastMouseMoveTime = SDL_GetTicks();
 	const uint32_t cursorHideDelay = 3000; // After this delay, the mouse cursor disappears
-
-	GLuint out_tex_id = 0;
 	
 	// Get the saved states from previous runs
 	std::cout << "Loading previous state..." << std::endl;
@@ -663,15 +660,18 @@ int main(int argc, char* argv[])
             }   // switch event.type
         }   // while SDL_PollEvent
 
+		// texture unit used by the main renderer,
+		// to send to postprocessing
+		GLuint A2VIDEO_TEX_UNIT = 0;
 		if (!_bDisableVideoRender)
 		{
 			if (sdhrManager->IsSdhrEnabled())
-				out_tex_id = sdhrManager->Render();
+				A2VIDEO_TEX_UNIT = sdhrManager->Render();
 			else
-				out_tex_id = a2VideoManager->Render();
+				A2VIDEO_TEX_UNIT = a2VideoManager->Render();
 		}
 
-		if (out_tex_id == UINT32_MAX)
+		if (A2VIDEO_TEX_UNIT == UINT32_MAX)
 			std::cerr << "ERROR: NO RENDERER OUTPUT!" << std::endl;
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -684,7 +684,7 @@ int main(int argc, char* argv[])
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		if (!_bDisablePPRender)
-			postProcessor->Render(window, out_tex_id);
+			postProcessor->Render(window, A2VIDEO_TEX_UNIT);
 		
 		if (Main_IsImGuiOn())
 		{

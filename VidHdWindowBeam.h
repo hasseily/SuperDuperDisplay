@@ -109,8 +109,7 @@ public:
     VidHdMode_e GetVideoMode() const { return video_mode; }
 	uint32_t GetWidth() const;
 	uint32_t GetHeight() const;
-	GLuint GetOutputTextureId() const;
-	GLuint Render(GLuint inputTexUnit, glm::vec2 inputSize);	// returns the output texture id
+	void Render(GLuint inputTexUnit, glm::vec2 inputSize);
 	void DisplayImGuiWindow(bool* p_open);
 
 	std::vector<VidHdBeamVertex> vertices;	// Vertices with XYRelative and XYPixels
@@ -130,9 +129,6 @@ private:
 											// byte 1: fore and background colors, as specified in the C022 softswitch
 											// byte 2: unused for now
 											// byte 3: fore and background transparency levels (16 levels of transparency)
-
-	GLuint output_texture_id = UINT_MAX;	// the output texture for this object
-	GLuint FBO = UINT_MAX;					// the framebuffer for this object
 
 	uint8_t textAlpha = 0xFF;				// Fore and Back alpha (high and low nibble)
 	// Current mode information

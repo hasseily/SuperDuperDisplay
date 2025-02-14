@@ -24,7 +24,7 @@ public:
 	}
 	~PostProcessor();
 
-	void Render(SDL_Window* window, GLuint inputTextureId);
+	void Render(SDL_Window* window, GLuint inputTextureSlot);
 	void DisplayImGuiWindow(bool* p_open);
 	nlohmann::json SerializeState();
 	void DeserializeState(const nlohmann::json &jsonState);
@@ -47,6 +47,8 @@ private:
 	// Attributes
 	GLuint quadVAO = UINT_MAX;
 	GLuint quadVBO = UINT_MAX;
+	GLuint FBO_prevFrame = UINT_MAX;		// Framebuffer that holds the texture of the previous frame
+	GLuint prevFrame_texture_id = UINT_MAX;	// The previous frame as a texture
 	
 	bool bImguiWindowIsOpen = false;
 
@@ -60,6 +62,8 @@ private:
 	GLint quadWidth = 0, quadHeight = 0;
 	GLint texWidth = 0, texHeight = 0;
 	GLint prev_texWidth = INT_MAX, prev_texHeight = INT_MAX;
+
+	GLint texUnitCurrent = INT_MAX, texUnitPrevious = INT_MAX;
 
 	int frame_count = 0;	// Frame count for interlacing, it may not be aligned with A2Video frames
 	int idx_preset = 0;		// Preset chosen

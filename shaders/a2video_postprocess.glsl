@@ -60,7 +60,7 @@ uniform COMPAT_PRECISION vec2 InputSize;
 uniform COMPAT_PRECISION vec2 ViewportSize;
 uniform COMPAT_PRECISION vec4 VideoRect;
 uniform sampler2D A2TextureCurrent;
-uniform sampler2D A2TexturePrevious;
+uniform sampler2D PreviousFrame;
 uniform COMPAT_PRECISION int GhostingPercent;
 in vec2 TexCoords;
 in vec2 scale;
@@ -235,7 +235,7 @@ void main() {
 	if (GhostingPercent > 0)
 	{
 		FragColor = mix(texture(A2TextureCurrent, TexCoords),
-						texture(A2TexturePrevious, TexCoords),
+						texture(PreviousFrame, TexCoords),
 						float(GhostingPercent)/100.0);
 	} else {
 		FragColor = texture(A2TextureCurrent, TexCoords);

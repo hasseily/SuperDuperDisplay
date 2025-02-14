@@ -15,11 +15,7 @@ A2WindowBeam::~A2WindowBeam()
 {
 	if (VRAMTEX != UINT_MAX)
 		glDeleteTextures(1, &VRAMTEX);
-	if (FBO != UINT_MAX)
-	{
-		glDeleteFramebuffers(1, &FBO);
-		glDeleteTextures(1, &output_texture_id);
-	}
+
 	if (VAO != UINT_MAX)
 	{
 		glDeleteVertexArrays(1, &VAO);
@@ -61,6 +57,11 @@ void A2WindowBeam::SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vert
 	UpdateVertexArray();
 }
 
+void A2WindowBeam::SetQuadRelativeBounds(QuadRect bounds)
+{
+	quadBounds = bounds;
+	this->UpdateVertexArray();
+}
 
 void A2WindowBeam::UpdateVertexArray()
 {
@@ -69,28 +70,22 @@ void A2WindowBeam::UpdateVertexArray()
 	// The A2WindowBeam always covers the whole screen, so from -1 to 1 on both axes
 	// The second pair of values is the actual pixel value on screen
 	vertices.clear();
-	vertices.push_back(A2BeamVertex({ glm::vec2(-1,  1), glm::ivec2(0, screen_count.y) }));	// top left
-	vertices.push_back(A2BeamVertex({ glm::vec2(1, -1), glm::ivec2(screen_count.x, 0) }));	// bottom right
-	vertices.push_back(A2BeamVertex({ glm::vec2(1,  1), glm::ivec2(screen_count.x, screen_count.y) }));	// top right
-	vertices.push_back(A2BeamVertex({ glm::vec2(-1,  1), glm::ivec2(0, screen_count.y) }));	// top left
-	vertices.push_back(A2BeamVertex({ glm::vec2(-1, -1), glm::ivec2(0, 0) }));	// bottom left
-	vertices.push_back(A2BeamVertex({ glm::vec2(1, -1), glm::ivec2(screen_count.x, 0) }));	// bottom right
+	vertices.push_back(A2BeamVertex({ glm::vec2(quadBounds.left,  quadBounds.top), glm::ivec2(0, screen_count.y) }));
+	vertices.push_back(A2BeamVertex({ glm::vec2(quadBounds.right, quadBounds.bottom), glm::ivec2(screen_count.x, 0) }));	// bottom right
+	vertices.push_back(A2BeamVertex({ glm::vec2(quadBounds.right, quadBounds.top), glm::ivec2(screen_count.x, screen_count.y) }));	// top right
+	vertices.push_back(A2BeamVertex({ glm::vec2(quadBounds.left,  quadBounds.top), glm::ivec2(0, screen_count.y) }));	// top left
+	vertices.push_back(A2BeamVertex({ glm::vec2(quadBounds.left,  quadBounds.bottom), glm::ivec2(0, 0) }));	// bottom left
+	vertices.push_back(A2BeamVertex({ glm::vec2(quadBounds.right, quadBounds.bottom), glm::ivec2(screen_count.x, 0) }));	// bottom right
 }
 
-
-GLuint A2WindowBeam::GetOutputTextureId() const
-{
-	return output_texture_id;
-}
-
-GLuint A2WindowBeam::Render(uint64_t frame_idx)
+void A2WindowBeam::Render(uint64_t frame_idx)
 {
 	// std::cerr << "Rendering " << (int)video_mode << " - " << shouldUpdateDataInGPU << std::endl;
 	// std::cerr << "border w " << border_width_cycles << " - h " << border_height_scanlines << std::endl;
 	if (!shader.isReady)
-		return UINT32_MAX;
+		return;
 	if (vertices.size() == 0)
-		return UINT32_MAX;
+		return;
 
 	GLenum glerr;
 	if (VRAMTEX == UINT_MAX)
@@ -125,36 +120,10 @@ GLuint A2WindowBeam::Render(uint64_t frame_idx)
 		glGenBuffers(1, &VBO);
 	}
 
-	if (FBO == UINT_MAX)
-	{
-		glGenFramebuffers(1, &FBO);
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-		glGenTextures(1, &output_texture_id);
-		glActiveTexture(_TEXUNIT_INPUT_VIDHD);
-		glBindTexture(GL_TEXTURE_2D, output_texture_id);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_count.x, screen_count.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, output_texture_id, 0);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		
-		glActiveTexture(GL_TEXTURE0);
-		// glBindTexture(GL_TEXTURE_2D, 0);
-	}
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-	glClearColor(0.f, 0.f, 0.f, 0.f);
-	glClear(GL_COLOR_BUFFER_BIT);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL render A2WindowBeam setup error: " << glerr << std::endl;
-	}
-	// std::cerr << "VRAMTEX " << VRAMTEX << " VAO " << VAO << " FBO " << FBO << std::endl;
-
 	shader.use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
-		return UINT32_MAX;
+		return;
 	}
 	
 	glBindVertexArray(VAO);
@@ -317,5 +286,5 @@ GLuint A2WindowBeam::Render(uint64_t frame_idx)
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2WindowBeam render error: " << glerr << std::endl;
 	}
-	return output_texture_id;
+	return;
 }

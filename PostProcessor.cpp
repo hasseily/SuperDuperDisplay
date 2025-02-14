@@ -32,6 +32,17 @@ PostProcessor* PostProcessor::s_instance;
 
 void PostProcessor::Initialize()
 {
+	if (FBO_prevFrame == UINT_MAX)
+	{
+		glGenFramebuffers(1, &FBO_prevFrame);
+		glGenTextures(1, &prevFrame_texture_id);
+	}
+	if (quadVAO == UINT_MAX)
+	{
+		glGenVertexArrays(1, &quadVAO);
+		glGenBuffers(1, &quadVBO);
+	}
+
 	v_ppshaders.clear();
 	Shader shader_basic = Shader();
 	shader_basic.build(_SHADER_VERTEX_BASIC, _SHADER_FRAGMENT_BASIC);
@@ -50,6 +61,15 @@ PostProcessor::~PostProcessor()
 		glDeleteVertexArrays(1, &quadVAO);
 		glDeleteBuffers(1, &quadVBO);
 	}
+	quadVAO = UINT_MAX;
+	quadVBO = UINT_MAX;
+
+	if (FBO_prevFrame != UINT_MAX)
+	{
+		glDeleteFramebuffers(1, &FBO_prevFrame);
+		glDeleteTextures(1, &prevFrame_texture_id);
+	}
+	FBO_prevFrame = UINT_MAX;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -172,9 +192,6 @@ void PostProcessor::LoadState(int profile_id) {
 void PostProcessor::SelectShader()
 {
 	// Choose the shader
-	// Frame count is always set, outside of the shader selection
-	auto _texUnitCurrent  = ((frame_count & 1) == 0 ? _TEXUNIT_POSTPROCESS_0 : _TEXUNIT_POSTPROCESS_1);
-	auto _texUnitPrevious = ((frame_count & 1) == 0 ? _TEXUNIT_POSTPROCESS_1 : _TEXUNIT_POSTPROCESS_0);
 	switch (p_i_postprocessingLevel)
 	{
 	case 0:	// basic passthrough shader with optional scanlines
@@ -182,8 +199,6 @@ void PostProcessor::SelectShader()
 		shaderProgram = v_ppshaders.at(0);
 		shaderProgram.use();
 		shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
-		shaderProgram.setInt("A2TextureCurrent", _texUnitCurrent - GL_TEXTURE0);
-		shaderProgram.setInt("A2TexturePrevious", _texUnitPrevious - GL_TEXTURE0);
 		shaderProgram.setInt("GhostingPercent", p_i_ghostingPercent);
 		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 
@@ -193,8 +208,6 @@ void PostProcessor::SelectShader()
 		shaderProgram.use();
 		// common
 		shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
-		shaderProgram.setInt("A2TextureCurrent", _texUnitCurrent - GL_TEXTURE0);
-		shaderProgram.setInt("A2TexturePrevious", _texUnitPrevious - GL_TEXTURE0);
 		shaderProgram.setInt("GhostingPercent", p_i_ghostingPercent);
 		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
@@ -242,7 +255,7 @@ void PostProcessor::SelectShader()
 	}
 }
 
-void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
+void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot)
 {
 	SDL_GL_GetDrawableSize(window, &viewportWidth, &viewportHeight);
 
@@ -260,25 +273,8 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	
 	// Bind the texture we're given
 	// And get its actual size.
-	// We assume we're working in slot 0 (even frames), then validate. If not slot 0,
-	// then we switch to slot 1 (odd frames). We don't use our own frame counter because
-	// it may not be synched with the A2Video frame generation
-	glActiveTexture(_TEXUNIT_POSTPROCESS_0);
-	auto _texUnitCurrent  = _TEXUNIT_POSTPROCESS_0;
-	auto _texUnitPrevious = _TEXUNIT_POSTPROCESS_1;
-	GLint boundTex = 0;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTex);
-	if (static_cast<GLuint>(boundTex) != inputTextureId)
-	{
-		// the input texture is in slot 1, let's move to slot 1
-		_texUnitCurrent  = _TEXUNIT_POSTPROCESS_1;
-		_texUnitPrevious = _TEXUNIT_POSTPROCESS_0;
-	}
-
-	glActiveTexture(_texUnitCurrent);
-	GLint last_bound_texture = 0;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_bound_texture);
-	glBindTexture(GL_TEXTURE_2D, inputTextureId);
+	texUnitCurrent  = inputTextureSlot;
+	glActiveTexture(texUnitCurrent);
 	prev_texWidth = texWidth;
 	prev_texHeight = texHeight;
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
@@ -313,7 +309,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 
 	if (bCRTFillWindow && p_i_postprocessingLevel > 1)
 	{
-		quadViewportCoords.x = -1.0;		// left
+		quadViewportCoords.x = -1.0;	// left
 		quadViewportCoords.y = -1.0;	// top
 		quadViewportCoords.z = 1.0;		// right
 		quadViewportCoords.w = 1.0;		// bottom
@@ -340,13 +336,11 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 //		<< "), (" << quadViewportCoords[2] << ", " << quadViewportCoords[3] << ")" << std::endl;
 	
 	if (bImguiWindowIsOpen || (!shaderProgram.isReady)
-		|| (last_bound_texture != inputTextureId)
 		|| (prev_texWidth != texWidth) || (prev_texHeight != texHeight))
 	{
 		// only update the shader parameters in certain cases
 		// as it may be very costly for rPi and slow CPUs
 		this->SelectShader();
-		last_bound_texture = inputTextureId;
 		prev_texWidth = texWidth;
 		prev_texHeight = texHeight;
 	}
@@ -355,19 +349,14 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 		shaderProgram.use();
 	}
 
+	shaderProgram.setInt("A2TextureCurrent", texUnitCurrent - GL_TEXTURE0);
+	shaderProgram.setInt("PreviousFrame", _TEXUNIT_PP_PREVIOUS - GL_TEXTURE0);
 	// Always set the frame count!
 	shaderProgram.setInt("FrameCount", frame_count);
 	shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 2: " << glerr << std::endl;
-	}
-
-	// Setup fullscreen quad VAO and VBO
-	if (quadVAO == UINT_MAX)
-	{
-		glGenVertexArrays(1, &quadVAO);
-		glGenBuffers(1, &quadVBO);
 	}
 	
 	// Now always send in the vertices because it all may have been resized upstream
@@ -389,13 +378,53 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	// Target the main SDL2 window
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
+
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 3: " << glerr << std::endl;
 	}
+
+	// Compute the pixel boundaries of the quad from its normalized coordinates.
+	// The conversion from normalized device coordinates (range [-1,1]) to pixel coordinates is:
+	//    pixel = (ndc * 0.5 + 0.5) * viewportDimension
+	int quadLeft = static_cast<int>((quadViewportCoords.x * 0.5f + 0.5f) * viewportWidth);
+	int quadRight = static_cast<int>((quadViewportCoords.z * 0.5f + 0.5f) * viewportWidth);
+	int quadTop = static_cast<int>((quadViewportCoords.y * 0.5f + 0.5f) * viewportHeight);
+	int quadBottom = static_cast<int>((quadViewportCoords.w * 0.5f + 0.5f) * viewportHeight);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_prevFrame);
+	glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, quadRight-quadLeft, quadBottom-quadTop, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, prevFrame_texture_id, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error PP 4: " << glerr << std::endl;
+	}
+	// Always bind the previous frame texture to its dedicated texture unit
+	glActiveTexture(_TEXUNIT_PP_PREVIOUS);
+	glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
+	glActiveTexture(GL_TEXTURE0);
+
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error PP 5: " << glerr << std::endl;
+	}
+
+	// Now copy the screen texture to prevFrame_texture_id, to use it for the next frame
+	// NOTE: prevFrame is flipped on the Y axis, so we flip Y on the destination to realign it
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO_prevFrame);
+	glBlitFramebuffer(quadLeft, quadTop, quadRight, quadBottom,	// source rectangle (quad region)
+		0, quadBottom - quadTop, quadRight-quadLeft, 0,				// destination rectangle (Y flipped)
+		GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error PP glBlitFramebuffer: " << glerr << std::endl;
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
 	// revert the texture assignment
-	glActiveTexture(_texUnitCurrent);
-	glBindTexture(GL_TEXTURE_2D, last_bound_texture);
 	glActiveTexture(GL_TEXTURE0);
 	++frame_count;
 }

@@ -69,8 +69,9 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _TEXUNIT_DATABUFFER_RGBA8UI GL_TEXTURE2	// Texunit of the data buffer (RGBA8UI VRAM)
 #define _TEXUNIT_PAL256BUFFER GL_TEXTURE3		// Texunit of the SHR4 PAL256 vram
 #define _TEXUNIT_IMAGE_ASSETS_START GL_TEXTURE4	// Start of the image assets
-#define _TEXUNIT_POSTPROCESS_0 GL_TEXTURE15		// input texunit the PP will use to generate the final output (buffer 0)
-#define _TEXUNIT_POSTPROCESS_1 GL_TEXTURE16		// input texunit the PP will use to generate the final output (buffer 1)
+#define _TEXUNIT_TEMP GL_TEXTURE14				// miscellaneous texture unit for temp work
+#define _TEXUNIT_POSTPROCESS GL_TEXTURE15		// input texunit the PP will use to generate the final output
+#define _TEXUNIT_PP_PREVIOUS GL_TEXTURE16		// The previous frame as a texture
 // MERGE textures
 #define _TEXUNIT_MERGE_OFFSET GL_TEXTURE17		// Offset buffer
 #define _TEXUNIT_MERGE_LEGACY GL_TEXTURE18		// legacy output texture
@@ -84,7 +85,7 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 // DEFINITIONS OF SDHR SPECS
 #define _SDHR_UPLOAD_REGION_SIZE 256*256*256	// Upload data region size (should be 16MB)
 #define _SDHR_MAX_WINDOWS 256
-#define _SDHR_MAX_TEXTURES (_TEXUNIT_POSTPROCESS_0 - _TEXUNIT_IMAGE_ASSETS_START)	// Max # of image assets available
+#define _SDHR_MAX_TEXTURES (_TEXUNIT_POSTPROCESS - _TEXUNIT_IMAGE_ASSETS_START)	// Max # of image assets available
 #define _SDHR_MAX_UV_SCALE 100.f				// Maximum scale of Mosaic Tile UV
 
 // ORIGINAL APPLE 2 VIDEO MODES
@@ -95,6 +96,9 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 #define _A2VIDEO_SHR_HEIGHT 200*2
 #define _A2VIDEO_SHR_BYTES_PER_LINE 160
 #define _A2VIDEO_SHR_SCANLINES 200
+
+#define _A2VIDEO_LEGACY_ASPECT_RATIO 280.f/192.f
+#define _A2VIDEO_SHR_ASPECT_RATIO 320.f/200.f
 
 #define _A2VIDEO_TEXT1_START 0x400
 #define _A2VIDEO_TEXT2_START 0x800

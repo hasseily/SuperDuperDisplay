@@ -351,26 +351,26 @@ void MainMenu::Render() {
 			}
 			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 1)
 			{
-				glActiveTexture(_TEXUNIT_POSTPROCESS_0);
+				glActiveTexture(_TEXUNIT_POSTPROCESS);
 				GLint target_tex_id = 0;
 				glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, target_tex_id);
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
-				ImGui::Text("_TEXUNIT_POSTPROCESS_0: %d (%d x %d)", target_tex_id, _w, _h);
+				ImGui::Text("_TEXUNIT_POSTPROCESS: %d (%d x %d)", target_tex_id, _w, _h);
 				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
 			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 2)
 			{
-				glActiveTexture(_TEXUNIT_POSTPROCESS_1);
+				glActiveTexture(_TEXUNIT_PP_PREVIOUS);
 				GLint target_tex_id = 0;
 				glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, target_tex_id);
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
-				ImGui::Text("_TEXUNIT_POSTPROCESS_1: %d (%d x %d)", target_tex_id, _w, _h);
+				ImGui::Text("_TEXUNIT_PP_PREVIOUS: %d (%d x %d)", target_tex_id, _w, _h);
 				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
 			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 3)
