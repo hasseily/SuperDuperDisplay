@@ -332,11 +332,12 @@ void A2VideoManager::Initialize()
 
 	vidhdWindowBeam = std::make_unique<VidHdWindowBeam>(VIDHDMODE_NONE);
 
-	// The merged framebuffer will have by default
-	// a size equal to the SHR buffer (including borders).
-	// But that can change if the VidHD overlay is active
-	fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
-	fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
+	// The framebuffer width. That will change depending on the layers that are rendered:
+	// If a VidHD text modes > 80x24 is active, then 1920x1080
+	// Otherwise if SHR is active in any scanline, then SHR size
+	// Otherwise, Legacy size
+	fb_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
+	fb_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
 
 	beamState = BeamState_e::NBVBLANK;
 	merge_last_change_mode = A2Mode_e::NONE;
@@ -1322,15 +1323,6 @@ GLuint A2VideoManager::Render()
 	
 	GLenum glerr;
 
-	// Select the proper framebuffer (even or odd)
-	if (FBO_A2Video == UINT_MAX)
-		CreateOrResizeFramebuffer(fb_width, fb_height);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "GL Framebuffer error: " << glerr << std::endl;
-	}
-
 	// Initialization routine runs only once on init (or re-init)
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
@@ -1370,7 +1362,31 @@ GLuint A2VideoManager::Render()
 		rendered_frame_idx = UINT64_MAX;
 	}
 
+	// The framebuffer width. That will change depending on the layers that are rendered:
+	// If a VidHD text modes > 80x24 is active, then 1920x1080
+	// Otherwise if it's a pure legacy frame, use legacy size
+	// Otherwise use SHR size
+	if (vidhdWindowBeam->GetVideoMode() != VIDHDMODE_NONE) {
+		fb_width = vidhdWindowBeam->GetWidth();
+		fb_height = vidhdWindowBeam->GetHeight();
+	} else if (vrams_read->mode == A2Mode_e::LEGACY) {
+		fb_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
+		fb_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
+	} else {
+		fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
+		fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
+	}
+
+	CreateOrResizeFramebuffer(fb_width, fb_height);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
+
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "GL Framebuffer error: " << glerr << std::endl;
+	}
+
+
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
+	glViewport(0, 0, fb_width, fb_height);		// new viewport the size of the output texture
 
 	glClearColor(0.f, 0.f, 0.f, 0.f);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -1384,114 +1400,10 @@ GLuint A2VideoManager::Render()
 	windowsbeam[A2VIDEOBEAM_SHR]->doubleSHR4 = ( overrideDoubleSHR > 0 ? overrideDoubleSHR - 1 : vrams_read->doubleSHR4Mode);
 
 	// ===============================================================================
-	// ============================== MERGED MODE RENDER ==============================
-	// ===============================================================================
-
-	// Now determine if we should merge both legacy and shr
-	if (vrams_read->mode == A2Mode_e::MERGED)
-	{
-		int _renderModes = 0;	// bit 0: LEGACY, bit 1: SHR, bit 2: VIDHD
-		_renderModes |= ((vrams_read->mode == A2Mode_e::LEGACY ? 1 : 0));
-		_renderModes |= ((vrams_read->mode == A2Mode_e::SHR ? 1 : 0) << 1);
-		_renderModes |= ((vrams_read->mode == A2Mode_e::MERGED ? 0b11 : 0));
-
-		GLuint legacy_texture_id = UINT_MAX;
-		GLuint shr_texture_id = UINT_MAX;
-
-		uint32_t legacy_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
-		auto legacy_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
-		uint32_t shr_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
-		auto shr_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
-
-		if ((_renderModes & 0b1) == 0b1)	// legacy
-		{
-			// first render Legacy in its viewport
-			glViewport(0, 0, legacy_width, legacy_height);
-			std::cerr << "Rendering merged legacy to viewport " << legacy_width << " x " << legacy_height << std::endl;
-			windowsbeam[A2VIDEOBEAM_LEGACY]->Render(current_frame_idx);
-		}
-
-		if ((_renderModes & 0b10) == 0b10)	// SHR
-		{
-			// output_width = fb_width;
-			// output_height = fb_height;
-			// glViewport(0, 0, output_width, output_height);
-			glViewport(0, 0, shr_width, shr_height);
-			std::cerr << "Rendering merged SHR to viewport " << shr_width << " x " << shr_height << std::endl;
-			windowsbeam[A2VIDEOBEAM_SHR]->Render(current_frame_idx);
-		}
-
-		// Setup for merged rendering
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
-		glViewport(0, 0, output_width, output_height);
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		// Use the shader program
-		shader_merge.use();
-		shader_merge.setInt("ticks", SDL_GetTicks());
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
-			return UINT32_MAX;
-		}
-
-		if ((_renderModes & 0b1) == 0b1)	// legacy
-		{
-			glActiveTexture(_TEXUNIT_MERGE_LEGACY);
-			glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
-			shader_merge.setInt("LEGACYTEX", _TEXUNIT_MERGE_LEGACY - GL_TEXTURE0);
-			shader_merge.setVec2("legacySize", legacy_width, legacy_height);
-			shader_merge.setInt("forceSHRWidth", bForceSHRWidth);
-			std::cerr << "Bound LEGACY" << std::endl;
-		}
-
-		if ((_renderModes & 0b10) == 0b10)	// SHR
-		{
-			glActiveTexture(_TEXUNIT_MERGE_SHR);
-			glBindTexture(GL_TEXTURE_2D, shr_texture_id);
-			shader_merge.setInt("SHRTEX", _TEXUNIT_MERGE_SHR - GL_TEXTURE0);
-			shader_merge.setVec2("shrSize", fb_width, fb_height);
-			std::cerr << "Bound SHR" << std::endl;
-		}
-
-		if ((_renderModes & 0b11) == 0b11)	// SHR+LEGACY
-		{
-			// Point the uniform at the OFFSET texture
-			PrepareOffsetTexture();
-			shader_merge.setInt("OFFSETTEX", _TEXUNIT_MERGE_OFFSET - GL_TEXTURE0);
-			std::cerr << "Bound OFFSETTEX" << std::endl;
-		}
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "A2VideoManager merged render 01 error: " << glerr << std::endl;
-		}
-
-		// Tell the shaders which layers to merge, depending on which render modes are active
-		shader_merge.setInt("mergeLayers", _renderModes);
-
-		// Render the fullscreen quad
-		if (quadVAO == UINT_MAX) {
-			InitializeFullQuad();
-		}
-		glBindVertexArray(quadVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-
-		// Reset state
-		glBindVertexArray(0);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "A2VideoManager merged render error: " << glerr << std::endl;
-		}
-	}
-	// ===============================================================================
 	// ============================= LEGACY MODE RENDER ==============================
 	// ===============================================================================
-	else if (vrams_read->mode == A2Mode_e::LEGACY) {
+	if ((vrams_read->mode == A2Mode_e::LEGACY) || (vrams_read->mode == A2Mode_e::MERGED)) {
 		// Only legacy is active, just bind the correct output for the postprocessor
-		output_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
-		output_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
-		glViewport(0, 0, output_width, output_height);
 		if (bUseDHGRCOL140Mixed)
 			windowsbeam[A2VIDEOBEAM_LEGACY]->specialModesMask |= A2_VSM_DHGRCOL140Mixed;
 		else
@@ -1506,11 +1418,12 @@ GLuint A2VideoManager::Render()
 			windowsbeam[A2VIDEOBEAM_LEGACY]->specialModesMask &= ~A2_VSM_HGRSPEC2;
 
 		windowsbeam[A2VIDEOBEAM_LEGACY]->monitorColorType = eA2MonitorType;
-		
+		windowsbeam[A2VIDEOBEAM_LEGACY]->bIsMergedMode = (vrams_read->mode == A2Mode_e::MERGED);
+
 		QuadRect _qr = { -1.f,1.f,1.f,-1.f };
 		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_qr);
 		windowsbeam[A2VIDEOBEAM_LEGACY]->Render(current_frame_idx);
-		// std::cerr << "Rendering legacy to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
+		// std::cerr << "Rendering legacy to viewport " << fb_width << "x" << fb_height << " - " << output_texture_id << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "Legacy Mode draw error: " << glerr << std::endl;
 		}
@@ -1518,26 +1431,20 @@ GLuint A2VideoManager::Render()
 	// ===============================================================================
 	// =============================== SHR MODE RENDER ===============================
 	// ===============================================================================
-	else if (vrams_read->mode == A2Mode_e::SHR) {
+	if ((vrams_read->mode == A2Mode_e::SHR) || (vrams_read->mode == A2Mode_e::MERGED)) {
 		// Only SHR is active, just bind the correct output for the postprocessor
-		output_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
-		output_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
-		glViewport(0, 0, output_width, output_height);
 		windowsbeam[A2VIDEOBEAM_SHR]->monitorColorType = eA2MonitorType;
+		windowsbeam[A2VIDEOBEAM_SHR]->bIsMergedMode = (vrams_read->mode == A2Mode_e::MERGED);
 		windowsbeam[A2VIDEOBEAM_SHR]->Render(current_frame_idx);
-		// std::cerr << "Rendering SHR to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
+		// std::cerr << "Rendering SHR to viewport " << fb_width << "x" << fb_height << " - " << output_texture_id << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "SHR Mode draw error: " << glerr << std::endl;
 		}
 	}
 
-	bool _bRenderVidhd = (vidhdWindowBeam->GetVideoMode() != VIDHDMODE_NONE);
-	if (_bRenderVidhd)	// VidHD
+	if (vidhdWindowBeam->GetVideoMode() != VIDHDMODE_NONE)	// VidHD
 	{
-		output_width = vidhdWindowBeam->GetWidth();
-		output_height = vidhdWindowBeam->GetHeight();
-		glViewport(0, 0, output_width, output_height);
-		vidhdWindowBeam->Render(_TEXUNIT_INPUT_VIDHD, glm::vec2(output_width, output_height));
+		vidhdWindowBeam->Render(_TEXUNIT_INPUT_VIDHD, glm::vec2(fb_width, fb_height));
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "VidHD draw error: " << glerr << std::endl;
 		}
