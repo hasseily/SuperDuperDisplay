@@ -147,20 +147,25 @@ uint32_t VidHdWindowBeam::GetHeight() const
 	return screen_count.y;
 }
 
+void VidHdWindowBeam::SetQuadRelativeBounds(SDL_FRect bounds)
+{
+	quad = bounds;
+	this->UpdateVertexArray();
+}
 
 void VidHdWindowBeam::UpdateVertexArray()
 {
 	// Assign the vertex array.
 	// The first 2 values are the relative XY, bound from -1 to 1.
-	// The VidHdWindowBeam always covers the whole screen, so from -1 to 1 on both axes
 	// The second pair of values is the actual pixel value on screen
 	vertices.clear();
-	vertices.push_back(VidHdBeamVertex({ glm::vec2(-1,  1), glm::ivec2(0, screen_count.y) }));	// top left
-	vertices.push_back(VidHdBeamVertex({ glm::vec2(1, -1), glm::ivec2(screen_count.x, 0) }));	// bottom right
-	vertices.push_back(VidHdBeamVertex({ glm::vec2(1,  1), glm::ivec2(screen_count.x, screen_count.y) }));	// top right
-	vertices.push_back(VidHdBeamVertex({ glm::vec2(-1,  1), glm::ivec2(0, screen_count.y) }));	// top left
-	vertices.push_back(VidHdBeamVertex({ glm::vec2(-1, -1), glm::ivec2(0, 0) }));	// bottom left
-	vertices.push_back(VidHdBeamVertex({ glm::vec2(1, -1), glm::ivec2(screen_count.x, 0) }));	// bottom right
+	vertices.push_back(VidHdBeamVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, screen_count.y) }));
+	vertices.push_back(VidHdBeamVertex({ glm::vec2(quad.x + quad.w, quad.y + quad.h), glm::ivec2(screen_count.x, 0) }));	// bottom right
+	vertices.push_back(VidHdBeamVertex({ glm::vec2(quad.x + quad.w, quad.y), glm::ivec2(screen_count.x, screen_count.y) }));	// top right
+	vertices.push_back(VidHdBeamVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, screen_count.y) }));	// top left
+	vertices.push_back(VidHdBeamVertex({ glm::vec2(quad.x, quad.y + quad.h), glm::ivec2(0, 0) }));	// bottom left
+	vertices.push_back(VidHdBeamVertex({ glm::vec2(quad.x + quad.w, quad.y + quad.h), glm::ivec2(screen_count.x, 0) }));	// bottom right
+
 }
 
 void VidHdWindowBeam::Render(GLuint inputTexUnit, glm::vec2 inputSize)

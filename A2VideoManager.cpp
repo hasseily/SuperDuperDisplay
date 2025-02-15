@@ -440,6 +440,15 @@ void A2VideoManager::CheckSetBordersWithReinit()
 	this->ForceBeamFullScreenRender();
 }
 
+SDL_FRect A2VideoManager::NormalizePixelQuad(const SDL_FRect& pixelQuad)
+{
+	SDL_FRect normalized;
+	normalized.x = (2.0f * pixelQuad.x) / fb_width - 1.0f;
+	normalized.y = (2.0f * pixelQuad.y) / fb_height - 1.0f;
+	normalized.w = (2.0f * pixelQuad.w) / fb_height;
+	normalized.h = (-2.f * pixelQuad.h) / fb_height;
+	return normalized;
+}
 
 void A2VideoManager::StartNextFrame()
 {
@@ -1366,24 +1375,44 @@ GLuint A2VideoManager::Render()
 	// If a VidHD text modes > 80x24 is active, then 1920x1080
 	// Otherwise if it's a pure legacy frame, use legacy size
 	// Otherwise use SHR size
-	if (vidhdWindowBeam->GetVideoMode() != VIDHDMODE_NONE) {
+	if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_TEXT_80X24) {
 		fb_width = vidhdWindowBeam->GetWidth();
 		fb_height = vidhdWindowBeam->GetHeight();
+		auto _rb = NormalizePixelQuad({ 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), 0 });
+		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
+		_rb = NormalizePixelQuad({ 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetHeight(), (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), 0 });
+		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds(_rb);
+		vidhdWindowBeam->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
+	} else if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_NONE) {
+		fb_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
+		fb_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
+		auto _rb = NormalizePixelQuad({ 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), 0 });
+		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
+		_rb = NormalizePixelQuad({ 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetHeight(), (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), 0 });
+		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds(_rb);
+		_rb = NormalizePixelQuad({ 0, (float)_A2VIDEO_LEGACY_HEIGHT, (float)_A2VIDEO_LEGACY_WIDTH, 0 });
+		vidhdWindowBeam->SetQuadRelativeBounds(_rb);
 	} else if (vrams_read->mode == A2Mode_e::LEGACY) {
 		fb_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
 		fb_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
+		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
 	} else {
 		fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
 		fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
+		auto _rb = NormalizePixelQuad({ 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), 0 });
+		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
+		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
 	}
 
+	vidhdWindowBeam->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
+	windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
+	windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
 	CreateOrResizeFramebuffer(fb_width, fb_height);
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "GL Framebuffer error: " << glerr << std::endl;
 	}
-
 
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
 	glViewport(0, 0, fb_width, fb_height);		// new viewport the size of the output texture
@@ -1398,6 +1427,10 @@ GLuint A2VideoManager::Render()
 	// Set the magic bytes, currently only in SHR mode
 	windowsbeam[A2VIDEOBEAM_SHR]->specialModesMask |= vrams_read->frameSHR4Modes;
 	windowsbeam[A2VIDEOBEAM_SHR]->doubleSHR4 = ( overrideDoubleSHR > 0 ? overrideDoubleSHR - 1 : vrams_read->doubleSHR4Mode);
+
+	// if we're in merged mode, prepare the offset texture
+	if (vrams_read->mode == A2Mode_e::MERGED)
+		PrepareOffsetTexture();
 
 	// ===============================================================================
 	// ============================= LEGACY MODE RENDER ==============================
@@ -1419,11 +1452,8 @@ GLuint A2VideoManager::Render()
 
 		windowsbeam[A2VIDEOBEAM_LEGACY]->monitorColorType = eA2MonitorType;
 		windowsbeam[A2VIDEOBEAM_LEGACY]->bIsMergedMode = (vrams_read->mode == A2Mode_e::MERGED);
-
-		QuadRect _qr = { -1.f,1.f,1.f,-1.f };
-		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_qr);
 		windowsbeam[A2VIDEOBEAM_LEGACY]->Render(current_frame_idx);
-		// std::cerr << "Rendering legacy to viewport " << fb_width << "x" << fb_height << " - " << output_texture_id << std::endl;
+		// std::cerr << "Rendered legacy to viewport " << fb_width << "x" << fb_height << " - " << current_frame_idx << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "Legacy Mode draw error: " << glerr << std::endl;
 		}
@@ -1436,12 +1466,14 @@ GLuint A2VideoManager::Render()
 		windowsbeam[A2VIDEOBEAM_SHR]->monitorColorType = eA2MonitorType;
 		windowsbeam[A2VIDEOBEAM_SHR]->bIsMergedMode = (vrams_read->mode == A2Mode_e::MERGED);
 		windowsbeam[A2VIDEOBEAM_SHR]->Render(current_frame_idx);
-		// std::cerr << "Rendering SHR to viewport " << fb_width << "x" << fb_height << " - " << output_texture_id << std::endl;
+		// std::cerr << "Rendered SHR to viewport " << fb_width << "x" << fb_height << " - " << current_frame_idx << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "SHR Mode draw error: " << glerr << std::endl;
 		}
 	}
-
+	// ===============================================================================
+	// ============================ VIDHD LAYER RENDER ===============================
+	// ===============================================================================
 	if (vidhdWindowBeam->GetVideoMode() != VIDHDMODE_NONE)	// VidHD
 	{
 		vidhdWindowBeam->Render(_TEXUNIT_INPUT_VIDHD, glm::vec2(fb_width, fb_height));

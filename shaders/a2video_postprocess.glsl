@@ -62,6 +62,7 @@ uniform COMPAT_PRECISION vec4 VideoRect;
 uniform sampler2D A2TextureCurrent;
 uniform sampler2D PreviousFrame;
 uniform COMPAT_PRECISION int GhostingPercent;
+uniform COMPAT_PRECISION float GhostingBrightness;
 in vec2 TexCoords;
 in vec2 scale;
 in vec2 ps;
@@ -232,22 +233,27 @@ vec2 BarrelDistortion(vec2 uv) {
 }
 
 void main() {
-	if (GhostingPercent > 0)
-	{
-		FragColor = mix(texture(A2TextureCurrent, TexCoords),
-						texture(PreviousFrame, TexCoords),
-						float(GhostingPercent)/100.0);
-	} else {
-		FragColor = texture(A2TextureCurrent, TexCoords);
-	}
+	FragColor = texture(A2TextureCurrent, TexCoords);
 
 	if (POSTPROCESSING_LEVEL == 0) {
+		if (GhostingPercent > 0)
+		{
+			FragColor = mix(FragColor,
+							texture(PreviousFrame, TexCoords)*GhostingBrightness,
+							float(GhostingPercent)/100.0);
+		}
 		return;
 	}
 	
 // Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1) {
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
+		if (GhostingPercent > 0)
+		{
+			FragColor = mix(FragColor,
+							texture(PreviousFrame, TexCoords)*GhostingBrightness,
+							float(GhostingPercent)/100.0);
+		}
 		return;
 	}
 
@@ -374,6 +380,13 @@ void main() {
 	res *= blck;
 
 	FragColor = vec4(res, corn);
+
+	if (GhostingPercent > 0)
+	{
+		FragColor = mix(FragColor,
+						texture(PreviousFrame, TexCoords)*GhostingBrightness,
+						float(GhostingPercent)/100.0);
+	}
 }
 
 #endif

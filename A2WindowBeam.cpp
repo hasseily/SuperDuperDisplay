@@ -57,9 +57,9 @@ void A2WindowBeam::SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vert
 	UpdateVertexArray();
 }
 
-void A2WindowBeam::SetQuadRelativeBounds(QuadRect bounds)
+void A2WindowBeam::SetQuadRelativeBounds(SDL_FRect bounds)
 {
-	quadBounds = bounds;
+	quad = bounds;
 	this->UpdateVertexArray();
 }
 
@@ -67,15 +67,14 @@ void A2WindowBeam::UpdateVertexArray()
 {
 	// Assign the vertex array.
 	// The first 2 values are the relative XY, bound from -1 to 1.
-	// The A2WindowBeam always covers the whole screen, so from -1 to 1 on both axes
 	// The second pair of values is the actual pixel value on screen
 	vertices.clear();
-	vertices.push_back(A2BeamVertex({ glm::vec2(quadBounds.left,  quadBounds.top), glm::ivec2(0, screen_count.y) }));
-	vertices.push_back(A2BeamVertex({ glm::vec2(quadBounds.right, quadBounds.bottom), glm::ivec2(screen_count.x, 0) }));	// bottom right
-	vertices.push_back(A2BeamVertex({ glm::vec2(quadBounds.right, quadBounds.top), glm::ivec2(screen_count.x, screen_count.y) }));	// top right
-	vertices.push_back(A2BeamVertex({ glm::vec2(quadBounds.left,  quadBounds.top), glm::ivec2(0, screen_count.y) }));	// top left
-	vertices.push_back(A2BeamVertex({ glm::vec2(quadBounds.left,  quadBounds.bottom), glm::ivec2(0, 0) }));	// bottom left
-	vertices.push_back(A2BeamVertex({ glm::vec2(quadBounds.right, quadBounds.bottom), glm::ivec2(screen_count.x, 0) }));	// bottom right
+	vertices.push_back(A2BeamVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, screen_count.y) }));
+	vertices.push_back(A2BeamVertex({ glm::vec2(quad.x + quad.w, quad.y + quad.h), glm::ivec2(screen_count.x, 0) }));	// bottom right
+	vertices.push_back(A2BeamVertex({ glm::vec2(quad.x + quad.w, quad.y), glm::ivec2(screen_count.x, screen_count.y) }));	// top right
+	vertices.push_back(A2BeamVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, screen_count.y) }));	// top left
+	vertices.push_back(A2BeamVertex({ glm::vec2(quad.x, quad.y + quad.h), glm::ivec2(0, 0) }));	// bottom left
+	vertices.push_back(A2BeamVertex({ glm::vec2(quad.x + quad.w, quad.y + quad.h), glm::ivec2(screen_count.x, 0) }));	// bottom right
 }
 
 void A2WindowBeam::Render(uint64_t frame_idx)

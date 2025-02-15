@@ -166,6 +166,8 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_f_barrelDistortion = jsonState.value("p_f_barrelDistortion", p_f_barrelDistortion);
 	p_f_zoomX = jsonState.value("p_f_zoomX", p_f_zoomX);
 	p_f_zoomY = jsonState.value("p_f_zoomY", p_f_zoomY);
+	p_i_ghostingPercent = jsonState.value("p_i_ghostingPercent", p_i_ghostingPercent);
+	p_f_ghostingBrightness = jsonState.value("p_f_ghostingBrightness", p_f_ghostingBrightness);
 }
 
 void PostProcessor::SaveState(int profile_id) {
@@ -198,18 +200,11 @@ void PostProcessor::SelectShader()
 	case 1:
 		shaderProgram = v_ppshaders.at(0);
 		shaderProgram.use();
-		shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
-		shaderProgram.setInt("GhostingPercent", p_i_ghostingPercent);
-		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
-
 		break;
 	case 2:	// CRT shader
 		shaderProgram = v_ppshaders.at(1);
 		shaderProgram.use();
-		// common
-		shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
-		shaderProgram.setInt("GhostingPercent", p_i_ghostingPercent);
-		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
+		// size info
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
 		shaderProgram.setVec2("InputSize", glm::vec2(texWidth, texHeight));
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
@@ -253,6 +248,11 @@ void PostProcessor::SelectShader()
 		shaderProgram.setInt("iSCANLINE_TYPE", p_i_scanlineType);
 		break;
 	}
+	// common
+	shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
+	shaderProgram.setInt("GhostingPercent", p_i_ghostingPercent);
+	shaderProgram.setFloat("GhostingBrightness", p_f_ghostingBrightness);
+	shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 }
 
 void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot)
@@ -343,10 +343,16 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot)
 		this->SelectShader();
 		prev_texWidth = texWidth;
 		prev_texHeight = texHeight;
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP shaderProgram select: " << glerr << std::endl;
+		}
 	}
 	else
 	{
 		shaderProgram.use();
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP shaderProgram use: " << glerr << std::endl;
+		}
 	}
 
 	shaderProgram.setInt("A2TextureCurrent", texUnitCurrent - GL_TEXTURE0);
@@ -490,10 +496,6 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 
 		ImGui::PushItemWidth(200);
 
-		// Just the ghosting, which applies everywhere
-		ImGui::Separator();
-		ImGui::SliderInt("Ghosting Weight", &p_i_ghostingPercent, 0, 99, 0);
-
 		// PP Type
 		ImGui::Separator();
 		ImGui::Text("[ POSTPROCESSING LEVEL ]");
@@ -543,6 +545,11 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		ImGui::SliderInt("Integer Scale", &integer_scale, 1, max_integer_scale, "%d");
 		if (bAutoScale)
 			ImGui::EndDisabled();
+		// Also the ghosting, which applies everywhere
+		ImGui::Separator();
+		ImGui::Text("[ GHOSTING ]");
+		ImGui::SliderInt("Weight", &p_i_ghostingPercent, 0, 99, 0);
+		ImGui::SliderFloat("Brightness Modifier", &p_f_ghostingBrightness, 0.5, 2.0, "%.2f");
 
 		if (p_i_postprocessingLevel == 2) {
 			ImGui::Separator();

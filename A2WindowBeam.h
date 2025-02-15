@@ -61,13 +61,6 @@ struct A2BeamVertex {
 	glm::vec2 PixelPos;		// Pixel position of the vertex in the Apple 2 screen
 };
 
-struct QuadRect {
-	float left;
-	float top;
-	float right;
-	float bottom;
-};
-
 class A2WindowBeam
 {
 public:
@@ -77,8 +70,8 @@ public:
 	uint32_t GetWidth() const;
 	uint32_t GetHeight() const;
 	void SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vertical);
-	void SetQuadRelativeBounds(QuadRect bounds);
-	QuadRect GetQuadRelativeBounds() const { return quadBounds; };
+	void SetQuadRelativeBounds(SDL_FRect bounds);
+	SDL_FRect GetQuadRelativeBounds() const { return quad; };
 	void Render(uint64_t frame_idx);
 
 	Shader* GetShader() { return &shader; };
@@ -108,7 +101,7 @@ private:
 	uint32_t border_width_cycles = 0;
 	uint32_t border_height_scanlines = 0;
 
-	QuadRect quadBounds = { -1.f, 1.f, 1.f, -1.f };	// left, top, right, bottom
+	SDL_FRect quad = { -1.f, 1.f, 2.f, -2.f };	// x, y, width, height
 
 	void UpdateVertexArray();
 };

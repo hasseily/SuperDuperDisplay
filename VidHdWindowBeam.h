@@ -109,6 +109,8 @@ public:
     VidHdMode_e GetVideoMode() const { return video_mode; }
 	uint32_t GetWidth() const;
 	uint32_t GetHeight() const;
+	void SetQuadRelativeBounds(SDL_FRect bounds);
+	SDL_FRect GetQuadRelativeBounds() const { return quad; };
 	void Render(GLuint inputTexUnit, glm::vec2 inputSize);
 	void DisplayImGuiWindow(bool* p_open);
 
@@ -139,6 +141,7 @@ private:
 	glm::uvec2 glyphSize = glm::uvec2(14,16);
 	glm::vec2 fontScale = glm::vec2(2.0,2.0);	// Font size should be 16x16
 	glm::vec2 border = glm::vec2(400.0,156.0);
+	SDL_FRect quad = { -1.f, 1.f, 2.f, -2.f };	// x, y, width, height
 
 	void UpdateVertexArray();
 };

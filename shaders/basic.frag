@@ -8,9 +8,10 @@
 in vec2 vTexCoords;
 out vec4 fragColor;
 uniform sampler2D A2TextureCurrent;
-uniform sampler2D A2TexturePrevious;
+uniform sampler2D PreviousFrame;
 uniform COMPAT_PRECISION int POSTPROCESSING_LEVEL;
 uniform COMPAT_PRECISION int GhostingPercent;
+uniform COMPAT_PRECISION float GhostingBrightness;
 uniform COMPAT_PRECISION vec2 TextureSize;
 
 void main()
@@ -18,7 +19,7 @@ void main()
 	if (GhostingPercent > 0)
 	{
 		fragColor = mix(texture(A2TextureCurrent, vTexCoords),
-						texture(A2TexturePrevious, vTexCoords),
+						texture(PreviousFrame, vTexCoords) * GhostingBrightness,
 						float(GhostingPercent)/100.0);
 	} else {
 		fragColor = texture(A2TextureCurrent, vTexCoords);
