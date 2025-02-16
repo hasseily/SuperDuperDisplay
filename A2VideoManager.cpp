@@ -692,7 +692,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 						else
 							vrams_write->offset_buffer[_TR_ANY_Y] = 10.f + pixelShift;
 					}
-					std::cerr << "Offset: " << vrams_write->offset_buffer[_TR_ANY_Y] << " y: " << _TR_ANY_Y << std::endl;
+					// std::cerr << "Offset: " << vrams_write->offset_buffer[_TR_ANY_Y] << " y: " << _TR_ANY_Y << std::endl;
 				}
 			}
 		}
@@ -1402,7 +1402,11 @@ GLuint A2VideoManager::Render()
 	} else {
 		fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
 		fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
-		auto _rb = NormalizePixelQuad({ 0, 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() });
+		SDL_FRect _rb;
+		if (bForceSHRWidth)
+			_rb = NormalizePixelQuad({ 0, 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() });
+		else
+			_rb = NormalizePixelQuad({ (640-560)/2, 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() });
 		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
 		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
 	}
