@@ -61,8 +61,6 @@ uniform COMPAT_PRECISION vec2 ViewportSize;
 uniform COMPAT_PRECISION vec4 VideoRect;
 uniform sampler2D A2TextureCurrent;
 uniform sampler2D PreviousFrame;
-uniform COMPAT_PRECISION int GhostingPercent;
-uniform COMPAT_PRECISION float GhostingBrightness;
 in vec2 TexCoords;
 in vec2 scale;
 in vec2 ps;
@@ -70,6 +68,9 @@ in vec2 v_pos;
 out vec4 FragColor;
 
 uniform COMPAT_PRECISION int POSTPROCESSING_LEVEL;
+
+uniform COMPAT_PRECISION float GhostingPercent;
+uniform COMPAT_PRECISION float BlurSize;
 
 uniform bool bCORNER_SMOOTH;
 uniform bool bEXT_GAMMA;
@@ -107,6 +108,48 @@ uniform COMPAT_PRECISION float ZOOMY;
 uniform COMPAT_PRECISION int iCOLOR_SPACE;
 uniform COMPAT_PRECISION int iM_TYPE;
 uniform COMPAT_PRECISION int iSCANLINE_TYPE;
+
+vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
+{
+	vec4 previousColor = texture(PreviousFrame, coords);
+	// Calculate the intensity levels of both frames
+	float currentIntensity = dot(currentColor.rgb, vec3(0.299, 0.587, 0.114));
+	float previousIntensity = dot(previousColor.rgb, vec3(0.299, 0.587, 0.114));
+	vec4 blended = vec4(0.0,0.0,0.0,0.0);
+	if (currentIntensity > previousIntensity)	// move at a fast fixed speed towards higher intensity
+		blended = mix(currentColor, previousColor, 0.01);
+	else {
+		if ((previousIntensity - currentIntensity) < (GhostingPercent*0.0025))
+			// As we get closer to the color (the higher the ghosting, the higher the cutoff),
+			// at some point we need to accelerate the move. Otherwise at higher ghosting values
+			// the color will never be reached (especially visible when fading to black)
+			blended = mix(currentColor, previousColor, 0.96);
+		else
+			blended = mix(currentColor, previousColor, GhostingPercent/100.0);
+	}
+	return blended;
+}
+
+vec4 PhosphorBlur(sampler2D tex, vec2 uv, vec2 resolution, float blurAmount) {
+    vec2 texelSize = 1.0 / resolution;
+    vec2 offset = texelSize * blurAmount;
+    
+    vec4 color = vec4(0.0);
+
+    color += texture(tex, uv + offset * vec2(-1.0, -1.0)) * 0.05;
+    color += texture(tex, uv + offset * vec2( 0.0, -1.0)) * 0.10;
+    color += texture(tex, uv + offset * vec2( 1.0, -1.0)) * 0.05;
+
+    color += texture(tex, uv + offset * vec2(-1.0,  0.0)) * 0.10;
+    color += texture(tex, uv + offset * vec2( 0.0,  0.0)) * 0.40;
+    color += texture(tex, uv + offset * vec2( 1.0,  0.0)) * 0.10;
+
+    color += texture(tex, uv + offset * vec2(-1.0,  1.0)) * 0.05;
+    color += texture(tex, uv + offset * vec2( 0.0,  1.0)) * 0.10;
+    color += texture(tex, uv + offset * vec2( 1.0,  1.0)) * 0.05;
+
+    return color;
+}
 
 vec3 Mask(vec2 pos, float CGWG) {
 	if (iM_TYPE == 0)
@@ -236,24 +279,16 @@ void main() {
 	FragColor = texture(A2TextureCurrent, TexCoords);
 
 	if (POSTPROCESSING_LEVEL == 0) {
-		if (GhostingPercent > 0)
-		{
-			FragColor = mix(FragColor,
-							texture(PreviousFrame, TexCoords)*GhostingBrightness,
-							float(GhostingPercent)/100.0);
-		}
+		if (GhostingPercent > 0.0001)
+			FragColor = GenerateGhosting(TexCoords, FragColor);
 		return;
 	}
 	
 // Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1) {
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
-		if (GhostingPercent > 0)
-		{
-			FragColor = mix(FragColor,
-							texture(PreviousFrame, TexCoords)*GhostingBrightness,
-							float(GhostingPercent)/100.0);
-		}
+		if (GhostingPercent > 0.0001)
+			FragColor = GenerateGhosting(TexCoords, FragColor);
 		return;
 	}
 
@@ -297,9 +332,13 @@ void main() {
 				discard;
 	}
 
+	if (BlurSize > 0.000001)
+		FragColor = PhosphorBlur(A2TextureCurrent, pos, TextureSize, BlurSize);
+	else
+		FragColor = texture(A2TextureCurrent,pos);
 
 // Convergence
-	vec3 res0 = FragColor.rgb;	// takes into account ghosting
+	vec3 res0 = FragColor.rgb;
 	float resr = texture(A2TextureCurrent,pos + dx*CONV_R).r;
 	float resg = texture(A2TextureCurrent,pos + dx*CONV_G).g;
 	float resb = texture(A2TextureCurrent,pos + dx*CONV_B).b;
@@ -381,11 +420,8 @@ void main() {
 
 	FragColor = vec4(res, corn);
 
-	if (GhostingPercent > 0)
-	{
-		FragColor = mix(FragColor,
-						texture(PreviousFrame, TexCoords)*GhostingBrightness,
-						float(GhostingPercent)/100.0);
+	if (GhostingPercent > 0) {
+		FragColor = GenerateGhosting(TexCoords, FragColor);
 	}
 }
 

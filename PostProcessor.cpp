@@ -119,7 +119,9 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_f_warpY", p_f_warpY},
 		{"p_f_barrelDistortion", p_f_barrelDistortion},
 		{"p_f_zoomX", p_f_zoomX},
-		{"p_f_zoomY", p_f_zoomY}
+		{"p_f_zoomY", p_f_zoomY},
+		{"p_f_ghostingPercent", p_f_ghostingPercent},
+		{"p_f_phosphorBlur", p_f_phosphorBlur}
 	};
 	return jsonState;
 }
@@ -166,8 +168,8 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_f_barrelDistortion = jsonState.value("p_f_barrelDistortion", p_f_barrelDistortion);
 	p_f_zoomX = jsonState.value("p_f_zoomX", p_f_zoomX);
 	p_f_zoomY = jsonState.value("p_f_zoomY", p_f_zoomY);
-	p_i_ghostingPercent = jsonState.value("p_i_ghostingPercent", p_i_ghostingPercent);
-	p_f_ghostingBrightness = jsonState.value("p_f_ghostingBrightness", p_f_ghostingBrightness);
+	p_f_ghostingPercent = jsonState.value("p_f_ghostingPercent", p_f_ghostingPercent);
+	p_f_phosphorBlur = jsonState.value("p_f_phosphorBlur", p_f_phosphorBlur);
 }
 
 void PostProcessor::SaveState(int profile_id) {
@@ -250,8 +252,8 @@ void PostProcessor::SelectShader()
 	}
 	// common
 	shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
-	shaderProgram.setInt("GhostingPercent", p_i_ghostingPercent);
-	shaderProgram.setFloat("GhostingBrightness", p_f_ghostingBrightness);
+	shaderProgram.setFloat("GhostingPercent", p_f_ghostingPercent);
+	shaderProgram.setFloat("BlurSize", p_f_phosphorBlur);
 	shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 }
 
@@ -392,10 +394,10 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot)
 	// Compute the pixel boundaries of the quad from its normalized coordinates.
 	// The conversion from normalized device coordinates (range [-1,1]) to pixel coordinates is:
 	//    pixel = (ndc * 0.5 + 0.5) * viewportDimension
-	int quadLeft = static_cast<int>((quadViewportCoords.x * 0.5f + 0.5f) * viewportWidth);
-	int quadRight = static_cast<int>((quadViewportCoords.z * 0.5f + 0.5f) * viewportWidth);
-	int quadTop = static_cast<int>((quadViewportCoords.y * 0.5f + 0.5f) * viewportHeight);
-	int quadBottom = static_cast<int>((quadViewportCoords.w * 0.5f + 0.5f) * viewportHeight);
+	int quadLeft = lround((quadViewportCoords.x * 0.5f + 0.5f) * viewportWidth);
+	int quadRight = lround((quadViewportCoords.z * 0.5f + 0.5f) * viewportWidth);
+	int quadTop = lround((quadViewportCoords.y * 0.5f + 0.5f) * viewportHeight);
+	int quadBottom = lround((quadViewportCoords.w * 0.5f + 0.5f) * viewportHeight);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO_prevFrame);
 	glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
@@ -548,8 +550,18 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		// Also the ghosting, which applies everywhere
 		ImGui::Separator();
 		ImGui::Text("[ GHOSTING ]");
-		ImGui::SliderInt("Weight", &p_i_ghostingPercent, 0, 99, 0);
-		ImGui::SliderFloat("Brightness Modifier", &p_f_ghostingBrightness, 0.5, 2.0, "%.2f");
+		// We'll use a normalized slider value in [0,1]
+		static float _ghostingSV = 0.f;
+		if (ImGui::SliderFloat("Ghosting Amount", &_ghostingSV, 0.0f, 100.0f, "%.0f"))
+		{
+			// Map sliderValue to ghosting percentage using a quadratic curve.
+			// At sliderValue = 0, ghostingPercent = 0; at sliderValue = 1, ghostingPercent = 100.
+			// The quadratic mapping (1 - (1-x)^2) gives finer control near 100.
+			p_f_ghostingPercent = 100.0f - 100.0f * powf(1.0f - _ghostingSV/100.f, 4.0f);
+		}
+		ImGui::SetItemTooltip("Mix in a bit of ghosting to smooth bad framerates. Overdo it for the Apple /// monitor");
+		ImGui::SliderFloat("Phosphor Blur", &p_f_phosphorBlur, 0.0, 2.0, "%.2f");
+		ImGui::SetItemTooltip("Some screen blur");
 
 		if (p_i_postprocessingLevel == 2) {
 			ImGui::Separator();

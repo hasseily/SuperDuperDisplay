@@ -109,9 +109,8 @@ private:
 	int p_i_maskType = 0;
 	int p_i_postprocessingLevel = 0;
 	int p_i_scanlineType = 2;
-	int p_i_ghostingPercent = 0;	// Percentage of ghosting of previous frame. 0 means no ghosting
-	float p_f_ghostingBrightness = 1.0f;	// ghosting brightness modifier
-
+	int p_f_ghostingPercent = 0;	// Percentage of ghosting of previous frame. 0 means no ghosting
+	float p_f_phosphorBlur = 1.0f;	// blur modifier
 };
 
 #endif	// POSTPROCESSOR_H
