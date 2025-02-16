@@ -78,6 +78,9 @@ uniform int doubleSHR4YOffset;	// Y offset to get double data in VRAMTEX. 0 mean
 uniform int doublePal256YOffset;// Y offset to get double data in PAL256TEX. 0 means no double data
 uniform int monitorColorType;
 
+uniform bool bIsMergedMode;				// if on, then only display lines that are legacy
+uniform sampler2D OFFSETTEX;			// X Offset texture for merged mode
+
 /*
  Special modes mask for SHR
  enum A2VideoSpecialMode_e
@@ -257,7 +260,21 @@ float applyFilterToColor(mat4 filterMatrix, mat4 colors) {
 
 void main()
 {
-	uint xpos = uint(vFragPos.x);
+	// First check if we're in merged mode. If so, determine if the line is a SHR line.
+	// If not, exit early. If it is SHR, then shift accordingly
+
+	float xOffsetMerge = 0.0;
+	if (bIsMergedMode) {
+		xOffsetMerge = texelFetch(OFFSETTEX, ivec2(0, vFragPos.y/2.0), 0).r;
+		if (xOffsetMerge > 0.0) {		// it is SHR, fix and use the offset
+			xOffsetMerge = xOffsetMerge - 10.0;
+		} else {						// it is Legacy, discard the line
+			fragColor = vec4(0.0,0.0,0.0,0.0);
+			return;
+		}
+    }
+
+	uint xpos = uint(vFragPos.x + xOffsetMerge);
 	uint ypos = uint(vFragPos.y);
     uint scanline = ypos >> 1;  // Divide by 2, there are 200 scanlines
 	uint isInterlaceSHR4 = (doubleSHR4Mode == 1 ? 1 : 0);

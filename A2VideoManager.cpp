@@ -440,12 +440,14 @@ void A2VideoManager::CheckSetBordersWithReinit()
 	this->ForceBeamFullScreenRender();
 }
 
+// The input is x,y,width,height where x,y are top left origin. The output is SDL style inverted Y
+// The full screen quad output would be { -1.f, 1.f, 2.f, -2.f }
 SDL_FRect A2VideoManager::NormalizePixelQuad(const SDL_FRect& pixelQuad)
 {
 	SDL_FRect normalized;
 	normalized.x = (2.0f * pixelQuad.x) / fb_width - 1.0f;
-	normalized.y = (2.0f * pixelQuad.y) / fb_height - 1.0f;
-	normalized.w = (2.0f * pixelQuad.w) / fb_height;
+	normalized.y = 1.0f - (2.0f * pixelQuad.y) / fb_height;
+	normalized.w = (2.0f * pixelQuad.w) / fb_width;
 	normalized.h = (-2.f * pixelQuad.h) / fb_height;
 	return normalized;
 }
@@ -669,7 +671,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 
 				// Finally set the offset
 				// NOTE: We add 10.f to the offset so that the shader can know which mode to apply
-				//		 If it's negative, it's SHR. Positive, legacy.
+				//		 If it's negative, it's Legacy. Positive, SHR.
 				if (bNoMergedModeWobble)
 				{
 					vrams_write->offset_buffer[_TR_ANY_Y] = (_curr_mode == A2Mode_e::LEGACY ? -10.f : 10.f);
@@ -686,11 +688,11 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 						// If the change is to 28 MHz, shift negative (left). Otherwise, shift positive (right)
 						float pixelShift = (GLfloat)glm::pow(1.1205, merge_last_change_y - _TR_ANY_Y + 28) - 4.0;
 						if (_curr_mode == A2Mode_e::LEGACY)
-							vrams_write->offset_buffer[_TR_ANY_Y] = -(10.f + pixelShift / 560.f);
+							vrams_write->offset_buffer[_TR_ANY_Y] = -(10.f + pixelShift);
 						else
-							vrams_write->offset_buffer[_TR_ANY_Y] = 10.f + pixelShift / 640.f;
+							vrams_write->offset_buffer[_TR_ANY_Y] = 10.f + pixelShift;
 					}
-					// std::cerr << "Offset: " << vrams_write->offset_buffer[_TR_ANY_Y] << " y: " << _TR_ANY_Y << std::endl;
+					std::cerr << "Offset: " << vrams_write->offset_buffer[_TR_ANY_Y] << " y: " << _TR_ANY_Y << std::endl;
 				}
 			}
 		}
@@ -1378,19 +1380,20 @@ GLuint A2VideoManager::Render()
 	if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_TEXT_80X24) {
 		fb_width = vidhdWindowBeam->GetWidth();
 		fb_height = vidhdWindowBeam->GetHeight();
-		auto _rb = NormalizePixelQuad({ 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), 0 });
+		auto _rb = NormalizePixelQuad({ 0, 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() });
 		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
-		_rb = NormalizePixelQuad({ 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetHeight(), (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), 0 });
+		_rb = NormalizePixelQuad({ 0, 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_SHR]->GetHeight()});
 		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds(_rb);
 		vidhdWindowBeam->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
 	} else if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_NONE) {
 		fb_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
 		fb_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
-		auto _rb = NormalizePixelQuad({ 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), 0 });
+		auto _rb = NormalizePixelQuad({ 0, 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight(), });
 		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
-		_rb = NormalizePixelQuad({ 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetHeight(), (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), 0 });
+		_rb = NormalizePixelQuad({ 0, 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_SHR]->GetHeight() });
 		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds(_rb);
-		_rb = NormalizePixelQuad({ 0, (float)_A2VIDEO_LEGACY_HEIGHT, (float)_A2VIDEO_LEGACY_WIDTH, 0 });
+		_rb = NormalizePixelQuad({ (fb_width - _A2VIDEO_LEGACY_WIDTH)/2.f, (fb_height - _A2VIDEO_LEGACY_HEIGHT) / 2.f,
+			(float)_A2VIDEO_LEGACY_WIDTH, (float)_A2VIDEO_LEGACY_HEIGHT });
 		vidhdWindowBeam->SetQuadRelativeBounds(_rb);
 	} else if (vrams_read->mode == A2Mode_e::LEGACY) {
 		fb_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
@@ -1399,7 +1402,7 @@ GLuint A2VideoManager::Render()
 	} else {
 		fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
 		fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
-		auto _rb = NormalizePixelQuad({ 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), 0 });
+		auto _rb = NormalizePixelQuad({ 0, 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() });
 		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
 		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
 	}

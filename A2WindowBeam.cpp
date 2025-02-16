@@ -101,16 +101,19 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glActiveTexture(GL_TEXTURE0);
 	}
-	if (PAL256TEX == UINT_MAX)
+	if (video_mode == A2VIDEOBEAM_SHR)
 	{
-		glGenTextures(1, &PAL256TEX);
-		glActiveTexture(_TEXUNIT_PAL256BUFFER);
-		glBindTexture(GL_TEXTURE_2D, PAL256TEX);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glActiveTexture(GL_TEXTURE0);
+		if (PAL256TEX == UINT_MAX)
+		{
+			glGenTextures(1, &PAL256TEX);
+			glActiveTexture(_TEXUNIT_PAL256BUFFER);
+			glBindTexture(GL_TEXTURE_2D, PAL256TEX);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glActiveTexture(GL_TEXTURE0);
+		}
 	}
 
 	if (VAO == UINT_MAX)

@@ -225,6 +225,7 @@ public:
 	void CheckSetBordersWithReinit();
 	uint32_t GetBordersWidthCycles() const { return borders_w_cycles; }
 	uint32_t GetBordersHeightScanlines() const { return borders_h_scanlines; }
+	// The input is x,y,width,height where x,y are top left origin. The output is SDL style inverted Y
 	SDL_FRect NormalizePixelQuad(const SDL_FRect& pixelQuad);
 
 	nlohmann::json SerializeState();

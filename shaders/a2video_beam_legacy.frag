@@ -141,6 +141,11 @@ void main()
 		}
 	}
 
+	if (xOffsetMerge > 0)
+    {
+        fragColor = vec4(1.0,0.0,0.5,0.6);
+        return;
+    }
 	// determine which VRAMTEX texel this fragment is part of, including
 	// the x and y offsets from the origin
 	// REMINDER: we're working on dots, with 560 dots per line. And lines are doubled
