@@ -551,12 +551,13 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		ImGui::Separator();
 		ImGui::Text("[ GHOSTING ]");
 		// We'll use a normalized slider value in [0,1]
-		static float _ghostingSV = 0.f;
+		static float _ghostingSV = 100.0f * (1.0f - pow(1.0f - p_f_ghostingPercent / 100.0f, 0.25f));
+		if (p_f_ghostingPercent < 0.001)
+			_ghostingSV = 0.0f;
 		if (ImGui::SliderFloat("Ghosting Amount", &_ghostingSV, 0.0f, 100.0f, "%.0f"))
 		{
-			// Map sliderValue to ghosting percentage using a quadratic curve.
-			// At sliderValue = 0, ghostingPercent = 0; at sliderValue = 1, ghostingPercent = 100.
-			// The quadratic mapping (1 - (1-x)^2) gives finer control near 100.
+			// Map sliderValue to ghosting percentage
+			// The mapping (1 - (1-x)^4) gives finer control near 100.
 			p_f_ghostingPercent = 100.0f - 100.0f * powf(1.0f - _ghostingSV/100.f, 4.0f);
 		}
 		ImGui::SetItemTooltip("Mix in a bit of ghosting to smooth bad framerates. Overdo it for the Apple /// monitor");

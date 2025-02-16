@@ -1404,9 +1404,6 @@ GLuint A2VideoManager::Render()
 		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
 	}
 
-	vidhdWindowBeam->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
-	windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
-	windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
 	CreateOrResizeFramebuffer(fb_width, fb_height);
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
 
