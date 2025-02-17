@@ -35,6 +35,9 @@ public:
     void setVec2(const std::string &name, const glm::vec2 &value) const;
     void setVec2(const std::string &name, float x, float y) const;
 	// ------------------------------------------------------------------------
+	void setVec2i(const std::string& name, const glm::ivec2& value) const;
+    void setVec2i(const std::string& name, int x, int y) const;
+    // ------------------------------------------------------------------------
 	void setVec2u(const std::string& name, const glm::uvec2& value) const;
     void setVec2u(const std::string& name, unsigned int x, unsigned int y) const;
     // ------------------------------------------------------------------------

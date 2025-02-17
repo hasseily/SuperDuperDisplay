@@ -109,6 +109,16 @@ void Shader::setVec2(const std::string& name, const glm::vec2& value) const
 	glUniform2fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
 }
 
+void Shader::setVec2i(const std::string& name, int x, int y) const
+{
+	glUniform2i(glGetUniformLocation(ID, name.c_str()), x, y);
+}
+
+void Shader::setVec2i(const std::string& name, const glm::ivec2& value) const
+{
+	glUniform2iv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+}
+
 void Shader::setVec2u(const std::string& name, unsigned int x, unsigned int y) const
 {
 	glUniform2ui(glGetUniformLocation(ID, name.c_str()), x, y);

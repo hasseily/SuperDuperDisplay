@@ -119,7 +119,7 @@ out vec4 fragColor;
 
 
 // Perform left rotation on a 4-bit nibble (for DLGR AUX memory)
-// Why? I don't know, can't find any docs, but AppleWin does it and it is Correct
+// Because AUX is one cycle before MAIN (for DHGR, it's embedded in the texture)
 uint ROL_NIB(uint x)
 {
         return ((x << 1) & 0xFu) | ((x >> 3) & 0x1u);
@@ -138,18 +138,18 @@ void main()
 		} else {						// it is SHR, discard the line
 			fragColor = vec4(0.0,0.0,0.0,0.0);
 			return;
+		}	
+		if ((vFragPos.x + xOffsetMerge) < 0.0)
+		{
+			fragColor = vec4(0.0,0.0,0.0,0.0);
+			return;
 		}
 	}
 
-	if (xOffsetMerge > 0)
-    {
-        fragColor = vec4(1.0,0.0,0.5,0.6);
-        return;
-    }
 	// determine which VRAMTEX texel this fragment is part of, including
 	// the x and y offsets from the origin
 	// REMINDER: we're working on dots, with 560 dots per line. And lines are doubled
-	uvec2 uFragPos = uvec2(vFragPos) + uvec2(xOffsetMerge, 0.0);
+	uvec2 uFragPos = uvec2(vFragPos.x + xOffsetMerge, vFragPos.y);
 	uvec4 targetTexel = texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0).rgba;
 	uvec2 fragOffset = uvec2(uFragPos.x % 14u, uFragPos.y % 16u);
 	// The fragOffsets are:

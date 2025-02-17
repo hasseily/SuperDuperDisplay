@@ -135,12 +135,10 @@ private:
 	uint8_t textAlpha = 0xFF;				// Fore and Back alpha (high and low nibble)
 	// Current mode information
 	bool bModeDidChange = true;
-	int mode_width = 0;
-	int mode_height = 0;
+	glm::ivec2 modeSize = glm::ivec2(0, 0);	// Row and Column count
 	int fontTex = _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0;
 	glm::uvec2 glyphSize = glm::uvec2(14,16);
 	glm::vec2 fontScale = glm::vec2(2.0,2.0);	// Font size should be 16x16
-	glm::vec2 border = glm::vec2(400.0,156.0);
 	SDL_FRect quad = { -1.f, 1.f, 2.f, -2.f };	// x, y, width, height
 
 	void UpdateVertexArray();

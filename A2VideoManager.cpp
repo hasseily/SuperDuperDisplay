@@ -1388,23 +1388,30 @@ GLuint A2VideoManager::Render()
 	// Otherwise use SHR size
 	SDL_FRect _legacyQuad = { 0, 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() };
 	SDL_FRect _shrQuad = { 0, 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_SHR]->GetHeight() };
+	SDL_FRect _vidHdLegacyQuad = { 0, 0, (float)_A2VIDEO_LEGACY_WIDTH, (float)_A2VIDEO_LEGACY_HEIGHT };
+
 	if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_TEXT_80X24) {
 		fb_width = vidhdWindowBeam->GetWidth();
 		fb_height = vidhdWindowBeam->GetHeight();
-		auto _rb = NormalizePixelQuad(_legacyQuad);
+		auto _rb = NormalizePixelQuad(CenteredQuadInFramebuffer(_legacyQuad));
 		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
 		_rb = NormalizePixelQuad(CenteredQuadInFramebuffer(_shrQuad));
 		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds(_rb);
 		vidhdWindowBeam->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
 	} else if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_NONE) {
-		fb_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
-		fb_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
-		auto _rb = NormalizePixelQuad(_legacyQuad);
+		if (vrams_read->mode == A2Mode_e::LEGACY) {
+			fb_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
+			fb_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
+		}
+		else {
+			fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
+			fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
+		}
+		auto _rb = NormalizePixelQuad(CenteredQuadInFramebuffer(_legacyQuad));
 		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
 		_rb = NormalizePixelQuad(CenteredQuadInFramebuffer(_shrQuad));
 		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds(_rb);
-		_rb = NormalizePixelQuad({ (fb_width - _A2VIDEO_LEGACY_WIDTH)/2.f, (fb_height - _A2VIDEO_LEGACY_HEIGHT) / 2.f,
-			(float)_A2VIDEO_LEGACY_WIDTH, (float)_A2VIDEO_LEGACY_HEIGHT });
+		_rb = NormalizePixelQuad(CenteredQuadInFramebuffer(_vidHdLegacyQuad));
 		vidhdWindowBeam->SetQuadRelativeBounds(_rb);
 	} else if (vrams_read->mode == A2Mode_e::LEGACY) {
 		fb_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();

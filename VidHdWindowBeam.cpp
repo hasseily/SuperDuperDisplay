@@ -78,63 +78,57 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 	bModeDidChange = true;
 	switch (video_mode) {
 		case VIDHDMODE_TEXT_40X24:
-			mode_width = 40;
-			mode_height = 24;
+			modeSize.x = 40;
+			modeSize.y = 24;
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(14,16);
 			fontScale = glm::uvec2(2,2);
-			border = glm::vec2(400.0,156.0);
 			break;
 		case VIDHDMODE_TEXT_80X24:
-			mode_width = 80;
-			mode_height = 24;
+			modeSize.x = 80;
+			modeSize.y = 24;
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(14,16);
 			fontScale = glm::uvec2(1,2);
-			border = glm::vec2(400.0,156.0);
 			break;
 		case VIDHDMODE_TEXT_80X45:
-			mode_width = 80;
-			mode_height = 45;
+			modeSize.x = 80;
+			modeSize.y = 45;
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(8,8);
 			fontScale = glm::uvec2(3,3);
-			border = glm::vec2(0.0,0.0);
 			break;
 		case VIDHDMODE_TEXT_120X67:
-			mode_width = 120;
-			mode_height = 67;
+			modeSize.x = 120;
+			modeSize.y = 67;
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(8,8);
 			fontScale = glm::uvec2(2,2);
-			border = glm::vec2(0.0,0.0);
 			break;
 		case VIDHDMODE_TEXT_240X135:
-			mode_width = 240;
-			mode_height = 135;
+			modeSize.x = 240;
+			modeSize.y = 135;
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(8,8);
 			fontScale = glm::uvec2(1,1);
-			border = glm::vec2(0.0,0.0);
 			break;
 		default:
-			mode_width = 0;
-			mode_height = 0;
+			modeSize.x = 0;
+			modeSize.y = 0;
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(14,16);
 			fontScale = glm::uvec2(2,2);
-			border = glm::vec2(400.0,156.0);
 			break;
 	}
 	// Clear all the columns that are beyond the width of the mode
-	if (mode_width < _VIDHDMODES_TEXT_WIDTH)
+	if (modeSize.x < _VIDHDMODES_TEXT_WIDTH)
 	{
-		for (int j = 0; j < mode_height; ++j) {
-			memset(vram_text+(_VIDHDMODES_TEXT_WIDTH*j + mode_width), 0, (_VIDHDMODES_TEXT_WIDTH - mode_width) * sizeof(uint32_t));
+		for (int j = 0; j < modeSize.y; ++j) {
+			memset(vram_text+(_VIDHDMODES_TEXT_WIDTH*j + modeSize.x), 0, (_VIDHDMODES_TEXT_WIDTH - modeSize.x) * sizeof(uint32_t));
 		}
 	}
 	// Clear all the rows that are beyond the height of the mode
-	memset(vram_text+(mode_width*mode_height), 0, _VIDHDMODES_TEXT_WIDTH * (_VIDHDMODES_TEXT_HEIGHT - mode_height) * sizeof(uint32_t));
+	memset(vram_text+(modeSize.x*modeSize.y), 0, _VIDHDMODES_TEXT_WIDTH * (_VIDHDMODES_TEXT_HEIGHT - modeSize.y) * sizeof(uint32_t));
 }
 
 uint32_t VidHdWindowBeam::GetWidth() const
@@ -159,7 +153,7 @@ void VidHdWindowBeam::UpdateVertexArray()
 	// The first 2 values are the relative XY, bound from -1 to 1.
 	// The second pair of values is the actual pixel value on screen
 	vertices.clear();
-	vertices.push_back(VidHdBeamVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, screen_count.y) }));
+	vertices.push_back(VidHdBeamVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, screen_count.y) }));	// top left
 	vertices.push_back(VidHdBeamVertex({ glm::vec2(quad.x + quad.w, quad.y + quad.h), glm::ivec2(screen_count.x, 0) }));	// bottom right
 	vertices.push_back(VidHdBeamVertex({ glm::vec2(quad.x + quad.w, quad.y), glm::ivec2(screen_count.x, screen_count.y) }));	// top right
 	vertices.push_back(VidHdBeamVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, screen_count.y) }));	// top left
@@ -249,17 +243,14 @@ void VidHdWindowBeam::Render(GLuint inputTexUnit, glm::vec2 inputSize)
 		bModeDidChange = false;
 		shader.setInt("VRAMTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
 		shader.setInt("vidhdMode", video_mode);
-		shader.setInt("xwidth", mode_width);
-		shader.setInt("yheight", mode_height);
+		shader.setVec2i("modeSize", modeSize);
 		shader.setInt("fontTex", fontTex);
 		shader.setVec2u("glyphSize", glyphSize);
 		shader.setVec2u("fontScale", fontScale);
-		shader.setVec2("border", border);
 
 		shader.setInt("inputTex", inputTexUnit - GL_TEXTURE0);
 	}
 
-	glViewport(0, 0, _VIDHDMODES_PIXEL_WIDTH, _VIDHDMODES_PIXEL_HEIGHT);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -298,8 +289,8 @@ void VidHdWindowBeam::DisplayImGuiWindow(bool* p_open)
 	}
 	if (ImGui::Button("Test String"))
 	{
-		for (int xx = 0; xx < mode_width; ++xx) {
-			for (int yy = 0; yy < mode_height; ++yy) {
+		for (int xx = 0; xx < modeSize.x; ++xx) {
+			for (int yy = 0; yy < modeSize.y; ++yy) {
 				WriteCharacter(static_cast<uint8_t>(xx),
 							   static_cast<uint8_t>(yy),
 							   static_cast<uint8_t>((xx % 0x80) + 0x80));
