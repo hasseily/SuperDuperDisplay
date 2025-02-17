@@ -227,6 +227,7 @@ public:
 	uint32_t GetBordersHeightScanlines() const { return borders_h_scanlines; }
 	// The input is x,y,width,height where x,y are top left origin. The output is SDL style inverted Y
 	SDL_FRect NormalizePixelQuad(const SDL_FRect& pixelQuad);
+	SDL_FRect CenteredQuadInFramebuffer(const SDL_FRect& quad);
 
 	nlohmann::json SerializeState();
 	void DeserializeState(const nlohmann::json &jsonState);

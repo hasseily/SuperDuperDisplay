@@ -452,6 +452,15 @@ SDL_FRect A2VideoManager::NormalizePixelQuad(const SDL_FRect& pixelQuad)
 	return normalized;
 }
 
+SDL_FRect A2VideoManager::CenteredQuadInFramebuffer(const SDL_FRect& quad) {
+	SDL_FRect centeredQuad;
+	centeredQuad.w = quad.w;
+	centeredQuad.h = quad.h;
+	centeredQuad.x = (fb_width - quad.w) / 2.0f;
+	centeredQuad.y = (fb_height - quad.h) / 2.0f;
+	return centeredQuad;
+}
+
 void A2VideoManager::StartNextFrame()
 {
 	// start the next frame
@@ -1377,20 +1386,22 @@ GLuint A2VideoManager::Render()
 	// If a VidHD text modes > 80x24 is active, then 1920x1080
 	// Otherwise if it's a pure legacy frame, use legacy size
 	// Otherwise use SHR size
+	SDL_FRect _legacyQuad = { 0, 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() };
+	SDL_FRect _shrQuad = { 0, 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_SHR]->GetHeight() };
 	if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_TEXT_80X24) {
 		fb_width = vidhdWindowBeam->GetWidth();
 		fb_height = vidhdWindowBeam->GetHeight();
-		auto _rb = NormalizePixelQuad({ 0, 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() });
+		auto _rb = NormalizePixelQuad(_legacyQuad);
 		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
-		_rb = NormalizePixelQuad({ 0, 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_SHR]->GetHeight()});
+		_rb = NormalizePixelQuad(CenteredQuadInFramebuffer(_shrQuad));
 		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds(_rb);
 		vidhdWindowBeam->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
 	} else if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_NONE) {
 		fb_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
 		fb_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
-		auto _rb = NormalizePixelQuad({ 0, 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight(), });
+		auto _rb = NormalizePixelQuad(_legacyQuad);
 		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
-		_rb = NormalizePixelQuad({ 0, 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_SHR]->GetHeight() });
+		_rb = NormalizePixelQuad(CenteredQuadInFramebuffer(_shrQuad));
 		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds(_rb);
 		_rb = NormalizePixelQuad({ (fb_width - _A2VIDEO_LEGACY_WIDTH)/2.f, (fb_height - _A2VIDEO_LEGACY_HEIGHT) / 2.f,
 			(float)_A2VIDEO_LEGACY_WIDTH, (float)_A2VIDEO_LEGACY_HEIGHT });
