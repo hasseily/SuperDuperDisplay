@@ -72,17 +72,8 @@ void main()
 	// the x and y offsets from the origin
 	// REMINDER: outputSize is 560x384 for classic modes, otherwise 1920x1080
 
-	vec2 outputSize = vec2(1920.0,1080.0);
-	// vec2 fragPixel = gl_FragCoord.xy;
-	bool isInBounds = true;
-
-	if (modeSize.y < 25)	// less than 25 rows, classic modes
-	{
-		outputSize = vec2(560.0,384.0);
-	}
-
-	uint uCharW = glyphSize.x;
-	uint uCharH = glyphSize.y;
+	uint uCharW = glyphSize.x*fontScale.x;
+	uint uCharH = glyphSize.y*fontScale.y;
 	uvec2 uFragPos = uvec2(vFragPos);
 	uvec4 targetTexel = texelFetch(VRAMTEX, ivec2(uFragPos.x / uCharW, uFragPos.y / uCharH), 0).rgba;
 	uvec2 fragOffset = uvec2(uFragPos.x % uCharW, uFragPos.y % uCharH);

@@ -83,6 +83,7 @@ public:
 	unsigned int VBO = UINT_MAX;			// Vertex Buffer Object (holds vertices)
 
 	bool bIsMergedMode = false;				// Activate in case this frame has both SHR and Legacy at once
+	bool bForceSHRWidth = false;			// Request to force SHR width for legacy
 
 	int specialModesMask = A2_VSM_NONE;		// Or'ed A2VideoSpecialMode_e
 	int overrideSHR4Mode = 0;				// Debugging to override the SHR4 modes in the shader

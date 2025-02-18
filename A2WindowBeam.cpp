@@ -259,8 +259,10 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 	// point the uniform at the VRAM texture
 	if (video_mode == A2VIDEOBEAM_SHR)
 		shader.setInt("VRAMTEX", _TEXUNIT_DATABUFFER_R8UI - GL_TEXTURE0);
-	else
+	else {
 		shader.setInt("VRAMTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
+		shader.setBool("bForceSHRWidth", bForceSHRWidth);
+	}
 
 	// And set all the modes textures that the shader will use
 	// 2 font textures + lgr, hgr, dhgr

@@ -141,8 +141,12 @@ public:
 	uXY ScreenSize();
 
 	bool bAlwaysRenderBuffer = false;		// If true, forces a rerender even if the VRAM hasn't changed
-	bool bForceSHRWidth = false;			// forces the legacy to have the SHR width
+
+	// Multi-Mode Prefs
+	bool bAlignQuadsToScanline = false;		// Forces all the quads to align to the same scanline (for all modes)
+	bool bForceSHRWidth = false;			// Forces the legacy to have the SHR width, only in Merge mode
 	bool bNoMergedModeWobble = false;		// Don't pixel shift the sine wobble if both SHR and Legacy are on screen
+
 	bool bDEMOMergedMode = false;			// DEMO to show merged mode
 
 	// Enable manually setting a DHGR mode that mixes 140 width 16-col and 560 width b/w
@@ -228,6 +232,7 @@ public:
 	// The input is x,y,width,height where x,y are top left origin. The output is SDL style inverted Y
 	SDL_FRect NormalizePixelQuad(const SDL_FRect& pixelQuad);
 	SDL_FRect CenteredQuadInFramebuffer(const SDL_FRect& quad);
+	SDL_FRect CenteredQuadInFramebufferWithOffset(const SDL_FRect& quad, const SDL_FPoint& offset);
 
 	nlohmann::json SerializeState();
 	void DeserializeState(const nlohmann::json &jsonState);

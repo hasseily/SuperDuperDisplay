@@ -83,6 +83,9 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(14,16);
 			fontScale = glm::uvec2(2,2);
+			// The base A2 font texture is twice the size it really is,
+			// so we fix it by doubling the screen size we send to the shader
+			screen_count = {_A2VIDEO_LEGACY_WIDTH*2,_A2VIDEO_LEGACY_HEIGHT*2};
 			break;
 		case VIDHDMODE_TEXT_80X24:
 			modeSize.x = 80;
@@ -90,6 +93,9 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(14,16);
 			fontScale = glm::uvec2(1,2);
+			// The base A2 font texture is twice the size it really is,
+			// so we fix it by doubling the screen size we send to the shader
+			screen_count = {_A2VIDEO_LEGACY_WIDTH*2,_A2VIDEO_LEGACY_HEIGHT*2};
 			break;
 		case VIDHDMODE_TEXT_80X45:
 			modeSize.x = 80;
@@ -97,6 +103,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(8,8);
 			fontScale = glm::uvec2(3,3);
+			screen_count = {_VIDHDMODES_PIXEL_WIDTH,_VIDHDMODES_PIXEL_HEIGHT};
 			break;
 		case VIDHDMODE_TEXT_120X67:
 			modeSize.x = 120;
@@ -104,6 +111,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(8,8);
 			fontScale = glm::uvec2(2,2);
+			screen_count = {_VIDHDMODES_PIXEL_WIDTH,_VIDHDMODES_PIXEL_HEIGHT};
 			break;
 		case VIDHDMODE_TEXT_240X135:
 			modeSize.x = 240;
@@ -111,6 +119,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(8,8);
 			fontScale = glm::uvec2(1,1);
+			screen_count = {_VIDHDMODES_PIXEL_WIDTH,_VIDHDMODES_PIXEL_HEIGHT};
 			break;
 		default:
 			modeSize.x = 0;
@@ -118,6 +127,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(14,16);
 			fontScale = glm::uvec2(2,2);
+			screen_count = {0,0};
 			break;
 	}
 	// Clear all the columns that are beyond the width of the mode
@@ -267,6 +277,18 @@ void VidHdWindowBeam::DisplayImGuiWindow(bool* p_open)
 	{
 		ImGui::End();
 		return;
+	}
+
+	if (ImGui::Button("Reload Shader"))
+	{
+		// shader.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_VIDHD_TEXT_FRAGMENT);
+		std::string _ps = "/Users/henri/Documents/Repos/SuperDuperDisplay/";
+		_ps.append(_SHADER_VIDHD_TEXT_FRAGMENT);
+		shader.build(_SHADER_A2_VERTEX_DEFAULT, _ps.c_str());
+		auto _vm = this->GetVideoMode();
+		this->SetVideoMode(VidHdMode_e::VIDHDMODE_NONE);
+		this->SetVideoMode(_vm);
+		this->UpdateVertexArray();
 	}
 
 	// --- Input Controls to Test Writing into vram_text ---

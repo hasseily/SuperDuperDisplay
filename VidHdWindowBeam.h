@@ -58,7 +58,7 @@ struct VidHdBeamVertex {
 	glm::vec2 PixelPos;		// Pixel position of the vertex
 };
 
-// VidHD uses a fixed 1920x1080 resolution
+// VidHD non-classic text modes uses a fixed 1920x1080 resolution
 constexpr uint32_t _VIDHDMODES_PIXEL_WIDTH = 1920;
 constexpr uint32_t _VIDHDMODES_PIXEL_HEIGHT = 1080;
 constexpr uint32_t _VIDHDMODES_TEXT_WIDTH = 240;

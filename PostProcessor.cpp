@@ -394,10 +394,10 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot)
 	// Compute the pixel boundaries of the quad from its normalized coordinates.
 	// The conversion from normalized device coordinates (range [-1,1]) to pixel coordinates is:
 	//    pixel = (ndc * 0.5 + 0.5) * viewportDimension
-	int quadLeft = lround((quadViewportCoords.x * 0.5f + 0.5f) * viewportWidth);
-	int quadRight = lround((quadViewportCoords.z * 0.5f + 0.5f) * viewportWidth);
-	int quadTop = lround((quadViewportCoords.y * 0.5f + 0.5f) * viewportHeight);
-	int quadBottom = lround((quadViewportCoords.w * 0.5f + 0.5f) * viewportHeight);
+	int quadLeft   = (int)lround((quadViewportCoords.x * 0.5f + 0.5f) * viewportWidth);
+	int quadRight  = (int)lround((quadViewportCoords.z * 0.5f + 0.5f) * viewportWidth);
+	int quadTop    = (int)lround((quadViewportCoords.y * 0.5f + 0.5f) * viewportHeight);
+	int quadBottom = (int)lround((quadViewportCoords.w * 0.5f + 0.5f) * viewportHeight);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO_prevFrame);
 	glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
@@ -512,12 +512,6 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::AlignTextToFramePadding();
 			ImGui::Text("Shader Programming: ");
 			ImGui::SameLine();
-			// enable to reload the shader
-			if (ImGui::Button("Reload"))
-			{
-				auto ppshader = v_ppshaders.at(1);
-				v_ppshaders.at(1).build(ppshader.GetVertexPath().c_str(), ppshader.GetFragmentPath().c_str());
-			}
 			// Enable to choose the shader
 			ImGui::SameLine();
 			if (ImGui::Button("Select"))

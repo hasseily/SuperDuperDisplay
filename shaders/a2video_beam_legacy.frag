@@ -35,8 +35,11 @@ The shader goes through the following phases:
 - It grabs the texel and determines the video mode to use
 - It runs the video mode code on that byte and chooses the correct fragment
 
-NOTE:	The special BORDER graphics mode is set only on border bytes. It only considers
-		bits 4-7 as the border color, picked from the LGR color palette.
+NOTES: 1. The special BORDER graphics mode is set only on border bytes. It only considers
+          bits 4-7 as the border color, picked from the LGR color palette.
+       2. The width is always 640 and not 560. Because we could be in merged SHR+Legacy
+          which would force the legacy pixels to potentially shift sideways with the wobble.
+          When in regular legacy mode, the extra pixels are transparent
 
  In case this frame has both legacy and SHR (i.e. a "merged" mode):
  This shader expects as input a OFFSETTEX texture that has the following features:
@@ -60,6 +63,7 @@ uniform sampler2D a2ModesTex2;			// LGR
 uniform sampler2D a2ModesTex3;			// HGR
 uniform sampler2D a2ModesTex4;			// DHGR
 
+uniform bool bForceSHRWidth;			// if on, stretch to SHR width. If off,
 uniform bool bIsMergedMode;				// if on, then only display lines that are legacy
 uniform sampler2D OFFSETTEX;			// X Offset texture for merged mode
 
@@ -127,19 +131,26 @@ uint ROL_NIB(uint x)
 
 void main()
 {
-	// First check if we're in merged mode. If so, determine if the line is a legacy line.
+	// for bForceSHRWidth
+	vec2 vFragUpdatedPos = vFragPos;
+
+	// Check if we're in merged mode. If so, determine if the line is a legacy line.
 	// If not, exit early. If it is legacy, then shift accordingly
 
 	float xOffsetMerge = 0.0;
 	if (bIsMergedMode) {
-		xOffsetMerge = texelFetch(OFFSETTEX, ivec2(0, vFragPos.y/2.0), 0).r;
+		// Check if we're using full SHR width or not
+		if (!bForceSHRWidth) {
+			vFragUpdatedPos.x = (vFragUpdatedPos.x * (640.0/560.0)) - 40.0;
+		}
+		xOffsetMerge = texelFetch(OFFSETTEX, ivec2(0, vFragUpdatedPos.y/2.0), 0).r;
 		if (xOffsetMerge < 0.0) {		// it is LEGACY, fix and use the offset
 			xOffsetMerge = xOffsetMerge + 10.0;
 		} else {						// it is SHR, discard the line
 			fragColor = vec4(0.0,0.0,0.0,0.0);
 			return;
 		}	
-		if ((vFragPos.x + xOffsetMerge) < 0.0)
+		if ((vFragUpdatedPos.x + xOffsetMerge) < 0.0)
 		{
 			fragColor = vec4(0.0,0.0,0.0,0.0);
 			return;
@@ -149,7 +160,7 @@ void main()
 	// determine which VRAMTEX texel this fragment is part of, including
 	// the x and y offsets from the origin
 	// REMINDER: we're working on dots, with 560 dots per line. And lines are doubled
-	uvec2 uFragPos = uvec2(vFragPos.x + xOffsetMerge, vFragPos.y);
+	uvec2 uFragPos = uvec2(vFragUpdatedPos.x + xOffsetMerge, vFragUpdatedPos.y);
 	uvec4 targetTexel = texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0).rgba;
 	uvec2 fragOffset = uvec2(uFragPos.x % 14u, uFragPos.y % 16u);
 	// The fragOffsets are:

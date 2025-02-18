@@ -452,13 +452,22 @@ SDL_FRect A2VideoManager::NormalizePixelQuad(const SDL_FRect& pixelQuad)
 	return normalized;
 }
 
-SDL_FRect A2VideoManager::CenteredQuadInFramebuffer(const SDL_FRect& quad) {
+SDL_FRect A2VideoManager::CenteredQuadInFramebuffer(const SDL_FRect& quad)
+{
 	SDL_FRect centeredQuad;
 	centeredQuad.w = quad.w;
 	centeredQuad.h = quad.h;
 	centeredQuad.x = (fb_width - quad.w) / 2.0f;
 	centeredQuad.y = (fb_height - quad.h) / 2.0f;
 	return centeredQuad;
+}
+
+SDL_FRect A2VideoManager::CenteredQuadInFramebufferWithOffset(const SDL_FRect& quad, const SDL_FPoint& offset)
+{
+	auto resQuad = CenteredQuadInFramebuffer(quad);
+	resQuad.x += offset.x;
+	resQuad.y += offset.y;
+	return resQuad;
 }
 
 void A2VideoManager::StartNextFrame()
@@ -1340,7 +1349,7 @@ GLuint A2VideoManager::Render()
 		return _TEXUNIT_POSTPROCESS;
 	if ((rendered_frame_idx == vrams_read->frame_idx) && bAlwaysRenderBuffer)
 		this->ForceBeamFullScreenRender();
-	
+
 	GLenum glerr;
 
 	// Initialization routine runs only once on init (or re-init)
@@ -1372,7 +1381,7 @@ GLuint A2VideoManager::Render()
 		image_assets[5].AssignByFilename("assets/VidHDFont8x8/00_US-Default.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL AssignByFilename error: "
-				<< 0 << " - " << glerr << std::endl;
+			<< 0 << " - " << glerr << std::endl;
 		}
 
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -1382,51 +1391,66 @@ GLuint A2VideoManager::Render()
 		rendered_frame_idx = UINT64_MAX;
 	}
 
-	// The framebuffer width. That will change depending on the layers that are rendered:
+	// ===============================================================================
+	// ============================ SET FRAMEBUFFER SIZE =============================
+	// ===============================================================================
+
+	// Framebuffer size will change depending on the layers that are rendered:
 	// If a VidHD text modes > 80x24 is active, then 1920x1080
 	// Otherwise if it's a pure legacy frame, use legacy size
-	// Otherwise use SHR size
+	// Otherwise if it's a pure SHR frame, use SHR size
+	// Otherwise in merged SHR+Legacy mode it depends on the user preferences. The
+	// problems are 2-fold: first, the width. Users may prefer the Legacy to use the
+	// full SHR width, but it any case the quad needs to be full width to accommodate
+	// the wobble effect if needed. And second, the vertical position. When both quads
+	// are centered, the legacy is too low by 4 scanlines.
+	// In SHR+Legacy the legacy shader will take care of centering horizontally the
+	// legacy image within the quad and handle the wobble.
+
 	SDL_FRect _legacyQuad = { 0, 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() };
+	SDL_FRect _legacyQuadWide = { 0, 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() };
 	SDL_FRect _shrQuad = { 0, 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_SHR]->GetHeight() };
 	SDL_FRect _vidHdLegacyQuad = { 0, 0, (float)_A2VIDEO_LEGACY_WIDTH, (float)_A2VIDEO_LEGACY_HEIGHT };
 
-	if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_TEXT_80X24) {
+	// Note: we always double the scanline value, so 4*2 for the shift
+	SDL_FPoint _scanlineOffset = (bAlignQuadsToScanline ? SDL_FPoint(0.f,8.f) : SDL_FPoint(0.f,0.f));
+
+	if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_TEXT_80X24) {	// Force 1080p size
 		fb_width = vidhdWindowBeam->GetWidth();
 		fb_height = vidhdWindowBeam->GetHeight();
-		auto _rb = NormalizePixelQuad(CenteredQuadInFramebuffer(_legacyQuad));
+		auto _rb = NormalizePixelQuad(CenteredQuadInFramebufferWithOffset(_legacyQuad, _scanlineOffset));
 		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
 		_rb = NormalizePixelQuad(CenteredQuadInFramebuffer(_shrQuad));
 		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds(_rb);
 		vidhdWindowBeam->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
-	} else if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_NONE) {
+	} else {
 		if (vrams_read->mode == A2Mode_e::LEGACY) {
 			fb_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
-			fb_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
-		}
-		else {
+			if (bAlignQuadsToScanline) {
+				fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
+				auto _rb = NormalizePixelQuad(CenteredQuadInFramebufferWithOffset(_legacyQuad, _scanlineOffset));
+				windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
+			} else {
+				fb_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
+				windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
+			}
+		} else if (vrams_read->mode == A2Mode_e::SHR) {
 			fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
 			fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
+			windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
+		} else {
+			fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
+			fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
+			SDL_FRect _rb;
+			_rb = NormalizePixelQuad(CenteredQuadInFramebufferWithOffset(_legacyQuadWide, _scanlineOffset));
+			windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
+			windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
 		}
-		auto _rb = NormalizePixelQuad(CenteredQuadInFramebuffer(_legacyQuad));
-		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
-		_rb = NormalizePixelQuad(CenteredQuadInFramebuffer(_shrQuad));
-		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds(_rb);
-		_rb = NormalizePixelQuad(CenteredQuadInFramebuffer(_vidHdLegacyQuad));
-		vidhdWindowBeam->SetQuadRelativeBounds(_rb);
-	} else if (vrams_read->mode == A2Mode_e::LEGACY) {
-		fb_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
-		fb_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
-		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
-	} else {
-		fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
-		fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
-		SDL_FRect _rb;
-		if (bForceSHRWidth)
-			_rb = NormalizePixelQuad({ 0, 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() });
-		else
-			_rb = NormalizePixelQuad({ (640-560)/2, 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() });
-		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
-		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
+		// add the vidhd layer
+		if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_NONE) {
+			auto _rb = NormalizePixelQuad(CenteredQuadInFramebufferWithOffset(_vidHdLegacyQuad, _scanlineOffset));
+			vidhdWindowBeam->SetQuadRelativeBounds(_rb);
+		}
 	}
 
 	CreateOrResizeFramebuffer(fb_width, fb_height);
@@ -1474,6 +1498,7 @@ GLuint A2VideoManager::Render()
 
 		windowsbeam[A2VIDEOBEAM_LEGACY]->monitorColorType = eA2MonitorType;
 		windowsbeam[A2VIDEOBEAM_LEGACY]->bIsMergedMode = (vrams_read->mode == A2Mode_e::MERGED);
+		windowsbeam[A2VIDEOBEAM_LEGACY]->bForceSHRWidth = bForceSHRWidth;
 		windowsbeam[A2VIDEOBEAM_LEGACY]->Render(current_frame_idx);
 		// std::cerr << "Rendered legacy to viewport " << fb_width << "x" << fb_height << " - " << current_frame_idx << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -1716,11 +1741,16 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, _BORDER_HEIGHT_MAX_MULT8, "%d", 1);
 			if (ImGui::SliderInt("Border Color (0xC034)", &memManager->switch_c034, 0, 15))
 				this->ForceBeamFullScreenRender();
+			if (ImGui::Checkbox("Align Legacy to SHR Vertically", &this->bAlignQuadsToScanline))
+				this->ForceBeamFullScreenRender();
+			ImGui::SetItemTooltip("Aligns all vertical origins so that the scanlines match exactly");
 			if (ImGui::Checkbox("Force SHR width in merged mode", &this->bForceSHRWidth))
 				this->ForceBeamFullScreenRender();
+			ImGui::SetItemTooltip("Legacy image is stretched horizontally to match the SHR image");
 			if (ImGui::Checkbox("No wobble in merged mode", &this->bNoMergedModeWobble))
 				this->ForceBeamFullScreenRender();
-			
+			ImGui::SetItemTooltip("Removes the wobble effect when shifting mode mid-frame");
+
 			//eA2MonitorType
 			const char* monitorTypes[] = { "Color", "White", "Green", "Amber" };
 			if (ImGui::Combo("Monitor Type", &this->eA2MonitorType, monitorTypes, IM_ARRAYSIZE(monitorTypes)))
@@ -1841,6 +1871,7 @@ nlohmann::json A2VideoManager::SerializeState()
 		{"enable_DHGRCOL140Mixed", bUseDHGRCOL140Mixed},
 		{"enable_HGRSPEC1", bUseHGRSPEC1},
 		{"enable_HGRSPEC2", bUseHGRSPEC2},
+		{"align_quads_to_scanline", bAlignQuadsToScanline},
 		{"force_shr_width_in_merge_mode", bForceSHRWidth},
 		{"no_merged_mode_wobble", bNoMergedModeWobble},
 		{"font_rom_regular_index", font_rom_regular_idx},
@@ -1857,7 +1888,8 @@ void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 	bUseDHGRCOL140Mixed = jsonState.value("enable_DHGRCOL140Mixed", bUseDHGRCOL140Mixed);
 	bUseHGRSPEC1 = jsonState.value("enable_HGRSPEC1", bUseHGRSPEC1);
 	bUseHGRSPEC2 = jsonState.value("enable_HGRSPEC2", bUseHGRSPEC2);
-	bForceSHRWidth = jsonState.value("force_shr_width_in_merge_mode", bForceSHRWidth);
+	bAlignQuadsToScanline = jsonState.value("force_shr_width_in_merge_mode", bAlignQuadsToScanline);
+	bForceSHRWidth = jsonState.value("align_quads_to_scanline", bForceSHRWidth);
 	bNoMergedModeWobble = jsonState.value("no_merged_mode_wobble", bNoMergedModeWobble);
 	font_rom_regular_idx = jsonState.value("font_rom_regular_index", font_rom_regular_idx);
 	font_rom_alternate_idx = jsonState.value("font_rom_slternate_index", font_rom_alternate_idx);
