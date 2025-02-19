@@ -43,6 +43,8 @@ void PostProcessor::Initialize()
 		glGenBuffers(1, &quadVBO);
 	}
 
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
+
 	v_ppshaders.clear();
 	Shader shader_basic = Shader();
 	shader_basic.build(_SHADER_VERTEX_BASIC, _SHADER_FRAGMENT_BASIC);
@@ -295,14 +297,16 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot)
 		_scale = std::floor(_scale);
 	else
 		_scale = 1.0f;
-	max_integer_scale = std::max(1, static_cast<int>(_scale) + 20);	// allow for manual further zoom
+	// make sure the scale doesn't extend beyond the GL max texture size
+	max_integer_scale = std::min(maxTexSize / texHeight, maxTexSize / texWidth);
+
 	if (!bAutoScale)
 	{
 		integer_scale = std::min(integer_scale, max_integer_scale);
 		_scale = static_cast<float>(integer_scale);
 	}
 	else {
-		integer_scale = static_cast<int>(_scale);
+		integer_scale = std::min(static_cast<int>(_scale), max_integer_scale);
 	}
 
 	// Determine the quad's origin
@@ -407,6 +411,9 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot)
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, prevFrame_texture_id, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		GLint maxSize;
+		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxSize);
+		std::cerr << maxSize << ":" << quadLeft << "-" << quadRight << "-" << quadTop << "-" << quadBottom << "-" << std::endl;
 		std::cerr << "OpenGL error PP 4: " << glerr << std::endl;
 	}
 	// Always bind the previous frame texture to its dedicated texture unit

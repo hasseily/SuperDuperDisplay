@@ -49,7 +49,9 @@ private:
 	GLuint quadVBO = UINT_MAX;
 	GLuint FBO_prevFrame = UINT_MAX;		// Framebuffer that holds the texture of the previous frame
 	GLuint prevFrame_texture_id = UINT_MAX;	// The previous frame as a texture
-	
+
+	GLint maxTexSize = 0;	// maximum texture size, depends on GL implementation
+
 	bool bImguiWindowIsOpen = false;
 
 	Shader shaderProgram;
