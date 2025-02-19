@@ -277,16 +277,15 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 		shader.setInt("doublePal256YOffset", _hasDSHR4 * (_A2VIDEO_SHR_SCANLINES));
 	}
 	else {
-		shader.setInt("a2ModesTex0", _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0);	// D/TEXT font regular
-		shader.setInt("a2ModesTex1", _TEXUNIT_IMAGE_ASSETS_START + 1 - GL_TEXTURE0);	// D/TEXT font alternate
-		shader.setInt("a2ModesTex2", _TEXUNIT_IMAGE_ASSETS_START + 2 - GL_TEXTURE0);	// D/LGR
-		shader.setInt("a2ModesTex3", _TEXUNIT_IMAGE_ASSETS_START + 3 - GL_TEXTURE0);	// HGR
-		shader.setInt("a2ModesTex4", _TEXUNIT_IMAGE_ASSETS_START + 4 - GL_TEXTURE0);	// DHGR
+		shader.setInt("a2ModesTex0", _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0);
+		shader.setInt("a2ModesTex1", _TEXUNIT_IMAGE_FONT_ROM_ALTERNATE - GL_TEXTURE0);
+		shader.setInt("a2ModesTex2", _TEXUNIT_IMAGE_COMPOSITE_LGR - GL_TEXTURE0);
+		shader.setInt("a2ModesTex3", _TEXUNIT_IMAGE_COMPOSITE_HGR - GL_TEXTURE0);
+		shader.setInt("a2ModesTex4", _TEXUNIT_IMAGE_COMPOSITE_DHGR - GL_TEXTURE0);
 	}
 	
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, 0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2WindowBeam render error: " << glerr << std::endl;
 	}

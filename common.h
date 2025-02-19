@@ -63,15 +63,23 @@ typedef struct ixy { int32_t x; int32_t y; } iXY;
 // For all modes!
 // The data buffer is always in tex1.
 // The special SHR4 PAL256 vram is in tex2.
-// Image assets can be put in tex3 to tex7
+// Image assets can be put in tex4 to tex14
 // Post processing input texture is always in tex15
 #define _TEXUNIT_DATABUFFER_R8UI GL_TEXTURE1	// Texunit of the data buffer (R8UI VRAM)
 #define _TEXUNIT_DATABUFFER_RGBA8UI GL_TEXTURE2	// Texunit of the data buffer (RGBA8UI VRAM)
 #define _TEXUNIT_PAL256BUFFER GL_TEXTURE3		// Texunit of the SHR4 PAL256 vram
 #define _TEXUNIT_IMAGE_ASSETS_START GL_TEXTURE4	// Start of the image assets
-#define _TEXUNIT_TEMP GL_TEXTURE14				// miscellaneous texture unit for temp work
 #define _TEXUNIT_POSTPROCESS GL_TEXTURE15		// input texunit the PP will use to generate the final output
 #define _TEXUNIT_PP_PREVIOUS GL_TEXTURE16		// The previous frame as a texture
+// exact asset textures
+#define _TEXUNIT_IMAGE_FONT_ROM_DEFAULT GL_TEXTURE4
+#define _TEXUNIT_IMAGE_FONT_ROM_ALTERNATE GL_TEXTURE5
+#define _TEXUNIT_IMAGE_COMPOSITE_LGR GL_TEXTURE6
+#define _TEXUNIT_IMAGE_COMPOSITE_HGR GL_TEXTURE7
+#define _TEXUNIT_IMAGE_COMPOSITE_DHGR GL_TEXTURE8
+#define _TEXUNIT_IMAGE_FONT_VIDHD_8X8 GL_TEXTURE9
+
+
 // MERGE textures
 #define _TEXUNIT_MERGE_OFFSET GL_TEXTURE17		// Offset buffer
 #define _TEXUNIT_MERGE_LEGACY GL_TEXTURE18		// legacy output texture

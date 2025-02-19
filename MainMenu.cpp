@@ -409,7 +409,7 @@ void MainMenu::Render() {
 				ImGui::Text("_TEXUNIT_INPUT_VIDHD: %d (%d x %d)", target_tex_id, _w, _h);
 				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
-			glBindTexture(GL_TEXTURE_2D, 0);
+			glActiveTexture(GL_TEXTURE0);
 			ImGui::End();
 		}
 		

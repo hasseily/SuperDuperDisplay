@@ -1319,7 +1319,6 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glBindTexture(GL_TEXTURE_2D, 0);
 	glActiveTexture(GL_TEXTURE0);
 
 	// std::cerr << "Generated two FBOs with size " << fb_width << " x " << fb_height << std::endl;
@@ -1356,37 +1355,34 @@ GLuint A2VideoManager::Render()
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
 
-		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START);
-
 		if (font_rom_regular_idx >= font_roms_array.size())
 			font_rom_regular_idx = 0;
 		if (font_rom_regular_idx >= font_roms_array.size())
 			font_rom_alternate_idx = (int)font_roms_array.size() - 1;
 		// image asset 0: The apple 2e US font
+		glActiveTexture(_TEXUNIT_IMAGE_FONT_ROM_DEFAULT);
 		image_assets[0].AssignByFilename(std::string(fontpath).append("/").append(font_roms_array[font_rom_regular_idx]).c_str());
 		// image asset 1: The alternate font
-		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 1);
+		glActiveTexture(_TEXUNIT_IMAGE_FONT_ROM_ALTERNATE);
 		image_assets[1].AssignByFilename(std::string(fontpath).append("/").append(font_roms_array[font_rom_alternate_idx]).c_str());
 		// image asset 2: LGR texture (overkill for color, useful for dithered b/w)
-		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 2);
+		glActiveTexture(_TEXUNIT_IMAGE_COMPOSITE_LGR);
 		image_assets[2].AssignByFilename("assets/Texture_composite_lgr.png");
 		// image asset 3: HGR texture
-		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 3);
+		glActiveTexture(_TEXUNIT_IMAGE_COMPOSITE_HGR);
 		image_assets[3].AssignByFilename("assets/Texture_composite_hgr.png");
 		// image asset 4: DHGR texture
-		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 4);
+		glActiveTexture(_TEXUNIT_IMAGE_COMPOSITE_DHGR);
 		image_assets[4].AssignByFilename("assets/Texture_composite_dhgr.png");
 		// image asset 5: 8x8 font for VidHD text modes
-		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 5);
+		glActiveTexture(_TEXUNIT_IMAGE_FONT_VIDHD_8X8);
 		image_assets[5].AssignByFilename("assets/VidHDFont8x8/00_US-Default.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL AssignByFilename error: "
 			<< 0 << " - " << glerr << std::endl;
 		}
 
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL render A2VideoManager error: " << glerr << std::endl;
-		}
+		glActiveTexture(GL_TEXTURE0);
 
 		rendered_frame_idx = UINT64_MAX;
 	}
@@ -1854,7 +1850,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			}
 			ImGui::Columns(1);
 
-			vidhdWindowBeam->DisplayImGuiWindow(p_open);
+			// vidhdWindowBeam->DisplayImGuiWindow(p_open);
 		}
 		ImGui::End();
 	}

@@ -80,7 +80,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 		case VIDHDMODE_TEXT_40X24:
 			modeSize.x = 40;
 			modeSize.y = 24;
-			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0;
+			fontTex = _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0;
 			glyphSize = glm::uvec2(14,16);
 			fontScale = glm::uvec2(2,2);
 			// The base A2 font texture is twice the size it really is,
@@ -90,7 +90,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 		case VIDHDMODE_TEXT_80X24:
 			modeSize.x = 80;
 			modeSize.y = 24;
-			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0;
+			fontTex = _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0;
 			glyphSize = glm::uvec2(14,16);
 			fontScale = glm::uvec2(1,2);
 			// The base A2 font texture is twice the size it really is,
@@ -100,7 +100,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 		case VIDHDMODE_TEXT_80X45:
 			modeSize.x = 80;
 			modeSize.y = 45;
-			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0;
+			fontTex = _TEXUNIT_IMAGE_FONT_VIDHD_8X8 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(8,8);
 			fontScale = glm::uvec2(3,3);
 			screen_count = {_VIDHDMODES_PIXEL_WIDTH,_VIDHDMODES_PIXEL_HEIGHT};
@@ -108,7 +108,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 		case VIDHDMODE_TEXT_120X67:
 			modeSize.x = 120;
 			modeSize.y = 67;
-			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0;
+			fontTex = _TEXUNIT_IMAGE_FONT_VIDHD_8X8 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(8,8);
 			fontScale = glm::uvec2(2,2);
 			screen_count = {_VIDHDMODES_PIXEL_WIDTH,_VIDHDMODES_PIXEL_HEIGHT};
@@ -116,7 +116,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 		case VIDHDMODE_TEXT_240X135:
 			modeSize.x = 240;
 			modeSize.y = 135;
-			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 5 - GL_TEXTURE0;
+			fontTex = _TEXUNIT_IMAGE_FONT_VIDHD_8X8 - GL_TEXTURE0;
 			glyphSize = glm::uvec2(8,8);
 			fontScale = glm::uvec2(1,1);
 			screen_count = {_VIDHDMODES_PIXEL_WIDTH,_VIDHDMODES_PIXEL_HEIGHT};
@@ -124,7 +124,7 @@ void VidHdWindowBeam::SetVideoMode(VidHdMode_e mode)
 		default:
 			modeSize.x = 0;
 			modeSize.y = 0;
-			fontTex = _TEXUNIT_IMAGE_ASSETS_START + 0 - GL_TEXTURE0;
+			fontTex = _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0;
 			glyphSize = glm::uvec2(14,16);
 			fontScale = glm::uvec2(2,2);
 			screen_count = {0,0};
@@ -261,9 +261,9 @@ void VidHdWindowBeam::Render(GLuint inputTexUnit, glm::vec2 inputSize)
 		shader.setInt("inputTex", inputTexUnit - GL_TEXTURE0);
 	}
 
+
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, 0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "VidHdWindowBeam render error: " << glerr << std::endl;
 	}
