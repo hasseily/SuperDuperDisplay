@@ -411,9 +411,6 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot)
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, prevFrame_texture_id, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		GLint maxSize;
-		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxSize);
-		std::cerr << maxSize << ":" << quadLeft << "-" << quadRight << "-" << quadTop << "-" << quadBottom << "-" << std::endl;
 		std::cerr << "OpenGL error PP 4: " << glerr << std::endl;
 	}
 	// Always bind the previous frame texture to its dedicated texture unit
