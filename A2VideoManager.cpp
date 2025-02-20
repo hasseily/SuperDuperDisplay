@@ -300,7 +300,8 @@ void A2VideoManager::Initialize()
 		font_roms_array.clear();
 		for (const auto & entry : std::filesystem::directory_iterator(fontpath)) {
 			if (entry.is_regular_file()) {
-				font_roms_array.push_back(entry.path().filename().string());
+				if ((entry.path().extension() == ".png") || (entry.path().extension() == ".PNG"))
+					font_roms_array.push_back(entry.path().filename().string());
 			}
 		}
 		if (font_roms_array.empty()) {
