@@ -24,7 +24,7 @@ EXE = SuperDuperDisplay
 IMGUI_DIR = imgui
 SOURCES = main.cpp OpenGLHelper.cpp MosaicMesh.cpp MemoryManager.cpp SDHRNetworking.cpp SDHRManager.cpp SDHRWindow.cpp
 SOURCES += A2VideoManager.cpp A2WindowBeam.cpp shader.cpp PostProcessor.cpp CycleCounter.cpp EventRecorder.cpp SoundManager.cpp
-SOURCES += Ayumi.cpp MockingboardManager.cpp SSI263.cpp MainMenu.cpp
+SOURCES += Ayumi.cpp MockingboardManager.cpp SSI263.cpp MainMenu.cpp VidHdWindowBeam.cpp
 SOURCES += extras/MemoryLoader.cpp extras/ImGuiFileDialog.cpp
 SOURCES += glad/glad.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
@@ -67,8 +67,8 @@ endif
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
 	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `/opt/homebrew/bin/sdl2-config --libs` -lz
-	LIBS += -framework CoreFoundation -lftd3xx
-	LIBS += -L/usr/local/lib -L/opt/homebrew/lib
+	LIBS += -framework CoreFoundation -lftd3xx-static
+	LIBS += -L/usr/local/lib -L/opt/homebrew/lib -Llib/OSX
 
 	CXXFLAGS += `/opt/homebrew/bin/sdl2-config --cflags`
 	CXXFLAGS += -I/usr/local/include -I/opt/homebrew/include
@@ -77,7 +77,7 @@ endif
 
 ifeq ($(OS), Windows_NT)
     ECHO_MESSAGE = "MinGW"
-    LIBS += -llibz -lgdi32 -lopengl32 -limm32 -lWs2_32 `pkg-config --static --libs sdl2`
+    LIBS += -llibz -lgdi32 -lopengl32 -limm32 -lWs2_32 `pkg-config --static --libs sdl2` -lftd3xx
 
     CXXFLAGS += `pkg-config --cflags sdl2`
 	CXXFLAGS += -I/ucrt64/include/
