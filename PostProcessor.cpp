@@ -215,6 +215,8 @@ void PostProcessor::SelectShader()
 		shaderProgram.setVec4("VideoRect", quadViewportCoords);
 
 		// shader specific
+		shaderProgram.setFloat("GhostingPercent", p_f_ghostingPercent);
+		shaderProgram.setFloat("BlurSize", p_f_phosphorBlur);
 		shaderProgram.setBool("bCORNER_SMOOTH", p_b_smoothCorner);
 		shaderProgram.setBool("bEXT_GAMMA", p_b_extGamma);
 		shaderProgram.setBool("bINTERLACE", p_b_interlace);
@@ -254,8 +256,6 @@ void PostProcessor::SelectShader()
 	}
 	// common
 	shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
-	shaderProgram.setFloat("GhostingPercent", p_f_ghostingPercent);
-	shaderProgram.setFloat("BlurSize", p_f_phosphorBlur);
 	shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 }
 
@@ -361,11 +361,14 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot)
 		}
 	}
 
+	// Used for all PP shaders
 	shaderProgram.setInt("A2TextureCurrent", texUnitCurrent - GL_TEXTURE0);
-	shaderProgram.setInt("PreviousFrame", _TEXUNIT_PP_PREVIOUS - GL_TEXTURE0);
-	// Always set the frame count!
-	shaderProgram.setInt("FrameCount", frame_count);
-	shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
+	// Only used for the full PP shader
+	if (p_i_postprocessingLevel > 1) {
+		shaderProgram.setInt("PreviousFrame", _TEXUNIT_PP_PREVIOUS - GL_TEXTURE0);
+		shaderProgram.setInt("FrameCount", frame_count);
+		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
+	}
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 2: " << glerr << std::endl;
@@ -545,22 +548,6 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		ImGui::SliderInt("Integer Scale", &integer_scale, 1, max_integer_scale, "%d");
 		if (bAutoScale)
 			ImGui::EndDisabled();
-		// Also the ghosting, which applies everywhere
-		ImGui::Separator();
-		ImGui::Text("[ GHOSTING ]");
-		// We'll use a normalized slider value in [0,1]
-		static float _ghostingSV = 100.0f * (1.0f - pow(1.0f - p_f_ghostingPercent / 100.0f, 0.25f));
-		if (p_f_ghostingPercent < 0.001)
-			_ghostingSV = 0.0f;
-		if (ImGui::SliderFloat("Ghosting Amount", &_ghostingSV, 0.0f, 100.0f, "%.0f"))
-		{
-			// Map sliderValue to ghosting percentage
-			// The mapping (1 - (1-x)^4) gives finer control near 100.
-			p_f_ghostingPercent = 100.0f - 100.0f * powf(1.0f - _ghostingSV/100.f, 4.0f);
-		}
-		ImGui::SetItemTooltip("Mix in a bit of ghosting to smooth bad framerates. Overdo it for the Apple /// monitor");
-		ImGui::SliderFloat("Phosphor Blur", &p_f_phosphorBlur, 0.0, 2.0, "%.2f");
-		ImGui::SetItemTooltip("Some screen blur");
 
 		if (p_i_postprocessingLevel == 2) {
 			ImGui::Separator();
@@ -588,7 +575,26 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 				ImGui::Checkbox("Interlacing", &p_b_interlace);
 				ImGui::SetItemTooltip("If you really want to feel the pain of bad refresh rates, disable VSYNC and set a low FPS limit like 30 Hz");
 			}
-			
+
+			ImGui::Separator();
+
+			// Blurring and Ghosting
+			ImGui::Text("[ BLUR & GHOSTING ]");
+			ImGui::SliderFloat("Phosphor Blur", &p_f_phosphorBlur, 0.0, 2.0, "%.2f");
+			ImGui::SetItemTooltip("Some screen blur");
+
+			// We'll use a normalized slider value in [0,1]
+			static float _ghostingSV = 100.0f * (1.0f - pow(1.0f - p_f_ghostingPercent / 100.0f, 0.25f));
+			if (p_f_ghostingPercent < 0.001)
+				_ghostingSV = 0.0f;
+			if (ImGui::SliderFloat("Ghosting Amount", &_ghostingSV, 0.0f, 100.0f, "%.0f"))
+			{
+				// Map sliderValue to ghosting percentage
+				// The mapping (1 - (1-x)^4) gives finer control near 100.
+				p_f_ghostingPercent = 100.0f - 100.0f * powf(1.0f - _ghostingSV/100.f, 4.0f);
+			}
+			ImGui::SetItemTooltip("Mix in a bit of ghosting to smooth bad framerates. Overdo it for the Apple /// monitor");
+
 			ImGui::Separator();
 			
 			// Mask Settings

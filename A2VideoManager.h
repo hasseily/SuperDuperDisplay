@@ -253,7 +253,7 @@ private:
 	static A2VideoManager* s_instance;
 	A2VideoManager()
 	{
-		vrams_array = new BeamRenderVRAMs[2];
+		vrams_array = new BeamRenderVRAMs[2]{};
 		Initialize();
 	}
 	void StartNextFrame();
@@ -288,7 +288,8 @@ private:
 	int vidHdTextAlphaForeNibble = 0b1111;
 	int vidHdTextAlphaBackNibble = 0b1111;
 	std::string sImguiLoadPath = ".";
-	
+	float bWobblePower = 0.200;
+
 	// beam render state variables
 	BeamState_e beamState = BeamState_e::UNKNOWN;
 	int scanlineSHR4Modes = 0;			// All SHR4 modes in the scanline

@@ -145,8 +145,8 @@ private:
 	uint8_t* a2mem;					// The current shadowed Apple 2 memory
 	size_t* a2mem_lastUpdate;		// timestamp of last update of each Apple 2 memory byte
 	uint16_t a2SoftSwitches;		// Soft switches states
-	uint8_t stateAN3Video7 = 0;		// State of the AN3 toggle for Video-7. Needs to toggle 5 times, starting with off
-	uint8_t flagsVideo7 = 0;		// 2 bits
+	// uint8_t stateAN3Video7 = 0;		// State of the AN3 toggle for Video-7. Needs to toggle 5 times, starting with off
+	// uint8_t flagsVideo7 = 0;		// 2 bits
 };
 
 #endif	// MEMORYMANAGER_H

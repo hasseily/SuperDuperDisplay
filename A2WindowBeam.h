@@ -82,7 +82,7 @@ public:
 	unsigned int VAO = UINT_MAX;			// Vertex Array Object (holds buffers that are vertex related)
 	unsigned int VBO = UINT_MAX;			// Vertex Buffer Object (holds vertices)
 
-	bool bIsMergedMode = false;				// Activate in case this frame has both SHR and Legacy at once
+	bool bIsMergedMode = false;				// Activate if this frame has both SHR and Legacy. Shader will use OFFSETEX
 	bool bForceSHRWidth = false;			// Request to force SHR width for legacy
 
 	int specialModesMask = A2_VSM_NONE;		// Or'ed A2VideoSpecialMode_e

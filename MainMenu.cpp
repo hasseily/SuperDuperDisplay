@@ -771,8 +771,7 @@ void MainMenu::ShowSamplesMenu() {
 		legacydemo.seekg(0, std::ios::beg); // Go back to the start of the file
 		legacydemo.read(reinterpret_cast<char*>(MemoryManager::GetInstance()->GetApple2MemPtr()), 0x4000);
 		a2VideoManager->bDEMOMergedMode = true;
-		a2VideoManager->bForceSHRWidth = true;
-		a2VideoManager->bNoMergedModeWobble = true;
+		a2VideoManager->bAlignQuadsToScanline = true;
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
 	if (ImGui::MenuItem("SHR RGGB (Bayer) 320@16")) {

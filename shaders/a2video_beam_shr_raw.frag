@@ -285,7 +285,17 @@ void main()
 	if (isPageFlipSHR4 == 1)	// the offset is used for odd frames
 		yOffsetLines = uint(doubleSHR4YOffset) * (uint(frameIsOdd));
 
-    // first do the borders
+    // First do the borders
+	// This part takes care of the piece when there is a sine wobble that's shifting left
+	// It keeps the border filled all the way to the right edge, as opposed to shifting the border
+	if (uint(vFragPos.x) >= uint(640+hborder*16))
+	{
+		fragColor = bordercolors[texelFetch(VRAMTEX, ivec2(33u + (uint(vFragPos.x) >> 2), scanline + yOffsetLines), 0).r & 0x0Fu];
+		if (monitorColorType > 0)
+			fragColor = GetMonochromeValue(fragColor, monitorcolors[monitorColorType]);
+		return;
+	}
+	// This part is the regular borders
     if ((ypos < uint(vborder*2)) || (ypos >= uint(vborder*2+400)) ||
         (xpos < uint(hborder*16)) || (xpos >= uint(640+hborder*16)))
     {

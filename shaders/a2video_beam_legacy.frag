@@ -152,8 +152,16 @@ void main()
 		}	
 		if ((vFragUpdatedPos.x + xOffsetMerge) < 0.0)
 		{
-			fragColor = vec4(0.0,0.0,0.0,0.0);
-			return;
+			if (vFragUpdatedPos.x > 0.0) {
+				// This part takes care of the piece when there is a sine wobble that's shifting right.
+				// We want the border to _extend_ right. So we tell the dead left pixels they're part of the border.
+				// It keeps the border filled all the way to the left edge, as opposed to shifting the border
+				vFragUpdatedPos.x -= xOffsetMerge;
+			} else {
+				// This part clears the left side between the SHR boundary of the quad, and the actual Legacy boundary.
+				fragColor = vec4(0.0,0.0,0.0,0.0);
+				return;
+			}
 		}
 	}
 

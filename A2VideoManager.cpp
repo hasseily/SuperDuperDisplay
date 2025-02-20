@@ -24,6 +24,7 @@
 #include "EventRecorder.h"
 #include "GRAddr2XY.h"
 #include "imgui.h"
+#include "SDL_rect.h"
 
 // Aspect constraint callback to enforce a fixed aspect ratio for ImGui windows.
 // The aspect ratio is provided via the UserData pointer
@@ -252,6 +253,7 @@ void A2VideoManager::Initialize()
 		vrams_array[i].offset_buffer = new GLfloat[GetVramHeightSHR()];
 		memset(vrams_array[i].vram_legacy, 0, GetVramSizeLegacy());
 		memset(vrams_array[i].vram_shr, 0, GetVramSizeSHR());
+		memset(vrams_array[i].vram_pal256, 0, _A2VIDEO_SHR_BYTES_PER_LINE*2*_A2VIDEO_SHR_SCANLINES*_INTERLACE_MULTIPLIER);
 		memset(vrams_array[i].offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
 		
 		// the debugging special vrams
@@ -582,7 +584,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			{
 				// Start of NBVBLANK at which we flip the double buffering
 				StartNextFrame();
-				beamState = BeamState_e::BORDER_TOP;
 			}
 			break;
 		case BeamState_e::BORDER_LEFT:
@@ -705,7 +706,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 					else
 					{
 						// If the change is to 28 MHz, shift negative (left). Otherwise, shift positive (right)
-						float pixelShift = (GLfloat)glm::pow(1.1205, merge_last_change_y - _TR_ANY_Y + 28) - 4.0;
+						float pixelShift = (GLfloat)glm::pow(glm::exp(merge_last_change_y - _TR_ANY_Y + 15), bWobblePower) - 1.0;
 						if (_curr_mode == A2Mode_e::LEGACY)
 							vrams_write->offset_buffer[_TR_ANY_Y] = -(10.f + pixelShift);
 						else
@@ -1083,10 +1084,10 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 }
 
 // When we learn we're in merged mode, we need to update all previous scanlines
-// to set the merged mode. Ideally it should all be one mode without any difference
-// between legacy and SHR, and a single shader. But for better performance, and to
-// not make a _very_ rare case (merged mode) the standard pipeline, we have both
-// legacy and shr split into their own and we merge them later.
+// to set the offset texture data. Ideally it should all be one integrated mode
+// between legacy and SHR. But then we'd have to always update the offset texture
+// to handle the wobble and remember the state, etc... That's a lot of work every
+// scanline for the _very_ rare case of merged mode which is only used in demos.
 void A2VideoManager::SwitchToMergedMode(uint32_t scanline)
 {
 	if (bIsSwitchingToMergedMode)
@@ -1410,7 +1411,10 @@ GLuint A2VideoManager::Render()
 	SDL_FRect _vidHdLegacyQuad = { 0, 0, (float)_A2VIDEO_LEGACY_WIDTH, (float)_A2VIDEO_LEGACY_HEIGHT };
 
 	// Note: we always double the scanline value, so 4*2 for the shift
-	SDL_FPoint _scanlineOffset = (bAlignQuadsToScanline ? SDL_FPoint(0.f,8.f) : SDL_FPoint(0.f,0.f));
+	SDL_FPoint _scanlineOffset = {0.f,0.f};
+	if (bAlignQuadsToScanline)
+		_scanlineOffset.y = 8.f;
+
 
 	if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_TEXT_80X24) {	// Force 1080p size
 		fb_width = vidhdWindowBeam->GetWidth();
@@ -1747,6 +1751,12 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			if (ImGui::Checkbox("No wobble in merged mode", &this->bNoMergedModeWobble))
 				this->ForceBeamFullScreenRender();
 			ImGui::SetItemTooltip("Removes the wobble effect when shifting mode mid-frame");
+			if (ImGui::Checkbox("Demo Merged Mode", &this->bDEMOMergedMode))
+				this->ForceBeamFullScreenRender();
+			ImGui::SetItemTooltip("A demo feature to force mid-frame switch between SHR and Legacy");
+			if (ImGui::SliderFloat("Wobble Power", &bWobblePower, 0.0, 0.3))
+				this->ForceBeamFullScreenRender();
+			ImGui::SetItemTooltip("Wobble strength. A value of .2 is relatively accurate");
 
 			//eA2MonitorType
 			const char* monitorTypes[] = { "Color", "White", "Green", "Amber" };

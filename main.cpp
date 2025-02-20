@@ -137,7 +137,7 @@ void Main_DisplaySplashScreen()
 {
 	if (MemoryLoadSHR("assets/logo.shr"))
 	{
-		MemoryManager::GetInstance()->SetSoftSwitch(A2SoftSwitch_e::A2SS_SHR, true);
+		MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, true);
 	}
 	// Run a refresh to show the first screen
 	A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
@@ -286,6 +286,7 @@ void Main_ResetA2SS() {
 	a2VideoManager->bUseHGRSPEC1 = false;
 	a2VideoManager->bUseHGRSPEC2 = false;
 	a2VideoManager->bDEMOMergedMode = false;
+	a2VideoManager->bAlignQuadsToScanline = false;
 }
 
 // Main code

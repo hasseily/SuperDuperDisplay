@@ -78,13 +78,13 @@ public:
 	void Enable() { bIsEnabled = true; };
 	void Disable() { bIsEnabled = false; };
 	bool IsEnabled() { return bIsEnabled; };
-
+	
 	// Received a mockingboard event, we don't care if it's C4XX or C5XX
 	void EventReceived(uint16_t addr, uint8_t val, bool rw);
 	
 	// Audio callback
 	void GetSamples(float& left, float& right);
-
+	
 	// Set the panning of a channel in an AY
 	// Pan is 0.0-1.0, left to right
 	// Set isEqp for "equal power" panning
@@ -136,17 +136,17 @@ private:
 	// Chips
 	Ayumi ay[4];
 	SSI263 ssi[4];
-
+	
 	// M6522 pin state
 	uint64_t a_pins_in[4] = { 0 };
 	uint64_t a_pins_out[4] = { 0 };
 	uint64_t a_pins_out_prev[4] = { 0 };
-
+	
 	float allpans[4][3] = {
-		0.3f, 0.3f, 0.3f,	// AY0 pans left
-		0.7f, 0.7f, 0.7f,	// AY1 pans right
-		0.2f, 0.2f, 0.2f,	// AY2 pans left
-		0.8f, 0.8f, 0.8f,	// AY3 pans right
+		{0.3f, 0.3f, 0.3f},	// AY0 pans left
+		{0.7f, 0.7f, 0.7f},	// AY1 pans right
+		{0.2f, 0.2f, 0.2f},	// AY2 pans left
+		{0.8f, 0.8f, 0.8f},	// AY3 pans right
 	};
 };
 
