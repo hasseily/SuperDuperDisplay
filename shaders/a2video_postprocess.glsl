@@ -74,7 +74,6 @@ uniform COMPAT_PRECISION float BlurSize;
 
 uniform bool bCORNER_SMOOTH;
 uniform bool bEXT_GAMMA;
-uniform bool bINTERLACE;
 uniform bool bPOTATO; 
 uniform bool bSLOT;
 uniform bool bVIGNETTE; 
@@ -99,6 +98,7 @@ uniform COMPAT_PRECISION float RB;
 uniform COMPAT_PRECISION float RG;
 uniform COMPAT_PRECISION float SATURATION;
 uniform COMPAT_PRECISION float SCANLINE_WEIGHT;
+uniform COMPAT_PRECISION float INTERLACE_WEIGHT;
 uniform COMPAT_PRECISION float SLOTW;
 uniform COMPAT_PRECISION float VIGNETTE_WEIGHT;
 uniform COMPAT_PRECISION float WARPX;
@@ -108,6 +108,11 @@ uniform COMPAT_PRECISION float ZOOMY;
 uniform COMPAT_PRECISION int iCOLOR_SPACE;
 uniform COMPAT_PRECISION int iM_TYPE;
 uniform COMPAT_PRECISION int iSCANLINE_TYPE;
+
+#define iTime (float(FrameCount) / 60.0)
+#define SCANSPEED 1.0
+#define iResolution OutputSize.xy
+#define fragCoord gl_FragCoord.xy
 
 vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 {
@@ -275,6 +280,21 @@ vec2 BarrelDistortion(vec2 uv) {
 	return (warped - 0.5) / mix(1.0,1.2,BARRELDISTORTION/5.0) + 0.5;
 }
 
+//Canonical noise function; replaced to prevent precision errors
+//float rand(vec2 co){
+//    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+//}
+
+float rand(vec2 co)
+{
+    float a = 12.9898;
+    float b = 78.233;
+    float c = 43758.5453;
+    float dt= dot(co.xy ,vec2(a,b));
+    float sn= mod(dt,3.14);
+    return fract(sin(sn) * c);
+}
+
 void main() {
 	FragColor = texture(A2TextureCurrent, TexCoords);
 
@@ -283,6 +303,16 @@ void main() {
 			FragColor = GenerateGhosting(TexCoords, FragColor);
 		return;
 	}
+
+	vec2 q = (TexCoords.xy * TextureSize.xy / InputSize.xy);//fragCoord.xy / iResolution.xy;
+    vec2 uv = q;
+	float o =2.0*mod(fragCoord.y,2.0)/iResolution.x;
+
+	if (uv.x < 0.0 || uv.x > 1.0)
+		discard;
+	if (uv.y < 0.0 || uv.y > 1.0)
+		discard;
+
 	
 // Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1) {
@@ -371,18 +401,42 @@ void main() {
 	if (bSLOT)
 		CGWG = mix(MASKL, MASKH, l);
 
-	// For CRT-Geom scanlines
-	vec3 v_pwr;
 	if (iSCANLINE_TYPE == 2) {
+		// New style scanlines, derived from Mattias' shader
+		// vignette
+		if (VIGNETTE_WEIGHT > 0.00001) {
+			float vig = (0.0 + 1.0*16.0*uv.x*uv.y*(1.0-uv.x)*(1.0-uv.y));
+			vig = pow(vig,VIGNETTE_WEIGHT);
+			res *= vec3(vig);
+		}
+
+		if (SCANLINE_WEIGHT > 0.00001) {
+			float scans = clamp( 0.35+0.15*sin(3.5*(iTime * INTERLACE_WEIGHT)+uv.y*iResolution.y*1.5), 0.0, 1.0);
+			float s = pow(scans,SCANLINE_WEIGHT);
+			res = res*vec3(s);
+		}
+		if (INTERLACE_WEIGHT > 0.00001) {
+			vec3 ires = res;
+			ires *= 1.0+0.0015*sin(300.0*iTime);
+			ires *= 1.0-0.15*vec3(clamp((mod(fragCoord.x+o, 2.0)-1.0)*2.0,0.0,1.0));
+			ires *= vec3( 1.0 ) - 0.25*vec3( rand( uv+0.0001*iTime),  rand( uv+0.0001*iTime + 0.3 ),  rand( uv+0.0001*iTime+ 0.5 )  );
+			res = pow(ires, vec3(INTERLACE_WEIGHT)) * (1.0 + INTERLACE_WEIGHT);	// need to boost brightness as the interlacing increases
+		}
+	}
+
+	/*
+	// For CRT-Geom scanlines
+	if (iSCANLINE_TYPE == 3) {
+		vec3 v_pwr;
 		v_pwr = vec3(1.0/((-1.0*SCANLINE_WEIGHT+1.0)*(-0.8*CGWG+1.0))-1.2);
 		// handle interlacing
 		float s = fract(pos.y*TextureSize.y/2.001+0.5);
-		if (bINTERLACE)
+		if (INTERLACE_WEIGHT > 0.001)
 			s = mod(float(FrameCount),2.0) < 1.0 ? s: fract(s+0.5);
 	
 		// Vignette
 		float x = 0.0;
-		if (bVIGNETTE) {
+		if (VIGNETTE_WEIGHT > 0.001) {
 			x = TexCoords.x-0.5;
 			x = x*x;
 		}
@@ -393,6 +447,7 @@ void main() {
 	} else {
 		v_pwr = vec3(1.0/((-1.0*0.3+1.0)*(-0.8*CGWG+1.0))-1.2);
 	}
+	*/
 
 // Masks
 	vec2 xy = TexCoords*OutputSize.xy*scale/MSIZE;	
@@ -404,8 +459,6 @@ void main() {
 	if (bPOTATO) {
 		res = sqrt(res);
 		res *= mix(1.3,1.1,l);
-	} else {
-		res = inv_gamma(res,v_pwr);
 	}
 
 // Saturation

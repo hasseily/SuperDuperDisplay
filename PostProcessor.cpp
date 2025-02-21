@@ -90,10 +90,9 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_f_corner", p_f_corner},
 		{"p_b_smoothCorner", p_b_smoothCorner},
 		{"p_b_extGamma", p_b_extGamma},
-		{"p_b_interlace", p_b_interlace},
+		{"p_f_interlace", p_f_interlace},
 		{"p_b_potato", p_b_potato},
 		{"p_b_slot", p_b_slot},
-		{"p_b_vignette", p_b_vignette},
 		{"p_f_bgr", p_f_bgr},
 		{"p_f_black", p_f_black},
 		{"p_f_brDep", p_f_brDep},
@@ -138,10 +137,9 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_f_corner = jsonState.value("p_f_corner", p_f_corner);
 	p_b_smoothCorner = jsonState.value("p_b_smoothCorner", p_b_smoothCorner);
 	p_b_extGamma = jsonState.value("p_b_extGamma", p_b_extGamma);
-	p_b_interlace = jsonState.value("p_b_interlace", p_b_interlace);
+	p_f_interlace = jsonState.value("p_f_interlace", p_f_interlace);
 	p_b_potato = jsonState.value("p_b_potato", p_b_potato);
 	p_b_slot = jsonState.value("p_b_slot", p_b_slot);
-	p_b_vignette = jsonState.value("p_b_vignette", p_b_vignette);
 	p_f_bgr = jsonState.value("p_f_bgr", p_f_bgr);
 	p_f_black = jsonState.value("p_f_black", p_f_black);
 	p_f_brDep = jsonState.value("p_f_brDep", p_f_brDep);
@@ -219,10 +217,8 @@ void PostProcessor::SelectShader()
 		shaderProgram.setFloat("BlurSize", p_f_phosphorBlur);
 		shaderProgram.setBool("bCORNER_SMOOTH", p_b_smoothCorner);
 		shaderProgram.setBool("bEXT_GAMMA", p_b_extGamma);
-		shaderProgram.setBool("bINTERLACE", p_b_interlace);
 		shaderProgram.setBool("bPOTATO", p_b_potato);
 		shaderProgram.setBool("bSLOT", p_b_slot);
-		shaderProgram.setBool("bVIGNETTE", p_b_vignette);
 		shaderProgram.setFloat("BARRELDISTORTION", p_f_barrelDistortion);
 		shaderProgram.setFloat("BGR", p_f_bgr);
 		shaderProgram.setFloat("BLACK", p_f_black);
@@ -245,6 +241,7 @@ void PostProcessor::SelectShader()
 		shaderProgram.setFloat("SCANLINE_WEIGHT", p_f_scanlineWeight);
 		shaderProgram.setFloat("SLOTW", p_f_slotW);
 		shaderProgram.setFloat("VIGNETTE_WEIGHT", p_f_vignetteWeight);
+		shaderProgram.setFloat("INTERLACE_WEIGHT", p_f_interlace);
 		shaderProgram.setFloat("WARPX", p_f_warpX);
 		shaderProgram.setFloat("WARPY", p_f_warpY);
 		shaderProgram.setFloat("ZOOMX", p_f_zoomX);
@@ -564,16 +561,14 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			}
 			ImGui::SameLine();
 			ImGui::RadioButton("Complex##SCANLINETYPE", &p_i_scanlineType, 2);
-			ImGui::SetItemTooltip("You should generally increase the brightness (further down) when using the complex scanline type");
-			if (p_i_scanlineType == 2)
+			ImGui::SetItemTooltip("You should generally tweak color settings (further down) when using the complex scanline type");
+			if (p_i_scanlineType >= 2)
 			{
-				ImGui::SliderFloat("Scanline Weight", &p_f_scanlineWeight, 0.03f, 0.7f, "%.2f");
-				ImGui::Checkbox("Scanline Vignette", &p_b_vignette);
+				ImGui::SliderFloat("Scanline Weight", &p_f_scanlineWeight, 0.0f, 2.0f, "%.2f");
+				ImGui::SliderFloat("Vignette Weight", &p_f_vignetteWeight, 0.0f, 5.0f, "%.2f");
 				ImGui::SetItemTooltip("Darker sides of the scanlines, works better when there's distortion");
-				if (p_b_vignette)
-					ImGui::SliderFloat("Vignette Weight", &p_f_vignetteWeight, 0.1, 5.0, "%.2f");
-				ImGui::Checkbox("Interlacing", &p_b_interlace);
-				ImGui::SetItemTooltip("If you really want to feel the pain of bad refresh rates, disable VSYNC and set a low FPS limit like 30 Hz");
+				ImGui::SliderFloat("Interlacing", &p_f_interlace, 0.0f, 5.0f, "%.2f");
+				ImGui::SetItemTooltip("If you really want to feel the pain of bad refresh rates");
 			}
 
 			ImGui::Separator();
@@ -635,9 +630,9 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::Text("[ COLOR SETTINGS ]");
 			ImGui::SliderFloat("Scan/Mask Brightness Dependence", &p_f_brDep, 0.0f, 0.5f, "%.3f");
 			ImGui::SliderInt("Color Space: sRGB,PAL,NTSC-U,NTSC-J", &p_i_cSpace, 0, 3, "%1d");
-			ImGui::SliderFloat("Saturation", &p_f_saturation, 0.0f, 2.0f, "%.2f");
+			ImGui::SliderFloat("Saturation", &p_f_saturation, 0.0f, 3.0f, "%.2f");
 			ImGui::SliderFloat("Brightness", &p_f_brightness, 0.0f, 4.0f, "%.2f");
-			ImGui::SliderFloat("Black Level", &p_f_black, -0.20f, 0.20f, "%.2f");
+			ImGui::SliderFloat("Black Level", &p_f_black, -0.50f, 0.50f, "%.2f");
 			ImGui::SliderFloat("Green <-to-> Red Hue", &p_f_hueRG, -0.25f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Blue <-to-> Red Hue", &p_f_hueRB, -0.25f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Blue <-to-> Green Hue", &p_f_hueGB, -0.25f, 0.25f, "%.2f");

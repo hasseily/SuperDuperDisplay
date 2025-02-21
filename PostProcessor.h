@@ -77,10 +77,8 @@ private:
 	// Shader parameter variables
 	bool p_b_smoothCorner = false;
 	bool p_b_extGamma = false;
-	bool p_b_interlace = false;
 	bool p_b_potato = false;
 	bool p_b_slot = false;
-	bool p_b_vignette = false;
 	float p_f_barrelDistortion = 0.0f;
 	float p_f_bgr = 0.0f;
 	float p_f_black = 0.0f;
@@ -100,9 +98,10 @@ private:
 	float p_f_maskLow = 0.3f;
 	float p_f_maskSize = 1.0f;
 	float p_f_saturation = 1.0f;
-	float p_f_scanlineWeight = 0.3f;
+	float p_f_scanlineWeight = 1.0f;
+	float p_f_interlace = 0.f;
 	float p_f_slotW = 3.0f;
-	float p_f_vignetteWeight = 0.8f;
+	float p_f_vignetteWeight = 0.0f;
 	float p_f_warpX = 0.0f;
 	float p_f_warpY = 0.0f;
 	float p_f_zoomX = 0.0f;
