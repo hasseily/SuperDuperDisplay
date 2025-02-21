@@ -420,7 +420,7 @@ void main() {
 			ires *= 1.0+0.0015*sin(300.0*iTime);
 			ires *= 1.0-0.15*vec3(clamp((mod(fragCoord.x+o, 2.0)-1.0)*2.0,0.0,1.0));
 			ires *= vec3( 1.0 ) - 0.25*vec3( rand( uv+0.0001*iTime),  rand( uv+0.0001*iTime + 0.3 ),  rand( uv+0.0001*iTime+ 0.5 )  );
-			res = pow(ires, vec3(INTERLACE_WEIGHT)) * (1.0 + INTERLACE_WEIGHT);	// need to boost brightness as the interlacing increases
+			res = pow(ires * (1.0 + INTERLACE_WEIGHT), vec3(INTERLACE_WEIGHT));	// need to boost brightness as the interlacing increases
 		}
 	}
 

@@ -550,17 +550,17 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::Separator();
 			// Scanline and Interlacing
 			ImGui::Text("[ SCANLINE TYPE ]");
-			if (ImGui::RadioButton("None##SCANLINETYPE", &p_i_scanlineType, 0))
-			{
-				p_f_scanlineWeight = 0.3f;
-			}
+			ImGui::RadioButton("None##SCANLINETYPE", &p_i_scanlineType, 0);
 			ImGui::SameLine();
 			if (ImGui::RadioButton("Simple##SCANLINETYPE", &p_i_scanlineType, 1))
 			{
 				p_f_scanlineWeight = 0.3f;
 			}
 			ImGui::SameLine();
-			ImGui::RadioButton("Complex##SCANLINETYPE", &p_i_scanlineType, 2);
+			if (ImGui::RadioButton("Complex##SCANLINETYPE", &p_i_scanlineType, 2))
+			{
+				p_f_scanlineWeight = 1.0f;
+			}
 			ImGui::SetItemTooltip("You should generally tweak color settings (further down) when using the complex scanline type");
 			if (p_i_scanlineType >= 2)
 			{
