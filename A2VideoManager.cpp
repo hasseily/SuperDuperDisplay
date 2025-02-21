@@ -1119,7 +1119,7 @@ void A2VideoManager::SwitchToMergedMode(uint32_t scanline)
 	bIsSwitchingToMergedMode = false;
 }
 
-void A2VideoManager::ForceBeamFullScreenRender()
+void A2VideoManager::ForceBeamFullScreenRender(const uint64_t numFrames)
 {
 	// Move the beam over the whole screen
 	auto totalscanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
@@ -1128,7 +1128,7 @@ void A2VideoManager::ForceBeamFullScreenRender()
 	int starty = _SCANLINE_START_FRAME + 2;
 	beamState = BeamState_e::NBVBLANK;
 
-	for (uint32_t y = starty; y < totalscanlines; y++)
+	for (uint32_t y = starty; y < totalscanlines * numFrames; y++)
 	{
 		for (uint32_t x = 0; x < 65; x++)
 		{

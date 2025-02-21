@@ -192,7 +192,7 @@ public:
 	// Methods for the single multipurpose beam racing shader
 	void BeamIsAtPosition(uint32_t _x, uint32_t _y);
 
-	void ForceBeamFullScreenRender();
+	void ForceBeamFullScreenRender(const uint64_t numFrames = 1);
 	
 	bool SelectLegacyShader(const int index);
 	bool SelectSHRShader(const int index);

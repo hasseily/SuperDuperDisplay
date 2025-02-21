@@ -140,7 +140,8 @@ void Main_DisplaySplashScreen()
 		MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, true);
 	}
 	// Run a refresh to show the first screen
-	A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	// going through 3 frames (0/1/0) to really clean the whole thing
+	A2VideoManager::GetInstance()->ForceBeamFullScreenRender(3);
 }
 
 void Main_DrawFPSOverlay()
