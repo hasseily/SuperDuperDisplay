@@ -59,6 +59,7 @@ uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
 uniform COMPAT_PRECISION vec2 ViewportSize;
 uniform COMPAT_PRECISION vec4 VideoRect;
+uniform COMPAT_PRECISION uint ScanlineCount;
 uniform sampler2D A2TextureCurrent;
 uniform sampler2D PreviousFrame;
 in vec2 TexCoords;
@@ -81,7 +82,8 @@ uniform COMPAT_PRECISION float BARRELDISTORTION;
 uniform COMPAT_PRECISION float BGR;
 uniform COMPAT_PRECISION float BLACK; 
 uniform COMPAT_PRECISION float BR_DEP; 
-uniform COMPAT_PRECISION float BRIGHTNESs;
+uniform COMPAT_PRECISION float BRIGHTNESS;
+uniform COMPAT_PRECISION float CONTRAST;
 uniform COMPAT_PRECISION float C_STR;
 uniform COMPAT_PRECISION float CENTERX;
 uniform COMPAT_PRECISION float CENTERY;
@@ -98,6 +100,7 @@ uniform COMPAT_PRECISION float RB;
 uniform COMPAT_PRECISION float RG;
 uniform COMPAT_PRECISION float SATURATION;
 uniform COMPAT_PRECISION float SCANLINE_WEIGHT;
+uniform COMPAT_PRECISION float SCAN_SPEED;
 uniform COMPAT_PRECISION float INTERLACE_WEIGHT;
 uniform COMPAT_PRECISION float SLOTW;
 uniform COMPAT_PRECISION float VIGNETTE_WEIGHT;
@@ -110,8 +113,6 @@ uniform COMPAT_PRECISION int iM_TYPE;
 uniform COMPAT_PRECISION int iSCANLINE_TYPE;
 
 #define iTime (float(FrameCount) / 60.0)
-#define SCANSPEED 1.0
-#define iResolution OutputSize.xy
 #define fragCoord gl_FragCoord.xy
 
 vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
@@ -306,14 +307,13 @@ void main() {
 
 	vec2 q = (TexCoords.xy * TextureSize.xy / InputSize.xy);//fragCoord.xy / iResolution.xy;
     vec2 uv = q;
-	float o =2.0*mod(fragCoord.y,2.0)/iResolution.x;
+	float o =2.0*mod(fragCoord.y,2.0)/InputSize.x;
 
 	if (uv.x < 0.0 || uv.x > 1.0)
 		discard;
 	if (uv.y < 0.0 || uv.y > 1.0)
 		discard;
 
-	
 // Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1) {
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
@@ -411,7 +411,7 @@ void main() {
 		}
 
 		if (SCANLINE_WEIGHT > 0.00001) {
-			float scans = clamp( 0.35+0.15*sin(3.5*(iTime * INTERLACE_WEIGHT)+uv.y*iResolution.y*1.5), 0.0, 1.0);
+			float scans = clamp( 0.35+0.15*sin(3.5*(iTime * (-SCAN_SPEED))+uv.y*float(ScanlineCount)*2.0*1.5), 0.0, 1.0);
 			float s = pow(scans,SCANLINE_WEIGHT);
 			res = res*vec3(s);
 		}
@@ -420,7 +420,7 @@ void main() {
 			ires *= 1.0+0.0015*sin(300.0*iTime);
 			ires *= 1.0-0.15*vec3(clamp((mod(fragCoord.x+o, 2.0)-1.0)*2.0,0.0,1.0));
 			ires *= vec3( 1.0 ) - 0.25*vec3( rand( uv+0.0001*iTime),  rand( uv+0.0001*iTime + 0.3 ),  rand( uv+0.0001*iTime+ 0.5 )  );
-			res = pow(ires * (1.0 + INTERLACE_WEIGHT), vec3(INTERLACE_WEIGHT));	// need to boost brightness as the interlacing increases
+			res = pow(ires, vec3(1.0+INTERLACE_WEIGHT));
 		}
 	}
 
@@ -456,17 +456,19 @@ void main() {
 // Apply slot mask on top of Trinitron-like mask
 	if (bSLOT)
 		res *= mix(slot(xy/2.0),vec3(1.0),CGWG);
-	if (bPOTATO) {
-		res = sqrt(res);
-		res *= mix(1.3,1.1,l);
-	}
+
+	// Have to boost the gamma a bit to counterbalance the interlacing etc
+	res = sqrt(res);
+	res *= (1.0+INTERLACE_WEIGHT)*mix(1.3,1.1,l);
 
 // Saturation
 	float lum = dot(vec3(0.29,0.60,0.11),res);
 	res = mix(vec3(lum),res,SATURATION);
 
-// Brightness, Hue and Black Level
-	res *= BRIGHTNESs;
+// Brightness, Contrast, Hue and Black Level
+	res *= BRIGHTNESS;
+	res = (res - 0.5) * CONTRAST + 0.5;
+	res = clamp(res, 0.0, 1.0);
 	res *= hue;
 	res -= vec3(BLACK);
 	res *= blck;

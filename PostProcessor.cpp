@@ -113,6 +113,7 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_f_hueRG", p_f_hueRG},
 		{"p_f_saturation", p_f_saturation},
 		{"p_f_scanlineWeight", p_f_scanlineWeight},
+		{"p_f_scanSpeed", p_f_scanSpeed},
 		{"p_i_scanlineType", p_i_scanlineType},
 		{"p_f_slotW", p_f_slotW},
 		{"p_f_vignetteWeight", p_f_vignetteWeight},
@@ -160,6 +161,7 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_f_hueRG = jsonState.value("p_f_hueRG", p_f_hueRG);
 	p_f_saturation = jsonState.value("p_f_saturation", p_f_saturation);
 	p_f_scanlineWeight = jsonState.value("p_f_scanlineWeight", p_f_scanlineWeight);
+	p_f_scanSpeed = jsonState.value("p_f_scanSpeed", p_f_scanSpeed);
 	p_i_scanlineType = jsonState.value("p_i_scanlineType", p_i_scanlineType);
 	p_f_slotW = jsonState.value("p_f_slotW", p_f_slotW);
 	p_f_vignetteWeight = jsonState.value("p_f_vignetteWeight", p_f_vignetteWeight);
@@ -223,7 +225,7 @@ void PostProcessor::SelectShader()
 		shaderProgram.setFloat("BGR", p_f_bgr);
 		shaderProgram.setFloat("BLACK", p_f_black);
 		shaderProgram.setFloat("BR_DEP", p_f_brDep);
-		shaderProgram.setFloat("BRIGHTNESs", p_f_brightness);
+		shaderProgram.setFloat("BRIGHTNESS", p_f_brightness);
 		shaderProgram.setFloat("C_STR", p_f_cStr);
 		shaderProgram.setFloat("CENTERX", p_f_centerX);
 		shaderProgram.setFloat("CENTERY", p_f_centerY);
@@ -239,6 +241,7 @@ void PostProcessor::SelectShader()
 		shaderProgram.setFloat("RG", p_f_hueRG);
 		shaderProgram.setFloat("SATURATION", p_f_saturation);
 		shaderProgram.setFloat("SCANLINE_WEIGHT", p_f_scanlineWeight);
+		shaderProgram.setFloat("SCAN_SPEED", p_f_scanSpeed);
 		shaderProgram.setFloat("SLOTW", p_f_slotW);
 		shaderProgram.setFloat("VIGNETTE_WEIGHT", p_f_vignetteWeight);
 		shaderProgram.setFloat("INTERLACE_WEIGHT", p_f_interlace);
@@ -256,7 +259,7 @@ void PostProcessor::SelectShader()
 	shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 }
 
-void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot)
+void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint scanlineCount)
 {
 	SDL_GL_GetDrawableSize(window, &viewportWidth, &viewportHeight);
 
@@ -365,6 +368,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot)
 		shaderProgram.setInt("PreviousFrame", _TEXUNIT_PP_PREVIOUS - GL_TEXTURE0);
 		shaderProgram.setInt("FrameCount", frame_count);
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
+		shaderProgram.setUInt("ScanlineCount", scanlineCount);
 	}
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -565,6 +569,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			if (p_i_scanlineType >= 2)
 			{
 				ImGui::SliderFloat("Scanline Weight", &p_f_scanlineWeight, 0.0f, 2.0f, "%.2f");
+				ImGui::SliderFloat("Scanline Speed", &p_f_scanSpeed, 0.0f, 4.0f, "%.2f");
 				ImGui::SliderFloat("Vignette Weight", &p_f_vignetteWeight, 0.0f, 5.0f, "%.2f");
 				ImGui::SetItemTooltip("Darker sides of the scanlines, works better when there's distortion");
 				ImGui::SliderFloat("Interlacing", &p_f_interlace, 0.0f, 5.0f, "%.2f");

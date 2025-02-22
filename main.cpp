@@ -686,7 +686,7 @@ int main(int argc, char* argv[])
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		if (!_bDisablePPRender)
-			postProcessor->Render(window, A2VIDEO_TEX_UNIT);
+			postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
 		
 		if (Main_IsImGuiOn())
 		{

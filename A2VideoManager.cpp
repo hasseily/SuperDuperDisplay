@@ -1183,7 +1183,7 @@ bool A2VideoManager::SelectSHRShader(const int index)
 
 uXY A2VideoManager::ScreenSize()
 {
-	return uXY({ (uint32_t)output_width, (uint32_t)output_height});
+	return uXY({ (uint32_t)fb_width, (uint32_t)fb_height});
 }
 
 void A2VideoManager::InitializeFullQuad() {

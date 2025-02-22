@@ -348,9 +348,6 @@ private:
 	// The merged framebuffer width is going to be shr + border
 	GLint fb_width = 0;
 	GLint fb_height = 0;
-	// The actual final output width and height
-	GLint output_width = 0;
-	GLint output_height = 0;
 
 	// Overlay strings handling
 	uint8_t overlay_text[_OVERLAY_CHAR_WIDTH *24];	// text for each overlay

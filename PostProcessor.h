@@ -24,7 +24,7 @@ public:
 	}
 	~PostProcessor();
 
-	void Render(SDL_Window* window, GLuint inputTextureSlot);
+	void Render(SDL_Window* window, GLuint inputTextureSlot, GLuint scanlineCount);
 	void DisplayImGuiWindow(bool* p_open);
 	nlohmann::json SerializeState();
 	void DeserializeState(const nlohmann::json &jsonState);
@@ -83,7 +83,7 @@ private:
 	float p_f_bgr = 0.0f;
 	float p_f_black = 0.0f;
 	float p_f_brDep = 0.2f;
-	float p_f_brightness = 2.0f;
+	float p_f_brightness = 1.0f;
 	float p_f_centerX = 0.0f;
 	float p_f_centerY = 0.0f;
 	float p_f_convB = 0.0f;
@@ -99,6 +99,7 @@ private:
 	float p_f_maskSize = 1.0f;
 	float p_f_saturation = 1.0f;
 	float p_f_scanlineWeight = 1.0f;
+	float p_f_scanSpeed = 1.0f;
 	float p_f_interlace = 0.f;
 	float p_f_slotW = 3.0f;
 	float p_f_vignetteWeight = 0.0f;
