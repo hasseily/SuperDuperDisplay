@@ -113,7 +113,6 @@ uniform COMPAT_PRECISION int iM_TYPE;
 uniform COMPAT_PRECISION int iSCANLINE_TYPE;
 
 #define iTime (float(FrameCount) / 60.0)
-#define SCANSPEED 1.0
 #define iResolution OutputSize.xy
 #define fragCoord gl_FragCoord.xy
 
@@ -307,7 +306,7 @@ void main() {
 		return;
 	}
 
-	vec2 q = (TexCoords.xy * TextureSize.xy / InputSize.xy);//fragCoord.xy / iResolution.xy;
+	vec2 q = (TexCoords.xy * TextureSize.xy / InputSize.xy);
     vec2 uv = q;
 	float o =2.0*mod(fragCoord.y,2.0)/iResolution.x;
 
