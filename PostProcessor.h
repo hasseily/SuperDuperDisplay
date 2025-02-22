@@ -100,6 +100,7 @@ private:
 	float p_f_saturation = 1.0f;
 	float p_f_scanlineWeight = 1.0f;
 	float p_f_scanSpeed = 1.0f;
+	float p_f_filmGrain = 0.0f;
 	float p_f_interlace = 0.f;
 	float p_f_slotW = 3.0f;
 	float p_f_vignetteWeight = 0.0f;

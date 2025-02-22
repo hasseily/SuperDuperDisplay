@@ -114,6 +114,7 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_f_saturation", p_f_saturation},
 		{"p_f_scanlineWeight", p_f_scanlineWeight},
 		{"p_f_scanSpeed", p_f_scanSpeed},
+		{"p_f_flimGrain", p_f_filmGrain},
 		{"p_i_scanlineType", p_i_scanlineType},
 		{"p_f_slotW", p_f_slotW},
 		{"p_f_vignetteWeight", p_f_vignetteWeight},
@@ -162,6 +163,7 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_f_saturation = jsonState.value("p_f_saturation", p_f_saturation);
 	p_f_scanlineWeight = jsonState.value("p_f_scanlineWeight", p_f_scanlineWeight);
 	p_f_scanSpeed = jsonState.value("p_f_scanSpeed", p_f_scanSpeed);
+	p_f_filmGrain = jsonState.value("p_f_filmGrain", p_f_filmGrain);
 	p_i_scanlineType = jsonState.value("p_i_scanlineType", p_i_scanlineType);
 	p_f_slotW = jsonState.value("p_f_slotW", p_f_slotW);
 	p_f_vignetteWeight = jsonState.value("p_f_vignetteWeight", p_f_vignetteWeight);
@@ -242,6 +244,7 @@ void PostProcessor::SelectShader()
 		shaderProgram.setFloat("SATURATION", p_f_saturation);
 		shaderProgram.setFloat("SCANLINE_WEIGHT", p_f_scanlineWeight);
 		shaderProgram.setFloat("SCAN_SPEED", p_f_scanSpeed);
+		shaderProgram.setFloat("FILM_GRAIN", p_f_filmGrain);
 		shaderProgram.setFloat("SLOTW", p_f_slotW);
 		shaderProgram.setFloat("VIGNETTE_WEIGHT", p_f_vignetteWeight);
 		shaderProgram.setFloat("INTERLACE_WEIGHT", p_f_interlace);
@@ -569,10 +572,11 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			if (p_i_scanlineType >= 2)
 			{
 				ImGui::SliderFloat("Scanline Weight", &p_f_scanlineWeight, 0.0f, 2.0f, "%.2f");
-				ImGui::SliderFloat("Scanline Speed", &p_f_scanSpeed, 0.0f, 4.0f, "%.2f");
+				ImGui::SliderFloat("Scanline Speed", &p_f_scanSpeed, 0.0f, 2.0f, "%.2f");
+				ImGui::SliderFloat("Film Grain", &p_f_filmGrain, 0.0f, 1.0f, "%.2f");
 				ImGui::SliderFloat("Vignette Weight", &p_f_vignetteWeight, 0.0f, 5.0f, "%.2f");
 				ImGui::SetItemTooltip("Darker sides of the scanlines, works better when there's distortion");
-				ImGui::SliderFloat("Interlacing", &p_f_interlace, 0.0f, 5.0f, "%.2f");
+				ImGui::SliderFloat("Interlacing", &p_f_interlace, 0.0f, 2.0f, "%.2f");
 				ImGui::SetItemTooltip("If you really want to feel the pain of bad refresh rates");
 			}
 

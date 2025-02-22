@@ -83,7 +83,6 @@ uniform COMPAT_PRECISION float BGR;
 uniform COMPAT_PRECISION float BLACK; 
 uniform COMPAT_PRECISION float BR_DEP; 
 uniform COMPAT_PRECISION float BRIGHTNESS;
-uniform COMPAT_PRECISION float CONTRAST;
 uniform COMPAT_PRECISION float C_STR;
 uniform COMPAT_PRECISION float CENTERX;
 uniform COMPAT_PRECISION float CENTERY;
@@ -101,6 +100,7 @@ uniform COMPAT_PRECISION float RG;
 uniform COMPAT_PRECISION float SATURATION;
 uniform COMPAT_PRECISION float SCANLINE_WEIGHT;
 uniform COMPAT_PRECISION float SCAN_SPEED;
+uniform COMPAT_PRECISION float FILM_GRAIN;
 uniform COMPAT_PRECISION float INTERLACE_WEIGHT;
 uniform COMPAT_PRECISION float SLOTW;
 uniform COMPAT_PRECISION float VIGNETTE_WEIGHT;
@@ -113,6 +113,8 @@ uniform COMPAT_PRECISION int iM_TYPE;
 uniform COMPAT_PRECISION int iSCANLINE_TYPE;
 
 #define iTime (float(FrameCount) / 60.0)
+#define SCANSPEED 1.0
+#define iResolution OutputSize.xy
 #define fragCoord gl_FragCoord.xy
 
 vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
@@ -307,13 +309,14 @@ void main() {
 
 	vec2 q = (TexCoords.xy * TextureSize.xy / InputSize.xy);//fragCoord.xy / iResolution.xy;
     vec2 uv = q;
-	float o =2.0*mod(fragCoord.y,2.0)/InputSize.x;
+	float o =2.0*mod(fragCoord.y,2.0)/iResolution.x;
 
 	if (uv.x < 0.0 || uv.x > 1.0)
 		discard;
 	if (uv.y < 0.0 || uv.y > 1.0)
 		discard;
 
+	
 // Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1) {
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
@@ -405,23 +408,41 @@ void main() {
 		// New style scanlines, derived from Mattias' shader
 		// vignette
 		if (VIGNETTE_WEIGHT > 0.00001) {
-			float vig = (0.0 + 1.0*16.0*uv.x*uv.y*(1.0-uv.x)*(1.0-uv.y));
+			float vig = (0.0 + 1.0*16.0*pos.x*pos.y*(1.0-pos.x)*(1.0-pos.y));
 			vig = pow(vig,VIGNETTE_WEIGHT);
 			res *= vec3(vig);
 		}
 
 		if (SCANLINE_WEIGHT > 0.00001) {
-			float scans = clamp( 0.35+0.15*sin(3.5*(iTime * (-SCAN_SPEED))+uv.y*float(ScanlineCount)*2.0*1.5), 0.0, 1.0);
+			float scans = clamp( 0.35+0.15*sin(2.0*(iTime * SCAN_SPEED)+pos.y*float(ScanlineCount)*2.0), 0.0, 1.0);
 			float s = pow(scans,SCANLINE_WEIGHT);
 			res = res*vec3(s);
 		}
+
+		// flicker
+		res *= 1.0+INTERLACE_WEIGHT*sin(300.0*iTime);
+
+		// film grain
+		res *= vec3(1.0) - FILM_GRAIN * vec3(
+					rand(pos + 0.0001 * iTime),
+					rand(pos + 0.0001 * iTime + 0.3),
+					rand(pos + 0.0001 * iTime + 0.5)
+				);
+
+
+		/*
 		if (INTERLACE_WEIGHT > 0.00001) {
 			vec3 ires = res;
-			ires *= 1.0+0.0015*sin(300.0*iTime);
-			ires *= 1.0-0.15*vec3(clamp((mod(fragCoord.x+o, 2.0)-1.0)*2.0,0.0,1.0));
-			ires *= vec3( 1.0 ) - 0.25*vec3( rand( uv+0.0001*iTime),  rand( uv+0.0001*iTime + 0.3 ),  rand( uv+0.0001*iTime+ 0.5 )  );
-			res = pow(ires, vec3(1.0+INTERLACE_WEIGHT));
+			ires *= 1.0-0.15*vec3(clamp((mod(pos.x+o, 2.0)-1.0)*2.0,0.0,1.0));
+
+
+			// res = pow(ires, vec3(0.5+INTERLACE_WEIGHT));
+			float gamma = 0.5 + INTERLACE_WEIGHT;
+			float mid = 0.5;
+			float brightnessCompensation = mid / pow(mid, gamma);
+			res = brightnessCompensation * pow(ires, vec3(gamma));
 		}
+		*/
 	}
 
 	/*
@@ -457,18 +478,16 @@ void main() {
 	if (bSLOT)
 		res *= mix(slot(xy/2.0),vec3(1.0),CGWG);
 
-	// Have to boost the gamma a bit to counterbalance the interlacing etc
+// Fix up the gamma
 	res = sqrt(res);
-	res *= (1.0+INTERLACE_WEIGHT)*mix(1.3,1.1,l);
+	res *= mix(1.3,1.1,l);
 
 // Saturation
 	float lum = dot(vec3(0.29,0.60,0.11),res);
 	res = mix(vec3(lum),res,SATURATION);
 
-// Brightness, Contrast, Hue and Black Level
+// Brightness, Hue and Black Level
 	res *= BRIGHTNESS;
-	res = (res - 0.5) * CONTRAST + 0.5;
-	res = clamp(res, 0.0, 1.0);
 	res *= hue;
 	res -= vec3(BLACK);
 	res *= blck;
