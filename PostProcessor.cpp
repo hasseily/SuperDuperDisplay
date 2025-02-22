@@ -91,7 +91,6 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_b_smoothCorner", p_b_smoothCorner},
 		{"p_b_extGamma", p_b_extGamma},
 		{"p_f_interlace", p_f_interlace},
-		{"p_b_potato", p_b_potato},
 		{"p_b_slot", p_b_slot},
 		{"p_f_bgr", p_f_bgr},
 		{"p_f_black", p_f_black},
@@ -140,7 +139,6 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_b_smoothCorner = jsonState.value("p_b_smoothCorner", p_b_smoothCorner);
 	p_b_extGamma = jsonState.value("p_b_extGamma", p_b_extGamma);
 	p_f_interlace = jsonState.value("p_f_interlace", p_f_interlace);
-	p_b_potato = jsonState.value("p_b_potato", p_b_potato);
 	p_b_slot = jsonState.value("p_b_slot", p_b_slot);
 	p_f_bgr = jsonState.value("p_f_bgr", p_f_bgr);
 	p_f_black = jsonState.value("p_f_black", p_f_black);
@@ -221,7 +219,6 @@ void PostProcessor::SelectShader()
 		shaderProgram.setFloat("BlurSize", p_f_phosphorBlur);
 		shaderProgram.setBool("bCORNER_SMOOTH", p_b_smoothCorner);
 		shaderProgram.setBool("bEXT_GAMMA", p_b_extGamma);
-		shaderProgram.setBool("bPOTATO", p_b_potato);
 		shaderProgram.setBool("bSLOT", p_b_slot);
 		shaderProgram.setFloat("BARRELDISTORTION", p_f_barrelDistortion);
 		shaderProgram.setFloat("BGR", p_f_bgr);
@@ -654,7 +651,6 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::SliderFloat("Convergence Red X-Axis", &p_f_convR, -3.0f, 3.0f, "%.2f");
 			ImGui::SliderFloat("Convergence Green X-axis", &p_f_convG, -3.0f, 3.0f, "%.2f");
 			ImGui::SliderFloat("Convergence Blue X-Axis", &p_f_convB, -3.0f, 3.0f, "%.2f");
-			ImGui::Checkbox("Potato Boost(Simple Gamma, adjust Mask)", &p_b_potato);
 		}
 
 		ImGui::PopItemWidth();
