@@ -29,6 +29,11 @@ public:
 	nlohmann::json SerializeState();
 	void DeserializeState(const nlohmann::json &jsonState);
 
+	// Tells main.cpp to skip flipping the buffers if we are halving the frame rate
+	// This actually skips even frames if ShouldFrameBeSkipped() is called after the frame
+	// is created
+	const bool ShouldFrameBeSkipped() { return (bHalveFramerate && (frame_count & 1) == 1); };
+
 	// public properties
 	std::vector<Shader>v_ppshaders;
 private:
@@ -73,6 +78,7 @@ private:
 	int max_integer_scale = 1;	// Maximum possible integer scale given screen size
 	int integer_scale = 1;		// Base integer scale used
 	bool bAutoScale = true;		// Automatically scale to max scale?
+	bool bHalveFramerate = false;	// Mixes every pair of frames, to avoid page flip flicker
 
 	// Shader parameter variables
 	bool p_b_smoothCorner = false;

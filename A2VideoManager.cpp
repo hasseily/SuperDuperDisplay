@@ -1336,13 +1336,13 @@ GLuint A2VideoManager::Render()
 	// the legacy mode use 16MHz instead of 14MHz for width.
 
 	if (!bIsReady)
-		return UINT32_MAX;
+		return A2VIDEORENDER_ERROR;
 
 	if (!bA2VideoEnabled)
-		return UINT32_MAX;
+		return A2VIDEORENDER_ERROR;
 
 	if (bIsRebooting)
-		return UINT32_MAX;
+		return A2VIDEORENDER_ERROR;
 
 
 	// Exit if we've already rendered the buffer

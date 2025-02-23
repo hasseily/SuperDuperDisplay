@@ -97,6 +97,9 @@ constexpr int _INTERLACE_MULTIPLIER = 2;	// How much to multiply the size of buf
 // Each SHR cycle is 4 bytes, and each byte is 4 pixels (2x2 when in 320 mode)
 constexpr uint32_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
 
+
+constexpr uint32_t A2VIDEORENDER_ERROR = UINT32_MAX;			// render error
+
 class A2VideoManager
 {
 public:

@@ -36,7 +36,7 @@ out vec2 scale;
 out vec2 ps;
 out vec2 v_pos;
 
-uniform COMPAT_PRECISION int FrameCount;
+uniform COMPAT_PRECISION int iFrameCount;
 uniform COMPAT_PRECISION vec2 OutputSize;
 uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
@@ -53,7 +53,7 @@ void main()
 ///////////////////////////////////////// FRAGMENT SHADER /////////////////////////////////////////
 #elif defined(FRAGMENT)
 
-uniform COMPAT_PRECISION int FrameCount;
+uniform COMPAT_PRECISION int iFrameCount;
 uniform COMPAT_PRECISION vec2 OutputSize;
 uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
@@ -62,6 +62,7 @@ uniform COMPAT_PRECISION vec4 VideoRect;
 uniform COMPAT_PRECISION uint ScanlineCount;
 uniform sampler2D A2TextureCurrent;
 uniform sampler2D PreviousFrame;
+uniform bool bHalveFrameRate;
 in vec2 TexCoords;
 in vec2 scale;
 in vec2 ps;
@@ -112,9 +113,42 @@ uniform COMPAT_PRECISION int iCOLOR_SPACE;
 uniform COMPAT_PRECISION int iM_TYPE;
 uniform COMPAT_PRECISION int iSCANLINE_TYPE;
 
-#define iTime (float(FrameCount) / 60.0)
+#define fTime (float(iFrameCount) / 60.0)
 #define iResolution OutputSize.xy
 #define fragCoord gl_FragCoord.xy
+
+// Utility functions to convert from/to sRGB/linear space
+vec3 toLinear(vec3 srgbColor) {
+	return pow(srgbColor, vec3(2.2));
+}
+vec3 toGamma(vec3 linearColor) {
+	return pow(linearColor, vec3(1.0 / 2.2));
+}
+
+// This function merges 2 generated frames: if it's an even frame nothing
+// happens, but an odd frame mixes in the previous even frame at 50%
+// In main.cpp if we halve the frame rate, every even frame is skipped
+// The background buffer isn't flipped and we overwrite it. The end result
+// is that the frame rate is halved, and we only display even+odd during
+// odd frames
+vec4 HalveFrameRate(vec2 coords, vec4 currentColor)
+{
+	if ((iFrameCount & 1) == 1) {
+		vec4 previousColor = texture(PreviousFrame, coords);
+
+		// Convert both colors to linear space
+		vec3 linearCurrent = toLinear(currentColor.rgb);
+		vec3 linearPrevious = toLinear(previousColor.rgb);
+
+		// Perform the mix in linear space
+		vec3 linearMix = (linearCurrent + linearPrevious) * 0.5;
+
+		// Convert the mixed color back to sRGB space
+		vec3 gammaMix = toGamma(linearMix);
+		return vec4(gammaMix, 1.0);
+	}
+	return currentColor;
+}
 
 vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 {
@@ -319,6 +353,8 @@ void main() {
 // Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1) {
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
+		if (bHalveFrameRate)
+			FragColor = HalveFrameRate(TexCoords, FragColor);
 		if (GhostingPercent > 0.0001)
 			FragColor = GenerateGhosting(TexCoords, FragColor);
 		return;
@@ -413,19 +449,19 @@ void main() {
 		}
 
 		if (SCANLINE_WEIGHT > 0.00001) {
-			float scans = clamp( 0.35+0.15*sin(2.0*(iTime * SCAN_SPEED)+pos.y*float(ScanlineCount)*2.0), 0.0, 1.0);
+			float scans = clamp( 0.35+0.15*sin(2.0*(fTime * SCAN_SPEED)+pos.y*float(ScanlineCount)*2.0), 0.0, 1.0);
 			float s = pow(scans,SCANLINE_WEIGHT);
 			res = res*vec3(s);
 		}
 
 		// flicker
-		res *= 1.0+INTERLACE_WEIGHT*sin(300.0*iTime);
+		res *= 1.0+INTERLACE_WEIGHT*sin(300.0*fTime);
 
 		// film grain
 		res *= vec3(1.0) - FILM_GRAIN * vec3(
-					rand(pos + 0.0001 * iTime),
-					rand(pos + 0.0001 * iTime + 0.3),
-					rand(pos + 0.0001 * iTime + 0.5)
+					rand(pos + 0.0001 * fTime),
+					rand(pos + 0.0001 * fTime + 0.3),
+					rand(pos + 0.0001 * fTime + 0.5)
 				);
 
 
@@ -452,8 +488,8 @@ void main() {
 		// handle interlacing
 		float s = fract(pos.y*TextureSize.y/2.001+0.5);
 		if (INTERLACE_WEIGHT > 0.001)
-			s = mod(float(FrameCount),2.0) < 1.0 ? s: fract(s+0.5);
-	
+			s = mod(float(iFrameCount),2.0) < 1.0 ? s: fract(s+0.5);
+
 		// Vignette
 		float x = 0.0;
 		if (VIGNETTE_WEIGHT > 0.001) {
@@ -493,6 +529,9 @@ void main() {
 
 	FragColor = vec4(res, corn);
 
+	if (bHalveFrameRate)
+		FragColor = HalveFrameRate(TexCoords, FragColor);
+	
 	if (GhostingPercent > 0) {
 		FragColor = GenerateGhosting(TexCoords, FragColor);
 	}

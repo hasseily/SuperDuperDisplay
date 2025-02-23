@@ -667,13 +667,13 @@ int main(int argc, char* argv[])
 		GLuint A2VIDEO_TEX_UNIT = 0;
 		if (!_bDisableVideoRender)
 		{
-			if (sdhrManager->IsSdhrEnabled())
-				A2VIDEO_TEX_UNIT = sdhrManager->Render();
-			else
-				A2VIDEO_TEX_UNIT = a2VideoManager->Render();
+			// if (sdhrManager->IsSdhrEnabled())
+			// 		A2VIDEO_TEX_UNIT = sdhrManager->Render();
+			// else
+			A2VIDEO_TEX_UNIT = a2VideoManager->Render();
 		}
 
-		if (A2VIDEO_TEX_UNIT == UINT32_MAX)
+		if (A2VIDEO_TEX_UNIT == A2VIDEORENDER_ERROR)
 			std::cerr << "ERROR: NO RENDERER OUTPUT!" << std::endl;
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -687,7 +687,7 @@ int main(int argc, char* argv[])
 
 		if (!_bDisablePPRender)
 			postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
-		
+
 		if (Main_IsImGuiOn())
 		{
 			menu->Render();
@@ -702,7 +702,15 @@ int main(int argc, char* argv[])
 				SDL_ShowCursor(SDL_ENABLE);
 		}
 
-		SDL_GL_SwapWindow(window);
+		if (!postProcessor->ShouldFrameBeSkipped())
+		{
+			// This is for halving the frame rate
+			// If we're halving the frame rate, then even frames do not display
+			// They're rendered in the postprocessing phase and copied to the prev_texture
+			// but they're not displayed. Then on the next odd frame, both are mixed
+			// at 50% and output
+			SDL_GL_SwapWindow(window);
+		}
 
 		// FRAME COUNTS, FREQUENCY AND RATES
 		fps_frame_count++;

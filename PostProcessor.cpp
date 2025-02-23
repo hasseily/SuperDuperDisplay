@@ -363,10 +363,11 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 
 	// Used for all PP shaders
 	shaderProgram.setInt("A2TextureCurrent", texUnitCurrent - GL_TEXTURE0);
+	shaderProgram.setInt("PreviousFrame", _TEXUNIT_PP_PREVIOUS - GL_TEXTURE0);
+	shaderProgram.setInt("iFrameCount", frame_count);
+	shaderProgram.setBool("bHalveFrameRate", bHalveFramerate);
 	// Only used for the full PP shader
 	if (p_i_postprocessingLevel > 1) {
-		shaderProgram.setInt("PreviousFrame", _TEXUNIT_PP_PREVIOUS - GL_TEXTURE0);
-		shaderProgram.setInt("FrameCount", frame_count);
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
 		shaderProgram.setUInt("ScanlineCount", scanlineCount);
 	}
@@ -549,6 +550,12 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		ImGui::SliderInt("Integer Scale", &integer_scale, 1, max_integer_scale, "%d");
 		if (bAutoScale)
 			ImGui::EndDisabled();
+
+		ImGui::Separator();
+
+		ImGui::Text("[ FRAME MERGING ]");
+		ImGui::Checkbox("Merge Frame Pairs", &bHalveFramerate);
+		ImGui::SetItemTooltip("Merges every pair of even and odd frames. Effectively halves the frame rate but removes any flickering associated with page flipping images");
 
 		if (p_i_postprocessingLevel == 2) {
 			ImGui::Separator();
