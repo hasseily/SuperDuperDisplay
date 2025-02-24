@@ -42,8 +42,7 @@
 #include <libgen.h>
 #endif
 
-static bool g_swapInterval = true;  // VSYNC
-static bool g_adaptiveVsync = true;
+static SwapInterval_e g_swapInterval = SWAPINTERVAL_ADAPTIVE;
 static bool g_quitIsRequested = false;
 static uint32_t g_fpsLimit = UINT32_MAX;
 float window_bgcolor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
@@ -110,25 +109,39 @@ void Main_SetFPSLimit(uint32_t fps)
 	g_fpsLimit = fps;
 }
 
-int Main_GetVsync()
+SwapInterval_e Main_GetVsync()
 {
-	return SDL_GL_GetSwapInterval();
+	return g_swapInterval;
 }
 
-void Main_SetVsync(bool _on)
+void Main_SetVsync(SwapInterval_e _vsync)
 {
-	// If vsync requested, try to make it adaptive vsync first
-	if (_on)
-	{
-		g_adaptiveVsync = (SDL_GL_SetSwapInterval(-1) == 0);	// adaptive
-		if (g_adaptiveVsync) {
-			g_swapInterval = true;
-		} else {
-			g_swapInterval = (SDL_GL_SetSwapInterval(1) == 0);	// VSYNC
-		}
+	int _si = -1;
+	switch (_vsync) {
+		case SWAPINTERVAL_NONE:
+			_si = SDL_GL_SetSwapInterval(0);	// no vsync
+			if (_si == 0)
+				g_swapInterval = SWAPINTERVAL_NONE;
+			break;
+		case SWAPINTERVAL_VSYNC:
+			_si = SDL_GL_SetSwapInterval(1);	// VSYNC
+			if (_si == 0)
+				g_swapInterval = SWAPINTERVAL_VSYNC;
+			break;
+		case SWAPINTERVAL_APPLE2BUS:
+			_si = SDL_GL_SetSwapInterval(0);	// no vsync
+			if (_si == 0)
+				g_swapInterval = SWAPINTERVAL_APPLE2BUS;
+			break;
+		default:	// SWAPINTERVAL_ADAPTIVE
+			// If adaptive vsync is requested, it may not be possible
+			_si = SDL_GL_SetSwapInterval(-1);	// VSYNC
+			if (_si == 0)
+				g_swapInterval = SWAPINTERVAL_ADAPTIVE;
+			else
+				Main_SetVsync(SWAPINTERVAL_VSYNC);
+			break;
 	}
-	else
-		g_swapInterval = (SDL_GL_SetSwapInterval(0) != 0);		// no VSYNC
 	
 	Main_ResetFPSCalculations();
 }
@@ -479,7 +492,7 @@ int main(int argc, char* argv[])
 			g_ww = _sm.value("window width", g_ww);
 			g_wh = _sm.value("window height", g_wh);
 			g_fpsLimit = _sm.value("fps limit", g_fpsLimit);
-			g_swapInterval = _sm.value("vsync", g_swapInterval);
+			g_swapInterval = (SwapInterval_e)_sm.value("vsync", (int)g_swapInterval);
 			Main_SetVsync(g_swapInterval);
 			// make sure the requested mode is acceptable
 			SDL_DisplayMode newMode;
@@ -665,12 +678,13 @@ int main(int argc, char* argv[])
 		// texture unit used by the main renderer,
 		// to send to postprocessing
 		GLuint A2VIDEO_TEX_UNIT = 0;
+		bool a2VideoDidRender = false;
 		if (!_bDisableVideoRender)
 		{
 			// if (sdhrManager->IsSdhrEnabled())
 			// 		A2VIDEO_TEX_UNIT = sdhrManager->Render();
 			// else
-			A2VIDEO_TEX_UNIT = a2VideoManager->Render();
+			a2VideoDidRender = a2VideoManager->Render(A2VIDEO_TEX_UNIT);
 		}
 
 		if (A2VIDEO_TEX_UNIT == A2VIDEORENDER_ERROR)
@@ -685,8 +699,18 @@ int main(int argc, char* argv[])
 			window_bgcolor[3]);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		// Now run the postprocessing.
+		// If we asked for the Apple 2 bus vsync, then only post process if the A2 renderer ran
 		if (!_bDisablePPRender)
-			postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
+		{
+			if (g_swapInterval == SWAPINTERVAL_APPLE2BUS)
+			{
+				if (a2VideoDidRender)
+					postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
+			} else {
+				postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
+			}
+		}
 
 		if (Main_IsImGuiOn())
 		{
@@ -716,7 +740,7 @@ int main(int argc, char* argv[])
 		fps_frame_count++;
 		dt_LAST = dt_NOW;
 		auto _pfreq = SDL_GetPerformanceFrequency();
-		if (!g_swapInterval)
+		if (g_swapInterval == SWAPINTERVAL_NONE)
 		{
 			// Allow for custom FPS when not in VSYNC
 			while (true)
@@ -789,7 +813,7 @@ int main(int argc, char* argv[])
 			{"fullscreen refresh rate", g_fullscreenMode.refresh_rate},
 			{"fullscreen", _isFullscreen},
 			{"fps limit", g_fpsLimit},
-			{"vsync", g_swapInterval},
+			{"vsync", (int)g_swapInterval},
 			{"videoregion", (int)cycleCounter->GetVideoRegion()},
 			{"window background color", window_bgcolor},
 			{"show F1 window", Main_IsImGuiOn()},

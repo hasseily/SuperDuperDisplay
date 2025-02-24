@@ -47,6 +47,15 @@
 typedef struct uixy { uint32_t x; uint32_t y; } uXY;
 typedef struct ixy { int32_t x; int32_t y; } iXY;
 
+enum SwapInterval_e
+{
+	SWAPINTERVAL_ADAPTIVE = -1,	// Adaptive vsync
+	SWAPINTERVAL_NONE,
+	SWAPINTERVAL_VSYNC,			// regular vsync
+	SWAPINTERVAL_APPLE2BUS,		// VSYNC to Apple 2 bus
+	SWAPINTERVAL_TOTAL_COUNT
+};
+
 // Apple 2 frequency
 #define _A2_CPU_FREQUENCY_NTSC 1'020'484
 #define _A2_CPU_FREQUENCY_PAL 1'015'625

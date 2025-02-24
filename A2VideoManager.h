@@ -214,8 +214,8 @@ public:
 	uint8_t* GetSHRVRAMWritePtr() { return vrams_write->vram_shr; };
 	uint8_t* GetSHRVRAMInterlacedWritePtr() { return vrams_write->vram_shr + sizeof(vrams_write->vram_shr) / _INTERLACE_MULTIPLIER; };
 	GLfloat* GetOffsetBufferWritePtr() { return vrams_write->offset_buffer; };
-	GLuint GetOutputTextureId();	// merged output
-	GLuint Render();				// returns the texture unit used
+	GLuint GetOutputTextureId();		// merged output
+	bool Render(GLuint &texUnit);	// outputs the texture unit used, and returns if it rendered or not
 
 	inline uint32_t GetVramWidthLegacy() { return (40 + (2 * borders_w_cycles)); };	// in 4 bytes!
 	inline uint32_t GetVramHeightLegacy() { return  (192 + (2 * borders_h_scanlines)); };

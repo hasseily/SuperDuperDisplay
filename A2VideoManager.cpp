@@ -1326,7 +1326,7 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 	// std::cerr << "Generated two FBOs with size " << fb_width << " x " << fb_height << std::endl;
 }
 
-GLuint A2VideoManager::Render()
+bool A2VideoManager::Render(GLuint &_texUnit)
 {
 	// We first render both the legacy and shr "windows" as textures
 	// (which ever one of the two, or both, is enabled for this frame)
@@ -1335,19 +1335,18 @@ GLuint A2VideoManager::Render()
 	// directly and avoid all the mess, unless the user has requested that
 	// the legacy mode use 16MHz instead of 14MHz for width.
 
-	if (!bIsReady)
-		return A2VIDEORENDER_ERROR;
-
-	if (!bA2VideoEnabled)
-		return A2VIDEORENDER_ERROR;
-
-	if (bIsRebooting)
-		return A2VIDEORENDER_ERROR;
-
+	if ((!bIsReady) || (!bA2VideoEnabled) || bIsRebooting)
+	{
+		_texUnit = A2VIDEORENDER_ERROR;
+		return false;
+	}
 
 	// Exit if we've already rendered the buffer
 	if ((rendered_frame_idx == vrams_read->frame_idx) && !bAlwaysRenderBuffer)
-		return _TEXUNIT_POSTPROCESS;
+	{
+		_texUnit = _TEXUNIT_POSTPROCESS;
+		return false;
+	}
 	if ((rendered_frame_idx == vrams_read->frame_idx) && bAlwaysRenderBuffer)
 		this->ForceBeamFullScreenRender();
 
@@ -1582,7 +1581,8 @@ GLuint A2VideoManager::Render()
 	rendered_frame_idx = vrams_read->frame_idx;
 	vrams_read->bWasRendered = true;
 
-	return _TEXUNIT_POSTPROCESS;
+	_texUnit = _TEXUNIT_POSTPROCESS;
+	return true;
 }
 
 GLuint A2VideoManager::GetOutputTextureId()

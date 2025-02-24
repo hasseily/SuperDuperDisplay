@@ -29,8 +29,8 @@ extern SDL_DisplayMode Main_GetFullScreenMode();
 extern void Main_SetFullScreenMode(SDL_DisplayMode mode);
 extern bool Main_IsFullScreen();
 extern void Main_SetFullScreen(bool bIsFullscreen);
-extern int Main_GetVsync();
-extern void Main_SetVsync(bool _on);
+extern SwapInterval_e Main_GetVsync();
+extern void Main_SetVsync(SwapInterval_e _vsync);
 extern void Main_DisplaySplashScreen();
 extern void Main_GetBGColor(float outColor[4]);
 extern void Main_SetBGColor(const float newColor[4]);
@@ -217,9 +217,13 @@ void MainMenu::Render() {
 			screen_width, screen_height
 		);
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
+		// If the frame rate is halved, io.Framerate would display twice the framerate
+		// because we're flipping backbuffers half as much. So we need to divide by 4
+		// to get the real frame rate
+		auto realFrameRate = (PostProcessor::GetInstance()->IsFrameRateHalved() ? io.Framerate / 2.0f : io.Framerate);
 		ImGui::Text("FrameID: %d, Avg %.3f ms/f (%.1f FPS)",
 					A2VideoManager::GetInstance()->GetVRAMReadId(),
-					1000.0f / io.Framerate, io.Framerate);
+					1000.0f / realFrameRate, realFrameRate);
 		ImGui::PopFont();
 		
 		ImGui::EndMainMenuBar();
@@ -582,24 +586,36 @@ void MainMenu::ShowSDDMenu() {
 		ImGui::EndMenu();
 	}
 #endif
-	int iMMVsync = Main_GetVsync();
-	bool bMMVsync = (iMMVsync == 0 ? 0 : 1);
-	if (ImGui::Checkbox("VSYNC", &bMMVsync)) {
-		Main_SetVsync(bMMVsync);
+	SwapInterval_e iMMVsync = Main_GetVsync();
+	int bMMVsync = 0;
+	if (iMMVsync == SWAPINTERVAL_VSYNC || iMMVsync == SWAPINTERVAL_ADAPTIVE)
+		bMMVsync = 1;
+	else if (iMMVsync == SWAPINTERVAL_APPLE2BUS)
+		bMMVsync = 2;
+	if (ImGui::RadioButton("VSYNC Monitor", &bMMVsync, 1)) {
+		Main_SetVsync(SWAPINTERVAL_ADAPTIVE);
 		iMMVsync = Main_GetVsync();
 	}
-	if (bMMVsync)
+	ImGui::SetItemTooltip("Standard monitor VSYNC, uses adaptive VSYNC when available. \nThis is the default. The Apple 2 renderer still renders at the speed of the \nApple 2 bus, but the final postprocessing is done at the monitor's VSYNC speed");
+	if (iMMVsync == SWAPINTERVAL_VSYNC || iMMVsync == SWAPINTERVAL_ADAPTIVE)
 	{
-		ImGui::SameLine();
-		ImGui::Text("On");
-		if (iMMVsync)
+		if (iMMVsync == SWAPINTERVAL_ADAPTIVE)
 		{
 			ImGui::SameLine();
 			ImGui::Text("(Adaptive)");
 		}
 	}
-	if (bMMVsync)
+	if (ImGui::RadioButton("VSYNC Appletini", &bMMVsync, 2)) {
+		Main_SetVsync(SWAPINTERVAL_APPLE2BUS);
+	}
+	ImGui::SetItemTooltip("Syncs to the Apple 2's bus. Everything will run at PAL \nor NTSC refresh rates, depending on your Apple 2 version");
+	if (ImGui::RadioButton("No VSYNC", &bMMVsync, 0)) {
+		Main_SetVsync(SWAPINTERVAL_NONE);
+	}
+	ImGui::SetItemTooltip("VSYNC disabled. You can choose your own postprocessing refresh speed. \nNot recommended unless you're testing your setup's maximum performance, \nor want to see what would happen if your Apple 2 were to be connected \nto a very slow refresh rate monitor");
+	if (bMMVsync > 0)
 		ImGui::BeginDisabled(true);
+	ImGui::SameLine();ImGui::Spacing();ImGui::SameLine();
 	if (ImGui::BeginMenu("FPS Limiter")) {
 		pGui->iFPSLimiter = Main_GetFPSLimit();
 		if (ImGui::RadioButton("Disabled##FPSLIMIT", &pGui->iFPSLimiter, UINT32_MAX))
@@ -616,6 +632,10 @@ void MainMenu::ShowSDDMenu() {
 			Main_SetFPSLimit(50);
 		if (ImGui::RadioButton("60 Hz##FPSLIMIT", &pGui->iFPSLimiter, 60))
 			Main_SetFPSLimit(60);
+		if (ImGui::RadioButton("100 Hz##FPSLIMIT", &pGui->iFPSLimiter, 100))
+			Main_SetFPSLimit(100);
+		if (ImGui::RadioButton("120 Hz##FPSLIMIT", &pGui->iFPSLimiter, 120))
+			Main_SetFPSLimit(120);
 		ImGui::EndMenu();
 	}
 	if (bMMVsync)
@@ -670,6 +690,7 @@ void MainMenu::ShowMotherboardMenu() {
 		{
 			cycleCounter->SetVBLStart(vbl_slider_val);
 		}
+		ImGui::SetItemTooltip("Press the '-' button to keep shifting the VBL earlier in the frame \nto realign it manually");
 		ImGui::Separator();
 		ImGui::EndMenu();
 	}
@@ -796,6 +817,7 @@ void MainMenu::ShowSamplesMenu() {
 		memManager->SetSoftSwitch(A2SS_TEXT, false);
 		memManager->SetSoftSwitch(A2SS_HIRES, false);
 		std::ifstream animationFile("recordings/anim00032#C20000", std::ios::binary);
+		pGui->bShowEventRecorderWindow = true;
 		eventRecorder->ReadPaintWorksAnimationsFile(animationFile);
 	}
 	auto _smtext = (pGui->bSampleRunKarateka ? "Stop Karateka Demo" : "Run Karateka Demo");

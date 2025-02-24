@@ -33,6 +33,7 @@ public:
 	// This actually skips even frames if ShouldFrameBeSkipped() is called after the frame
 	// is created
 	const bool ShouldFrameBeSkipped() { return (bHalveFramerate && (frame_count & 1) == 1); };
+	const bool IsFrameRateHalved() { return bHalveFramerate; };
 
 	// public properties
 	std::vector<Shader>v_ppshaders;
