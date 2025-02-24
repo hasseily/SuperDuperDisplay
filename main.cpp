@@ -440,13 +440,21 @@ int main(int argc, char* argv[])
 	// This ensures thread safety
 	// The OpenGLHelper instance is already acquired
 	[[maybe_unused]] auto memManager = MemoryManager::GetInstance();
+	std::cout << "Loaded MemoryManager " << memManager << std::endl;
 	[[maybe_unused]] auto sdhrManager = SDHRManager::GetInstance();
+	std::cout << "Loaded SDHRManager " << sdhrManager << std::endl;
 	[[maybe_unused]] auto a2VideoManager = A2VideoManager::GetInstance();
+	std::cout << "Loaded A2VideoManager " << a2VideoManager << std::endl;
 	[[maybe_unused]] auto postProcessor = PostProcessor::GetInstance();
+	std::cout << "Loaded PostProcessor " << postProcessor << std::endl;
 	[[maybe_unused]] auto eventRecorder = EventRecorder::GetInstance();
+	std::cout << "Loaded EventRecorder " << eventRecorder << std::endl;
 	[[maybe_unused]] auto cycleCounter = CycleCounter::GetInstance();
+	std::cout << "Loaded CycleCounter " << cycleCounter << std::endl;
 	[[maybe_unused]] auto soundManager = SoundManager::GetInstance();
+	std::cout << "Loaded SoundManager " << soundManager << std::endl;
 	[[maybe_unused]] auto mockingboardManager = MockingboardManager::GetInstance();
+	std::cout << "Loaded MockingboardManager " << mockingboardManager << std::endl;
 
 	std::cout << "Renderer Initializing..." << std::endl;
 	while (!a2VideoManager->IsReady())
