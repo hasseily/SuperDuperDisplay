@@ -280,8 +280,10 @@ static void Main_ToggleImGui(SDL_GLContext gl_context)
 void Main_ResetA2SS() {
 	auto a2VideoManager = A2VideoManager::GetInstance();
 	auto memManager = MemoryManager::GetInstance();
+	EventRecorder::GetInstance()->StopReplay();
 
-	memManager->SetSoftSwitch(A2SS_TEXT, true);
+	memManager->SetSoftSwitch(A2SS_SHR, false);
+	memManager->SetSoftSwitch(A2SS_TEXT, false);
 	memManager->SetSoftSwitch(A2SS_80STORE, false);
 	memManager->SetSoftSwitch(A2SS_RAMRD, false);
 	memManager->SetSoftSwitch(A2SS_RAMWRT, false);
@@ -294,13 +296,13 @@ void Main_ResetA2SS() {
 	memManager->SetSoftSwitch(A2SS_HIRES, false);
 	memManager->SetSoftSwitch(A2SS_DHGR, false);
 	memManager->SetSoftSwitch(A2SS_DHGRMONO, false);
-	memManager->SetSoftSwitch(A2SS_SHR, false);
 	memManager->SetSoftSwitch(A2SS_GREYSCALE, false);
 	a2VideoManager->bUseDHGRCOL140Mixed = false;
 	a2VideoManager->bUseHGRSPEC1 = false;
 	a2VideoManager->bUseHGRSPEC2 = false;
 	a2VideoManager->bDEMOMergedMode = false;
 	a2VideoManager->bAlignQuadsToScanline = false;
+	memManager->SetSoftSwitch(A2SS_TEXT, true);
 }
 
 // Main code
@@ -703,7 +705,7 @@ int main(int argc, char* argv[])
 		// If we asked for the Apple 2 bus vsync, then only post process if the A2 renderer ran
 		if (!_bDisablePPRender)
 		{
-			if (g_swapInterval == SWAPINTERVAL_APPLE2BUS)
+			if ((g_swapInterval == SWAPINTERVAL_APPLE2BUS) && tini_is_ok())
 			{
 				if (a2VideoDidRender)
 					postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
@@ -740,13 +742,24 @@ int main(int argc, char* argv[])
 		fps_frame_count++;
 		dt_LAST = dt_NOW;
 		auto _pfreq = SDL_GetPerformanceFrequency();
+		// Allow for custom FPS when not in VSYNC
 		if (g_swapInterval == SWAPINTERVAL_NONE)
 		{
-			// Allow for custom FPS when not in VSYNC
 			while (true)
 			{
 				if ((SDL_GetPerformanceCounter() - dt_LAST) >=
 					(_pfreq / g_fpsLimit))
+					break;
+			}
+		}
+		// And if we've requested to sync to the tini, and it's not ready,
+		// max the fps at 60
+		if ((g_swapInterval == SWAPINTERVAL_APPLE2BUS) && !tini_is_ok())
+		{
+			while (true)
+			{
+				if ((SDL_GetPerformanceCounter() - dt_LAST) >=
+					(_pfreq / 60))
 					break;
 			}
 		}
