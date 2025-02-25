@@ -277,12 +277,12 @@ void main()
 	uint xpos = uint(vFragPos.x + xOffsetMerge);
 	uint ypos = uint(vFragPos.y);
     uint scanline = ypos >> 1;  // Divide by 2, there are 200 scanlines
-	uint isInterlaceSHR4 = (doubleSHR4Mode == 1 ? 1 : 0);
-	uint isPageFlipSHR4 = (doubleSHR4Mode == 2 ? 1 : 0);
-	uint yOffsetLines = 0;
-	if (isInterlaceSHR4 == 1)	// the offset is used for odd lines (i.e. use bank E0 for odd lines)
+	uint isInterlaceSHR4 = (doubleSHR4Mode == 1 ? 1u : 0u);
+	uint isPageFlipSHR4 = (doubleSHR4Mode == 2 ? 1u : 0u);
+	uint yOffsetLines = 0u;
+	if (isInterlaceSHR4 == 1u)	// the offset is used for odd lines (i.e. use bank E0 for odd lines)
 		yOffsetLines = uint(doubleSHR4YOffset) * (ypos & 1u);
-	if (isPageFlipSHR4 == 1)	// the offset is used for odd frames
+	if (isPageFlipSHR4 == 1u)	// the offset is used for odd frames
 		yOffsetLines = uint(doubleSHR4YOffset) * (uint(frameIsOdd));
 
     // First do the borders
@@ -412,7 +412,7 @@ void main()
 				// no interlace, interlace when in even lines, interlace when in odd lines
 				// Offset 2 is the center line where the frag pixel is
 				int RGGBYOffsets[5] = int[5](-2,-1,0,1,2);
-				if (isInterlaceSHR4 == 1)
+				if (isInterlaceSHR4 == 1u)
 				{
 					if ((ypos_noborder & 1u) == 0u)	// even row
 					{
@@ -530,7 +530,7 @@ void main()
                     // The `colors` mat4 now contains the color values around the origin pixel
 
                     // Switch to 640x200, from 640x400 if not interlaced
-					if (isInterlaceSHR4 == 0)
+					if (isInterlaceSHR4 == 0u)
 						ypos = ypos >> 1;
                     if (((xpos & 1u) == 0u) && ((ypos & 1u) == 0u))
                     {
@@ -621,7 +621,7 @@ void main()
 
                     // Switch to 320x200 or 320x400 (interlaced), from 640x400
                     xpos = xpos >> 1;
-					if (isInterlaceSHR4 == 0)
+					if (isInterlaceSHR4 == 0u)
 						ypos = ypos >> 1;
                     if (((xpos & 1u) == 0u) && ((ypos & 1u) == 0u))
                     {
@@ -667,10 +667,10 @@ void main()
 				// Both pixels use the same color. PAL256TEX is a R16UI
 				// The reason the CPU pregenerates the colors is that they depend on the state of
 				// all the palettes at the time of the beam cycle.
-				uint yPal256OffsetLines = 0;
-				if (isInterlaceSHR4 == 1)	// the offset is used for odd lines
+				uint yPal256OffsetLines = 0u;
+				if (isInterlaceSHR4 == 1u)	// the offset is used for odd lines
 					yPal256OffsetLines = uint(doublePal256YOffset) * (ypos_noborder & 1u);
-				if (isPageFlipSHR4 == 1)		// the offset is used for odd frames
+				if (isPageFlipSHR4 == 1u)		// the offset is used for odd frames
 					yPal256OffsetLines = uint(doublePal256YOffset) * (uint(ticks) & 1u);
 				uint pal256Word = texelFetch(PAL256TEX,ivec2(xpos_noborder >> 2, (ypos_noborder >> 1) + yPal256OffsetLines),0).r;
 				fragColor = ConvertIIgs2RGB(pal256Word);
