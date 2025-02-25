@@ -18,3 +18,4 @@ Use the included Makefile. Check the comments at the top.
 - COL160 DHGR Video-7 mode?
 - For non-border pixels, use 4 border color bits in VRAM to store Video-7 & EVE registers
 - VidHD Text modes
+
