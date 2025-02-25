@@ -195,10 +195,13 @@ bool Main_IsFullScreen() {
 void Main_SetFullScreen(bool bWantFullscreen) {
 #if defined(__LINUX__)
 	// Only change resolution under linux console mode
-	const char* video_driver = SDL_GetCurrentVideoDriver();
-	if (strcmp(video_driver, "KMSDRM") == 0) {
-		SDL_SetWindowDisplayMode(window, &g_fullscreenMode);
-		return;
+	if (bWantFullscreen)
+	{
+		const char* video_driver = SDL_GetCurrentVideoDriver();
+		if (strcmp(video_driver, "KMSDRM") == 0) {
+			SDL_SetWindowDisplayMode(window, &g_fullscreenMode);
+			return;
+		}
 	}
 #endif
 	// Don't do anything if it's already in the requested state.
