@@ -566,7 +566,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 
 		ImGui::Text("[ FRAME MERGING ]");
 		ImGui::Checkbox("Merge Frame Pairs", &bHalveFramerate);
-		ImGui::SetItemTooltip("Merges every pair of even and odd frames. Effectively halves the frame rate but removes any flickering associated with page flipping images");
+		ImGui::SetItemTooltip("WARNING: SIGNIFICANT FPS IMPACT! \nMerges every pair of even and odd frames. Effectively halves the frame rate but removes any flickering associated with page flipping images");
 
 		if (p_i_postprocessingLevel == 2) {
 			ImGui::Separator();
@@ -612,7 +612,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 				// The mapping (1 - (1-x)^4) gives finer control near 100.
 				p_f_ghostingPercent = 100.0f - 100.0f * powf(1.0f - _ghostingSV/100.f, 4.0f);
 			}
-			ImGui::SetItemTooltip("Mix in a bit of ghosting to smooth bad framerates. Overdo it for the Apple /// monitor");
+			ImGui::SetItemTooltip("WARNING: SIGNIFICANT FPS IMPACT! \nMix in a bit of ghosting to smooth animations. \nOverdo it to emulate the Apple /// monitor!");
 
 			ImGui::Separator();
 			
