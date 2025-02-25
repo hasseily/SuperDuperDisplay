@@ -172,6 +172,8 @@ vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 }
 
 vec4 PhosphorBlur(sampler2D tex, vec2 uv, vec2 resolution, float blurAmount) {
+	return textureLod(tex, uv, blurAmount);
+	/* if we don't generate the LOD for the texture
     vec2 texelSize = 1.0 / resolution;
     vec2 offset = texelSize * blurAmount;
     
@@ -190,6 +192,7 @@ vec4 PhosphorBlur(sampler2D tex, vec2 uv, vec2 resolution, float blurAmount) {
     color += texture(tex, uv + offset * vec2( 1.0,  1.0)) * 0.05;
 
     return color;
+	*/
 }
 
 vec3 Mask(vec2 pos, float CGWG) {

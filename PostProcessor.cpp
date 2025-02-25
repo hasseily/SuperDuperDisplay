@@ -400,44 +400,55 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		std::cerr << "OpenGL error PP 3: " << glerr << std::endl;
 	}
 
-	// Compute the pixel boundaries of the quad from its normalized coordinates.
-	// The conversion from normalized device coordinates (range [-1,1]) to pixel coordinates is:
-	//    pixel = (ndc * 0.5 + 0.5) * viewportDimension
-	int quadLeft   = (int)lround((quadViewportCoords.x * 0.5f + 0.5f) * viewportWidth);
-	int quadRight  = (int)lround((quadViewportCoords.z * 0.5f + 0.5f) * viewportWidth);
-	int quadTop    = (int)lround((quadViewportCoords.y * 0.5f + 0.5f) * viewportHeight);
-	int quadBottom = (int)lround((quadViewportCoords.w * 0.5f + 0.5f) * viewportHeight);
+	/////////////////////////// BEGIN PREVIOUS FRAME TEXTURE ///////////////////////////
 
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO_prevFrame);
-	glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, quadRight-quadLeft, quadBottom-quadTop, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, prevFrame_texture_id, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error PP 4: " << glerr << std::endl;
+	// DO NOT COPY INTO THE PREVIOUS FRAME TEXTURE UNLESS IT IS REQUIRED
+	// THIS _DRAMATICALLY_ REDUCES THE FPS ON A RASPBERRY PI
+	if ((p_f_ghostingPercent > 0.0000001f) || bHalveFramerate)
+	{
+		// Compute the pixel boundaries of the quad from its normalized coordinates.
+		// The conversion from normalized device coordinates (range [-1,1]) to pixel coordinates is:
+		//    pixel = (ndc * 0.5 + 0.5) * viewportDimension
+		int quadLeft = (int)lround((quadViewportCoords.x * 0.5f + 0.5f) * viewportWidth);
+		int quadRight = (int)lround((quadViewportCoords.z * 0.5f + 0.5f) * viewportWidth);
+		int quadTop = (int)lround((quadViewportCoords.y * 0.5f + 0.5f) * viewportHeight);
+		int quadBottom = (int)lround((quadViewportCoords.w * 0.5f + 0.5f) * viewportHeight);
+
+
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_prevFrame);
+		glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, quadRight - quadLeft, quadBottom - quadTop, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, prevFrame_texture_id, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP 4: " << glerr << std::endl;
+		}
+		// Always bind the previous frame texture to its dedicated texture unit
+		glActiveTexture(_TEXUNIT_PP_PREVIOUS);
+		glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
+		glActiveTexture(GL_TEXTURE0);
+
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP 5: " << glerr << std::endl;
+		}
+
+		// Now copy the screen texture to prevFrame_texture_id, to use it for the next frame
+		// NOTE: prevFrame is flipped on the Y axis, so we flip Y on the destination to realign it
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO_prevFrame);
+		glBlitFramebuffer(quadLeft, quadTop, quadRight, quadBottom,	// source rectangle (quad region)
+			0, quadBottom - quadTop, quadRight - quadLeft, 0,				// destination rectangle (Y flipped)
+			GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP glBlitFramebuffer: " << glerr << std::endl;
+		}
 	}
-	// Always bind the previous frame texture to its dedicated texture unit
-	glActiveTexture(_TEXUNIT_PP_PREVIOUS);
-	glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
-	glActiveTexture(GL_TEXTURE0);
 
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error PP 5: " << glerr << std::endl;
-	}
+	//////////////////////////// END OF PREVIOUS FRAME TEXTURE ///////////////////////////
 
-	// Now copy the screen texture to prevFrame_texture_id, to use it for the next frame
-	// NOTE: prevFrame is flipped on the Y axis, so we flip Y on the destination to realign it
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO_prevFrame);
-	glBlitFramebuffer(quadLeft, quadTop, quadRight, quadBottom,	// source rectangle (quad region)
-		0, quadBottom - quadTop, quadRight-quadLeft, 0,				// destination rectangle (Y flipped)
-		GL_COLOR_BUFFER_BIT, GL_NEAREST);
-
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL error PP glBlitFramebuffer: " << glerr << std::endl;
-	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);

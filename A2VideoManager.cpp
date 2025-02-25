@@ -1533,7 +1533,8 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
-
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glGenerateMipmap(GL_TEXTURE_2D);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2VideoManager Bind Texture error: " << glerr << std::endl;
