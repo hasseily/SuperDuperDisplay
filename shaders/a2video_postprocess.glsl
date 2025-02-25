@@ -36,7 +36,7 @@ out vec2 scale;
 out vec2 ps;
 out vec2 v_pos;
 
-uniform COMPAT_PRECISION int FrameCount;
+uniform COMPAT_PRECISION int iFrameCount;
 uniform COMPAT_PRECISION vec2 OutputSize;
 uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
@@ -53,13 +53,16 @@ void main()
 ///////////////////////////////////////// FRAGMENT SHADER /////////////////////////////////////////
 #elif defined(FRAGMENT)
 
-uniform COMPAT_PRECISION int FrameCount;
+uniform COMPAT_PRECISION int iFrameCount;
 uniform COMPAT_PRECISION vec2 OutputSize;
 uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
 uniform COMPAT_PRECISION vec2 ViewportSize;
 uniform COMPAT_PRECISION vec4 VideoRect;
-uniform sampler2D A2Texture;
+uniform COMPAT_PRECISION uint ScanlineCount;
+uniform sampler2D A2TextureCurrent;
+uniform sampler2D PreviousFrame;
+uniform bool bHalveFrameRate;
 in vec2 TexCoords;
 in vec2 scale;
 in vec2 ps;
@@ -68,9 +71,11 @@ out vec4 FragColor;
 
 uniform COMPAT_PRECISION int POSTPROCESSING_LEVEL;
 
+uniform COMPAT_PRECISION float GhostingPercent;
+uniform COMPAT_PRECISION float BlurSize;
+
 uniform bool bCORNER_SMOOTH;
 uniform bool bEXT_GAMMA;
-uniform bool bINTERLACE;
 uniform bool bPOTATO; 
 uniform bool bSLOT;
 uniform bool bVIGNETTE; 
@@ -78,7 +83,7 @@ uniform COMPAT_PRECISION float BARRELDISTORTION;
 uniform COMPAT_PRECISION float BGR;
 uniform COMPAT_PRECISION float BLACK; 
 uniform COMPAT_PRECISION float BR_DEP; 
-uniform COMPAT_PRECISION float BRIGHTNESs;
+uniform COMPAT_PRECISION float BRIGHTNESS;
 uniform COMPAT_PRECISION float C_STR;
 uniform COMPAT_PRECISION float CENTERX;
 uniform COMPAT_PRECISION float CENTERY;
@@ -95,6 +100,9 @@ uniform COMPAT_PRECISION float RB;
 uniform COMPAT_PRECISION float RG;
 uniform COMPAT_PRECISION float SATURATION;
 uniform COMPAT_PRECISION float SCANLINE_WEIGHT;
+uniform COMPAT_PRECISION float SCAN_SPEED;
+uniform COMPAT_PRECISION float FILM_GRAIN;
+uniform COMPAT_PRECISION float INTERLACE_WEIGHT;
 uniform COMPAT_PRECISION float SLOTW;
 uniform COMPAT_PRECISION float VIGNETTE_WEIGHT;
 uniform COMPAT_PRECISION float WARPX;
@@ -104,6 +112,88 @@ uniform COMPAT_PRECISION float ZOOMY;
 uniform COMPAT_PRECISION int iCOLOR_SPACE;
 uniform COMPAT_PRECISION int iM_TYPE;
 uniform COMPAT_PRECISION int iSCANLINE_TYPE;
+
+#define fTime (float(iFrameCount) / 60.0)
+#define iResolution OutputSize.xy
+#define fragCoord gl_FragCoord.xy
+
+// Utility functions to convert from/to sRGB/linear space
+vec3 toLinear(vec3 srgbColor) {
+	return pow(srgbColor, vec3(2.2));
+}
+vec3 toGamma(vec3 linearColor) {
+	return pow(linearColor, vec3(1.0 / 2.2));
+}
+
+// This function merges 2 generated frames: if it's an even frame nothing
+// happens, but an odd frame mixes in the previous even frame at 50%
+// In main.cpp if we halve the frame rate, every even frame is skipped
+// The background buffer isn't flipped and we overwrite it. The end result
+// is that the frame rate is halved, and we only display even+odd during
+// odd frames
+vec4 HalveFrameRate(vec2 coords, vec4 currentColor)
+{
+	if ((iFrameCount & 1) == 1) {
+		vec4 previousColor = texture(PreviousFrame, coords);
+
+		// Convert both colors to linear space
+		vec3 linearCurrent = toLinear(currentColor.rgb);
+		vec3 linearPrevious = toLinear(previousColor.rgb);
+
+		// Perform the mix in linear space
+		vec3 linearMix = (linearCurrent + linearPrevious) * 0.5;
+
+		// Convert the mixed color back to sRGB space
+		vec3 gammaMix = toGamma(linearMix);
+		return vec4(gammaMix, 1.0);
+	}
+	return currentColor;
+}
+
+vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
+{
+	vec4 previousColor = texture(PreviousFrame, coords);
+	// Calculate the intensity levels of both frames
+	float currentIntensity = dot(currentColor.rgb, vec3(0.299, 0.587, 0.114));
+	float previousIntensity = dot(previousColor.rgb, vec3(0.299, 0.587, 0.114));
+	vec4 blended = vec4(0.0,0.0,0.0,0.0);
+	if (currentIntensity > previousIntensity)	// move at a fast fixed speed towards higher intensity
+		blended = mix(currentColor, previousColor, 0.01);
+	else {
+		if ((previousIntensity - currentIntensity) < (GhostingPercent*0.0025))
+			// As we get closer to the color (the higher the ghosting, the higher the cutoff),
+			// at some point we need to accelerate the move. Otherwise at higher ghosting values
+			// the color will never be reached (especially visible when fading to black)
+			blended = mix(currentColor, previousColor, 0.96);
+		else
+			blended = mix(currentColor, previousColor, GhostingPercent/100.0);
+	}
+	return blended;
+}
+
+vec4 PhosphorBlur(sampler2D tex, vec2 uv, vec2 resolution, float blurAmount) {
+	return textureLod(tex, uv, blurAmount);
+	/* if we don't generate the LOD for the texture
+    vec2 texelSize = 1.0 / resolution;
+    vec2 offset = texelSize * blurAmount;
+    
+    vec4 color = vec4(0.0);
+
+    color += texture(tex, uv + offset * vec2(-1.0, -1.0)) * 0.05;
+    color += texture(tex, uv + offset * vec2( 0.0, -1.0)) * 0.10;
+    color += texture(tex, uv + offset * vec2( 1.0, -1.0)) * 0.05;
+
+    color += texture(tex, uv + offset * vec2(-1.0,  0.0)) * 0.10;
+    color += texture(tex, uv + offset * vec2( 0.0,  0.0)) * 0.40;
+    color += texture(tex, uv + offset * vec2( 1.0,  0.0)) * 0.10;
+
+    color += texture(tex, uv + offset * vec2(-1.0,  1.0)) * 0.05;
+    color += texture(tex, uv + offset * vec2( 0.0,  1.0)) * 0.10;
+    color += texture(tex, uv + offset * vec2( 1.0,  1.0)) * 0.05;
+
+    return color;
+	*/
+}
 
 vec3 Mask(vec2 pos, float CGWG) {
 	if (iM_TYPE == 0)
@@ -137,6 +227,11 @@ vec3 Mask(vec2 pos, float CGWG) {
 		}
 	}
 	return vec3(1.0);
+}
+
+float roundCorners(vec2 p, vec2 b, float r)
+{
+    return length(max(abs(p)-b+r,0.0))-r;
 }
 
 float scanlineWeights(float distance, vec3 color, float x) {
@@ -224,17 +319,47 @@ vec2 BarrelDistortion(vec2 uv) {
 	return (warped - 0.5) / mix(1.0,1.2,BARRELDISTORTION/5.0) + 0.5;
 }
 
+//Canonical noise function; replaced to prevent precision errors
+//float rand(vec2 co){
+//    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+//}
+
+float rand(vec2 co)
+{
+    float a = 12.9898;
+    float b = 78.233;
+    float c = 43758.5453;
+    float dt= dot(co.xy ,vec2(a,b));
+    float sn= mod(dt,3.14);
+    return fract(sin(sn) * c);
+}
+
 void main() {
-	
+	FragColor = texture(A2TextureCurrent, TexCoords);
+
 	if (POSTPROCESSING_LEVEL == 0) {
-		FragColor = texture(A2Texture,TexCoords);
+		if (GhostingPercent > 0.0001)
+			FragColor = GenerateGhosting(TexCoords, FragColor);
 		return;
 	}
+
+	vec2 q = (TexCoords.xy * TextureSize.xy / InputSize.xy);
+    vec2 uv = q;
+	float o =2.0*mod(fragCoord.y,2.0)/iResolution.x;
+
+	if (uv.x < 0.0 || uv.x > 1.0)
+		discard;
+	if (uv.y < 0.0 || uv.y > 1.0)
+		discard;
+
 	
 // Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1) {
-		FragColor = texture(A2Texture,TexCoords);
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
+		if (bHalveFrameRate)
+			FragColor = HalveFrameRate(TexCoords, FragColor);
+		if (GhostingPercent > 0.0001)
+			FragColor = GenerateGhosting(TexCoords, FragColor);
 		return;
 	}
 
@@ -252,8 +377,7 @@ void main() {
 	
 // zoom in and center screen for bezel
 	vec2 pos = Warp(TexCoords*vec2(1.0-ZOOMX,1.0-ZOOMY)-vec2(CENTERX,CENTERY)/100.0);
-	
-	
+
 // If people prefer the BarrelDistortion algo
 	pos = BarrelDistortion(pos);
 
@@ -267,30 +391,36 @@ void main() {
 	pos.y = (i.y + 4.0*f*f*f)*ps.y; // smooth
 	pos.x = mix(pos.x, i.x*ps.x, 0.2);
 
+// Rounded corners
+	float corn = 1.0;
+	if (CORNER > 0.000001) {
+		vec2 halfRes = 0.5 * OutputSize.xy;
+		float b = 1.0 - roundCorners(pos.xy * OutputSize.xy - halfRes, halfRes, abs(CORNER * OutputSize.x * 30.0));
+		if (bCORNER_SMOOTH)
+			corn = b/10.0;	// if we want it smooth
+		else
+			if (b < CORNER)
+				discard;
+	}
+
+	if (BlurSize > 0.000001)
+		FragColor = PhosphorBlur(A2TextureCurrent, pos, TextureSize, BlurSize);
+	else
+		FragColor = texture(A2TextureCurrent,pos);
 
 // Convergence
-	vec3 res0 = texture(A2Texture,pos).rgb;
-	float resr = texture(A2Texture,pos + dx*CONV_R).r;
-	float resg = texture(A2Texture,pos + dx*CONV_G).g;
-	float resb = texture(A2Texture,pos + dx*CONV_B).b;
+	vec3 res0 = FragColor.rgb;
+	float resr = texture(A2TextureCurrent,pos + dx*CONV_R).r;
+	float resg = texture(A2TextureCurrent,pos + dx*CONV_G).g;
+	float resb = texture(A2TextureCurrent,pos + dx*CONV_B).b;
 
 	vec3 res = vec3(res0.r*(1.0-C_STR) + resr*C_STR,
 					res0.g*(1.0-C_STR) + resg*C_STR,
 					res0.b*(1.0-C_STR) + resb*C_STR
 					);
-
-	float corn;
-	if (CORNER > 0.000001) {
-		corn = pos.x * pos.y * (1.-pos.x) * (1.-pos.y);
-		if (bCORNER_SMOOTH)
-			res = res * smoothstep(0.0, CORNER, corn);	// if we want it smooth
-		else
-			if (corn < CORNER)						// if we want it cut
-				discard;
-	}
 	
 	float l = dot(vec3(BR_DEP),res);
- 
+
  // Color Spaces 
 	if(!bEXT_GAMMA)
 		res *= res;
@@ -312,18 +442,60 @@ void main() {
 	if (bSLOT)
 		CGWG = mix(MASKL, MASKH, l);
 
-	// For CRT-Geom scanlines
-	vec3 v_pwr;
 	if (iSCANLINE_TYPE == 2) {
+		// New style scanlines, derived from Mattias' shader
+		// vignette
+		if (VIGNETTE_WEIGHT > 0.00001) {
+			float vig = (0.0 + 1.0*16.0*pos.x*pos.y*(1.0-pos.x)*(1.0-pos.y));
+			vig = pow(vig,VIGNETTE_WEIGHT);
+			res *= vec3(vig);
+		}
+
+		if (SCANLINE_WEIGHT > 0.00001) {
+			float scans = clamp( 0.35+0.15*sin(2.0*(fTime * SCAN_SPEED)+pos.y*float(ScanlineCount)*2.0), 0.0, 1.0);
+			float s = pow(scans,SCANLINE_WEIGHT);
+			res = res*vec3(s);
+		}
+
+		// flicker
+		res *= 1.0+INTERLACE_WEIGHT*sin(300.0*fTime);
+
+		// film grain
+		res *= vec3(1.0) - FILM_GRAIN * vec3(
+					rand(pos + 0.0001 * fTime),
+					rand(pos + 0.0001 * fTime + 0.3),
+					rand(pos + 0.0001 * fTime + 0.5)
+				);
+
+
+		/*
+		if (INTERLACE_WEIGHT > 0.00001) {
+			vec3 ires = res;
+			ires *= 1.0-0.15*vec3(clamp((mod(pos.x+o, 2.0)-1.0)*2.0,0.0,1.0));
+
+
+			// res = pow(ires, vec3(0.5+INTERLACE_WEIGHT));
+			float gamma = 0.5 + INTERLACE_WEIGHT;
+			float mid = 0.5;
+			float brightnessCompensation = mid / pow(mid, gamma);
+			res = brightnessCompensation * pow(ires, vec3(gamma));
+		}
+		*/
+	}
+
+	/*
+	// For CRT-Geom scanlines
+	if (iSCANLINE_TYPE == 3) {
+		vec3 v_pwr;
 		v_pwr = vec3(1.0/((-1.0*SCANLINE_WEIGHT+1.0)*(-0.8*CGWG+1.0))-1.2);
 		// handle interlacing
 		float s = fract(pos.y*TextureSize.y/2.001+0.5);
-		if (bINTERLACE)
-			s = mod(float(FrameCount),2.0) < 1.0 ? s: fract(s+0.5);
-	
+		if (INTERLACE_WEIGHT > 0.001)
+			s = mod(float(iFrameCount),2.0) < 1.0 ? s: fract(s+0.5);
+
 		// Vignette
 		float x = 0.0;
-		if (bVIGNETTE) {
+		if (VIGNETTE_WEIGHT > 0.001) {
 			x = TexCoords.x-0.5;
 			x = x*x;
 		}
@@ -334,6 +506,7 @@ void main() {
 	} else {
 		v_pwr = vec3(1.0/((-1.0*0.3+1.0)*(-0.8*CGWG+1.0))-1.2);
 	}
+	*/
 
 // Masks
 	vec2 xy = TexCoords*OutputSize.xy*scale/MSIZE;	
@@ -342,24 +515,29 @@ void main() {
 // Apply slot mask on top of Trinitron-like mask
 	if (bSLOT)
 		res *= mix(slot(xy/2.0),vec3(1.0),CGWG);
-	if (bPOTATO) {
-		res = sqrt(res);
-		res *= mix(1.3,1.1,l);
-	} else {
-		res = inv_gamma(res,v_pwr);
-	}
+
+// Fix up the gamma
+	res = sqrt(res);
+	res *= mix(1.3,1.1,l);
 
 // Saturation
 	float lum = dot(vec3(0.29,0.60,0.11),res);
 	res = mix(vec3(lum),res,SATURATION);
 
 // Brightness, Hue and Black Level
-	res *= BRIGHTNESs;
+	res *= BRIGHTNESS;
 	res *= hue;
 	res -= vec3(BLACK);
 	res *= blck;
 
-	FragColor = vec4(res, 1.0);
+	FragColor = vec4(res, corn);
+
+	if (bHalveFrameRate)
+		FragColor = HalveFrameRate(TexCoords, FragColor);
+	
+	if (GhostingPercent > 0.0001) {
+		FragColor = GenerateGhosting(TexCoords, FragColor);
+	}
 }
 
 #endif

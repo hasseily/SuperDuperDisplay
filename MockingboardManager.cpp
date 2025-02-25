@@ -1,7 +1,6 @@
 #include "MockingboardManager.h"
 #include <iostream>
 #include <vector>
-#include "common.h"
 #include "imgui.h"
 
 #define CHIPS_IMPL
@@ -11,70 +10,23 @@ m6522_t m6522[4];
 // below because "The declaration of a static data member in its class definition is not a definition"
 MockingboardManager* MockingboardManager::s_instance;
 
-MockingboardManager::MockingboardManager(uint32_t sampleRate, uint32_t bufferSize)
-: sampleRate(sampleRate), bufferSize(bufferSize),
+MockingboardManager::MockingboardManager(uint32_t sampleRate)
+: sampleRate(sampleRate),
 	ay{ Ayumi(false, _A2_CPU_FREQUENCY_NTSC, sampleRate),
 		Ayumi(false, _A2_CPU_FREQUENCY_NTSC, sampleRate),
 		Ayumi(false, _A2_CPU_FREQUENCY_NTSC, sampleRate),
 		Ayumi(false, _A2_CPU_FREQUENCY_NTSC, sampleRate) } {
-	if (SDL_Init(SDL_INIT_AUDIO) < 0) {
-		std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
-		throw std::runtime_error("SDL_Init failed");
-	}
-	audioDevice = 0;
 	Initialize();
 }
 
 void MockingboardManager::Initialize()
 {
-	// NOTE: SSI263 objects have their own audioDevice
 	// This here is for mixing the AYs
-	if (audioDevice == 0)
+	for (uint8_t viaidx = 0; viaidx < 4; viaidx++)
 	{
-		SDL_zero(audioSpec);
-		audioSpec.freq = sampleRate;
-		audioSpec.format = AUDIO_F32SYS;
-		audioSpec.channels = 2;
-		audioSpec.samples = bufferSize;
-		audioSpec.callback = MockingboardManager::AudioCallback;
-		audioSpec.userdata = this;
-		
-		audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
-
-		for (uint8_t viaidx = 0; viaidx < 4; viaidx++)
-		{
-			m6522_init(&m6522[viaidx]);
-		}
-	}
-	else {
-		// std::cerr << "Stopping and clearing Mockingboard Audio" << std::endl;
-		SDL_PauseAudioDevice(audioDevice, 1);
-		SDL_ClearQueuedAudio(audioDevice);
-
-		for (uint8_t viaidx = 0; viaidx < 4; viaidx++)
-		{
-			m6522_reset(&m6522[viaidx]);
-		}
+		m6522_reset(&m6522[viaidx]);
 	}
 	
-	if (audioDevice == 0) {
-		std::cerr << "Failed to open audio device: " << SDL_GetError() << std::endl;
-		SDL_Quit();
-		throw std::runtime_error("SDL_OpenAudioDevice failed");
-	}
-	
-	// Reset registers
-	/*
-	for(uint8_t ayidx = 0; ayidx < 4; ayidx++)
-	{
-		ay[ayidx].ResetRegisters();
-		ay[ayidx].value_ora = 0;
-		ay[ayidx].value_orb = 0;
-		ay[ayidx].value_oddra = 0xFF;
-		ay[ayidx].value_oddrb = 0xFF;
-		ay[ayidx].latched_register = 0;		
-	}
-	*/
 	for(uint8_t ssiidx = 0; ssiidx < 4; ssiidx++)
 	{
 		ssi[ssiidx].ResetRegisters();
@@ -84,15 +36,12 @@ void MockingboardManager::Initialize()
 }
 
 MockingboardManager::~MockingboardManager() {
-	SDL_CloseAudioDevice(audioDevice);
-	SDL_Quit();
 }
 
 void MockingboardManager::BeginPlay() {
 	if (!bIsEnabled)
 		return;
 	UpdateAllPans();
-	SDL_PauseAudioDevice(audioDevice, 0); // Start audio playback
 	bIsPlaying = true;
 	mb_event_count = 0;
 }
@@ -105,8 +54,6 @@ void MockingboardManager::StopPlay() {
 		ay[ayidx].SetVolume(1, 0);
 		ay[ayidx].SetVolume(2, 0);
 	}
-	SDL_PauseAudioDevice(audioDevice, 1);
-	SDL_ClearQueuedAudio(audioDevice);
 	bIsPlaying = false;
 }
 
@@ -114,35 +61,43 @@ bool MockingboardManager::IsPlaying() {
 	return bIsPlaying;
 }
 
-void MockingboardManager::AudioCallback(void* userdata, uint8_t* stream, int len) {
-	MockingboardManager* self = static_cast<MockingboardManager*>(userdata);
-	int samples = len / (sizeof(float) * 2); 	// Number of samples to fill
-	
-	for (int i = 0; i < samples; ++i) {
-		uint8_t ay_ct = (self->bIsDual ? 4 : 2);
-		for(uint8_t ayidx = 0; ayidx < ay_ct; ayidx++)
-		{
-			self->ay[ayidx].Process();
-		}
-		if (self->bIsDual)
-		{
-			self->audioCallbackBuffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left + self->ay[2].left + self->ay[3].left) / 4.0f;
-			self->audioCallbackBuffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right + self->ay[2].right + self->ay[3].right) / 4.0f;
-		} else {
-			self->audioCallbackBuffer[2 * i] = static_cast<float>(self->ay[0].left + self->ay[1].left) / 2.0f;
-			self->audioCallbackBuffer[2 * i + 1] = static_cast<float>(self->ay[0].right + self->ay[1].right) / 2.0f;
+void MockingboardManager::GetSamples(float& left, float& right) {
+	uint8_t ay_ct = (bIsDual ? 4 : 2);
+	uint8_t ssi_ct = 0;
+	for (uint8_t ayidx = 0; ayidx < ay_ct; ayidx++)
+	{
+		ay[ayidx].Process();
+		left += ay[ayidx].left;
+		right += ay[ayidx].right;
+		if (ssi[ayidx].IsPowered()) {
+			// speech is mono
+			++ssi_ct;
+			auto _s = ssi[ayidx].GetSample();
+			left += _s;
+			right += _s;
 		}
 	}
-	
-	// Copy the buffer to the stream
-	SDL_memcpy(stream, self->audioCallbackBuffer, len);
-	SDL_memset(self->audioCallbackBuffer, 0, len);
+	left /= static_cast<float>(ay_ct + ssi_ct);
+	right /= static_cast<float>(ay_ct + ssi_ct);
 }
 
 void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 {
 	if (!bIsEnabled)
 		return;
+
+	uint8_t _addrhi = addr >> 8;
+	switch (_addrhi) {
+	case 0xC4:			// first MB
+		break;
+	case 0xC5:			// second MB
+		if (!bIsDual)
+			return;
+		break;
+	default:
+		return;
+	}
+
 
 	// Reset CS0 for all SSI chips
 	for (uint8_t ssiidx = 0; ssiidx < 4; ssiidx++)
@@ -177,13 +132,13 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 	a_pins_in[2] |= (1ULL << M6522_PIN_CS2);
 	a_pins_in[3] |= (1ULL << M6522_PIN_CS2);
 
-	if ((addr >> 8) == 0xC4)
+	if (_addrhi == 0xC4)
 	{
 		// FIRST MOCKINGBOARD, SLOT 4
 		a_pins_in[0] &= (~M6522_CS2);
 		a_pins_in[1] &= (~M6522_CS2);
 	}
-	else if ((addr >> 8) == 0xC5)
+	else if (_addrhi == 0xC5)
 	{
 		// SECOND MOCKINGBOARD, SLOT 5
 		if (this->bIsDual)
@@ -291,11 +246,14 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 	}
 
 	// Update the valid SSI chip
-	ssip->SetData(val);
-	ssip->SetRegisterSelect(addr & 0b11);
-	ssip->SetReadMode(rw);
-	ssip->SetCS0(1);
-	ssip->Update();
+	if (ssip->IsEnabled())
+	{
+		ssip->SetData(val);
+		ssip->SetRegisterSelect(addr);
+		ssip->SetReadMode(rw);
+		ssip->SetCS0(1);
+		ssip->Update();
+	}
 }
 
 void MockingboardManager::SetPan(uint8_t ay_idx, uint8_t channel_idx, double pan, bool isEqp)
@@ -471,7 +429,8 @@ void MockingboardManager::Util_SpeakDemoPhrase()
 		0xE8, 0xFF, 0xA8, 0x39, 0x00,	// PAUSE
 		0xE8, 0x7B, 0xA8, 0x47, 0xFF,	// LB
 	};
-	ssi[0].ResetRegisters();
+	// The active SSI263 chip is at index 1
+	ssi[1].ResetRegisters();
 	// Raise CTL, set TRANSITIONED_INFLECTION, and lower CTL
 	EventReceived(0xC443, 0x80, 0);	// Reg 3, raise CTL
 	EventReceived(0xC440, 0xC0, 0);	// Set TRANSITIONED_INFLECTION
@@ -485,10 +444,13 @@ void MockingboardManager::Util_SpeakDemoPhrase()
 		
 		if (i < (sizeof(phrase) - 1))
 		{
-			while (!ssi[0].WasIRQTriggered() && ssi[0].IsPlaying())
+			if (ssi[1].IsPowered())	// When unpowered there won't be an IRQ
 			{
-				// haven't finished yet, wait for irq to send next phoneme
-				SDL_Delay(1);
+				while (!ssi[1].WasIRQTriggered())
+				{
+					// haven't finished yet, wait for irq to send next phoneme
+					SDL_Delay(1);
+				}
 			}
 		}
 	}

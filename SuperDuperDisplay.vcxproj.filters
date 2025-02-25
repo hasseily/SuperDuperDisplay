@@ -108,6 +108,9 @@
     <ClCompile Include="SSI263.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="VidHdWindowBeam.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -224,6 +227,12 @@
     <ClInclude Include="extras\ImGuiFileDialogConfig.h">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="ftd3xx_win.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="VidHdWindowBeam.h">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
@@ -286,6 +295,9 @@
     <None Include="shaders\a2video_beam_shr_raw.frag">
       <Filter>shaders</Filter>
     </None>
+    <None Include="shaders\vidhd_beam_text.frag">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="assets\Apple2eFont7x16 - Alternate.png">
@@ -320,5 +332,8 @@
     <Font Include="assets\ProggyTiny.ttf">
       <Filter>assets</Filter>
     </Font>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="lib\Win_x64\FTD3XX.lib" />
   </ItemGroup>
 </Project>

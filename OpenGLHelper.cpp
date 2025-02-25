@@ -31,6 +31,39 @@ OpenGLHelper::~OpenGLHelper()
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Image Asset Methods
+//////////////////////////////////////////////////////////////////////////
+
+// NOTE:	The below image asset method uses OpenGL
+//			so it _must_ be called from the main thread
+void OpenGLHelper::ImageAsset::AssignByFilename(const char* filename) {
+	int width;
+	int height;
+	int channels;
+	unsigned char* data = stbi_load(filename, &width, &height, &channels, 4);
+	if (data == NULL) {
+		std::cerr << "ERROR: STBI load failure: " << stbi_failure_reason() << std::endl;
+		std::cerr << "Tried loading: " << filename << std::endl;
+		return;
+	}
+	if (tex_id != UINT_MAX)
+	{
+		OpenGLHelper::GetInstance()->load_texture(data, width, height, channels, tex_id);
+		stbi_image_free(data);
+	}
+	else {
+		std::cerr << "ERROR: Could not bind texture, all slots filled!" << std::endl;
+		return;
+	}
+	GLenum glerr;
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "ImageAsset::AssignByFilename error: " << glerr << std::endl;
+	}
+	image_xcount = width;
+	image_ycount = height;
+}
+
+//////////////////////////////////////////////////////////////////////////
 // Methods
 //////////////////////////////////////////////////////////////////////////
 
@@ -124,3 +157,18 @@ GLuint OpenGLHelper::get_texture_id_at_slot(int slot)
 	}
 	return texid;
 }
+
+glm::vec2 OpenGLHelper::get_dpi_scaling_factors(SDL_Window* window) {
+	int windowWidth = 0, windowHeight = 0;
+	int drawableWidth = 0, drawableHeight = 0;
+	SDL_GetWindowSize(window, &windowWidth, &windowHeight);
+	SDL_GL_GetDrawableSize(window, &drawableWidth, &drawableHeight);
+	// std::cout << "Logical window size: " << windowWidth << "x" << windowHeight << "\n";
+	// std::cout << "Actual drawable size: " << drawableWidth << "x" << drawableHeight << "\n";
+
+	float scaleX = static_cast<float>(drawableWidth) / windowWidth;
+	float scaleY = static_cast<float>(drawableHeight) / windowHeight;
+	// std::cout << "Calculated scaling factors - X: " << scaleX << ", Y: " << scaleY << "\n";
+	return glm::vec2(scaleX, scaleY);
+}
+

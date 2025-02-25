@@ -12,7 +12,7 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 Apple 2 video beam shader for legacy modes (not SHR).
 
 This shader expects as input a VRAMTEX texture that has the following features:
-- Type GL_RGB8UI, which is 4 bytes for each texel
+- Type GL_RGBA8UI, which is 4 bytes for each texel
 - Color R is the MAIN memory byte
 - Color G is the AUX memory byte
 - Color B is 8 bits of state, including the graphics mode and soft switches
@@ -35,12 +35,25 @@ The shader goes through the following phases:
 - It grabs the texel and determines the video mode to use
 - It runs the video mode code on that byte and chooses the correct fragment
 
-NOTE:	The special BORDER graphics mode is set only on border bytes. It only considers
-		bits 4-7 as the border color, picked from the LGR color palette.
+NOTES: 1. The special BORDER graphics mode is set only on border bytes. It only considers
+          bits 4-7 as the border color, picked from the LGR color palette.
+       2. The width is always 640 and not 560. Because we could be in merged SHR+Legacy
+          which would force the legacy pixels to potentially shift sideways with the wobble.
+          When in regular legacy mode, the extra pixels are transparent
+
+ In case this frame has both legacy and SHR (i.e. a "merged" mode):
+ This shader expects as input a OFFSETTEX texture that has the following features:
+ - Type GL_R32F
+ - One byte per line (Red channel only)
+ - Lines are the same count as the SHR lines (200 plus border)
+ - Each float is the x offset the pixel needs to take from the textures to display,
+ but needs to remove 10.f to get the actual offset. A negative offset is a legacy line
+ and a positive offset is a shr line
 */
 
 // Global uniforms
 uniform int ticks;						// ms since start
+uniform int frameIsOdd;					// 0 if even frame, 1 if odd frame
 uniform int hborder;					// horizontal border in cycles
 uniform int vborder;					// vertical border in scanlines
 uniform usampler2D VRAMTEX;				// Video RAM texture
@@ -49,6 +62,10 @@ uniform sampler2D a2ModesTex1;			// font 14x16 alternate
 uniform sampler2D a2ModesTex2;			// LGR
 uniform sampler2D a2ModesTex3;			// HGR
 uniform sampler2D a2ModesTex4;			// DHGR
+
+uniform bool bForceSHRWidth;			// if on, stretch to SHR width. If off,
+uniform bool bIsMergedMode;				// if on, then only display lines that are legacy
+uniform sampler2D OFFSETTEX;			// X Offset texture for merged mode
 
 // Special modes mask for legacy only is
 // enum A2VideoSpecialMode_e
@@ -106,7 +123,7 @@ out vec4 fragColor;
 
 
 // Perform left rotation on a 4-bit nibble (for DLGR AUX memory)
-// Why? I don't know, can't find any docs, but AppleWin does it and it is Correct
+// Because AUX is one cycle before MAIN (for DHGR, it's embedded in the texture)
 uint ROL_NIB(uint x)
 {
         return ((x << 1) & 0xFu) | ((x >> 3) & 0x1u);
@@ -114,10 +131,44 @@ uint ROL_NIB(uint x)
 
 void main()
 {
-	// first determine which VRAMTEX texel this fragment is part of, including
+	// for bForceSHRWidth
+	vec2 vFragUpdatedPos = vFragPos;
+
+	// Check if we're in merged mode. If so, determine if the line is a legacy line.
+	// If not, exit early. If it is legacy, then shift accordingly
+
+	float xOffsetMerge = 0.0;
+	if (bIsMergedMode) {
+		// Check if we're using full SHR width or not
+		if (!bForceSHRWidth) {
+			vFragUpdatedPos.x = (vFragUpdatedPos.x * (640.0/560.0)) - 40.0;
+		}
+		xOffsetMerge = texelFetch(OFFSETTEX, ivec2(0, vFragUpdatedPos.y/2.0), 0).r;
+		if (xOffsetMerge < 0.0) {		// it is LEGACY, fix and use the offset
+			xOffsetMerge = xOffsetMerge + 10.0;
+		} else {						// it is SHR, discard the line
+			fragColor = vec4(0.0,0.0,0.0,0.0);
+			return;
+		}	
+		if ((vFragUpdatedPos.x + xOffsetMerge) < 0.0)
+		{
+			if (vFragUpdatedPos.x > 0.0) {
+				// This part takes care of the piece when there is a sine wobble that's shifting right.
+				// We want the border to _extend_ right. So we tell the dead left pixels they're part of the border.
+				// It keeps the border filled all the way to the left edge, as opposed to shifting the border
+				vFragUpdatedPos.x -= xOffsetMerge;
+			} else {
+				// This part clears the left side between the SHR boundary of the quad, and the actual Legacy boundary.
+				fragColor = vec4(0.0,0.0,0.0,0.0);
+				return;
+			}
+		}
+	}
+
+	// determine which VRAMTEX texel this fragment is part of, including
 	// the x and y offsets from the origin
 	// REMINDER: we're working on dots, with 560 dots per line. And lines are doubled
-	uvec2 uFragPos = uvec2(vFragPos);
+	uvec2 uFragPos = uvec2(vFragUpdatedPos.x + xOffsetMerge, vFragUpdatedPos.y);
 	uvec4 targetTexel = texelFetch(VRAMTEX, ivec2(uFragPos.x / 14u, uFragPos.y / 2u), 0).rgba;
 	uvec2 fragOffset = uvec2(uFragPos.x % 14u, uFragPos.y % 16u);
 	// The fragOffsets are:

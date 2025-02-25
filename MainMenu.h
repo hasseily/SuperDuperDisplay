@@ -9,7 +9,6 @@ public:
 	~MainMenu();
 	void Render();
 	bool HandleEvent(SDL_Event& event);
-	
 private:
 	void ShowSDDMenu();
 	void ShowMotherboardMenu();

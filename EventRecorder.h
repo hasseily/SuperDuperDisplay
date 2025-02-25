@@ -38,7 +38,7 @@ class EventRecorder
 public:
 	void RecordEvent(SDHREvent* sdhr_event);
 	void DisplayImGuiWindow(bool* p_open);
-	void Update();
+	void SetPAL(bool isPal);				// Sets PAL (true) or NTSC (false)
 	inline const EventRecorderStates_e GetState() { return m_state; };
 	inline const bool IsRecording() { return (m_state == EventRecorderStates_e::RECORDING); };
 	inline const bool IsInReplayMode() { return (m_state >= EventRecorderStates_e::STOPPED); };
@@ -83,6 +83,7 @@ private:
 	void WriteEvent(const SDHREvent& event, std::ofstream& file);
 	void ReadEvent(std::ifstream& file);
 
+	bool bIsPAL = false;						// Is the machine PAL?
 	bool bHasRecording = false;
 	EventRecorderStates_e m_state = EventRecorderStates_e::DISABLED;
 	void SetState(EventRecorderStates_e _state);

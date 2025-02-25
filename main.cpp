@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <algorithm>
 #include <thread>
+#include <atomic>
 
 #include "common.h"
 #include "shader.h"
@@ -41,8 +42,7 @@
 #include <libgen.h>
 #endif
 
-static bool g_swapInterval = true;  // VSYNC
-static bool g_adaptiveVsync = true;
+static SwapInterval_e g_swapInterval = SWAPINTERVAL_ADAPTIVE;
 static bool g_quitIsRequested = false;
 static uint32_t g_fpsLimit = UINT32_MAX;
 float window_bgcolor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
@@ -109,25 +109,39 @@ void Main_SetFPSLimit(uint32_t fps)
 	g_fpsLimit = fps;
 }
 
-int Main_GetVsync()
+SwapInterval_e Main_GetVsync()
 {
-	return SDL_GL_GetSwapInterval();
+	return g_swapInterval;
 }
 
-void Main_SetVsync(bool _on)
+void Main_SetVsync(SwapInterval_e _vsync)
 {
-	// If vsync requested, try to make it adaptive vsync first
-	if (_on)
-	{
-		g_adaptiveVsync = (SDL_GL_SetSwapInterval(-1) == 0);	// adaptive
-		if (g_adaptiveVsync) {
-			g_swapInterval = true;
-		} else {
-			g_swapInterval = (SDL_GL_SetSwapInterval(1) == 0);	// VSYNC
-		}
+	int _si = -1;
+	switch (_vsync) {
+		case SWAPINTERVAL_NONE:
+			_si = SDL_GL_SetSwapInterval(0);	// no vsync
+			if (_si == 0)
+				g_swapInterval = SWAPINTERVAL_NONE;
+			break;
+		case SWAPINTERVAL_VSYNC:
+			_si = SDL_GL_SetSwapInterval(1);	// VSYNC
+			if (_si == 0)
+				g_swapInterval = SWAPINTERVAL_VSYNC;
+			break;
+		case SWAPINTERVAL_APPLE2BUS:
+			_si = SDL_GL_SetSwapInterval(0);	// no vsync
+			if (_si == 0)
+				g_swapInterval = SWAPINTERVAL_APPLE2BUS;
+			break;
+		default:	// SWAPINTERVAL_ADAPTIVE
+			// If adaptive vsync is requested, it may not be possible
+			_si = SDL_GL_SetSwapInterval(-1);	// VSYNC
+			if (_si == 0)
+				g_swapInterval = SWAPINTERVAL_ADAPTIVE;
+			else
+				Main_SetVsync(SWAPINTERVAL_VSYNC);
+			break;
 	}
-	else
-		g_swapInterval = (SDL_GL_SetSwapInterval(0) != 0);		// no VSYNC
 	
 	Main_ResetFPSCalculations();
 }
@@ -136,10 +150,11 @@ void Main_DisplaySplashScreen()
 {
 	if (MemoryLoadSHR("assets/logo.shr"))
 	{
-		MemoryManager::GetInstance()->SetSoftSwitch(A2SoftSwitch_e::A2SS_SHR, true);
+		MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, true);
 	}
 	// Run a refresh to show the first screen
-	A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	// going through 3 frames (0/1/0) to really clean the whole thing
+	A2VideoManager::GetInstance()->ForceBeamFullScreenRender(3);
 }
 
 void Main_DrawFPSOverlay()
@@ -234,6 +249,11 @@ bool Main_IsImGuiOn()
 	return (menu != nullptr);
 }
 
+MainMenu* Main_GetMenuPtr()
+{
+	return menu;
+}
+
 void Main_GetBGColor(float outColor[4]) {
 	for (int i = 0; i < 4; ++i) {
 		outColor[i] = window_bgcolor[i];
@@ -260,8 +280,10 @@ static void Main_ToggleImGui(SDL_GLContext gl_context)
 void Main_ResetA2SS() {
 	auto a2VideoManager = A2VideoManager::GetInstance();
 	auto memManager = MemoryManager::GetInstance();
+	EventRecorder::GetInstance()->StopReplay();
 
-	memManager->SetSoftSwitch(A2SS_TEXT, true);
+	memManager->SetSoftSwitch(A2SS_SHR, false);
+	memManager->SetSoftSwitch(A2SS_TEXT, false);
 	memManager->SetSoftSwitch(A2SS_80STORE, false);
 	memManager->SetSoftSwitch(A2SS_RAMRD, false);
 	memManager->SetSoftSwitch(A2SS_RAMWRT, false);
@@ -274,12 +296,13 @@ void Main_ResetA2SS() {
 	memManager->SetSoftSwitch(A2SS_HIRES, false);
 	memManager->SetSoftSwitch(A2SS_DHGR, false);
 	memManager->SetSoftSwitch(A2SS_DHGRMONO, false);
-	memManager->SetSoftSwitch(A2SS_SHR, false);
 	memManager->SetSoftSwitch(A2SS_GREYSCALE, false);
 	a2VideoManager->bUseDHGRCOL140Mixed = false;
 	a2VideoManager->bUseHGRSPEC1 = false;
 	a2VideoManager->bUseHGRSPEC2 = false;
 	a2VideoManager->bDEMOMergedMode = false;
+	a2VideoManager->bAlignQuadsToScanline = false;
+	memManager->SetSoftSwitch(A2SS_TEXT, true);
 }
 
 // Main code
@@ -404,8 +427,8 @@ int main(int argc, char* argv[])
 	mem_edit_a2e.Open = false;
 	mem_edit_upload.Open = false;
 
-	static bool bShouldTerminateNetworking = false;
-	static bool bShouldTerminateProcessing = false;
+	std::atomic<bool> bShouldTerminateNetworking = false;
+	std::atomic<bool> bShouldTerminateProcessing = false;
     bool show_metrics_window = false;
 	bool show_texture_window = false;
 	bool show_a2video_window = true;
@@ -417,13 +440,21 @@ int main(int argc, char* argv[])
 	// This ensures thread safety
 	// The OpenGLHelper instance is already acquired
 	[[maybe_unused]] auto memManager = MemoryManager::GetInstance();
+	std::cout << "Loaded MemoryManager " << memManager << std::endl;
 	[[maybe_unused]] auto sdhrManager = SDHRManager::GetInstance();
+	std::cout << "Loaded SDHRManager " << sdhrManager << std::endl;
 	[[maybe_unused]] auto a2VideoManager = A2VideoManager::GetInstance();
+	std::cout << "Loaded A2VideoManager " << a2VideoManager << std::endl;
 	[[maybe_unused]] auto postProcessor = PostProcessor::GetInstance();
+	std::cout << "Loaded PostProcessor " << postProcessor << std::endl;
 	[[maybe_unused]] auto eventRecorder = EventRecorder::GetInstance();
+	std::cout << "Loaded EventRecorder " << eventRecorder << std::endl;
 	[[maybe_unused]] auto cycleCounter = CycleCounter::GetInstance();
+	std::cout << "Loaded CycleCounter " << cycleCounter << std::endl;
 	[[maybe_unused]] auto soundManager = SoundManager::GetInstance();
+	std::cout << "Loaded SoundManager " << soundManager << std::endl;
 	[[maybe_unused]] auto mockingboardManager = MockingboardManager::GetInstance();
+	std::cout << "Loaded MockingboardManager " << mockingboardManager << std::endl;
 
 	std::cout << "Renderer Initializing..." << std::endl;
 	while (!a2VideoManager->IsReady())
@@ -441,10 +472,6 @@ int main(int argc, char* argv[])
 
 	uint32_t lastMouseMoveTime = SDL_GetTicks();
 	const uint32_t cursorHideDelay = 3000; // After this delay, the mouse cursor disappears
-
-    // Main loop
-    bool done = false;
-	GLuint out_tex_id = 0;
 	
 	// Get the saved states from previous runs
 	std::cout << "Loading previous state..." << std::endl;
@@ -475,7 +502,7 @@ int main(int argc, char* argv[])
 			g_ww = _sm.value("window width", g_ww);
 			g_wh = _sm.value("window height", g_wh);
 			g_fpsLimit = _sm.value("fps limit", g_fpsLimit);
-			g_swapInterval = _sm.value("vsync", g_swapInterval);
+			g_swapInterval = (SwapInterval_e)_sm.value("vsync", (int)g_swapInterval);
 			Main_SetVsync(g_swapInterval);
 			// make sure the requested mode is acceptable
 			SDL_DisplayMode newMode;
@@ -491,13 +518,7 @@ int main(int argc, char* argv[])
 			Main_SetFullScreen(_sm.value("fullscreen", false));
 			vbl_region = (VideoRegion_e)_sm.value("videoregion", vbl_region);
 			if (vbl_region == VideoRegion_e::Unknown)
-			{
-				cycleCounter->isVideoRegionDynamic = true;
-			}
-			else {
-				cycleCounter->isVideoRegionDynamic = false;
-				cycleCounter->SetVideoRegion(vbl_region);
-			}
+				cycleCounter->SetVideoRegion(VideoRegion_e::NTSC);
 			if (_sm.value("show F1 window", true))
 				Main_ToggleImGui(gl_context);
 			show_a2video_window = _sm.value("show Apple 2 Video window", show_a2video_window);
@@ -534,11 +555,11 @@ int main(int argc, char* argv[])
 		Main_DrawFPSOverlay();
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
-	std::thread thread_server(socket_server_thread, (uint16_t)_SDHR_SERVER_PORT, &bShouldTerminateNetworking);
+	std::thread thread_server(usb_server_thread, &bShouldTerminateNetworking);
 	// And run the processing thread
-	std::thread thread_processor(process_events_thread, &bShouldTerminateProcessing);
+	std::thread thread_processor(process_usb_events_thread, &bShouldTerminateProcessing);
 
-    while (!done)
+    while (!g_quitIsRequested)
 	{
 		// Check if we should reboot
 		if (a2VideoManager->bShouldReboot)
@@ -547,6 +568,7 @@ int main(int argc, char* argv[])
 			a2VideoManager->bShouldReboot = false;
 			a2VideoManager->ResetComputer();
 		}
+		a2VideoManager->CheckSetBordersWithReinit();
 
 		if (!eventRecorder->IsInReplayMode())
 			eventRecorder->StartReplay();
@@ -562,7 +584,7 @@ int main(int argc, char* argv[])
 			}
             switch (event.type) {
             case SDL_QUIT:
-				done = true;
+				Main_RequestAppQuit();
                 break;
             case SDL_WINDOWEVENT:
 			{
@@ -582,7 +604,7 @@ int main(int argc, char* argv[])
 					}
 				}
 				if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
-					done = true;
+					Main_RequestAppQuit();
 			}
                 break;
             case SDL_MOUSEMOTION:
@@ -599,7 +621,7 @@ int main(int argc, char* argv[])
 			{
 				if (event.key.keysym.sym == SDLK_F4) {  // Quit on ALT-F4
 					if (SDL_GetModState() & KMOD_ALT) {
-						done = true;
+						Main_RequestAppQuit();
 						break;
 					}
 				}
@@ -616,6 +638,11 @@ int main(int argc, char* argv[])
 					}
 				}
 				else if (event.key.keysym.sym == SDLK_F10) {
+					if (SDL_GetModState() & KMOD_SHIFT) {
+						a2VideoManager->bAlwaysRenderBuffer = !a2VideoManager->bAlwaysRenderBuffer;
+					} else {
+						a2VideoManager->bAlwaysRenderBuffer = false;
+					}
 					a2VideoManager->ForceBeamFullScreenRender();
 				}
 				// Handle fullscreen toggle for Alt+Enter
@@ -656,18 +683,21 @@ int main(int argc, char* argv[])
             default:
                 break;
             }   // switch event.type
-			
         }   // while SDL_PollEvent
 
+		// texture unit used by the main renderer,
+		// to send to postprocessing
+		GLuint A2VIDEO_TEX_UNIT = 0;
+		bool a2VideoDidRender = false;
 		if (!_bDisableVideoRender)
 		{
-			if (sdhrManager->IsSdhrEnabled())
-				out_tex_id = sdhrManager->Render();
-			else
-				out_tex_id = a2VideoManager->Render();
+			// if (sdhrManager->IsSdhrEnabled())
+			// 		A2VIDEO_TEX_UNIT = sdhrManager->Render();
+			// else
+			a2VideoDidRender = a2VideoManager->Render(A2VIDEO_TEX_UNIT);
 		}
 
-		if (out_tex_id == UINT32_MAX)
+		if (A2VIDEO_TEX_UNIT == A2VIDEORENDER_ERROR)
 			std::cerr << "ERROR: NO RENDERER OUTPUT!" << std::endl;
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -679,9 +709,19 @@ int main(int argc, char* argv[])
 			window_bgcolor[3]);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		// Now run the postprocessing.
+		// If we asked for the Apple 2 bus vsync, then only post process if the A2 renderer ran
 		if (!_bDisablePPRender)
-			postProcessor->Render(window, out_tex_id);
-		
+		{
+			if ((g_swapInterval == SWAPINTERVAL_APPLE2BUS) && tini_is_ok())
+			{
+				if (a2VideoDidRender)
+					postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
+			} else {
+				postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
+			}
+		}
+
 		if (Main_IsImGuiOn())
 		{
 			menu->Render();
@@ -696,19 +736,38 @@ int main(int argc, char* argv[])
 				SDL_ShowCursor(SDL_ENABLE);
 		}
 
-		SDL_GL_SwapWindow(window);
+		if (!postProcessor->ShouldFrameBeSkipped())
+		{
+			// This is for halving the frame rate
+			// If we're halving the frame rate, then even frames do not display
+			// They're rendered in the postprocessing phase and copied to the prev_texture
+			// but they're not displayed. Then on the next odd frame, both are mixed
+			// at 50% and output
+			SDL_GL_SwapWindow(window);
+		}
 
 		// FRAME COUNTS, FREQUENCY AND RATES
 		fps_frame_count++;
 		dt_LAST = dt_NOW;
 		auto _pfreq = SDL_GetPerformanceFrequency();
-		if (!g_swapInterval)
+		// Allow for custom FPS when not in VSYNC
+		if (g_swapInterval == SWAPINTERVAL_NONE)
 		{
-			// Allow for custom FPS when not in VSYNC
 			while (true)
 			{
 				if ((SDL_GetPerformanceCounter() - dt_LAST) >=
 					(_pfreq / g_fpsLimit))
+					break;
+			}
+		}
+		// And if we've requested to sync to the tini, and it's not ready,
+		// max the fps at 60
+		if ((g_swapInterval == SWAPINTERVAL_APPLE2BUS) && !tini_is_ok())
+		{
+			while (true)
+			{
+				if ((SDL_GetPerformanceCounter() - dt_LAST) >=
+					(_pfreq / 60))
 					break;
 			}
 		}
@@ -739,11 +798,7 @@ int main(int argc, char* argv[])
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL end of render error: " << glerr << std::endl;
 		}
-
-		if (g_quitIsRequested)
-			done = true;
-
-    }
+    }	// main loop
 
 	eventRecorder->StopReplay();
 	soundManager->StopPlay();
@@ -779,7 +834,7 @@ int main(int argc, char* argv[])
 			{"fullscreen refresh rate", g_fullscreenMode.refresh_rate},
 			{"fullscreen", _isFullscreen},
 			{"fps limit", g_fpsLimit},
-			{"vsync", g_swapInterval},
+			{"vsync", (int)g_swapInterval},
 			{"videoregion", (int)cycleCounter->GetVideoRegion()},
 			{"window background color", window_bgcolor},
 			{"show F1 window", Main_IsImGuiOn()},

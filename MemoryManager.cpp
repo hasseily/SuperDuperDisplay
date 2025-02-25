@@ -1,5 +1,6 @@
 #include "MemoryManager.h"
 #include "CycleCounter.h"
+#include "A2VideoManager.h"
 #include <iostream>
 #include <sstream>
 
@@ -59,6 +60,76 @@ void MemoryManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool 
 {
 	(void)is_iigs;		// mark as unused -- Appletini brings iigs features to the //e
 	//std::cerr << "Processing soft switch " << std::hex << (uint32_t)addr << " RW: " << (uint32_t)rw << " 2gs: " << (uint32_t)is_iigs << std::endl;
+
+	/*
+	* The below is a hack and just here to remember the code.
+	// This is to handle Video-7 cards, but Appletini needs to register as a Video-7 card!
+	// Check the Video-7 special mode changes
+	// using a 2-bit state register
+	// They're activated when the DHIRES (!AN3) switch is toggled exactly 5 times while A2SS_MIXED is OFF:
+	// OFF-ON-OFF-ON-OFF
+	// At each of the 2 ON, it sets a bit based on the 80COL value
+
+	if ((addr & 0b1) == 0xC05E)		// Case of DHIRES (!AN3) being hit: 0xC05E and 0xC05F
+	{
+		if (IsSoftSwitch(A2SS_MIXED))	// MIXED should always be OFF for the Video7 modes
+		{
+			stateAN3Video7 = 0;
+			goto AFTERVIDEO7;
+		}
+		bool setOn = (addr == 0xC05E);
+		if ((stateAN3Video7 == 0) && setOn)	// Not a start of sequence, it needs to start set to off
+			goto AFTERVIDEO7;
+		if ((stateAN3Video7 & 0b1) != setOn)		// toggle
+		{
+			++stateAN3Video7;
+			std::cerr << "toggled AN3 " << stateAN3Video7 << std::endl;
+		}
+		if (stateAN3Video7 == 2)
+		{
+			flagsVideo7 = !IsSoftSwitch(A2SS_80COL);
+		}
+		else if (stateAN3Video7 == 4)
+		{
+			flagsVideo7 += 2 * !IsSoftSwitch(A2SS_80COL);
+		}
+		else if (stateAN3Video7 == 5)	// 5 total toggles, Video-7 is switching modes!
+		{
+			stateAN3Video7 = 0;
+			// Video7 special modes:
+			// 00 : 140x192
+			// 01 : 160x192
+			// 10: MIX mode (ie. COL140Mixed mode) 140x192 + 560x192
+			// 11 : 560x192 monochrome
+			SetSoftSwitch(A2SS_DHGRMONO, false);
+			A2VideoManager::GetInstance()->bUseDHGRCOL140Mixed = false;
+			switch (flagsVideo7)
+			{
+			case 0b00:		// MIXED ON  80COL ON : 140x192
+				// Default
+				break;
+			case 0b01:		// MIXED OFF 80COL ON : 160x192
+				// TODO: NOT HANDLED
+				break;
+			case 0b10:		// MIX mode (ie. COL140Mixed mode) 140x192 + 560x192
+				// TODO: Hack. Don't force usage of A2VideoManager. Instead use another SS variable
+				// for A2VideoManager to determine what to do, or have a special Video7 module
+				A2VideoManager::GetInstance()->bUseDHGRCOL140Mixed = true;
+				break;
+			case 0b11:		// 560x192 monochrome
+				SetSoftSwitch(A2SS_DHGRMONO, true);
+				break;
+			default:
+				break;
+			}
+		}
+	}
+	else {
+		stateAN3Video7 = 0;			// Reset the toggle state
+	}
+	*/
+
+AFTERVIDEO7:
 	switch (addr)
 	{
 	case 0xC000:	// 80STOREOFF
@@ -141,10 +212,10 @@ void MemoryManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool 
 	case 0xC057:	// HIRESON
 		a2SoftSwitches |= A2SS_HIRES;
 		break;
-	case 0xC05E:	// DHIRESON
+	case 0xC05E:	// DHIRESON	(AN3 RESET)
 		a2SoftSwitches |= A2SS_DHGR;
 		break;
-	case 0xC05F:	// DHIRESOFF
+	case 0xC05F:	// DHIRESOFF (AN3 SET)
 		a2SoftSwitches &= ~A2SS_DHGR;
 		break;
 	case 0xC021:	// MONOCOLOR
@@ -349,7 +420,10 @@ void MemoryManager::WriteToMemory(uint16_t addr, uint8_t val, bool m2b0, bool is
 	{
 		case 0b010:
 			// Only writes 0000-01FF to MAIN
-			bIsAux = true;
+			if (addr < 0x200)
+				bIsAux = false;
+			else
+				bIsAux = true;
 			break;
 		case 0b011:
 			// anything not page 1 (including 0000-01FFF goes to AUX
@@ -393,6 +467,26 @@ void MemoryManager::WriteToMemory(uint16_t addr, uint8_t val, bool m2b0, bool is
 	else {
 		a2mem[addr] = val;
 		a2mem_lastUpdate[addr] = CycleCounter::GetInstance()->GetCycleTimestamp();
+
+		// Handle Main ZERO PAGE data changes
+		if (addr < 0x100)
+		{
+			// Check for PR#1 (assuming the tini is in slot 1
+			// TODO: Have a way to get the tini to tell us its slot
+			// TODO: Have a way to get the tini to tell us to switch between the new modes
+			if ((addr == 0x36) || (addr == 0x37))	// PR#x
+			{
+				if (a2mem[0x36] == 0x00 && a2mem[0x37] == 0xC1)	// PR#1 is called, COUT is going to $C001
+				{
+					// switch to the new video modes
+					A2VideoManager::GetInstance()->vidhdWindowBeam->SetVideoMode(VIDHDMODE_TEXT_40X24);
+				}
+				else {
+					// switch to the standard Apple 2 video modes
+					A2VideoManager::GetInstance()->vidhdWindowBeam->SetVideoMode(VIDHDMODE_NONE);
+				}
+			}
+		}
 	}
 }
 

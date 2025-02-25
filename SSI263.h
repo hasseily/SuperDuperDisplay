@@ -47,8 +47,10 @@
 #include <stdio.h>
 #include <vector>
 #include <SDL.h>
+#include <mutex>
 
 constexpr int SSI263_SAMPLE_RATE = 22050;
+constexpr int SSI263_DCADJ_BUFLEN = 256;
 
 enum SSI263DurationModes_e
 {
@@ -62,22 +64,28 @@ class SSI263 {
 public:
 	SSI263();
 	~SSI263();
+	bool IsEnabled() { return bIsEnabled; };
+	void Enable() { bIsEnabled = true; };
+	void Disable() { bIsEnabled = false; };
+	bool IsPowered() { return !regCTL; };	// When regCTL is high, the chip is in "Power Down" mode
 	void Update();
+	float GetSample();
 	void ResetRegisters();
-	void SetRegisterSelect(int val);	// Set RS2->RS0 (A2->A0)
+	void SetRegisterSelect(int addr);	// Set RS2->RS0 (A2->A0)
 	void SetData(int data);				// Set D7->D0 data pins
 	void SetReadMode(bool pinState);	// R/W mode, true for R
 	void SetCS0(bool pinState);			// Linked to A6 (1st SSI) or A5 (2nd SSI)
 	void SetCS1(bool pinState);			// !IOSELECT
 	bool GetAR();						// Returns value of A/!R pin
 	int GetData();						// 0x00 or 0x80, only in read mode (reads D7)
-	bool IsPlaying();
 	
 	// Call WasIRQTriggered() on every update. Guaranteed to only
 	// return true once per IRQ (if true, subsequent calls are false until
 	// IRQ triggers again)
 	bool WasIRQTriggered();
 private:
+	bool bIsEnabled = false;
+
 	// CONTROL data
 	// All the below have immediate effect
 	int speechRate;
@@ -111,12 +119,16 @@ private:
 
 	void LoadRegister();
 
-	SDL_AudioSpec audioSpec;
-	SDL_AudioDeviceID audioDevice;
-	std::vector<uint8_t> v_samples;
+	std::vector<float> v_samples;
 	int m_currentSampleIdx = 0;
+	std::mutex	d_mutex_accessing_phoneme;
 	void GeneratePhonemeSamples();
-	static void AudioCallback(void* userdata, uint8_t* stream, int len);
+
+	// DC Filter
+	float dcadj_sum = 0.0;
+	uint32_t dcadj_pos = 0;
+	float dcadj_buf[SSI263_DCADJ_BUFLEN];
+	float DCAdjust(float sample);
 };
 
 #endif /* SSI263_H */

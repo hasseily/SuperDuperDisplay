@@ -44,8 +44,8 @@ VIDEO SOFT SWITCHES
  $C055   R/W     PAGE2ON         Select page2 display (or aux video memory)
  $C056   R/W     HIRESOFF        Select low resolution graphics
  $C057   R/W     HIRESON         Select high resolution graphics
- $C05E   R/W     DHIRESON        Select double (14M) resolution graphics (DLGR or DHGR)
- $C05F   R/W     DHIRESOFF       Select single (7M) resolution graphics
+ $C05E   R/W     DHIRESON        AN3: Select double (14M) resolution graphics (DLGR or DHGR)
+ $C05F   R/W     DHIRESOFF       AN3: Select single (7M) resolution graphics
 */
 enum A2SoftSwitch_e
 {
@@ -110,7 +110,7 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
-	uint8_t switch_c022;				// Exact value of the switch c022	fg/bg color
+	int switch_c022;					// Exact value of the switch c022	fg/bg color
 	int switch_c034;					// Exact value of the switch c034	border color
 	bool is2gs;
 
@@ -144,7 +144,9 @@ private:
 
 	uint8_t* a2mem;					// The current shadowed Apple 2 memory
 	size_t* a2mem_lastUpdate;		// timestamp of last update of each Apple 2 memory byte
-	uint16_t a2SoftSwitches;	// Soft switches states
+	uint16_t a2SoftSwitches;		// Soft switches states
+	// uint8_t stateAN3Video7 = 0;		// State of the AN3 toggle for Video-7. Needs to toggle 5 times, starting with off
+	// uint8_t flagsVideo7 = 0;		// 2 bits
 };
 
 #endif	// MEMORYMANAGER_H

@@ -24,9 +24,7 @@
 #include "Ayumi.h"
 #include "SSI263.h"
 #include "nlohmann/json.hpp"
-
-const uint32_t MM_SAMPLE_RATE = 44100; 					// Audio sample rate
-const uint32_t MM_BUFFER_SIZE = 1024;
+#include "common.h"
 
 // The first AY-3-8910 starts at 0x00
 // The second AY3-8910 starts at 0x80
@@ -79,9 +77,13 @@ public:
 	void SetDualMode(bool _isDual) { bIsDual = _isDual; };	// set isDual to have 2 mockingboards
 	void Enable() { bIsEnabled = true; };
 	void Disable() { bIsEnabled = false; };
-
+	bool IsEnabled() { return bIsEnabled; };
+	
 	// Received a mockingboard event, we don't care if it's C4XX or C5XX
 	void EventReceived(uint16_t addr, uint8_t val, bool rw);
+	
+	// Audio callback
+	void GetSamples(float& left, float& right);
 	
 	// Set the panning of a channel in an AY
 	// Pan is 0.0-1.0, left to right
@@ -114,42 +116,37 @@ public:
 	static MockingboardManager* GetInstance()
 	{
 		if (NULL == s_instance)
-			s_instance = new MockingboardManager(MM_SAMPLE_RATE, MM_BUFFER_SIZE);
+			s_instance = new MockingboardManager(_AUDIO_SAMPLE_RATE);
 		return s_instance;
 	}
 private:
 	static MockingboardManager* s_instance;
-	MockingboardManager(uint32_t sampleRate, uint32_t bufferSize);
+	MockingboardManager(uint32_t sampleRate);
 	
-	void Process();
 	void UpdateAllPans();
 	void SetLatchedRegister(Ayumi* ayp, uint8_t value);
-	static void AudioCallback(void* userdata, uint8_t* stream, int len);
 	
-	SDL_AudioSpec audioSpec;
-	SDL_AudioDeviceID audioDevice;
 	uint32_t sampleRate;
 	uint32_t bufferSize;
 	bool bIsEnabled = true;
 	bool bIsDual = true;
 	bool bIsPlaying;
 	int mb_event_count = 0;
-	float audioCallbackBuffer[MM_BUFFER_SIZE*2] = { 0.f };	// Stereo
 	
 	// Chips
 	Ayumi ay[4];
 	SSI263 ssi[4];
-
+	
 	// M6522 pin state
 	uint64_t a_pins_in[4] = { 0 };
 	uint64_t a_pins_out[4] = { 0 };
 	uint64_t a_pins_out_prev[4] = { 0 };
-
+	
 	float allpans[4][3] = {
-		0.3f, 0.3f, 0.3f,	// AY0 pans left
-		0.7f, 0.7f, 0.7f,	// AY1 pans right
-		0.2f, 0.2f, 0.2f,	// AY2 pans left
-		0.8f, 0.8f, 0.8f,	// AY3 pans right
+		{0.3f, 0.3f, 0.3f},	// AY0 pans left
+		{0.7f, 0.7f, 0.7f},	// AY1 pans right
+		{0.2f, 0.2f, 0.2f},	// AY2 pans left
+		{0.8f, 0.8f, 0.8f},	// AY3 pans right
 	};
 };
 

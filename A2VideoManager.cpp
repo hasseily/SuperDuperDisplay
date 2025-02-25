@@ -24,6 +24,15 @@
 #include "EventRecorder.h"
 #include "GRAddr2XY.h"
 #include "imgui.h"
+#include "SDL_rect.h"
+
+// Aspect constraint callback to enforce a fixed aspect ratio for ImGui windows.
+// The aspect ratio is provided via the UserData pointer
+static inline void AspectConstraintCallback(ImGuiSizeCallbackData* data)
+{
+	float aspect_ratio = *(float*)data->UserData;
+	data->DesiredSize.y = data->DesiredSize.x / aspect_ratio;
+}
 
 static inline uint32_t SETRGBCOLOR(uint8_t r, uint8_t g, uint8_t b)
 {
@@ -170,39 +179,6 @@ inline void A2VideoManager::UpdateOverlayLine(uint32_t y)
 }
 
 //////////////////////////////////////////////////////////////////////////
-// Image Asset Methods
-//////////////////////////////////////////////////////////////////////////
-
-// NOTE:	Both the below image asset methods use OpenGL 
-//			so they _must_ be called from the main thread
-void A2VideoManager::ImageAsset::AssignByFilename(A2VideoManager* owner, const char* filename) {
-	(void)owner; // mark as unused
-	int width;
-	int height;
-	int channels;
-	unsigned char* data = stbi_load(filename, &width, &height, &channels, 4);
-	if (data == NULL) {
-		std::cerr << "ERROR: STBI load failure" << stbi_failure_reason() << std::endl;
-		return;
-	}
-	if (tex_id != UINT_MAX)
-	{
-		OpenGLHelper::GetInstance()->load_texture(data, width, height, channels, tex_id);
-		stbi_image_free(data);
-	}
-	else {
-		std::cerr << "ERROR: Could not bind texture, all slots filled!" << std::endl;
-		return;
-	}
-	GLenum glerr;
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "ImageAsset::AssignByFilename error: " << glerr << std::endl;
-	}
-	image_xcount = width;
-	image_ycount = height;
-}
-
-//////////////////////////////////////////////////////////////////////////
 // Manager Methods
 //////////////////////////////////////////////////////////////////////////
 
@@ -237,11 +213,14 @@ void A2VideoManager::Initialize()
 {
 	// Here do not reinitialize bBeamIsActive. It could still be active from earlier.
 	// The initialization process can be triggered from a ctrl-reset on the Apple 2.
+	bIsReady = false;
+
+	border_w_slider_val = (int)this->GetBordersWidthCycles();
+	border_h_slider_val = (int)this->GetBordersHeightScanlines() / 8;
 
 	ResetGLData();
 	
 	auto oglHelper = OpenGLHelper::GetInstance();
-	bIsReady = false;
 	for (int i = 0; i < 2; i++)
 	{
 		vrams_array[i].id = i;
@@ -249,30 +228,55 @@ void A2VideoManager::Initialize()
 		vrams_array[i].bWasRendered = true;		// otherwise it won't render the first frame
 		vrams_array[i].mode = A2Mode_e::NONE;
 		if (vrams_array[i].vram_legacy != nullptr)
+		{
 			delete[] vrams_array[i].vram_legacy;
+			vrams_array[i].vram_legacy = nullptr;
+		}
 		if (vrams_array[i].vram_shr != nullptr)
+		{
 			delete[] vrams_array[i].vram_shr;
+			vrams_array[i].vram_shr = nullptr;
+		}
 		if (vrams_array[i].vram_pal256 != nullptr)
-				delete[] vrams_array[i].vram_pal256;
+		{
+			delete[] vrams_array[i].vram_pal256;
+			vrams_array[i].vram_pal256 = nullptr;
+		}
 		if (vrams_array[i].offset_buffer != nullptr)
+		{
 			delete[] vrams_array[i].offset_buffer;
+			vrams_array[i].offset_buffer = nullptr;
+		}
 		vrams_array[i].vram_legacy = new uint8_t[GetVramSizeLegacy()];
 		vrams_array[i].vram_shr = new uint8_t[GetVramSizeSHR()];
-		vrams_array[i].vram_pal256 = new uint8_t[_A2VIDEO_SHR_BYTES_PER_LINE*2*_A2VIDEO_SHR_SCANLINES];
+		vrams_array[i].vram_pal256 = new uint8_t[_A2VIDEO_SHR_BYTES_PER_LINE*2*_A2VIDEO_SHR_SCANLINES*_INTERLACE_MULTIPLIER];
 		vrams_array[i].offset_buffer = new GLfloat[GetVramHeightSHR()];
 		memset(vrams_array[i].vram_legacy, 0, GetVramSizeLegacy());
 		memset(vrams_array[i].vram_shr, 0, GetVramSizeSHR());
+		memset(vrams_array[i].vram_pal256, 0, _A2VIDEO_SHR_BYTES_PER_LINE*2*_A2VIDEO_SHR_SCANLINES*_INTERLACE_MULTIPLIER);
 		memset(vrams_array[i].offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
 		
 		// the debugging special vrams
 		if (vrams_array[i].vram_forced_text1 != nullptr)
+		{
 			delete[] vrams_array[i].vram_forced_text1;
+			vrams_array[i].vram_forced_text1 = nullptr;
+		}
 		if (vrams_array[i].vram_forced_text2 != nullptr)
+		{
 			delete[] vrams_array[i].vram_forced_text2;
+			vrams_array[i].vram_forced_text2 = nullptr;
+		}
 		if (vrams_array[i].vram_forced_hgr1 != nullptr)
+		{
 			delete[] vrams_array[i].vram_forced_hgr1;
+			vrams_array[i].vram_forced_hgr1 = nullptr;
+		}
 		if (vrams_array[i].vram_forced_hgr2 != nullptr)
+		{
 			delete[] vrams_array[i].vram_forced_hgr2;
+			vrams_array[i].vram_forced_hgr2 = nullptr;
+		}
 		vrams_array[i].vram_forced_text1 = new uint8_t[40 * 192 * 4];
 		vrams_array[i].vram_forced_text2 = new uint8_t[40 * 192 * 4];
 		vrams_array[i].vram_forced_hgr1 = new uint8_t[40 * 192 * 4];
@@ -288,7 +292,7 @@ void A2VideoManager::Initialize()
 	// Set up the image assets (textures)
 	// Assign them their respective GPU texture id
 	*image_assets = {};
-	for (uint8_t i = 0; i < (sizeof(image_assets) / sizeof(ImageAsset)); i++)
+	for (uint8_t i = 0; i < (sizeof(image_assets) / sizeof(OpenGLHelper::ImageAsset)); i++)
 	{
 		image_assets[i].tex_id = oglHelper->get_texture_id_at_slot(i);
 	}
@@ -298,7 +302,8 @@ void A2VideoManager::Initialize()
 		font_roms_array.clear();
 		for (const auto & entry : std::filesystem::directory_iterator(fontpath)) {
 			if (entry.is_regular_file()) {
-				font_roms_array.push_back(entry.path().filename().string());
+				if ((entry.path().extension() == ".png") || (entry.path().extension() == ".PNG"))
+					font_roms_array.push_back(entry.path().filename().string());
 			}
 		}
 		if (font_roms_array.empty()) {
@@ -328,11 +333,14 @@ void A2VideoManager::Initialize()
 	windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->SetBorder(0, 0);
 	windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->SetBorder(0, 0);
 
+	vidhdWindowBeam = std::make_unique<VidHdWindowBeam>(VIDHDMODE_NONE);
 
-
-	// The merged framebuffer will have a size equal to the SHR buffer (including borders)
-	fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
-	fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
+	// The framebuffer width. That will change depending on the layers that are rendered:
+	// If a VidHD text modes > 80x24 is active, then 1920x1080
+	// Otherwise if SHR is active in any scanline, then SHR size
+	// Otherwise, Legacy size
+	fb_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
+	fb_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
 
 	beamState = BeamState_e::NBVBLANK;
 	merge_last_change_mode = A2Mode_e::NONE;
@@ -361,20 +369,33 @@ void A2VideoManager::Initialize()
 void A2VideoManager::ResetGLData() {
 	if (OFFSETTEX != UINT_MAX)
 		glDeleteTextures(1, &OFFSETTEX);
+
 	if (quadVAO != UINT_MAX)
 	{
 		glDeleteVertexArrays(1, &quadVAO);
 		glDeleteBuffers(1, &quadVBO);
 	}
-	if (FBO_merged != UINT_MAX)
+
+	if (FBO_A2Video != UINT_MAX)
 	{
-		glDeleteFramebuffers(1, &FBO_merged);
-		glDeleteTextures(1, &merged_texture_id);
+		glDeleteFramebuffers(1, &FBO_A2Video);
+		glDeleteTextures(1, &a2video_texture_id);
 	}
+	FBO_A2Video = UINT_MAX;
+
+	for (int i = 0; i < 4; i++)
+	{
+		if (FBO_debug[i] != UINT_MAX)
+		{
+			glDeleteFramebuffers(1, &FBO_debug[i]);
+			glDeleteTextures(1, &debug_texture_id[i]);
+		}
+		FBO_debug[i] = UINT_MAX;
+	}
+
 	OFFSETTEX = UINT_MAX;
 	quadVAO = UINT_MAX;
 	quadVBO = UINT_MAX;
-	FBO_merged = UINT_MAX;
 }
 
 void A2VideoManager::ResetComputer()
@@ -404,20 +425,53 @@ void A2VideoManager::ToggleA2Video(bool value)
 		bShouldInitializeRender = true;
 }
 
-void A2VideoManager::SetBordersWithReinit(uint8_t width_cycles, uint8_t height_8s)
+void A2VideoManager::CheckSetBordersWithReinit()
 {
-	if (width_cycles > _BORDER_WIDTH_MAX_CYCLES)
-		width_cycles = _BORDER_WIDTH_MAX_CYCLES;
-	if (height_8s > _BORDER_WIDTH_MAX_CYCLES)
-		height_8s = _BORDER_WIDTH_MAX_CYCLES;
-	borders_w_cycles = width_cycles;
-	borders_h_scanlines = height_8s * 8;	// Must be multiple of 8s
+	if (border_w_slider_val > _BORDER_WIDTH_MAX_CYCLES)
+		border_w_slider_val = _BORDER_WIDTH_MAX_CYCLES;
+	if (border_h_slider_val > _BORDER_WIDTH_MAX_CYCLES)
+		border_h_slider_val = _BORDER_WIDTH_MAX_CYCLES;
+	if ((border_w_slider_val == borders_w_cycles)
+		&& (border_h_slider_val == (borders_h_scanlines / 8)))
+		return;
+	bIsReady = false;
+	borders_w_cycles = border_w_slider_val;
+	borders_h_scanlines = border_h_slider_val * 8;	// Must be multiple of 8s
 	auto _mms = MemoryManager::GetInstance()->SerializeSwitches();
 	this->Initialize();
 	MemoryManager::GetInstance()->DeserializeSwitches(_mms);
 	this->ForceBeamFullScreenRender();
 }
 
+// The input is x,y,width,height where x,y are top left origin. The output is SDL style inverted Y
+// The full screen quad output would be { -1.f, 1.f, 2.f, -2.f }
+SDL_FRect A2VideoManager::NormalizePixelQuad(const SDL_FRect& pixelQuad)
+{
+	SDL_FRect normalized;
+	normalized.x = (2.0f * pixelQuad.x) / fb_width - 1.0f;
+	normalized.y = 1.0f - (2.0f * pixelQuad.y) / fb_height;
+	normalized.w = (2.0f * pixelQuad.w) / fb_width;
+	normalized.h = (-2.f * pixelQuad.h) / fb_height;
+	return normalized;
+}
+
+SDL_FRect A2VideoManager::CenteredQuadInFramebuffer(const SDL_FRect& quad)
+{
+	SDL_FRect centeredQuad;
+	centeredQuad.w = quad.w;
+	centeredQuad.h = quad.h;
+	centeredQuad.x = (fb_width - quad.w) / 2.0f;
+	centeredQuad.y = (fb_height - quad.h) / 2.0f;
+	return centeredQuad;
+}
+
+SDL_FRect A2VideoManager::CenteredQuadInFramebufferWithOffset(const SDL_FRect& quad, const SDL_FPoint& offset)
+{
+	auto resQuad = CenteredQuadInFramebuffer(quad);
+	resQuad.x += offset.x;
+	resQuad.y += offset.y;
+	return resQuad;
+}
 
 void A2VideoManager::StartNextFrame()
 {
@@ -449,6 +503,7 @@ void A2VideoManager::StartNextFrame()
 	merge_last_change_y = UINT_MAX;
 	// Additional frame data resets
 	vrams_write->frameSHR4Modes = 0;
+	vrams_write->doubleSHR4Mode = 0;
 }
 
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
@@ -529,7 +584,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			{
 				// Start of NBVBLANK at which we flip the double buffering
 				StartNextFrame();
-				beamState = BeamState_e::BORDER_TOP;
 			}
 			break;
 		case BeamState_e::BORDER_LEFT:
@@ -584,6 +638,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		{
 			if (_x < CYCLES_SC_HBL || _y >= mode_scanlines)		// bounds check if mode changes midway
 				return;
+
 			uint32_t _toff = _OVERLAY_CHAR_WIDTH * (_y/8) + (_x - CYCLES_SC_HBL);
 			// Override when the byte is an overlay
 			if (overlay_text[_toff] > 0)
@@ -601,59 +656,67 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		}
 	}
 
+	auto vramInterlaceOffset = GetVramSizeSHR() / _INTERLACE_MULTIPLIER;	// Offset to 2nd half of the vram
+
 	// Always at the start of the row, set the SHR SCB to 0x10
 	// Because we check bit 4 of the SCB to know if that line is drawn as SHR
 	// The 2gs will always set bit 4 to 0 when sending it over
 	// Also check if the mode has switched in the middle of the frame
 	if (_x == 0)
 	{
-		vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
-
-		if ((vrams_write->mode == A2Mode_e::MERGED) && _TR_ANY_Y < (200 + 2*borders_h_scanlines))
+		if (_TR_ANY_Y < (_A2VIDEO_SHR_SCANLINES + 2 * borders_h_scanlines))
 		{
-			// Merge mode calculations
-			// determine the mode switch and update merge_last_change_mode and merge_last_change_y
-			auto _curr_mode = (memMgr->IsSoftSwitch(A2SS_SHR) ? A2Mode_e::SHR : A2Mode_e::LEGACY);
-			if ((merge_last_change_mode == A2Mode_e::LEGACY) && (_curr_mode == A2Mode_e::SHR))
-			{
-				// 14 -> 16MHz
-				merge_last_change_y = _TR_ANY_Y;
-				// std::cerr << "merge to 16 " << merge_last_change_y << std::endl;
-			}
-			else if ((merge_last_change_mode == A2Mode_e::SHR) && (_curr_mode == A2Mode_e::LEGACY))
-			{
-				// 16 -> 14MHz
-				merge_last_change_y = _TR_ANY_Y;
-				// std::cerr << "merge to 14 " << merge_last_change_y << std::endl;
-			}
-			merge_last_change_mode = _curr_mode;
+			// Set both regular and interlaced areas SCBs
+			vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
+			vrams_write->vram_shr[vramInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
 
-			// Finally set the offset
-			// NOTE: We add 10.f to the offset so that the shader can know which mode to apply
-			//		 If it's negative, it's SHR. Positive, legacy.
-			if (bNoMergedModeWobble)
+			if (vrams_write->mode == A2Mode_e::MERGED)
 			{
-				vrams_write->offset_buffer[_TR_ANY_Y] = (_curr_mode == A2Mode_e::LEGACY ? -10.f : 10.f);
-			}
-			else
-			{
-				if (_TR_ANY_Y < merge_last_change_y					// the switch happened last frame
-					|| (_TR_ANY_Y - merge_last_change_y) > 15)		// the switch has been recovered
+				// Merge mode calculations
+				// determine the mode switch and update merge_last_change_mode and merge_last_change_y
+				auto _curr_mode = (memMgr->IsSoftSwitch(A2SS_SHR) ? A2Mode_e::SHR : A2Mode_e::LEGACY);
+				if ((merge_last_change_mode == A2Mode_e::LEGACY) && (_curr_mode == A2Mode_e::SHR))
+				{
+					// 14 -> 16MHz
+					merge_last_change_y = _TR_ANY_Y;
+					// std::cerr << "merge to 16 " << merge_last_change_y << std::endl;
+				}
+				else if ((merge_last_change_mode == A2Mode_e::SHR) && (_curr_mode == A2Mode_e::LEGACY))
+				{
+					// 16 -> 14MHz
+					merge_last_change_y = _TR_ANY_Y;
+					// std::cerr << "merge to 14 " << merge_last_change_y << std::endl;
+				}
+				merge_last_change_mode = _curr_mode;
+
+				// Finally set the offset
+				// NOTE: We add 10.f to the offset so that the shader can know which mode to apply
+				//		 If it's negative, it's Legacy. Positive, SHR.
+				if (bNoMergedModeWobble)
 				{
 					vrams_write->offset_buffer[_TR_ANY_Y] = (_curr_mode == A2Mode_e::LEGACY ? -10.f : 10.f);
 				}
 				else
 				{
-					// If the change is to 28 MHz, shift negative (left). Otherwise, shift positive (right)
-					float pixelShift = (GLfloat)glm::pow(1.1205, merge_last_change_y - _TR_ANY_Y + 28) - 4.0;
-					if (_curr_mode == A2Mode_e::LEGACY)
-						vrams_write->offset_buffer[_TR_ANY_Y] = -(10.f + pixelShift / 560.f);
+					if (_TR_ANY_Y < merge_last_change_y					// the switch happened last frame
+						|| (_TR_ANY_Y - merge_last_change_y) > 15)		// the switch has been recovered
+					{
+						vrams_write->offset_buffer[_TR_ANY_Y] = (_curr_mode == A2Mode_e::LEGACY ? -10.f : 10.f);
+					}
 					else
-						vrams_write->offset_buffer[_TR_ANY_Y] = 10.f + pixelShift / 640.f;
+					{
+						// If the change is to 28 MHz, shift negative (left). Otherwise, shift positive (right)
+						float pixelShift = (GLfloat)glm::pow(glm::exp(merge_last_change_y - _TR_ANY_Y + 15), bWobblePower) - 1.0;
+						if (_curr_mode == A2Mode_e::LEGACY)
+							vrams_write->offset_buffer[_TR_ANY_Y] = -(10.f + pixelShift);
+						else
+							vrams_write->offset_buffer[_TR_ANY_Y] = 10.f + pixelShift;
+					}
+					// std::cerr << "Offset: " << vrams_write->offset_buffer[_TR_ANY_Y] << " y: " << _TR_ANY_Y << std::endl;
 				}
-				// std::cerr << "Offset: " << vrams_write->offset_buffer[_TR_ANY_Y] << " y: " << _TR_ANY_Y << std::endl;
 			}
 		}
+
 	}
 
 	// Now we get rid of all the non-border BLANK areas to avoid an overflow on the vertical border areas.
@@ -685,18 +748,21 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		auto memPtr = memMgr->GetApple2MemAuxPtr();
 		uint8_t* lineStartPtr = vrams_write->vram_shr + GetVramWidthSHR() * _TR_ANY_Y;
 
+		// For the additional interlacing mode data, use main mem and the second part of vram_shr
+		auto memInterlacePtr = memMgr->GetApple2MemPtr();				// main mem (E0)
+		uint8_t* lineInterlaceStartPtr = vrams_write->vram_shr + vramInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y;
+
 		// get the SCB and palettes if we're starting a line
 		// and it's part of the content area. The top & bottom border areas don't care about SCB
 		// We may or may not have a border, so at this point the beamstate is either BORDER_LEFT or CONTENT
 		if ((_TR_ANY_X == 0) && (_y < mode_scanlines))
 		{
 			lineStartPtr[0] = memPtr[_A2VIDEO_SHR_SCB_START + _y];
-			vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = memPtr[_A2VIDEO_SHR_SCB_START + _y];
 			// Get the palette
 			memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
 				   memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
 				   32);					// palette length is 32 bytes
-			
+
 			// Also here check all the palette reserved nibble values (high nibble of byte 2) to see
 			// what SHR4 modes are used in this line, if SHR4 is enabled via the magic bytes
 			
@@ -709,9 +775,23 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 					scanlineSHR4Modes |= (1 << ((lineStartPtr[2 + 2*i] >> 4) + 4));	// second byte of each palette color (skip SCB byte 1)
 				}
 				vrams_write->frameSHR4Modes |= scanlineSHR4Modes;	// Add to the frame's SHR4 modes the new modes found on this line
+				vrams_write->doubleSHR4Mode = (memPtr + _A2VIDEO_SHR_MAGIC_BYTES - 1)[0];	// the previous byte has the Double SHR4 information
+			} else {
+				vrams_write->doubleSHR4Mode = 0;	// double mode can only be enabled in SHR4 mode
+			}
+
+			// Do the SCB and palettes for interlacing if requested
+			bShouldDoubleSHR = ( overrideDoubleSHR > 0 ? 1 : (vrams_write->doubleSHR4Mode > 0));
+			if (bShouldDoubleSHR)
+			{
+				lineInterlaceStartPtr[0] = memInterlacePtr[_A2VIDEO_SHR_SCB_START + _y];
+				// Get the palette
+				memcpy(lineInterlaceStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
+					   memInterlacePtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineInterlaceStartPtr[0] & 0xFu) * 32),
+					   32);					// palette length is 32 bytes
 			}
 		}
-		
+
 		switch (beamState)
 		{
 		case BeamState_e::UNKNOWN:
@@ -727,6 +807,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		case BeamState_e::BORDER_TOP:
 		case BeamState_e::BORDER_BOTTOM:
 			memset(lineStartPtr + _COLORBYTESOFFSET + (_TR_ANY_X * 4), (uint8_t)memMgr->switch_c034, 4);
+			if (bShouldDoubleSHR)
+				memset(lineInterlaceStartPtr + _COLORBYTESOFFSET + (_TR_ANY_X * 4), (uint8_t)memMgr->switch_c034, 4);
 			break;
 		case BeamState_e::CONTENT:
 		{
@@ -777,6 +859,51 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 					pal256ByteStartPtr[2*i + 1] = paletteColorStart[1];
 				}
 			}
+
+			// Do the exact same thing for double SHR if necessary, getting the data from main RAM
+			if (bShouldDoubleSHR)
+			{
+				scb = lineInterlaceStartPtr[0];
+				memcpy(lineInterlaceStartPtr + _COLORBYTESOFFSET + _TR_ANY_X * 4,
+					   memInterlacePtr + _A2VIDEO_SHR_START + _y * _A2VIDEO_SHR_BYTES_PER_LINE + xfb, 4);
+				if (!(scb & 0x80u) && (scb & 0x20u))	// 320 mode and colorfill
+				{
+					// Pre-calculate colorfill, so that the shader doesn't have to do it
+					// It's completely wasted on the shader. Here it's much more efficient
+					for (uint32_t i = 0; i < 4; i++)
+					{
+						auto byteColor = lineInterlaceStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i];
+						// if the first color of the byte is 0, give it the last color of the previous byte
+						// assuming this is not the first byte of the line
+						if (((byteColor & 0xF0) == 0) && ((xfb + i) != 0))
+							byteColor |= (lineInterlaceStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i - 1] & 0b1111) << 4;
+						// if the second color of the byte is 0, give it the first color of the byte
+						if ((byteColor & 0x0F) == 0)
+							byteColor |= (byteColor >> 4);
+						lineInterlaceStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i] = byteColor;
+					}
+				}
+				// Here deal with the new SHR4 mode PAL256, where each byte is an index into the full palette
+				// of 256 colors. We have to do it here because the palette can be dynamically modified while
+				// racing the beam.
+				if (((scanlineSHR4Modes & A2_VSM_SHR4PAL256) != 0) || (windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 3))
+				{
+					// calculate x value where x is 0-40 in the content area
+					// move to the offset to the interlace area which is the second half of the vram (i.e. slide down by _A2VIDEO_SHR_SCANLINES)
+					auto _x_just_content = _x - CYCLES_SC_HBL;
+					auto pal256ByteStartPtr = vrams_write->vram_pal256 + ((_y + _A2VIDEO_SHR_SCANLINES) * _A2VIDEO_SHR_BYTES_PER_LINE + (4 * _x_just_content))*2;
+
+					for (uint32_t i = 0; i < 4; i++)
+					{
+						// get the byte value, a pointer to the palette color
+						auto byteColor = lineInterlaceStartPtr[_COLORBYTESOFFSET + (_TR_ANY_X * 4) + i];
+						// get the palette color (2 bytes), the palette being all 256 colors in a single palette
+						auto paletteColorStart = memInterlacePtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)byteColor * 2);
+						pal256ByteStartPtr[2*i] = paletteColorStart[0];
+						pal256ByteStartPtr[2*i + 1] = paletteColorStart[1];
+					}
+				}
+			}	// end interlacing
 		}
 			break;
 		default:
@@ -957,10 +1084,10 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 }
 
 // When we learn we're in merged mode, we need to update all previous scanlines
-// to set the merged mode. Ideally it should all be one mode without any difference
-// between legacy and SHR, and a single shader. But for better performance, and to
-// not make a _very_ rare case (merged mode) the standard pipeline, we have both
-// legacy and shr split into their own and we merge them later.
+// to set the offset texture data. Ideally it should all be one integrated mode
+// between legacy and SHR. But then we'd have to always update the offset texture
+// to handle the wobble and remember the state, etc... That's a lot of work every
+// scanline for the _very_ rare case of merged mode which is only used in demos.
 void A2VideoManager::SwitchToMergedMode(uint32_t scanline)
 {
 	if (bIsSwitchingToMergedMode)
@@ -992,7 +1119,7 @@ void A2VideoManager::SwitchToMergedMode(uint32_t scanline)
 	bIsSwitchingToMergedMode = false;
 }
 
-void A2VideoManager::ForceBeamFullScreenRender()
+void A2VideoManager::ForceBeamFullScreenRender(const uint64_t numFrames)
 {
 	// Move the beam over the whole screen
 	auto totalscanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
@@ -1001,7 +1128,7 @@ void A2VideoManager::ForceBeamFullScreenRender()
 	int starty = _SCANLINE_START_FRAME + 2;
 	beamState = BeamState_e::NBVBLANK;
 
-	for (uint32_t y = starty; y < totalscanlines; y++)
+	for (uint32_t y = starty; y < totalscanlines * numFrames; y++)
 	{
 		for (uint32_t x = 0; x < 65; x++)
 		{
@@ -1056,7 +1183,7 @@ bool A2VideoManager::SelectSHRShader(const int index)
 
 uXY A2VideoManager::ScreenSize()
 {
-	return uXY({ (uint32_t)output_width, (uint32_t)output_height});
+	return uXY({ (uint32_t)fb_width, (uint32_t)fb_height});
 }
 
 void A2VideoManager::InitializeFullQuad() {
@@ -1103,7 +1230,7 @@ void A2VideoManager::PrepareOffsetTexture() {
 		// Generate the texture if it doesn't exist
 		if (OFFSETTEX == UINT_MAX)
 			glGenTextures(1, &OFFSETTEX);
-		glActiveTexture(GL_TEXTURE10);
+		glActiveTexture(_TEXUNIT_MERGE_OFFSET);
 		glBindTexture(GL_TEXTURE_2D, OFFSETTEX);
 
 		// Set texture parameters
@@ -1122,13 +1249,84 @@ void A2VideoManager::PrepareOffsetTexture() {
 	}
 	else {
 		// Update the texture
-		glActiveTexture(GL_TEXTURE10);
+		glActiveTexture(_TEXUNIT_MERGE_OFFSET);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, GetVramHeightSHR(), GL_RED, GL_FLOAT, vrams_read->offset_buffer);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	}
 }
-GLuint A2VideoManager::Render()
+
+void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
+{
+	// Create FBO and texture if they haven't been created yet
+	if (FBO_A2Video == UINT_MAX)
+	{
+		glGenFramebuffers(1, &FBO_A2Video);
+		glGenTextures(1, &a2video_texture_id);
+	}
+
+	// Create all the debug FBOs and textures, those have a static size and can be generated once only
+	if (FBO_debug[0] == UINT_MAX)
+	{
+		glGenFramebuffers(4, FBO_debug);
+		glGenTextures(4, debug_texture_id);
+		for (int i = 0; i < 4; i++)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[i]);
+			glBindTexture(GL_TEXTURE_2D, debug_texture_id[i]);
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, debug_texture_id[i], 0);
+
+			GLenum _statusFBO = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+			if (_statusFBO != GL_FRAMEBUFFER_COMPLETE)
+			{
+				std::cerr << "Debug Framebuffer " << i << " is not complete: " << _statusFBO << std::endl;
+			}
+		}
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+	glActiveTexture(_TEXUNIT_POSTPROCESS);	// this will go to postprocessing
+
+	// Check if the textures already have the desired dimensions.
+	GLint width = 0, height = 0;
+	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+
+	if (width == fb_width && height == fb_height)
+	{
+		glBindTexture(GL_TEXTURE_2D, 0);
+		return;
+	}
+
+	// ------------------------
+	// Setup framebuffer object
+	// ------------------------
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
+	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, a2video_texture_id, 0);
+
+	GLenum _statusFBO = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (_statusFBO != GL_FRAMEBUFFER_COMPLETE)
+	{
+		std::cerr << "Framebuffer is not complete: " << _statusFBO << std::endl;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glActiveTexture(GL_TEXTURE0);
+
+	// std::cerr << "Generated two FBOs with size " << fb_width << " x " << fb_height << std::endl;
+}
+
+bool A2VideoManager::Render(GLuint &_texUnit)
 {
 	// We first render both the legacy and shr "windows" as textures
 	// (which ever one of the two, or both, is enabled for this frame)
@@ -1137,164 +1335,154 @@ GLuint A2VideoManager::Render()
 	// directly and avoid all the mess, unless the user has requested that
 	// the legacy mode use 16MHz instead of 14MHz for width.
 
-	if (!bIsReady)
-		return UINT32_MAX;
-
-	if (!bA2VideoEnabled)
-		return UINT32_MAX;
-	
-	GLenum glerr;
-	if (FBO_merged == UINT_MAX)
+	if ((!bIsReady) || (!bA2VideoEnabled) || bIsRebooting)
 	{
-		glGenFramebuffers(1, &FBO_merged);
-		glGenTextures(1, &merged_texture_id);
-
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
-
-		glActiveTexture(_TEXUNIT_POSTPROCESS);
-		glBindTexture(GL_TEXTURE_2D, merged_texture_id);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, merged_texture_id, 0);
-
-		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-		if (status != GL_FRAMEBUFFER_COMPLETE) {
-			std::cerr << "Framebuffer is not complete: " << status << std::endl;
-		}
-
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		glActiveTexture(GL_TEXTURE0);
-		// std::cerr << "Generating FBO with size " << fb_width << " x " << fb_height << std::endl;
+		_texUnit = A2VIDEORENDER_ERROR;
+		return false;
 	}
+
+	// Exit if we've already rendered the buffer
+	if ((rendered_frame_idx == vrams_read->frame_idx) && !bAlwaysRenderBuffer)
+	{
+		_texUnit = _TEXUNIT_POSTPROCESS;
+		return false;
+	}
+	if ((rendered_frame_idx == vrams_read->frame_idx) && bAlwaysRenderBuffer)
+		this->ForceBeamFullScreenRender();
+
+	GLenum glerr;
 
 	// Initialization routine runs only once on init (or re-init)
 	if (bShouldInitializeRender) {
 		bShouldInitializeRender = false;
 
-		// image asset 0: The apple 2e US font
-		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START);
 		if (font_rom_regular_idx >= font_roms_array.size())
 			font_rom_regular_idx = 0;
 		if (font_rom_regular_idx >= font_roms_array.size())
 			font_rom_alternate_idx = (int)font_roms_array.size() - 1;
-		image_assets[0].AssignByFilename(this, std::string(fontpath).append("/").append(font_roms_array[font_rom_regular_idx]).c_str());
+		// image asset 0: The apple 2e US font
+		glActiveTexture(_TEXUNIT_IMAGE_FONT_ROM_DEFAULT);
+		image_assets[0].AssignByFilename(std::string(fontpath).append("/").append(font_roms_array[font_rom_regular_idx]).c_str());
 		// image asset 1: The alternate font
-		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 1);
-		image_assets[1].AssignByFilename(this, std::string(fontpath).append("/").append(font_roms_array[font_rom_alternate_idx]).c_str());
+		glActiveTexture(_TEXUNIT_IMAGE_FONT_ROM_ALTERNATE);
+		image_assets[1].AssignByFilename(std::string(fontpath).append("/").append(font_roms_array[font_rom_alternate_idx]).c_str());
 		// image asset 2: LGR texture (overkill for color, useful for dithered b/w)
-		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 2);
-		image_assets[2].AssignByFilename(this, "assets/Texture_composite_lgr.png");
+		glActiveTexture(_TEXUNIT_IMAGE_COMPOSITE_LGR);
+		image_assets[2].AssignByFilename("assets/Texture_composite_lgr.png");
 		// image asset 3: HGR texture
-		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 3);
-		image_assets[3].AssignByFilename(this, "assets/Texture_composite_hgr.png");
+		glActiveTexture(_TEXUNIT_IMAGE_COMPOSITE_HGR);
+		image_assets[3].AssignByFilename("assets/Texture_composite_hgr.png");
 		// image asset 4: DHGR texture
-		glActiveTexture(_TEXUNIT_IMAGE_ASSETS_START + 4);
-		image_assets[4].AssignByFilename(this, "assets/Texture_composite_dhgr.png");
+		glActiveTexture(_TEXUNIT_IMAGE_COMPOSITE_DHGR);
+		image_assets[4].AssignByFilename("assets/Texture_composite_dhgr.png");
+		// image asset 5: 8x8 font for VidHD text modes
+		glActiveTexture(_TEXUNIT_IMAGE_FONT_VIDHD_8X8);
+		image_assets[5].AssignByFilename("assets/VidHDFont8x8/00_US-Default.png");
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL AssignByFilename error: " 
-				<< 0 << " - " << glerr << std::endl;
+			std::cerr << "OpenGL AssignByFilename error: "
+			<< 0 << " - " << glerr << std::endl;
 		}
 
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL render A2VideoManager error: " << glerr << std::endl;
-		}
+		glActiveTexture(GL_TEXTURE0);
 
 		rendered_frame_idx = UINT64_MAX;
 	}
 
-	// Exit if we've already rendered the buffer
-	if ((rendered_frame_idx == vrams_read->frame_idx) && !bAlwaysRenderBuffer)
-		return output_texture_id;
+	// ===============================================================================
+	// ============================ SET FRAMEBUFFER SIZE =============================
+	// ===============================================================================
 
-	// std::cerr << "--- Actual Render: " << vrams_read->frame_idx << std::endl;
+	// Framebuffer size will change depending on the layers that are rendered:
+	// If a VidHD text modes > 80x24 is active, then 1920x1080
+	// Otherwise if it's a pure legacy frame, use legacy size
+	// Otherwise if it's a pure SHR frame, use SHR size
+	// Otherwise in merged SHR+Legacy mode it depends on the user preferences. The
+	// problems are 2-fold: first, the width. Users may prefer the Legacy to use the
+	// full SHR width, but it any case the quad needs to be full width to accommodate
+	// the wobble effect if needed. And second, the vertical position. When both quads
+	// are centered, the legacy is too low by 4 scanlines.
+	// In SHR+Legacy the legacy shader will take care of centering horizontally the
+	// legacy image within the quad and handle the wobble.
+
+	SDL_FRect _legacyQuad = { 0, 0, (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() };
+	SDL_FRect _legacyQuadWide = { 0, 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() };
+	SDL_FRect _shrQuad = { 0, 0, (float)windowsbeam[A2VIDEOBEAM_SHR]->GetWidth(), (float)windowsbeam[A2VIDEOBEAM_SHR]->GetHeight() };
+	SDL_FRect _vidHdLegacyQuad = { 0, 0, (float)_A2VIDEO_LEGACY_WIDTH, (float)_A2VIDEO_LEGACY_HEIGHT };
+
+	// Note: we always double the scanline value, so 4*2 for the shift
+	SDL_FPoint _scanlineOffset = {0.f,0.f};
+	if (bAlignQuadsToScanline)
+		_scanlineOffset.y = 8.f;
+
+
+	if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_TEXT_80X24) {	// Force 1080p size
+		fb_width = vidhdWindowBeam->GetWidth();
+		fb_height = vidhdWindowBeam->GetHeight();
+		auto _rb = NormalizePixelQuad(CenteredQuadInFramebufferWithOffset(_legacyQuad, _scanlineOffset));
+		windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
+		_rb = NormalizePixelQuad(CenteredQuadInFramebuffer(_shrQuad));
+		windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds(_rb);
+		vidhdWindowBeam->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
+	} else {
+		if (vrams_read->mode == A2Mode_e::LEGACY) {
+			fb_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
+			if (bAlignQuadsToScanline) {
+				fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
+				auto _rb = NormalizePixelQuad(CenteredQuadInFramebufferWithOffset(_legacyQuad, _scanlineOffset));
+				windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
+			} else {
+				fb_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
+				windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
+			}
+		} else if (vrams_read->mode == A2Mode_e::SHR) {
+			fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
+			fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
+			windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
+		} else {
+			fb_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
+			fb_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
+			SDL_FRect _rb;
+			_rb = NormalizePixelQuad(CenteredQuadInFramebufferWithOffset(_legacyQuadWide, _scanlineOffset));
+			windowsbeam[A2VIDEOBEAM_LEGACY]->SetQuadRelativeBounds(_rb);
+			windowsbeam[A2VIDEOBEAM_SHR]->SetQuadRelativeBounds({ -1.f, 1.f, 2.f, -2.f });
+		}
+		// add the vidhd layer
+		if (vidhdWindowBeam->GetVideoMode() > VIDHDMODE_NONE) {
+			auto _rb = NormalizePixelQuad(CenteredQuadInFramebufferWithOffset(_vidHdLegacyQuad, _scanlineOffset));
+			vidhdWindowBeam->SetQuadRelativeBounds(_rb);
+		}
+	}
+
+	CreateOrResizeFramebuffer(fb_width, fb_height);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
+
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "GL Framebuffer error: " << glerr << std::endl;
+	}
+
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
+	glViewport(0, 0, fb_width, fb_height);		// new viewport the size of the output texture
+
+	glClearColor(0.f, 0.f, 0.f, 0.f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glActiveTexture(_TEXUNIT_POSTPROCESS);
+	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
 
 	// Set the magic bytes, currently only in SHR mode
 	windowsbeam[A2VIDEOBEAM_SHR]->specialModesMask |= vrams_read->frameSHR4Modes;
+	windowsbeam[A2VIDEOBEAM_SHR]->doubleSHR4 = ( overrideDoubleSHR > 0 ? overrideDoubleSHR - 1 : vrams_read->doubleSHR4Mode);
 
-	// ===============================================================================
-	// ============================== MERGED MODE RENDER ==============================
-	// ===============================================================================
-
-	// Now determine how we should merge both legacy and shr
+	// if we're in merged mode, prepare the offset texture
 	if (vrams_read->mode == A2Mode_e::MERGED)
-	{
-		// Both are active in this frame, we need to do the merge
-
-		// first render Legacy in its viewport
-		uint32_t legacy_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
-		auto legacy_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
-		glViewport(0, 0, legacy_width, legacy_height);
-		// std::cerr << "Rendering merged legacy to viewport " << legacy_width << " x " << legacy_height << std::endl;
-		GLuint legacy_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
-
-		// Then render SHR in our viewport which is the same as SHR
-		output_width = fb_width;
-		output_height = fb_height;
-		glViewport(0, 0, output_width, output_height);
-		// std::cerr << "Rendering merged SHR to viewport " << output_width << " x " << output_height << std::endl;
-		GLuint shr_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
-
-		// Setup for merged rendering
-		output_texture_id = merged_texture_id;
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO_merged);
-		// glViewport(0, 0, output_width, output_height);
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		// Use the shader program
-		shader_merge.use();
-		shader_merge.setInt("ticks", SDL_GetTicks());
-		shader_merge.setInt("shrScanlineCount", (int)GetVramHeightSHR());
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
-			return UINT32_MAX;
-		}
-
-		// Bind both Legacy and SHR textures to Tex 8 and 9 respectively
-		glActiveTexture(GL_TEXTURE8);
-		glBindTexture(GL_TEXTURE_2D, legacy_texture_id);
-		shader_merge.setInt("legacyTex", GL_TEXTURE8 - GL_TEXTURE0);
-		shader_merge.setVec2("legacySize", legacy_width, legacy_height);
-		shader_merge.setInt("forceSHRWidth", bForceSHRWidth);
-
-		glActiveTexture(GL_TEXTURE9);
-		glBindTexture(GL_TEXTURE_2D, shr_texture_id);
-		shader_merge.setInt("shrTex", GL_TEXTURE9 - GL_TEXTURE0);
-		shader_merge.setVec2("shrSize", fb_width, fb_height);
-
-		// Point the uniform at the OFFSET texture
 		PrepareOffsetTexture();
-		shader_merge.setInt("OFFSETTEX", GL_TEXTURE10 - GL_TEXTURE0);
 
-		// Render the fullscreen quad
-		if (quadVAO == UINT_MAX) {
-			InitializeFullQuad();
-		}
-		glBindVertexArray(quadVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-
-		// Reset state
-		glBindVertexArray(0);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "A2VideoManager merged render error: " << glerr << std::endl;
-		}
-	}
 	// ===============================================================================
 	// ============================= LEGACY MODE RENDER ==============================
 	// ===============================================================================
-	else if (vrams_read->mode == A2Mode_e::LEGACY) {
+	if ((vrams_read->mode == A2Mode_e::LEGACY) || (vrams_read->mode == A2Mode_e::MERGED)) {
 		// Only legacy is active, just bind the correct output for the postprocessor
-		output_width = windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth();
-		output_height = windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight();
-		glViewport(0, 0, output_width, output_height);
 		if (bUseDHGRCOL140Mixed)
 			windowsbeam[A2VIDEOBEAM_LEGACY]->specialModesMask |= A2_VSM_DHGRCOL140Mixed;
 		else
@@ -1309,9 +1497,10 @@ GLuint A2VideoManager::Render()
 			windowsbeam[A2VIDEOBEAM_LEGACY]->specialModesMask &= ~A2_VSM_HGRSPEC2;
 
 		windowsbeam[A2VIDEOBEAM_LEGACY]->monitorColorType = eA2MonitorType;
-		
-		output_texture_id = windowsbeam[A2VIDEOBEAM_LEGACY]->Render(true);
-		// std::cerr << "Rendering legacy to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
+		windowsbeam[A2VIDEOBEAM_LEGACY]->bIsMergedMode = (vrams_read->mode == A2Mode_e::MERGED);
+		windowsbeam[A2VIDEOBEAM_LEGACY]->bForceSHRWidth = bForceSHRWidth;
+		windowsbeam[A2VIDEOBEAM_LEGACY]->Render(current_frame_idx);
+		// std::cerr << "Rendered legacy to viewport " << fb_width << "x" << fb_height << " - " << current_frame_idx << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "Legacy Mode draw error: " << glerr << std::endl;
 		}
@@ -1319,23 +1508,33 @@ GLuint A2VideoManager::Render()
 	// ===============================================================================
 	// =============================== SHR MODE RENDER ===============================
 	// ===============================================================================
-	else if (vrams_read->mode == A2Mode_e::SHR) {
+	if ((vrams_read->mode == A2Mode_e::SHR) || (vrams_read->mode == A2Mode_e::MERGED)) {
 		// Only SHR is active, just bind the correct output for the postprocessor
-		output_width = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth();
-		output_height = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight();
-		glViewport(0, 0, output_width, output_height);
 		windowsbeam[A2VIDEOBEAM_SHR]->monitorColorType = eA2MonitorType;
-		output_texture_id = windowsbeam[A2VIDEOBEAM_SHR]->Render(true);
-		// std::cerr << "Rendering SHR to viewport " << output_width << "x" << output_height << " - " << output_texture_id << std::endl;
+		windowsbeam[A2VIDEOBEAM_SHR]->bIsMergedMode = (vrams_read->mode == A2Mode_e::MERGED);
+		windowsbeam[A2VIDEOBEAM_SHR]->Render(current_frame_idx);
+		// std::cerr << "Rendered SHR to viewport " << fb_width << "x" << fb_height << " - " << current_frame_idx << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "SHR Mode draw error: " << glerr << std::endl;
 		}
 	}
+	// ===============================================================================
+	// ============================ VIDHD LAYER RENDER ===============================
+	// ===============================================================================
+	if (vidhdWindowBeam->GetVideoMode() != VIDHDMODE_NONE)	// VidHD
+	{
+		vidhdWindowBeam->Render(_TEXUNIT_INPUT_VIDHD, glm::vec2(fb_width, fb_height));
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "VidHD draw error: " << glerr << std::endl;
+		}
+	}
+
 	glActiveTexture(_TEXUNIT_POSTPROCESS);
-	glBindTexture(GL_TEXTURE_2D, output_texture_id);
+	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
-
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glGenerateMipmap(GL_TEXTURE_2D);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2VideoManager Bind Texture error: " << glerr << std::endl;
@@ -1349,50 +1548,48 @@ GLuint A2VideoManager::Render()
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2VideoManager glViewport error: " << glerr << std::endl;
 	}
-
-	// all done, the texture for this Apple 2 beam cycle frame is rendered
-	rendered_frame_idx = vrams_read->frame_idx;
-	vrams_read->bWasRendered = true;
 	
 	// Render the debugging textures as necessary
 	if (bRenderTEXT1) {
-		glViewport(0, 0, 280*2, 192*2);
-		windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->Render(true);
+		glViewport(0, 0, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT);
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[0]);
+		glBindTexture(GL_TEXTURE_2D, debug_texture_id[0]);
+		windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->Render(current_frame_idx);
 	}
 	if (bRenderTEXT2) {
-		glViewport(0, 0, 280*2, 192*2);
-		windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->Render(true);
+		glViewport(0, 0, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT);
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[1]);
+		glBindTexture(GL_TEXTURE_2D, debug_texture_id[1]);
+		windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->Render(current_frame_idx);
 	}
 	if (bRenderHGR1) {
-		glViewport(0, 0, 280*2, 192*2);
-		windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->Render(true);
+		glViewport(0, 0, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT);
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[2]);
+		glBindTexture(GL_TEXTURE_2D, debug_texture_id[2]);
+		windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->Render(current_frame_idx);
 	}
 	if (bRenderHGR2) {
-		glViewport(0, 0, 280*2, 192*2);
-		windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->Render(true);
+		glViewport(0, 0, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT);
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[3]);
+		glBindTexture(GL_TEXTURE_2D, debug_texture_id[3]);
+		windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->Render(current_frame_idx);
 	}
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2VideoManager debugging textures render error: " << glerr << std::endl;
 	}
 
-	return output_texture_id;
+	// all done, the texture for this Apple 2 beam cycle frame is rendered
+	rendered_frame_idx = vrams_read->frame_idx;
+	vrams_read->bWasRendered = true;
+
+	_texUnit = _TEXUNIT_POSTPROCESS;
+	return true;
 }
 
 GLuint A2VideoManager::GetOutputTextureId()
 {
-	return output_texture_id;
+	return a2video_texture_id;
 }
-
-void A2VideoManager::ActivateBeam()
-{
-	bBeamIsActive = true;
-}
-
-void A2VideoManager::DeactivateBeam()
-{
-	bBeamIsActive = false;
-}
-
 
 ///
 ///
@@ -1445,7 +1642,11 @@ void A2VideoManager::DisplayImGuiLoadFileWindow(bool* p_open)
 			ImGui::Checkbox("Aux Bank", &bImguiMemLoadAuxBank);
 			ImGui::SameLine(); ImGui::Text("   "); ImGui::SameLine();
 			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank, sImguiLoadPath))
+			{
+				// Force a double render because the top border is part of the previous beam scan
 				this->ForceBeamFullScreenRender();
+				this->ForceBeamFullScreenRender();
+			}
 		}
 		ImGui::End();
 	}
@@ -1473,44 +1674,49 @@ void A2VideoManager::DisplayImGuiExtraWindows()
 	
 	// Show extra render windows
 	// The extra windows may not have been rendered yet so we may need to force a re-render
+	float _debug_aspect_ratio;
 	if (bRenderTEXT1)
 	{
-		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->GetOutputTextureId();
-		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		_debug_aspect_ratio = _A2VIDEO_LEGACY_ASPECT_RATIO;
+		ImGui::SetNextWindowSizeConstraints(
+			ImVec2(_A2VIDEO_LEGACY_WIDTH/2, _A2VIDEO_LEGACY_HEIGHT/2),
+			ImVec2(FLT_MAX, FLT_MAX),
+			AspectConstraintCallback, (void*)&_debug_aspect_ratio);
 		ImGui::Begin("TEXT1 Viewer", &bRenderTEXT1);
-		if (texid == UINT_MAX)
-			this->ForceBeamFullScreenRender();
-		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::Image(reinterpret_cast<void*>(debug_texture_id[0]), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
 		ImGui::End();
 	}
 	if (bRenderTEXT2)
 	{
-		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->GetOutputTextureId();
-		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		_debug_aspect_ratio = _A2VIDEO_LEGACY_ASPECT_RATIO;
+		ImGui::SetNextWindowSizeConstraints(
+			ImVec2(_A2VIDEO_LEGACY_WIDTH / 2, _A2VIDEO_LEGACY_HEIGHT / 2), 
+			ImVec2(FLT_MAX, FLT_MAX),
+			AspectConstraintCallback, (void*)&_debug_aspect_ratio);
 		ImGui::Begin("TEXT2 Viewer", &bRenderTEXT2);
-		if (texid == UINT_MAX)
-			this->ForceBeamFullScreenRender();
-		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::Image(reinterpret_cast<void*>(debug_texture_id[1]), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
 		ImGui::End();
 	}
 	if (bRenderHGR1)
 	{
-		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->GetOutputTextureId();
-		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		_debug_aspect_ratio = _A2VIDEO_LEGACY_ASPECT_RATIO;
+		ImGui::SetNextWindowSizeConstraints(
+			ImVec2(_A2VIDEO_LEGACY_WIDTH / 2, _A2VIDEO_LEGACY_HEIGHT / 2), 
+			ImVec2(FLT_MAX, FLT_MAX),
+			AspectConstraintCallback, (void*)&_debug_aspect_ratio);
 		ImGui::Begin("HGR1 Viewer", &bRenderHGR1);
-		if (texid == UINT_MAX)
-			this->ForceBeamFullScreenRender();
-		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::Image(reinterpret_cast<void*>(debug_texture_id[2]), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
 		ImGui::End();
 	}
 	if (bRenderHGR2)
 	{
-		auto texid = windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->GetOutputTextureId();
-		ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2(FLT_MAX, FLT_MAX));
+		_debug_aspect_ratio = _A2VIDEO_LEGACY_ASPECT_RATIO;
+		ImGui::SetNextWindowSizeConstraints(
+			ImVec2(_A2VIDEO_LEGACY_WIDTH / 2, _A2VIDEO_LEGACY_HEIGHT / 2), 
+			ImVec2(FLT_MAX, FLT_MAX),
+			AspectConstraintCallback, (void*)&_debug_aspect_ratio);
 		ImGui::Begin("HGR2 Viewer", &bRenderHGR2);
-		if (texid == UINT_MAX)
-			this->ForceBeamFullScreenRender();
-		ImGui::Image(reinterpret_cast<void*>(texid), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
+		ImGui::Image(reinterpret_cast<void*>(debug_texture_id[3]), ImGui::GetContentRegionAvail(), ImVec2(0, 0), ImVec2(1, 1));
 		ImGui::End();
 	}
 }
@@ -1525,8 +1731,6 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 		if (!ImGui::IsWindowCollapsed())
 		{
 			auto memManager = MemoryManager::GetInstance();
-			auto border_w_slider_val = (int)this->GetBordersWidthCycles();
-			auto border_h_slider_val = (int)this->GetBordersHeightScanlines() / 8;
 			ImGui::PushItemWidth(200);
 			
 			if (ImGui::Button("Run Vertical Refresh"))
@@ -1535,16 +1739,26 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			ImGui::Text("Frame ID: %d", this->GetVRAMReadId());
 			
 			ImGui::SeparatorText("[ BORDERS AND WIDTH ]");
-			if (ImGui::SliderInt("Horizontal Borders", &border_w_slider_val, 0, _BORDER_WIDTH_MAX_CYCLES, "%d", 1)
-				|| ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, _BORDER_HEIGHT_MAX_MULT8, "%d", 1))
-				this->SetBordersWithReinit(border_w_slider_val, border_h_slider_val);
+			ImGui::SliderInt("Horizontal Borders", &border_w_slider_val, 0, _BORDER_WIDTH_MAX_CYCLES, "%d", 1);
+			ImGui::SliderInt("Vertical Borders", &border_h_slider_val, 0, _BORDER_HEIGHT_MAX_MULT8, "%d", 1);
 			if (ImGui::SliderInt("Border Color (0xC034)", &memManager->switch_c034, 0, 15))
 				this->ForceBeamFullScreenRender();
+			if (ImGui::Checkbox("Align Legacy to SHR Vertically", &this->bAlignQuadsToScanline))
+				this->ForceBeamFullScreenRender();
+			ImGui::SetItemTooltip("Aligns all vertical origins so that the scanlines match exactly");
 			if (ImGui::Checkbox("Force SHR width in merged mode", &this->bForceSHRWidth))
 				this->ForceBeamFullScreenRender();
+			ImGui::SetItemTooltip("Legacy image is stretched horizontally to match the SHR image");
 			if (ImGui::Checkbox("No wobble in merged mode", &this->bNoMergedModeWobble))
 				this->ForceBeamFullScreenRender();
-			
+			ImGui::SetItemTooltip("Removes the wobble effect when shifting mode mid-frame");
+			if (ImGui::Checkbox("Demo Merged Mode", &this->bDEMOMergedMode))
+				this->ForceBeamFullScreenRender();
+			ImGui::SetItemTooltip("A demo feature to force mid-frame switch between SHR and Legacy");
+			if (ImGui::SliderFloat("Wobble Power", &bWobblePower, 0.0, 0.3))
+				this->ForceBeamFullScreenRender();
+			ImGui::SetItemTooltip("Wobble strength. A value of .2 is relatively accurate");
+
 			//eA2MonitorType
 			const char* monitorTypes[] = { "Color", "White", "Green", "Amber" };
 			if (ImGui::Combo("Monitor Type", &this->eA2MonitorType, monitorTypes, IM_ARRAYSIZE(monitorTypes)))
@@ -1554,7 +1768,45 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 				}
 				this->ForceBeamFullScreenRender();
 			}
-			
+
+			ImGui::SeparatorText("[ VIDHD TEXT MODES ]");
+			// VidHdMode_e
+			const char* vidHdModes[] = { "OFF", "40x24", "80x24", "80x45", "120x67", "240x135" };
+			overrideVidHDTextMode = (int)vidhdWindowBeam->GetVideoMode();
+			if (ImGui::Combo("VidHD Text Modes", &this->overrideVidHDTextMode, vidHdModes, IM_ARRAYSIZE(vidHdModes)))
+			{
+				vidhdWindowBeam->SetVideoMode((VidHdMode_e)overrideVidHDTextMode);
+				this->ForceBeamFullScreenRender();
+			}
+			c022TextColorForeNibble = memManager->switch_c022 >> 4;
+			c022TextColorBackNibble = memManager->switch_c022 & 0xF;
+			if (ImGui::SliderInt("Text Color FG (0xC022)", &c022TextColorForeNibble, 0, 15))
+			{
+				auto _color = (c022TextColorForeNibble << 4) | c022TextColorBackNibble;
+				memManager->switch_c022 = _color;
+				this->ForceBeamFullScreenRender();
+			}
+			if (ImGui::SliderInt("Text Color BG (0xC022)", &c022TextColorBackNibble, 0, 15))
+			{
+				auto _color = (c022TextColorForeNibble << 4) | c022TextColorBackNibble;
+				memManager->switch_c022 = _color;
+				this->ForceBeamFullScreenRender();
+			}
+			vidHdTextAlphaForeNibble = vidhdWindowBeam->GetAlpha() >> 4;
+			vidHdTextAlphaBackNibble = vidhdWindowBeam->GetAlpha() & 0xF;
+			if (ImGui::SliderInt("Text Alpha FG", &vidHdTextAlphaForeNibble, 0, 15))
+			{
+				auto _alpha = (vidHdTextAlphaForeNibble << 4) | vidHdTextAlphaBackNibble;
+				vidhdWindowBeam->SetAlpha(_alpha);
+				this->ForceBeamFullScreenRender();
+			}
+			if (ImGui::SliderInt("Text Alpha BG", &vidHdTextAlphaBackNibble, 0, 15))
+			{
+				auto _alpha = (vidHdTextAlphaForeNibble << 4) | vidHdTextAlphaBackNibble;
+				vidhdWindowBeam->SetAlpha(_alpha);
+				this->ForceBeamFullScreenRender();
+			}
+
 			ImGui::SeparatorText("[ LEGACY EXTRA MODES ]");
 			if (ImGui::Checkbox("HGR SPEC1", &bUseHGRSPEC1))
 				this->ForceBeamFullScreenRender();
@@ -1573,13 +1825,17 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			bool isSHR4RGGBActive = (vrams_read->frameSHR4Modes & A2_VSM_SHR4RGGB) != 0;
 			bool isSHR4PAL256Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4PAL256) != 0;
 			bool isSHR4R4G4B4Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4R4G4B4) != 0;
-			
+			bool isSHRInterlaced = (vrams_read->doubleSHR4Mode == DSHR4_INTERLACE);
+			bool isSHRPageFlip = (vrams_read->doubleSHR4Mode == DSHR4_PAGEFLIP);
+
 			ImGui::BeginDisabled();
 			ImGui::Checkbox("None##SHR4", &isNoneActive);
 			ImGui::Checkbox("SHR4 SHR", &isSHR4SHRActive);
 			ImGui::Checkbox("SHR4 RGGB", &isSHR4RGGBActive);
 			ImGui::Checkbox("SHR4 PAL256", &isSHR4PAL256Active);
 			ImGui::Checkbox("SHR4 R4G4B4", &isSHR4R4G4B4Active);
+			ImGui::Checkbox("SHR Interlacing", &isSHRInterlaced);
+			ImGui::Checkbox("SHR Page Flip", &isSHRPageFlip);
 			ImGui::EndDisabled();
 			
 			ImGui::NextColumn();
@@ -1599,7 +1855,14 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = overrideSHR4Mode;
 				this->ForceBeamFullScreenRender();
 			}
+			const char* _doubleSHRModes[] = { "Default", "Disable", "Interlace", "Page Flip" };
+			if (ImGui::Combo("Force Double SHR", &this->overrideDoubleSHR, _doubleSHRModes, IM_ARRAYSIZE(_doubleSHRModes)))
+			{
+				this->ForceBeamFullScreenRender();
+			}
 			ImGui::Columns(1);
+
+			// vidhdWindowBeam->DisplayImGuiWindow(p_open);
 		}
 		ImGui::End();
 	}
@@ -1608,14 +1871,15 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 nlohmann::json A2VideoManager::SerializeState()
 {
 	nlohmann::json jsonState = {
-		{"borders_w_cycles", borders_w_cycles},
-		{"borders_h_8scanlines", borders_h_scanlines / 8},
+		{"borders_w_cycles", border_w_slider_val},
+		{"borders_h_8scanlines", border_h_slider_val},
 		{"borders_color", MemoryManager::GetInstance()->switch_c034},
 		{"monitor_type", eA2MonitorType},
 		{"enable_texture_repeat_mirroring", bMirrorRepeatOutputTexture},
 		{"enable_DHGRCOL140Mixed", bUseDHGRCOL140Mixed},
 		{"enable_HGRSPEC1", bUseHGRSPEC1},
 		{"enable_HGRSPEC2", bUseHGRSPEC2},
+		{"align_quads_to_scanline", bAlignQuadsToScanline},
 		{"force_shr_width_in_merge_mode", bForceSHRWidth},
 		{"no_merged_mode_wobble", bNoMergedModeWobble},
 		{"font_rom_regular_index", font_rom_regular_idx},
@@ -1632,11 +1896,12 @@ void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 	bUseDHGRCOL140Mixed = jsonState.value("enable_DHGRCOL140Mixed", bUseDHGRCOL140Mixed);
 	bUseHGRSPEC1 = jsonState.value("enable_HGRSPEC1", bUseHGRSPEC1);
 	bUseHGRSPEC2 = jsonState.value("enable_HGRSPEC2", bUseHGRSPEC2);
-	bForceSHRWidth = jsonState.value("force_shr_width_in_merge_mode", bForceSHRWidth);
+	bAlignQuadsToScanline = jsonState.value("force_shr_width_in_merge_mode", bAlignQuadsToScanline);
+	bForceSHRWidth = jsonState.value("align_quads_to_scanline", bForceSHRWidth);
 	bNoMergedModeWobble = jsonState.value("no_merged_mode_wobble", bNoMergedModeWobble);
 	font_rom_regular_idx = jsonState.value("font_rom_regular_index", font_rom_regular_idx);
 	font_rom_alternate_idx = jsonState.value("font_rom_slternate_index", font_rom_alternate_idx);
 
-	SetBordersWithReinit(jsonState.value("borders_w_cycles", borders_w_cycles),
-						 jsonState.value("borders_h_8scanlines", borders_h_scanlines / 8));
+	border_w_slider_val = jsonState.value("borders_w_cycles", border_w_slider_val);
+	border_h_slider_val = jsonState.value("borders_h_8scanlines", border_h_slider_val);
 }

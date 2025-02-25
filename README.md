@@ -9,6 +9,13 @@ TODO...
 ## MSYS2/MINGW, Ubuntu 14.04.1 and Mac OS X (Makefile)
 Use the included Makefile. Check the comments at the top.
 
-# TODO
+# DONE
 - Switch to the new USB protocol using the Appletini FPGA
 - Implement support for the Mockingboard 6522s' interrupts
+
+# TODO
+- Fix the SSI263 Speech implementation and get new phoneme samples
+- COL160 DHGR Video-7 mode?
+- For non-border pixels, use 4 border color bits in VRAM to store Video-7 & EVE registers
+- VidHD Text modes
+

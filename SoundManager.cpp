@@ -1,9 +1,9 @@
 #include "SoundManager.h"
 #include "imgui.h"
 #include <iostream>
+#include "MockingboardManager.h"
 #define CHIPS_IMPL
 #include "beeper.h"
-#include "common.h"
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 SoundManager* SoundManager::s_instance;
@@ -26,10 +26,10 @@ void SoundManager::Initialize()
 	{
 		SDL_zero(audioSpec);
 		audioSpec.freq = sampleRate;
-		audioSpec.format = AUDIO_F32;
-		audioSpec.channels = 1;
+		audioSpec.format = AUDIO_F32SYS;
+		audioSpec.channels = 2;
 		audioSpec.samples = bufferSize;
-		audioSpec.callback = nullptr;
+		audioSpec.callback = SoundManager::AudioCallback;
 		audioSpec.userdata = this;
 
 		audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
@@ -47,12 +47,12 @@ void SoundManager::Initialize()
 	}
 
 	bIsPlaying = false;
-	beeper_samples_idx = 0;
-	beeper_samples_zero_ct = 0;
 	SetPAL(bIsPAL);
+	SDL_PauseAudioDevice(audioDevice, 0);
 }
 
 SoundManager::~SoundManager() {
+	SDL_PauseAudioDevice(audioDevice, 1);
 	SDL_CloseAudioDevice(audioDevice);
 	SDL_Quit();
 }
@@ -64,7 +64,8 @@ void SoundManager::SetPAL(bool isPal) {
 	bool _isPlaying = bIsPlaying;
 	if (_isPlaying)
 		SDL_PauseAudioDevice(audioDevice, 1);
-	beeper_desc_t bdesc = { bIsPAL ? (float)_A2_CPU_FREQUENCY_PAL : (float)_A2_CPU_FREQUENCY_NTSC, SM_SAMPLE_RATE, 0.6f };
+	beeper_desc_t bdesc = { bIsPAL ? (float)_A2_CPU_FREQUENCY_PAL : (float)_A2_CPU_FREQUENCY_NTSC, _AUDIO_SAMPLE_RATE, 
+		SM_BASE_VOLUME_ADJUSTMENT };
 	beeper_init(&beeper, &bdesc);
 	if (_isPlaying)
 		BeginPlay();
@@ -74,28 +75,39 @@ void SoundManager::BeginPlay() {
 	if (!bIsEnabled)
 		return;
 	beeper_reset(&beeper);
-	beeper_samples_idx = 0;
-	beeper_samples_zero_ct = 0;
-	SDL_PauseAudioDevice(audioDevice, 0); // Start audio playback
+	curr_tick = 0;
+	curr_freq = 0.f;
+	beeper_samples_idx_read = SM_BEEPER_BUFFER_SIZE - SM_AUDIO_BUFLEN;
+	beeper_samples_idx_write = 0;
+	dcadj_pos = 0;
+	dcadj_sum = 0;
+	memset(beeper_samples, 0, sizeof(beeper_samples));
+	memset(dcadj_buf, 0, sizeof(dcadj_buf));
 	bIsPlaying = true;
+	MockingboardManager::GetInstance()->BeginPlay();
 }
 
 void SoundManager::StopPlay() {
 	// flush the last sounds
-	std::memset(beeper_samples + beeper_samples_idx, 0, SM_BEEPER_BUFFER_SIZE - beeper_samples_idx);
-	bool is_queue_empty = false;
-	while (!is_queue_empty) {
-		if (SDL_GetQueuedAudioSize(audioDevice) == 0) {
-			is_queue_empty = true;
-		}
-		SDL_Delay(5);
-	}
-	SDL_PauseAudioDevice(audioDevice, 1);
+	bool _enabledState = bIsEnabled;
+	bIsEnabled = false;	 // disable event handling until everything is flushed
+	MockingboardManager::GetInstance()->StopPlay();
+	SDL_Delay(100);
 	bIsPlaying = false;
+	bIsEnabled = _enabledState;
 }
 
 bool SoundManager::IsPlaying() {
 	return bIsPlaying;
+}
+
+float SoundManager::DCAdjustment(float freq)
+{
+	dcadj_sum -= dcadj_buf[dcadj_pos];
+	dcadj_sum += freq;
+	dcadj_buf[dcadj_pos] = freq;
+	dcadj_pos = (dcadj_pos + 1) & (SM_BEEPER_DCADJ_BUFLEN - 1);
+	return (dcadj_sum / SM_BEEPER_DCADJ_BUFLEN);
 }
 
 void SoundManager::EventReceived(bool isC03x) {
@@ -104,34 +116,55 @@ void SoundManager::EventReceived(bool isC03x) {
 	if (!bIsPlaying)
 		BeginPlay();
 	if (isC03x)
-	{
 		beeper_toggle(&beeper);
-	}
 	if (beeper_tick(&beeper))
 	{
-		beeper_samples[beeper_samples_idx] = beeper.sample;
-		++beeper_samples_idx;
-		beeper.sample == 0 ? ++beeper_samples_zero_ct : beeper_samples_zero_ct = 0;
-		if (beeper_samples_idx == SM_BEEPER_BUFFER_SIZE)
+		if (((beeper_samples_idx_write + 1) % SM_BEEPER_BUFFER_SIZE) == beeper_samples_idx_read)
 		{
-			// Drift removal code
-			// Here we check if we've got more than the buffer size in the queue, which means
-			// we're going to soon have a noticeable lag. We check if the queue is full of zeros
-			// and we clear it completely. As long as SM_BUFFER_DRIFT_LIMIT_SIZE >= 4096, which is gets to about 11Hz,
-			// it is certain that we are not "within a sound" (because no human can hear < 12Hz). So this
-			// is really a silent time, which we can use to remove the drift.
-			auto sdl_queue_size = SDL_GetQueuedAudioSize(audioDevice);
-			if ((sdl_queue_size >= SM_BUFFER_DRIFT_LIMIT_SIZE) && (sdl_queue_size < beeper_samples_zero_ct))
-			{
-				SDL_ClearQueuedAudio(audioDevice);
-				beeper_samples_zero_ct = 0;
-			}
-			
-			// Just queue the SM_BEEPER_BUFFER_SIZE array
-			SDL_QueueAudio(audioDevice, (const void*)(beeper_samples), SM_BEEPER_BUFFER_SIZE*sizeof(float));
-			beeper_samples_idx = 0;
+			// drop the sample, reading is lagging
+		}
+		else {
+			beeper_samples_idx_write = (beeper_samples_idx_write + 1) % SM_BEEPER_BUFFER_SIZE;
+			beeper_samples[beeper_samples_idx_write] = beeper.sample;
 		}
 	}
+}
+
+void SoundManager::AudioCallback(void* userdata, uint8_t* stream, int len)
+{
+	SoundManager* self = static_cast<SoundManager*>(userdata);
+	int samples = len / (sizeof(float) * 2); 	// Number of samples to fill
+
+	// Need to mix the speaker and the mockingboard Audio
+	auto mmMgr = MockingboardManager::GetInstance();
+	float mm_left = 0.f, mm_right = 0.f;	// The left and right values from the Mockingboard mix
+
+	float beeper_sample = 0.f;	// that's the beeper mono sample
+
+	for (int i = 0; i < samples; ++i) {
+		if (self->IsPlaying())
+		{
+			if (((self->beeper_samples_idx_read + 1) % SM_BEEPER_BUFFER_SIZE) == self->beeper_samples_idx_write)
+			{
+				// write is lagging, use the current sample
+				beeper_sample = self->beeper_samples[self->beeper_samples_idx_read];
+			}
+			else {
+				self->beeper_samples_idx_read = (self->beeper_samples_idx_read + 1) % SM_BEEPER_BUFFER_SIZE;
+				beeper_sample = self->beeper_samples[self->beeper_samples_idx_read];
+			}
+		}
+		if (mmMgr->IsPlaying())
+			mmMgr->GetSamples(mm_left, mm_right);
+
+		// Mix in the mono beeper and stereo Mockingboard streams
+		self->audioCallbackBuffer[2 * i] = 0.5 * self->beeper_volume * beeper_sample + 0.5 * mm_left;
+		self->audioCallbackBuffer[2 * i + 1] = 0.5 * self->beeper_volume * beeper_sample + 0.5 * mm_right;
+	}
+
+	// Copy the buffer to the stream
+	SDL_memcpy(stream, self->audioCallbackBuffer, len);
+	SDL_memset(self->audioCallbackBuffer, 0, len);
 }
 
 ///
@@ -163,16 +196,20 @@ void SoundManager::DisplayImGuiChunk()
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
 	}
-	ImGui::SliderFloat("Volume", &beeper.volume, 0.f, 1.f);
+	ImGui::SliderFloat("Volume", &beeper_volume, 0.f, 1.f);
 	ImGui::Separator();
-	ImGui::Text("Queued Samples: %d", (int)(SDL_GetQueuedAudioSize(audioDevice) / sizeof(float)));
+	static int sm_imgui_samples_delay = (SM_BEEPER_BUFFER_SIZE + beeper_samples_idx_write - beeper_samples_idx_read) % SM_BEEPER_BUFFER_SIZE;
+	if ((SDL_GetTicks64() & 0xC0) == 0)
+		sm_imgui_samples_delay = (SM_BEEPER_BUFFER_SIZE + beeper_samples_idx_write - beeper_samples_idx_read) % SM_BEEPER_BUFFER_SIZE;
+	ImGui::Text("Write-Read Samples Delay: %d", sm_imgui_samples_delay);
+	ImGui::Text("Current Audio Driver: %s\n", SDL_GetCurrentAudioDriver());
 }
 
 nlohmann::json SoundManager::SerializeState()
 {
 	nlohmann::json jsonState = {
 		{"sound_enabled", bIsEnabled},
-		{"sound_volume", beeper.volume}
+		{"sound_volume", beeper_volume}
 	};
 	return jsonState;
 }
@@ -180,5 +217,5 @@ nlohmann::json SoundManager::SerializeState()
 void SoundManager::DeserializeState(const nlohmann::json &jsonState)
 {
 	bIsEnabled = jsonState.value("sound_enabled", bIsEnabled);
-	beeper.volume = jsonState.value("sound_volume", beeper.volume);
+	beeper_volume = jsonState.value("sound_volume", beeper_volume);
 }

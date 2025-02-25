@@ -26,7 +26,7 @@
  */
 
 // Phoneme default speech rate
-constexpr float SSI263_PHONEME_SPEECH_RATE = 10.f;
+constexpr float SSI263_PHONEME_SPEECH_RATE = 2.f;
 // Phoneme default pitch empirically (speech data in MB Disk 1) gives
 // for bits I10->I6 the half-way value. But we don't know the parameter values
 // the samples were recorded at

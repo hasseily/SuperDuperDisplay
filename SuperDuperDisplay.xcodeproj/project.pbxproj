@@ -10,6 +10,9 @@
 		BB006F532C3C2E49008BFFAF /* Ayumi.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB006F4F2C3C2E49008BFFAF /* Ayumi.cpp */; };
 		BB006F542C3C2E49008BFFAF /* MockingboardManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB006F522C3C2E49008BFFAF /* MockingboardManager.cpp */; };
 		BB01620B2B83643D00A3D503 /* assets in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBD102132B829BAE00360B33 /* assets */; };
+		BB044AC12CF37F900002F6FA /* libftd3xx-static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC02CF37F8F0002F6FA /* libftd3xx-static.a */; };
+		BB044AC52CF381F80002F6FA /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC42CF381F80002F6FA /* CoreFoundation.framework */; };
+		BB044AC72CF382620002F6FA /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC62CF382620002F6FA /* IOKit.framework */; };
 		BB6B2FDD2CD17D03008BC3F2 /* samples in CopyFiles */ = {isa = PBXBuildFile; fileRef = BB6B2FDC2CD17CD4008BC3F2 /* samples */; };
 		BB6BE3152CC3963B00901A03 /* libopencv_core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BB6BE3142CC395F000901A03 /* libopencv_core.a */; };
 		BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = BB96E3EA2B6650BA00A3077C /* libz.tbd */; };
@@ -44,6 +47,7 @@
 		BBD102082B7CF23A00360B33 /* CycleCounter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBD102072B7CF23A00360B33 /* CycleCounter.cpp */; };
 		BBD102112B829B7C00360B33 /* EventRecorder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */; };
 		BBE17D862C81CDCB008EF443 /* SSI263.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBE17D842C81CDCB008EF443 /* SSI263.cpp */; };
+		BBE45C122D477211008D10A9 /* VidHdWindowBeam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBE45C112D477211008D10A9 /* VidHdWindowBeam.cpp */; };
 		BBF6D2C12C358F5000E85E1E /* SoundManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */; };
 		BBF6D2C82C35A1B900E85E1E /* recordings in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBF6D2C72C35A1AE00E85E1E /* recordings */; };
 /* End PBXBuildFile section */
@@ -81,6 +85,12 @@
 		BB006F502C3C2E49008BFFAF /* MockingboardManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MockingboardManager.h; sourceTree = "<group>"; };
 		BB006F512C3C2E49008BFFAF /* Ayumi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Ayumi.h; sourceTree = "<group>"; };
 		BB006F522C3C2E49008BFFAF /* MockingboardManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MockingboardManager.cpp; sourceTree = "<group>"; };
+		BB044ABD2CEA74690002F6FA /* Ft3xxTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Ft3xxTypes.h; sourceTree = "<group>"; };
+		BB044ABE2CEA74690002F6FA /* ftd3xx.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ftd3xx.h; sourceTree = "<group>"; };
+		BB044ABF2CEA74690002F6FA /* m6522.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = m6522.h; sourceTree = "<group>"; };
+		BB044AC02CF37F8F0002F6FA /* libftd3xx-static.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libftd3xx-static.a"; path = "lib/OSX/libftd3xx-static.a"; sourceTree = "<group>"; };
+		BB044AC42CF381F80002F6FA /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		BB044AC62CF382620002F6FA /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		BB0E58192C7B2E8600B44B58 /* SSI263Phonemes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSI263Phonemes.h; sourceTree = "<group>"; };
 		BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MemoryLoader.h; path = extras/MemoryLoader.h; sourceTree = "<group>"; };
 		BB64A7D02C391D580044E05B /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -150,6 +160,8 @@
 		BBD102132B829BAE00360B33 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = "<group>"; };
 		BBE17D842C81CDCB008EF443 /* SSI263.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SSI263.cpp; sourceTree = "<group>"; };
 		BBE17D852C81CDCB008EF443 /* SSI263.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSI263.h; sourceTree = "<group>"; };
+		BBE45C102D477211008D10A9 /* VidHdWindowBeam.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VidHdWindowBeam.h; sourceTree = "<group>"; };
+		BBE45C112D477211008D10A9 /* VidHdWindowBeam.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = VidHdWindowBeam.cpp; sourceTree = "<group>"; };
 		BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SoundManager.cpp; sourceTree = "<group>"; };
 		BBF6D2C02C358F5000E85E1E /* SoundManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SoundManager.h; sourceTree = "<group>"; };
 		BBF6D2C72C35A1AE00E85E1E /* recordings */ = {isa = PBXFileReference; lastKnownFileType = folder; path = recordings; sourceTree = "<group>"; };
@@ -160,8 +172,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB044AC12CF37F900002F6FA /* libftd3xx-static.a in Frameworks */,
 				BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */,
 				BBB525292B664A7D00A65C62 /* OpenGL.framework in Frameworks */,
+				BB044AC72CF382620002F6FA /* IOKit.framework in Frameworks */,
+				BB044AC52CF381F80002F6FA /* CoreFoundation.framework in Frameworks */,
 				BBB5252B2B664A8F00A65C62 /* CoreVideo.framework in Frameworks */,
 				BB6BE3152CC3963B00901A03 /* libopencv_core.a in Frameworks */,
 				BB9F87242C4BEE920091F5C6 /* SDL2.framework in Frameworks */,
@@ -204,63 +219,68 @@
 		BB8330D82B6645B300071F38 /* SuperDuperDisplay */ = {
 			isa = PBXGroup;
 			children = (
-				BBB525022B6648A200A65C62 /* A2VideoManager.cpp */,
+				BBE45C102D477211008D10A9 /* VidHdWindowBeam.h */,
+				BBE45C112D477211008D10A9 /* VidHdWindowBeam.cpp */,
 				BBB524FC2B6648A100A65C62 /* A2VideoManager.h */,
-				BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */,
+				BBB525022B6648A200A65C62 /* A2VideoManager.cpp */,
 				BBB4E5C02B83ECCE00764C50 /* A2WindowBeam.h */,
+				BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */,
 				BBD102132B829BAE00360B33 /* assets */,
-				BB006F4F2C3C2E49008BFFAF /* Ayumi.cpp */,
 				BB006F512C3C2E49008BFFAF /* Ayumi.h */,
+				BB006F4F2C3C2E49008BFFAF /* Ayumi.cpp */,
 				BB68B4C72C4248C400F96269 /* beeper.h */,
 				BBD102102B829B7C00360B33 /* ByteBuffer.h */,
 				BBB5250A2B6648A200A65C62 /* camera.h */,
 				BBB525102B6648A200A65C62 /* common.h */,
 				BBB525152B6648A200A65C62 /* ConcurrentQueue.h */,
-				BBD102072B7CF23A00360B33 /* CycleCounter.cpp */,
 				BBD102062B7CF23100360B33 /* CycleCounter.h */,
-				BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */,
+				BBD102072B7CF23A00360B33 /* CycleCounter.cpp */,
 				BBD1020F2B829B7C00360B33 /* EventRecorder.h */,
+				BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */,
 				BBB5250F2B6648A200A65C62 /* extras */,
+				BB044ABD2CEA74690002F6FA /* Ft3xxTypes.h */,
+				BB044ABE2CEA74690002F6FA /* ftd3xx.h */,
 				BBB525132B6648A200A65C62 /* glad */,
 				BBB525192B6648A200A65C62 /* glm */,
 				BBB525032B6648A200A65C62 /* GRAddr2XY.h */,
-				BBB525112B6648A200A65C62 /* imgui_memory_editor.h */,
 				BBB525062B6648A200A65C62 /* imgui.ini */,
+				BBB525112B6648A200A65C62 /* imgui_memory_editor.h */,
+				BB044ABF2CEA74690002F6FA /* m6522.h */,
 				BBB525142B6648A200A65C62 /* main.cpp */,
-				BB9F87262C4F09870091F5C6 /* MainMenu.cpp */,
 				BB9F87272C4F09870091F5C6 /* MainMenu.h */,
+				BB9F87262C4F09870091F5C6 /* MainMenu.cpp */,
 				BB64A7D02C391D580044E05B /* Makefile */,
-				BBC172F82B6657C20044B194 /* MemoryLoader.cpp */,
 				BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */,
-				BBC43F6A2B98CDE50035071D /* MemoryManager.cpp */,
+				BBC172F82B6657C20044B194 /* MemoryLoader.cpp */,
 				BBC43F692B98CDE50035071D /* MemoryManager.h */,
-				BB006F522C3C2E49008BFFAF /* MockingboardManager.cpp */,
+				BBC43F6A2B98CDE50035071D /* MemoryManager.cpp */,
 				BB006F502C3C2E49008BFFAF /* MockingboardManager.h */,
-				BBB5250B2B6648A200A65C62 /* MosaicMesh.cpp */,
+				BB006F522C3C2E49008BFFAF /* MockingboardManager.cpp */,
 				BBB524F92B6648A100A65C62 /* MosaicMesh.h */,
+				BBB5250B2B6648A200A65C62 /* MosaicMesh.cpp */,
 				BBB525072B6648A200A65C62 /* my_imgui_config.h */,
 				BBC48E172B71DA7D00D70DBD /* nlohmann */,
-				BBB5250C2B6648A200A65C62 /* OpenGLHelper.cpp */,
 				BBB524FA2B6648A100A65C62 /* OpenGLHelper.h */,
-				BBB5251A2B6648A200A65C62 /* PostProcessor.cpp */,
+				BBB5250C2B6648A200A65C62 /* OpenGLHelper.cpp */,
 				BBB524FB2B6648A100A65C62 /* PostProcessor.h */,
+				BBB5251A2B6648A200A65C62 /* PostProcessor.cpp */,
 				BBB524FE2B6648A100A65C62 /* ProjectConfig.xconfig */,
 				BBD1020E2B829B7C00360B33 /* README.md */,
-				BBB525082B6648A200A65C62 /* SDHRManager.cpp */,
 				BBB5250D2B6648A200A65C62 /* SDHRManager.h */,
-				BBB525162B6648A200A65C62 /* SDHRNetworking.cpp */,
+				BBB525082B6648A200A65C62 /* SDHRManager.cpp */,
 				BBB525012B6648A200A65C62 /* SDHRNetworking.h */,
-				BBB5250E2B6648A200A65C62 /* SDHRWindow.cpp */,
+				BBB525162B6648A200A65C62 /* SDHRNetworking.cpp */,
 				BBB524FF2B6648A100A65C62 /* SDHRWindow.h */,
-				BBB525042B6648A200A65C62 /* shader.cpp */,
+				BBB5250E2B6648A200A65C62 /* SDHRWindow.cpp */,
 				BBB524F82B6648A100A65C62 /* shader.h */,
+				BBB525042B6648A200A65C62 /* shader.cpp */,
 				BBB525002B6648A200A65C62 /* shaders */,
-				BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */,
 				BBF6D2C02C358F5000E85E1E /* SoundManager.h */,
-				BBB525052B6648A200A65C62 /* stb_image.h */,
-				BB0E58192C7B2E8600B44B58 /* SSI263Phonemes.h */,
-				BBE17D842C81CDCB008EF443 /* SSI263.cpp */,
+				BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */,
 				BBE17D852C81CDCB008EF443 /* SSI263.h */,
+				BBE17D842C81CDCB008EF443 /* SSI263.cpp */,
+				BB0E58192C7B2E8600B44B58 /* SSI263Phonemes.h */,
+				BBB525052B6648A200A65C62 /* stb_image.h */,
 			);
 			name = SuperDuperDisplay;
 			sourceTree = "<group>";
@@ -268,6 +288,9 @@
 		BBB525272B664A7D00A65C62 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				BB044AC62CF382620002F6FA /* IOKit.framework */,
+				BB044AC42CF381F80002F6FA /* CoreFoundation.framework */,
+				BB044AC02CF37F8F0002F6FA /* libftd3xx-static.a */,
 				BB6BE3142CC395F000901A03 /* libopencv_core.a */,
 				BB96E3EA2B6650BA00A3077C /* libz.tbd */,
 				BB9F87222C4BECEE0091F5C6 /* SDL2.framework */,
@@ -358,6 +381,7 @@
 				BBB5251D2B6648A200A65C62 /* A2VideoManager.cpp in Sources */,
 				BBB5251F2B6648A200A65C62 /* SDHRManager.cpp in Sources */,
 				BBB525242B6648A200A65C62 /* SDHRNetworking.cpp in Sources */,
+				BBE45C122D477211008D10A9 /* VidHdWindowBeam.cpp in Sources */,
 				BBB525212B6648A200A65C62 /* OpenGLHelper.cpp in Sources */,
 				BB006F542C3C2E49008BFFAF /* MockingboardManager.cpp in Sources */,
 				BBE17D862C81CDCB008EF443 /* SSI263.cpp in Sources */,
@@ -512,6 +536,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/homebrew/lib,
+					"$(PROJECT_DIR)/lib/OSX",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -529,6 +554,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/homebrew/lib,
+					"$(PROJECT_DIR)/lib/OSX",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

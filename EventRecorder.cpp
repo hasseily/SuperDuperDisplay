@@ -241,7 +241,6 @@ void EventRecorder::StopReplay()
 		if (thread_replay.joinable())
 			thread_replay.join();
 	}
-	MockingboardManager::GetInstance()->StopPlay();
 }
 
 void EventRecorder::StartReplay()
@@ -253,7 +252,6 @@ void EventRecorder::StartReplay()
 	bShouldStopReplay = false;
 	SetState(EventRecorderStates_e::PLAYING);
 	ApplyRAMSnapshot(0);
-	MockingboardManager::GetInstance()->BeginPlay();
 	thread_replay = std::thread(&EventRecorder::replay_events_thread, this,
 		&bShouldPauseReplay, &bShouldStopReplay);
 }
@@ -261,10 +259,6 @@ void EventRecorder::StartReplay()
 void EventRecorder::PauseReplay(bool pause)
 {
 	bShouldPauseReplay = pause;
-	if (pause)
-		MockingboardManager::GetInstance()->StopPlay();
-	else
-		MockingboardManager::GetInstance()->BeginPlay();
 }
 
 void EventRecorder::RewindReplay()
@@ -278,7 +272,8 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 {
 	using namespace std::chrono;
 	// Duration of an Apple 2 clock cycle (not stretched)
-	auto targetDuration = duration_cast<high_resolution_clock::duration>(duration<double, std::nano>(slowdownMultiplier * 979.926864));
+	auto duration_ns = 1'000'000'000 / (bIsPAL ? _A2_CPU_FREQUENCY_PAL : _A2_CPU_FREQUENCY_NTSC);
+	auto targetDuration = duration_cast<high_resolution_clock::duration>(duration<double, std::nano>(slowdownMultiplier * duration_ns));
 	auto startTime = high_resolution_clock::now();
 	auto nextTime = startTime;
 
@@ -306,13 +301,10 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			// These events can be run at max speed
 			auto snapshot_index = currentReplayEvent / m_current_snapshot_cycles;
 			ApplyRAMSnapshot(snapshot_index);
-			bool isVBL = false;
 			auto first_event_index = snapshot_index * m_current_snapshot_cycles;
 			for (auto i = first_event_index; i < currentReplayEvent; i++)
 			{
 				auto e = v_events.at(i);
-				isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == (e.is_iigs ? 1 : 0)));
-				CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
 				process_single_event(e);
 			}
 		}
@@ -322,8 +314,6 @@ int EventRecorder::replay_events_thread(bool* shouldPauseReplay, bool* shouldSto
 			if (*shouldStopReplay)	// In case a stop was sent while sleeping
 				break;
 			auto e = v_events.at(currentReplayEvent);
-			bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == (e.is_iigs ? 1 : 0)));
-			CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
 			process_single_event(e);
 			currentReplayEvent += 1;
 			// wait 1 clock cycle before adding the next event, compensating for drift
@@ -401,6 +391,11 @@ void EventRecorder::LoadTextEventsFromFile()
 //////////////////////////////////////////////////////////////////////////
 // Public methods
 //////////////////////////////////////////////////////////////////////////
+
+void EventRecorder::SetPAL(bool isPal) {
+	// Don't stop playing here because this may be called from the playing thread
+	bIsPAL = isPal;
+}
 
 void EventRecorder::RecordEvent(SDHREvent* sdhr_event)
 {
@@ -634,23 +629,11 @@ void EventRecorder::SetState(EventRecorderStates_e _state)
 	if (_state == m_state)
 		return;
 	m_state = _state;
+	/*
+	// do things based on state
 	switch (m_state) {
-		case EventRecorderStates_e::DISABLED:
-			A2VideoManager::GetInstance()->ActivateBeam();
-			break;
-		case EventRecorderStates_e::STOPPED:
-			A2VideoManager::GetInstance()->DeactivateBeam();
-			break;
-		case EventRecorderStates_e::PAUSED:
-			A2VideoManager::GetInstance()->DeactivateBeam();
-			break;
-		case EventRecorderStates_e::PLAYING:
-			A2VideoManager::GetInstance()->ActivateBeam();
-			break;
-		case EventRecorderStates_e::RECORDING:
-			A2VideoManager::GetInstance()->ActivateBeam();
-			break;
-		case EventRecorderStates_e::TOTAL_COUNT:
+	default:
 			break;
 	}
+	*/
 }

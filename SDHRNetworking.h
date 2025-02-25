@@ -20,6 +20,7 @@
 
 #include <iostream>
 #include <cstring>
+#include <atomic>
 
 #define PKT_BUFSZ 2048
 
@@ -63,7 +64,7 @@ enum class ENET_RES
 // Call this method as a new thread
 // It loops infinitely and waits for packets
 // And puts it in an events queue
-int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking);
+int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking);
 
 // Call this method as a new thread
 // It loops indefinitely and processes the packets queue
@@ -71,7 +72,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking);
 // If the events are SDHR data, it appends them to a command_buffer
 // When it parses a SDHR_PROCESS_EVENTS event, it calls SDHRManager
 // which itself processes the command_buffer
-int process_events_thread(bool* shouldTerminateProcessing);
+int process_usb_events_thread(std::atomic<bool>* shouldTerminateProcessing);
 void process_single_event(SDHREvent& e);
 void terminate_processing_thread();
 
@@ -82,4 +83,8 @@ const uint64_t get_duration_packet_processing_ns();
 const uint64_t get_duration_network_processing_ns();
 const size_t get_packet_pool_count();
 const size_t get_max_incoming_packets();
+const bool tini_is_ok();
 const bool client_is_connected();
+const std::string get_tini_name_string();
+const uint32_t get_tini_last_error();
+const std::string get_tini_last_error_string();

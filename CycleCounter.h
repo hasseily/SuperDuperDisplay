@@ -23,14 +23,20 @@ enum class VideoRegion_e
 	PAL = 2
 };
 
+enum class VBLState_e
+{
+	Unknown = 0,
+	Off = 1,
+	On = 2
+};
+
 class CycleCounter
 {
 public:
-	void IncrementCycles(int inc, bool isVBL);
+	void IncrementCycles(int inc, VBLState_e vblState);
 	const bool IsVBL();
 	const bool IsHBL();
 	const bool IsInBlank();
-	bool isVideoRegionDynamic = true;		// Video region will reconfigure automatically as necessary
 	const VideoRegion_e GetVideoRegion();
 	void SetVideoRegion(VideoRegion_e region);
 	void Reset();
@@ -45,6 +51,8 @@ public:
 	const uint32_t GetScreenCycles();
 	// Shift the VBL start. It effectively moves the current cycle.
 	void SetVBLStart(uint32_t _vblStart);
+	// Get cycles since reset
+	uint64_t GetCyclesSinceReset() { return m_cycles_since_reset; };
 	
 	// public singleton code
 	static CycleCounter* GetInstance()
@@ -70,6 +78,7 @@ private:
 	uint32_t m_prev_vbl_start = 0;	// debug to know when we think vbl started previously
 	size_t m_tstamp_init = 0;		// tstamp at initalization, as microseconds since epoch
 	size_t m_tstamp_cycle = 0;		// current tstamp of cycle, as microseconds since m_tstamp_init
+	uint64_t m_cycles_since_reset = 0;	// total cycles since computer reset
 
 };
 

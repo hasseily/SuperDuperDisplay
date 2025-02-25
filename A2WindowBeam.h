@@ -37,6 +37,15 @@ enum A2VideoSpecialMode_e
 	A2_VSM_SHR4R4G4B4		= 0b1000'0000,	// New SHR4 modes - r4G4B4 (see shader for details)
 };
 
+// Special double SHR4 modes that use both E0 and E1 banks
+enum DoubleSHR4Mode_e
+{
+	DSHR4_NONE = 0,
+	DSHR4_INTERLACE,
+	DSHR4_PAGEFLIP,
+	DSHR4_TOTAL_COUNT
+};
+
 // Monitor color type
 enum A2VideoMonitorType_e
 {
@@ -61,8 +70,9 @@ public:
 	uint32_t GetWidth() const;
 	uint32_t GetHeight() const;
 	void SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vertical);
-	GLuint GetOutputTextureId() const;
-	GLuint Render(bool shouldUpdateDataInGPU);	// returns the output texture id
+	void SetQuadRelativeBounds(SDL_FRect bounds);
+	SDL_FRect GetQuadRelativeBounds() const { return quad; };
+	void Render(uint64_t frame_idx);
 
 	Shader* GetShader() { return &shader; };
 	void SetShaderPrograms(const char* shaderVertexPath, const char* shaderFragmentPath);
@@ -71,9 +81,13 @@ public:
 	std::vector<A2BeamVertex> vertices;		// Vertices with XYRelative and XYPixels
 	unsigned int VAO = UINT_MAX;			// Vertex Array Object (holds buffers that are vertex related)
 	unsigned int VBO = UINT_MAX;			// Vertex Buffer Object (holds vertices)
-	
+
+	bool bIsMergedMode = false;				// Activate if this frame has both SHR and Legacy. Shader will use OFFSETEX
+	bool bForceSHRWidth = false;			// Request to force SHR width for legacy
+
 	int specialModesMask = A2_VSM_NONE;		// Or'ed A2VideoSpecialMode_e
 	int overrideSHR4Mode = 0;				// Debugging to override the SHR4 modes in the shader
+	int doubleSHR4 = DSHR4_NONE;
 	int monitorColorType = A2_MON_COLOR;	// Monitor color type A2VideoMonitorType_e
 
 private:
@@ -88,8 +102,7 @@ private:
 	uint32_t border_width_cycles = 0;
 	uint32_t border_height_scanlines = 0;
 
-	GLuint output_texture_id = UINT_MAX;	// the output texture for this object
-	GLuint FBO = UINT_MAX;					// the framebuffer for this object
+	SDL_FRect quad = { -1.f, 1.f, 2.f, -2.f };	// x, y, width, height
 
 	void UpdateVertexArray();
 };

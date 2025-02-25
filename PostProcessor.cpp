@@ -32,6 +32,19 @@ PostProcessor* PostProcessor::s_instance;
 
 void PostProcessor::Initialize()
 {
+	if (FBO_prevFrame == UINT_MAX)
+	{
+		glGenFramebuffers(1, &FBO_prevFrame);
+		glGenTextures(1, &prevFrame_texture_id);
+	}
+	if (quadVAO == UINT_MAX)
+	{
+		glGenVertexArrays(1, &quadVAO);
+		glGenBuffers(1, &quadVBO);
+	}
+
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
+
 	v_ppshaders.clear();
 	Shader shader_basic = Shader();
 	shader_basic.build(_SHADER_VERTEX_BASIC, _SHADER_FRAGMENT_BASIC);
@@ -39,6 +52,7 @@ void PostProcessor::Initialize()
 	Shader shader_pp = Shader();
 	shader_pp.build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");
 	v_ppshaders.push_back(shader_pp);
+	memset(preset_name_buffer, 0, sizeof(preset_name_buffer));
 }
 
 PostProcessor::~PostProcessor()
@@ -49,6 +63,15 @@ PostProcessor::~PostProcessor()
 		glDeleteVertexArrays(1, &quadVAO);
 		glDeleteBuffers(1, &quadVBO);
 	}
+	quadVAO = UINT_MAX;
+	quadVBO = UINT_MAX;
+
+	if (FBO_prevFrame != UINT_MAX)
+	{
+		glDeleteFramebuffers(1, &FBO_prevFrame);
+		glDeleteTextures(1, &prevFrame_texture_id);
+	}
+	FBO_prevFrame = UINT_MAX;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -58,6 +81,7 @@ PostProcessor::~PostProcessor()
 nlohmann::json PostProcessor::SerializeState()
 {
 	nlohmann::json jsonState = {
+		{"preset_name", preset_name_buffer},
 		{"p_i_postprocessingLevel", p_i_postprocessingLevel},
 		{"bCRTFillWindow", bCRTFillWindow},
 		{"integer_scale", integer_scale},
@@ -66,10 +90,8 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_f_corner", p_f_corner},
 		{"p_b_smoothCorner", p_b_smoothCorner},
 		{"p_b_extGamma", p_b_extGamma},
-		{"p_b_interlace", p_b_interlace},
-		{"p_b_potato", p_b_potato},
+		{"p_f_interlace", p_f_interlace},
 		{"p_b_slot", p_b_slot},
-		{"p_b_vignette", p_b_vignette},
 		{"p_f_bgr", p_f_bgr},
 		{"p_f_black", p_f_black},
 		{"p_f_brDep", p_f_brDep},
@@ -90,6 +112,8 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_f_hueRG", p_f_hueRG},
 		{"p_f_saturation", p_f_saturation},
 		{"p_f_scanlineWeight", p_f_scanlineWeight},
+		{"p_f_scanSpeed", p_f_scanSpeed},
+		{"p_f_flimGrain", p_f_filmGrain},
 		{"p_i_scanlineType", p_i_scanlineType},
 		{"p_f_slotW", p_f_slotW},
 		{"p_f_vignetteWeight", p_f_vignetteWeight},
@@ -97,13 +121,16 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_f_warpY", p_f_warpY},
 		{"p_f_barrelDistortion", p_f_barrelDistortion},
 		{"p_f_zoomX", p_f_zoomX},
-		{"p_f_zoomY", p_f_zoomY}
+		{"p_f_zoomY", p_f_zoomY},
+		{"p_f_ghostingPercent", p_f_ghostingPercent},
+		{"p_f_phosphorBlur", p_f_phosphorBlur}
 	};
 	return jsonState;
 }
 
 void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 {
+	std::strncpy(preset_name_buffer, jsonState.value("preset_name", preset_name_buffer).c_str(), sizeof(preset_name_buffer) - 1);
 	p_i_postprocessingLevel = jsonState.value("p_i_postprocessingLevel", p_i_postprocessingLevel);
 	bCRTFillWindow = jsonState.value("bCRTFillWindow", bCRTFillWindow);
 	integer_scale = jsonState.value("integer_scale", integer_scale);
@@ -111,10 +138,8 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_f_corner = jsonState.value("p_f_corner", p_f_corner);
 	p_b_smoothCorner = jsonState.value("p_b_smoothCorner", p_b_smoothCorner);
 	p_b_extGamma = jsonState.value("p_b_extGamma", p_b_extGamma);
-	p_b_interlace = jsonState.value("p_b_interlace", p_b_interlace);
-	p_b_potato = jsonState.value("p_b_potato", p_b_potato);
+	p_f_interlace = jsonState.value("p_f_interlace", p_f_interlace);
 	p_b_slot = jsonState.value("p_b_slot", p_b_slot);
-	p_b_vignette = jsonState.value("p_b_vignette", p_b_vignette);
 	p_f_bgr = jsonState.value("p_f_bgr", p_f_bgr);
 	p_f_black = jsonState.value("p_f_black", p_f_black);
 	p_f_brDep = jsonState.value("p_f_brDep", p_f_brDep);
@@ -135,6 +160,8 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_f_hueRG = jsonState.value("p_f_hueRG", p_f_hueRG);
 	p_f_saturation = jsonState.value("p_f_saturation", p_f_saturation);
 	p_f_scanlineWeight = jsonState.value("p_f_scanlineWeight", p_f_scanlineWeight);
+	p_f_scanSpeed = jsonState.value("p_f_scanSpeed", p_f_scanSpeed);
+	p_f_filmGrain = jsonState.value("p_f_filmGrain", p_f_filmGrain);
 	p_i_scanlineType = jsonState.value("p_i_scanlineType", p_i_scanlineType);
 	p_f_slotW = jsonState.value("p_f_slotW", p_f_slotW);
 	p_f_vignetteWeight = jsonState.value("p_f_vignetteWeight", p_f_vignetteWeight);
@@ -143,6 +170,8 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_f_barrelDistortion = jsonState.value("p_f_barrelDistortion", p_f_barrelDistortion);
 	p_f_zoomX = jsonState.value("p_f_zoomX", p_f_zoomX);
 	p_f_zoomY = jsonState.value("p_f_zoomY", p_f_zoomY);
+	p_f_ghostingPercent = jsonState.value("p_f_ghostingPercent", p_f_ghostingPercent);
+	p_f_phosphorBlur = jsonState.value("p_f_phosphorBlur", p_f_phosphorBlur);
 }
 
 void PostProcessor::SaveState(int profile_id) {
@@ -169,41 +198,33 @@ void PostProcessor::LoadState(int profile_id) {
 void PostProcessor::SelectShader()
 {
 	// Choose the shader
-	// Frame count is always set, outside of the shader selection
 	switch (p_i_postprocessingLevel)
 	{
 	case 0:	// basic passthrough shader with optional scanlines
 	case 1:
 		shaderProgram = v_ppshaders.at(0);
 		shaderProgram.use();
-		shaderProgram.setInt("Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
-		shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
-		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 		break;
 	case 2:	// CRT shader
 		shaderProgram = v_ppshaders.at(1);
 		shaderProgram.use();
-		// common
-		shaderProgram.setInt("A2Texture", _PP_INPUT_TEXTURE_UNIT - GL_TEXTURE0);
+		// size info
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
 		shaderProgram.setVec2("InputSize", glm::vec2(texWidth, texHeight));
-		shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
 		shaderProgram.setVec4("VideoRect", quadViewportCoords);
-		shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
 
 		// shader specific
+		shaderProgram.setFloat("GhostingPercent", p_f_ghostingPercent);
+		shaderProgram.setFloat("BlurSize", p_f_phosphorBlur);
 		shaderProgram.setBool("bCORNER_SMOOTH", p_b_smoothCorner);
 		shaderProgram.setBool("bEXT_GAMMA", p_b_extGamma);
-		shaderProgram.setBool("bINTERLACE", p_b_interlace);
-		shaderProgram.setBool("bPOTATO", p_b_potato);
 		shaderProgram.setBool("bSLOT", p_b_slot);
-		shaderProgram.setBool("bVIGNETTE", p_b_vignette);
 		shaderProgram.setFloat("BARRELDISTORTION", p_f_barrelDistortion);
 		shaderProgram.setFloat("BGR", p_f_bgr);
 		shaderProgram.setFloat("BLACK", p_f_black);
 		shaderProgram.setFloat("BR_DEP", p_f_brDep);
-		shaderProgram.setFloat("BRIGHTNESs", p_f_brightness);
+		shaderProgram.setFloat("BRIGHTNESS", p_f_brightness);
 		shaderProgram.setFloat("C_STR", p_f_cStr);
 		shaderProgram.setFloat("CENTERX", p_f_centerX);
 		shaderProgram.setFloat("CENTERY", p_f_centerY);
@@ -219,8 +240,11 @@ void PostProcessor::SelectShader()
 		shaderProgram.setFloat("RG", p_f_hueRG);
 		shaderProgram.setFloat("SATURATION", p_f_saturation);
 		shaderProgram.setFloat("SCANLINE_WEIGHT", p_f_scanlineWeight);
+		shaderProgram.setFloat("SCAN_SPEED", p_f_scanSpeed);
+		shaderProgram.setFloat("FILM_GRAIN", p_f_filmGrain);
 		shaderProgram.setFloat("SLOTW", p_f_slotW);
 		shaderProgram.setFloat("VIGNETTE_WEIGHT", p_f_vignetteWeight);
+		shaderProgram.setFloat("INTERLACE_WEIGHT", p_f_interlace);
 		shaderProgram.setFloat("WARPX", p_f_warpX);
 		shaderProgram.setFloat("WARPY", p_f_warpY);
 		shaderProgram.setFloat("ZOOMX", p_f_zoomX);
@@ -230,9 +254,12 @@ void PostProcessor::SelectShader()
 		shaderProgram.setInt("iSCANLINE_TYPE", p_i_scanlineType);
 		break;
 	}
+	// common
+	shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
+	shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
 }
 
-void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
+void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint scanlineCount)
 {
 	SDL_GL_GetDrawableSize(window, &viewportWidth, &viewportHeight);
 
@@ -248,12 +275,10 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 		std::cerr << "OpenGL error PP 0: " << glerr << std::endl;
 	}
 	
-	// Bind the texture we're given to our _POSTPROCESSOR_INPUT_TEXTURE
+	// Bind the texture we're given
 	// And get its actual size.
-	glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
-	GLint last_bound_texture = 0;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_bound_texture);
-	glBindTexture(GL_TEXTURE_2D, inputTextureId);
+	texUnitCurrent  = inputTextureSlot;
+	glActiveTexture(texUnitCurrent);
 	prev_texWidth = texWidth;
 	prev_texHeight = texHeight;
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texWidth);
@@ -270,14 +295,18 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	_scale = std::min(_scale, static_cast<float>(viewportHeight) / static_cast<float>(texHeight));
 	if (_scale > 1.0f)
 		_scale = std::floor(_scale);
-	max_integer_scale = std::max(1, static_cast<int>(_scale) + 10);	// allow for manual further zoom
+	else
+		_scale = 1.0f;
+	// make sure the scale doesn't extend beyond the GL max texture size
+	max_integer_scale = std::min(maxTexSize / texHeight, maxTexSize / texWidth);
+
 	if (!bAutoScale)
 	{
 		integer_scale = std::min(integer_scale, max_integer_scale);
 		_scale = static_cast<float>(integer_scale);
 	}
 	else {
-		integer_scale = static_cast<int>(_scale);
+		integer_scale = std::min(static_cast<int>(_scale), max_integer_scale);
 	}
 
 	// Determine the quad's origin
@@ -286,7 +315,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 
 	if (bCRTFillWindow && p_i_postprocessingLevel > 1)
 	{
-		quadViewportCoords.x = -1.0;		// left
+		quadViewportCoords.x = -1.0;	// left
 		quadViewportCoords.y = -1.0;	// top
 		quadViewportCoords.z = 1.0;		// right
 		quadViewportCoords.w = 1.0;		// bottom
@@ -313,34 +342,38 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 //		<< "), (" << quadViewportCoords[2] << ", " << quadViewportCoords[3] << ")" << std::endl;
 	
 	if (bImguiWindowIsOpen || (!shaderProgram.isReady)
-		|| (last_bound_texture != inputTextureId)
 		|| (prev_texWidth != texWidth) || (prev_texHeight != texHeight))
 	{
 		// only update the shader parameters in certain cases
 		// as it may be very costly for rPi and slow CPUs
 		this->SelectShader();
-		last_bound_texture = inputTextureId;
 		prev_texWidth = texWidth;
 		prev_texHeight = texHeight;
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP shaderProgram select: " << glerr << std::endl;
+		}
 	}
 	else
 	{
 		shaderProgram.use();
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP shaderProgram use: " << glerr << std::endl;
+		}
 	}
 
-	// Always set the frame count!
-	shaderProgram.setInt("FrameCount", frame_count);
-	shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
+	// Used for all PP shaders
+	shaderProgram.setInt("A2TextureCurrent", texUnitCurrent - GL_TEXTURE0);
+	shaderProgram.setInt("PreviousFrame", _TEXUNIT_PP_PREVIOUS - GL_TEXTURE0);
+	shaderProgram.setInt("iFrameCount", frame_count);
+	shaderProgram.setBool("bHalveFrameRate", bHalveFramerate);
+	// Only used for the full PP shader
+	if (p_i_postprocessingLevel > 1) {
+		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
+		shaderProgram.setUInt("ScanlineCount", scanlineCount);
+	}
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 2: " << glerr << std::endl;
-	}
-
-	// Setup fullscreen quad VAO and VBO
-	if (quadVAO == UINT_MAX)
-	{
-		glGenVertexArrays(1, &quadVAO);
-		glGenBuffers(1, &quadVBO);
 	}
 	
 	// Now always send in the vertices because it all may have been resized upstream
@@ -362,13 +395,64 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureId)
 	// Target the main SDL2 window
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
+
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 3: " << glerr << std::endl;
 	}
+
+	/////////////////////////// BEGIN PREVIOUS FRAME TEXTURE ///////////////////////////
+
+	// DO NOT COPY INTO THE PREVIOUS FRAME TEXTURE UNLESS IT IS REQUIRED
+	// THIS _DRAMATICALLY_ REDUCES THE FPS ON A RASPBERRY PI
+	if ((p_f_ghostingPercent > 0.0000001f) || bHalveFramerate)
+	{
+		// Compute the pixel boundaries of the quad from its normalized coordinates.
+		// The conversion from normalized device coordinates (range [-1,1]) to pixel coordinates is:
+		//    pixel = (ndc * 0.5 + 0.5) * viewportDimension
+		int quadLeft = (int)lround((quadViewportCoords.x * 0.5f + 0.5f) * viewportWidth);
+		int quadRight = (int)lround((quadViewportCoords.z * 0.5f + 0.5f) * viewportWidth);
+		int quadTop = (int)lround((quadViewportCoords.y * 0.5f + 0.5f) * viewportHeight);
+		int quadBottom = (int)lround((quadViewportCoords.w * 0.5f + 0.5f) * viewportHeight);
+
+
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO_prevFrame);
+		glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, quadRight - quadLeft, quadBottom - quadTop, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, prevFrame_texture_id, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP 4: " << glerr << std::endl;
+		}
+		// Always bind the previous frame texture to its dedicated texture unit
+		glActiveTexture(_TEXUNIT_PP_PREVIOUS);
+		glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
+		glActiveTexture(GL_TEXTURE0);
+
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP 5: " << glerr << std::endl;
+		}
+
+		// Now copy the screen texture to prevFrame_texture_id, to use it for the next frame
+		// NOTE: prevFrame is flipped on the Y axis, so we flip Y on the destination to realign it
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO_prevFrame);
+		glBlitFramebuffer(quadLeft, quadTop, quadRight, quadBottom,	// source rectangle (quad region)
+			0, quadBottom - quadTop, quadRight - quadLeft, 0,				// destination rectangle (Y flipped)
+			GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP glBlitFramebuffer: " << glerr << std::endl;
+		}
+	}
+
+	//////////////////////////// END OF PREVIOUS FRAME TEXTURE ///////////////////////////
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
 	// revert the texture assignment
-	glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
-	glBindTexture(GL_TEXTURE_2D, last_bound_texture);
 	glActiveTexture(GL_TEXTURE0);
 	++frame_count;
 }
@@ -378,74 +462,59 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 	bImguiWindowIsOpen = p_open;
 	if (p_open)
 	{
-		ImGui::SetNextWindowSizeConstraints(ImVec2(400, 400), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(450, 400), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("Post Processing CRT Shader", p_open);
 		// Handle presets. Disable load/save if the chosen button is "Off"
 		ImGui::Text("[ PRESETS ]");
-		if (v_presets == 0)
+		if (idx_preset == 0)
 		{
 			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f); // Reduce button opacity
 			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true); // Disable button (and make it unclickable)
 		}
 		if (ImGui::Button("Load##Presets"))
 		{
-			this->LoadState(v_presets);
+			this->LoadState(idx_preset);
 		}
-		if (v_presets == 0)
+		if (idx_preset == 0)
 		{
 			ImGui::PopItemFlag();
 			ImGui::PopStyleVar();
 		}
 		ImGui::SameLine();
-		ImGui::Dummy(ImVec2(50.0f, 0.0f));
+		ImGui::Dummy(ImVec2(5.0f, 0.0f));
 		ImGui::SameLine();
-		ImGui::RadioButton("None##Presets", &v_presets, 0); ImGui::SameLine();
-		ImGui::RadioButton("1##Presets", &v_presets, 1); ImGui::SameLine();
-		ImGui::RadioButton("2##Presets", &v_presets, 2); ImGui::SameLine();
-		ImGui::RadioButton("3##Presets", &v_presets, 3);
+		ImGui::RadioButton("None##Presets", &idx_preset, 0); ImGui::SameLine();
+		ImGui::RadioButton("1##Presets", &idx_preset, 1); ImGui::SameLine();
+		ImGui::RadioButton("2##Presets", &idx_preset, 2); ImGui::SameLine();
+		ImGui::RadioButton("3##Presets", &idx_preset, 3); ImGui::SameLine();
+		ImGui::RadioButton("4##Presets", &idx_preset, 4); ImGui::SameLine();
+		ImGui::RadioButton("5##Presets", &idx_preset, 5); ImGui::SameLine();
+		ImGui::RadioButton("6##Presets", &idx_preset, 6); ImGui::SameLine();
+		ImGui::RadioButton("7##Presets", &idx_preset, 7);
 		ImGui::SameLine();
-		ImGui::Dummy(ImVec2(50.0f, 0.0f));
+		ImGui::Dummy(ImVec2(5.0f, 0.0f));
 		ImGui::SameLine();
 		
-		if (v_presets == 0)
+		if (idx_preset == 0)
 		{
 			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f); // Reduce button opacity
 			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true); // Disable button (and make it unclickable)
 		}
 		if (ImGui::Button("Save##Presets"))
 		{
-			this->SaveState(v_presets);
+			this->SaveState(idx_preset);
 		}
-		if (v_presets == 0)
+		if (idx_preset == 0)
 		{
 			ImGui::PopItemFlag();
 			ImGui::PopStyleVar();
 		}
-
-		 // enable to reload the shader
-		if (ImGui::Button("Reload Shader"))
-		{
-			auto ppshader = v_ppshaders.at(1);
-			v_ppshaders.at(1).build(ppshader.GetVertexPath().c_str(), ppshader.GetFragmentPath().c_str());
+		if (std::strlen(preset_name_buffer) == 0) {
+			std::strncpy(preset_name_buffer, "Unnamed", sizeof(preset_name_buffer) - 1);
 		}
-		
-		// Enable to choose the shader
-		if (ImGui::Button("Slot 1 Shader"))
-		{
-			IGFD::FileDialogConfig config;
-			config.path = "./shaders/";
-			ImGuiFileDialog::Instance()->OpenDialog("ChooseShader1DlgKey", "Choose File", ".glsl,", config);
-		}
-		if (ImGuiFileDialog::Instance()->Display("ChooseShader1DlgKey")) {
-			// Check if a file was selected
-			if (ImGuiFileDialog::Instance()->IsOk()) {
-				v_ppshaders.at(1).build(
-					ImGuiFileDialog::Instance()->GetFilePathName().c_str(),
-					ImGuiFileDialog::Instance()->GetFilePathName().c_str()
-				);
-			}
-			ImGuiFileDialog::Instance()->Close();
-		}
+		ImGui::PushItemWidth(200);
+		ImGui::InputText("Preset Name", preset_name_buffer, sizeof(preset_name_buffer));
+		ImGui::PopItemWidth();
 
 		ImGui::PushItemWidth(200);
 
@@ -459,6 +528,31 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		ImGui::RadioButton("Full CRT##PPLEVEL", &p_i_postprocessingLevel, 2);
 		ImGui::SetItemTooltip("Customizable CRT shader, slow");
 		ImGui::Separator();
+		if (p_i_postprocessingLevel == 2) {
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Shader Programming: ");
+			ImGui::SameLine();
+			// Enable to choose the shader
+			ImGui::SameLine();
+			if (ImGui::Button("Select"))
+			{
+				IGFD::FileDialogConfig config;
+				config.path = "./shaders/";
+				ImGuiFileDialog::Instance()->OpenDialog("ChooseShader1DlgKey", "Choose File", ".glsl,", config);
+			}
+			if (ImGuiFileDialog::Instance()->Display("ChooseShader1DlgKey")) {
+				// Check if a file was selected
+				if (ImGuiFileDialog::Instance()->IsOk()) {
+					v_ppshaders.at(1).build(
+						ImGuiFileDialog::Instance()->GetFilePathName().c_str(),
+						ImGuiFileDialog::Instance()->GetFilePathName().c_str()
+					);
+				}
+				ImGuiFileDialog::Instance()->Close();
+			}
+
+			ImGui::Separator();
+		}
 		ImGui::Text("[ BASE INTEGER SCALE ]");
 		ImGui::Checkbox("Auto", &bAutoScale);
 		ImGui::SetItemTooltip("Automatically selects the largest output possible, with pixel perfect scaling");
@@ -468,33 +562,58 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		if (bAutoScale)
 			ImGui::EndDisabled();
 
+		ImGui::Separator();
+
+		ImGui::Text("[ FRAME MERGING ]");
+		ImGui::Checkbox("Merge Frame Pairs", &bHalveFramerate);
+		ImGui::SetItemTooltip("WARNING: SIGNIFICANT FPS IMPACT! \nMerges every pair of even and odd frames. Effectively halves the frame rate but removes any flickering associated with page flipping images");
+
 		if (p_i_postprocessingLevel == 2) {
 			ImGui::Separator();
 			// Scanline and Interlacing
 			ImGui::Text("[ SCANLINE TYPE ]");
-			if (ImGui::RadioButton("None##SCANLINETYPE", &p_i_scanlineType, 0))
-			{
-				p_f_scanlineWeight = 0.3f;
-			}
+			ImGui::RadioButton("None##SCANLINETYPE", &p_i_scanlineType, 0);
 			ImGui::SameLine();
 			if (ImGui::RadioButton("Simple##SCANLINETYPE", &p_i_scanlineType, 1))
 			{
 				p_f_scanlineWeight = 0.3f;
 			}
 			ImGui::SameLine();
-			ImGui::RadioButton("Complex##SCANLINETYPE", &p_i_scanlineType, 2);
-			ImGui::SetItemTooltip("You should generally increase the brightness (further down) when using the complex scanline type");
-			if (p_i_scanlineType == 2)
+			if (ImGui::RadioButton("Complex##SCANLINETYPE", &p_i_scanlineType, 2))
 			{
-				ImGui::SliderFloat("Scanline Weight", &p_f_scanlineWeight, 0.03f, 0.7f, "%.2f");
-				ImGui::Checkbox("Scanline Vignette", &p_b_vignette);
-				ImGui::SetItemTooltip("Darker sides of the scanlines, works better when there's distortion");
-				if (p_b_vignette)
-					ImGui::SliderFloat("Vignette Weight", &p_f_vignetteWeight, 0.1, 5.0, "%.2f");
-				ImGui::Checkbox("Interlacing", &p_b_interlace);
-				ImGui::SetItemTooltip("If you really want to feel the pain of bad refresh rates, disable VSYNC and set a low FPS limit like 30 Hz");
+				p_f_scanlineWeight = 1.0f;
 			}
-			
+			ImGui::SetItemTooltip("You should generally tweak color settings (further down) when using the complex scanline type");
+			if (p_i_scanlineType >= 2)
+			{
+				ImGui::SliderFloat("Scanline Weight", &p_f_scanlineWeight, 0.0f, 2.0f, "%.2f");
+				ImGui::SliderFloat("Scanline Speed", &p_f_scanSpeed, 0.0f, 2.0f, "%.2f");
+				ImGui::SliderFloat("Film Grain", &p_f_filmGrain, 0.0f, 1.0f, "%.2f");
+				ImGui::SliderFloat("Vignette Weight", &p_f_vignetteWeight, 0.0f, 5.0f, "%.2f");
+				ImGui::SetItemTooltip("Darker sides of the scanlines, works better when there's distortion");
+				ImGui::SliderFloat("Interlacing", &p_f_interlace, 0.0f, 2.0f, "%.2f");
+				ImGui::SetItemTooltip("If you really want to feel the pain of bad refresh rates");
+			}
+
+			ImGui::Separator();
+
+			// Blurring and Ghosting
+			ImGui::Text("[ BLUR & GHOSTING ]");
+			ImGui::SliderFloat("Phosphor Blur", &p_f_phosphorBlur, 0.0, 2.0, "%.2f");
+			ImGui::SetItemTooltip("Some screen blur");
+
+			// We'll use a normalized slider value in [0,1]
+			static float _ghostingSV = 100.0f * (1.0f - pow(1.0f - p_f_ghostingPercent / 100.0f, 0.25f));
+			if (p_f_ghostingPercent < 0.001)
+				_ghostingSV = 0.0f;
+			if (ImGui::SliderFloat("Ghosting Amount", &_ghostingSV, 0.0f, 100.0f, "%.0f"))
+			{
+				// Map sliderValue to ghosting percentage
+				// The mapping (1 - (1-x)^4) gives finer control near 100.
+				p_f_ghostingPercent = 100.0f - 100.0f * powf(1.0f - _ghostingSV/100.f, 4.0f);
+			}
+			ImGui::SetItemTooltip("WARNING: SIGNIFICANT FPS IMPACT! \nMix in a bit of ghosting to smooth animations. \nOverdo it to emulate the Apple /// monitor!");
+
 			ImGui::Separator();
 			
 			// Mask Settings
@@ -527,7 +646,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::SliderFloat("Curvature Horizontal", &p_f_warpX, 0.00f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Curvature Vertical", &p_f_warpY, 0.00f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Barrel Distortion", &p_f_barrelDistortion, -0.30f, 5.00f, "%.2f");
-			ImGui::SliderFloat("Corners Cut", &p_f_corner, 0.f, 90.f, "%.3f");
+			ImGui::SliderFloat("Corners Cut", &p_f_corner, 0.f, 100.f, "%.3f");
 			ImGui::Spacing();ImGui::SameLine();ImGui::Checkbox("Smooth Corners", &p_b_smoothCorner);
 			ImGui::Separator();
 			
@@ -535,9 +654,9 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::Text("[ COLOR SETTINGS ]");
 			ImGui::SliderFloat("Scan/Mask Brightness Dependence", &p_f_brDep, 0.0f, 0.5f, "%.3f");
 			ImGui::SliderInt("Color Space: sRGB,PAL,NTSC-U,NTSC-J", &p_i_cSpace, 0, 3, "%1d");
-			ImGui::SliderFloat("Saturation", &p_f_saturation, 0.0f, 2.0f, "%.2f");
+			ImGui::SliderFloat("Saturation", &p_f_saturation, 0.0f, 3.0f, "%.2f");
 			ImGui::SliderFloat("Brightness", &p_f_brightness, 0.0f, 4.0f, "%.2f");
-			ImGui::SliderFloat("Black Level", &p_f_black, -0.20f, 0.20f, "%.2f");
+			ImGui::SliderFloat("Black Level", &p_f_black, -0.50f, 0.50f, "%.2f");
 			ImGui::SliderFloat("Green <-to-> Red Hue", &p_f_hueRG, -0.25f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Blue <-to-> Red Hue", &p_f_hueRB, -0.25f, 0.25f, "%.2f");
 			ImGui::SliderFloat("Blue <-to-> Green Hue", &p_f_hueGB, -0.25f, 0.25f, "%.2f");
@@ -550,7 +669,6 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::SliderFloat("Convergence Red X-Axis", &p_f_convR, -3.0f, 3.0f, "%.2f");
 			ImGui::SliderFloat("Convergence Green X-axis", &p_f_convG, -3.0f, 3.0f, "%.2f");
 			ImGui::SliderFloat("Convergence Blue X-Axis", &p_f_convB, -3.0f, 3.0f, "%.2f");
-			ImGui::Checkbox("Potato Boost(Simple Gamma, adjust Mask)", &p_b_potato);
 		}
 
 		ImGui::PopItemWidth();

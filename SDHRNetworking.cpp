@@ -7,40 +7,33 @@
 #include "SDHRManager.h"
 #include "CycleCounter.h"
 #include "EventRecorder.h"
+#include "MainMenu.h"
 #include <time.h>
 #include <fcntl.h>
 #include <chrono>
-
-
 #ifdef __NETWORKING_WINDOWS__
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
-#pragma comment(lib, "Ws2_32.lib")
-typedef SOCKET        __SOCKET;
+#define FTD3XX_STATIC
+#include "ftd3xx_win.h"
 #else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <poll.h>
-typedef int        __SOCKET;
-#ifdef __NETWORKING_APPLE__
-//#include <sys/uio.h>
-struct mmsghdr {
-	struct msghdr msg_hdr;  // The standard msghdr structure
-	unsigned int  msg_len;  // Number of bytes received or sent
-};
+#include "ftd3xx.h"
 #endif
-#endif
+
+// Write to Appletini
+#define FT_PIPE_WRITE_ID 0x02
+// Read from Appletini
+#define FT_PIPE_READ_ID 0x82
 
 static EventRecorder* eventRecorder;
-static uint32_t prev_seqno;
-static bool bFirstDrop;
 static bool bIsConnected = false;
 static uint64_t num_processed_packets = 0;
 static uint64_t duration_packet_processing_ns = 0;
 static uint64_t duration_network_processing_ns = 0;
+static FT_STATUS ftStatus;	// latest FT60x status
+static FT_DEVICE_LIST_INFO_NODE activeNode;	// currently active USB device
+
+// Only do a single reset if a string of reset events arrive
+static bool event_reset = 1;
+static bool event_reset_prev = 1;
 
 static ConcurrentQueue<std::shared_ptr<Packet>> packetInQueue;
 static ConcurrentQueue<std::shared_ptr<Packet>> packetFreeQueue;
@@ -50,6 +43,88 @@ const uint64_t get_duration_packet_processing_ns() { return duration_packet_proc
 const uint64_t get_duration_network_processing_ns() { return duration_network_processing_ns; };
 const size_t get_packet_pool_count() { return packetFreeQueue.max_size(); };
 const size_t get_max_incoming_packets() { return packetInQueue.max_size(); };
+
+const std::string get_ft_status_message(FT_STATUS status) {
+	switch (status) {
+	case FT_OK:
+		return "OK";
+	case FT_INVALID_HANDLE:
+		return "Invalid handle";
+	case FT_DEVICE_NOT_FOUND:
+		return "Device not found";
+	case FT_DEVICE_NOT_OPENED:
+		return "Failed to open device";
+	case FT_IO_ERROR:
+		return "Input/output error";
+	case FT_INSUFFICIENT_RESOURCES:
+		return "Insufficient resources";
+	case FT_INVALID_PARAMETER:
+		return "Invalid parameter provided";
+	case FT_INVALID_BAUD_RATE:
+		return "Invalid baud rate specified";
+	case FT_DEVICE_NOT_OPENED_FOR_ERASE:
+		return "Device not opened for erase";
+	case FT_DEVICE_NOT_OPENED_FOR_WRITE:
+		return "Device not opened for write";
+	case FT_FAILED_TO_WRITE_DEVICE:
+		return "Failed to write to device";
+	case FT_EEPROM_READ_FAILED:
+		return "Failed to read from EEPROM";
+	case FT_EEPROM_WRITE_FAILED:
+		return "Failed to write to EEPROM";
+	case FT_EEPROM_ERASE_FAILED:
+		return "Failed to erase EEPROM";
+	case FT_EEPROM_NOT_PRESENT:
+		return "EEPROM not present on device";
+	case FT_EEPROM_NOT_PROGRAMMED:
+		return "EEPROM is not programmed";
+	case FT_INVALID_ARGS:
+		return "Invalid arguments provided";
+	case FT_NOT_SUPPORTED:
+		return "Operation not supported";
+	case FT_NO_MORE_ITEMS:
+		return "No more items available";
+	case FT_TIMEOUT:
+		return "Operation timed out";
+	case FT_OPERATION_ABORTED:
+		return "Operation was aborted";
+	case FT_RESERVED_PIPE:
+		return "A reserved pipe was accessed";
+	case FT_INVALID_CONTROL_REQUEST_DIRECTION:
+		return "Invalid control request direction";
+	case FT_INVALID_CONTROL_REQUEST_TYPE:
+		return "Invalid control request type";
+	case FT_IO_PENDING:
+		return "Input/output operation is pending";
+	case FT_IO_INCOMPLETE:
+		return "Input/output operation is incomplete";
+	case FT_HANDLE_EOF:
+		return "End of file handle reached";
+	case FT_BUSY:
+		return "Device is busy";
+	case FT_NO_SYSTEM_RESOURCES:
+		return "No system resources available";
+	case FT_DEVICE_LIST_NOT_READY:
+		return "Device list is not ready";
+	case FT_DEVICE_NOT_CONNECTED:
+		return "Device not connected";
+	case FT_INCORRECT_DEVICE_PATH:
+		return "Incorrect device path";
+	case FT_OTHER_ERROR:
+		return "Unknown error";
+	default:
+		return "Unknown status code";
+	}
+}
+
+const std::string get_tini_name_string() { return std::string(activeNode.Description); };
+const uint32_t get_tini_last_error() { return (uint32_t)ftStatus; };
+const std::string get_tini_last_error_string() { return get_ft_status_message(ftStatus); };
+
+const bool tini_is_ok()
+{
+	return FT_SUCCESS(ftStatus);
+}
 
 const bool client_is_connected()
 {
@@ -107,14 +182,21 @@ void process_single_event(SDHREvent& e)
 	*/
 
 	// std::cout << e.is_iigs << " " << e.rw << " " << std::hex << e.addr << " " << (uint32_t)e.data << std::endl;
-	
+
 	eventRecorder = EventRecorder::GetInstance();
 	if (eventRecorder->IsRecording())
 		eventRecorder->RecordEvent(&e);
 	// Update the cycle counting and VBL hit
-	bool isVBL = ((e.addr == 0xC019) && e.rw && ((e.data >> 7) == (e.is_iigs ? 1 : 0)));
-	CycleCounter::GetInstance()->IncrementCycles(1, isVBL);
-	
+	VBLState_e vblState = VBLState_e::Unknown;
+	if ((e.addr == 0xC019) && e.rw)
+	{
+		if ((e.data >> 7) == (e.is_iigs ? 1 : 0))
+			vblState = VBLState_e::On;
+		else
+			vblState = VBLState_e::Off;
+	}
+	CycleCounter::GetInstance()->IncrementCycles(1, vblState);
+
 	/*
 	 *********************************
 	 HANDLE SOUND AND PASSTHROUGH
@@ -122,7 +204,7 @@ void process_single_event(SDHREvent& e)
 	 */
 	auto soundMgr = SoundManager::GetInstance();
 	soundMgr->EventReceived((e.addr & 0xFFF0) == 0xC030);
-	
+
 	/*
 	 *********************************
 	 HANDLE MOCKINGBOARD EVENTS
@@ -130,7 +212,7 @@ void process_single_event(SDHREvent& e)
 	 */
 	auto mockingboardMgr = MockingboardManager::GetInstance();
 	mockingboardMgr->EventReceived(e.addr, e.data, e.rw);
-	
+
 	if (e.is_iigs && e.m2sel) {
 		// ignore updates from iigs_mode firmware with m2sel high
 		return;
@@ -141,9 +223,7 @@ void process_single_event(SDHREvent& e)
 	}
 
 	auto memMgr = MemoryManager::GetInstance();
-	auto sdhrMgr = SDHRManager::GetInstance();
-	auto a2VideoMgr = A2VideoManager::GetInstance();
-	
+
 	/*
 	 *********************************
 	 HANDLE SIMPLE MEMORY WRITE EVENTS
@@ -158,8 +238,8 @@ void process_single_event(SDHREvent& e)
 	 HANDLE SOFT SWITCHES EVENTS
 	 *********************************
 	 */
-	// TODO: *** SDHR IS DISABLED FOR 2GS ***
-	//		because we're getting spurious 0xC0A0 events from the GS
+	 // TODO: *** SDHR IS DISABLED FOR 2GS ***
+	 //		because we're getting spurious 0xC0A0 events from the GS
 	if ((e.is_iigs == true) || ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA))) {
 		if (e.addr >> 8 == 0xc0)
 			memMgr->ProcessSoftSwitch(e.addr, e.data, e.rw, e.is_iigs);
@@ -171,311 +251,242 @@ void process_single_event(SDHREvent& e)
 	 HANDLE SDHR (0xC0A0/1) EVENTS
 	 *********************************
 	 */
-	//std::cerr << "cmd " << e.addr << " " << (uint32_t) e.data << std::endl;
+	 //std::cerr << "cmd " << e.addr << " " << (uint32_t) e.data << std::endl;
+	auto sdhrMgr = SDHRManager::GetInstance();
+	auto a2VideoMgr = A2VideoManager::GetInstance();
 	SDHRCtrl_e _ctrl;
 	switch (e.addr & 0x0f)
 	{
-		case 0x00:
-			// std::cout << "This is a control packet!" << std::endl;
-			_ctrl = (SDHRCtrl_e)e.data;
-			switch (_ctrl)
+	case 0x00:
+		// std::cout << "This is a control packet!" << std::endl;
+		_ctrl = (SDHRCtrl_e)e.data;
+		switch (_ctrl)
+		{
+		case SDHR_CTRL_DISABLE:
+#ifdef DEBUG
+			std::cout << "CONTROL: Disable SDHR" << std::endl;
+#endif
+			sdhrMgr->ToggleSdhr(false);
+			a2VideoMgr->ToggleA2Video(true);
+			break;
+		case SDHR_CTRL_ENABLE:
+			//#ifdef DEBUG
+			std::cout << "CONTROL: Enable SDHR" << std::endl;
+			//#endif
+			sdhrMgr->ToggleSdhr(true);
+			a2VideoMgr->ToggleA2Video(false);
+			break;
+		case SDHR_CTRL_RESET:
+			//#ifdef DEBUG
+			std::cout << "CONTROL: Reset SDHR" << std::endl;
+			//#endif
+			sdhrMgr->ResetSdhr();
+			break;
+		case SDHR_CTRL_PROCESS:
+		{
+			/*
+			 At this point we have a complete set of commands to process.
+			 Wait for the main thread to finish loading any previous changes into the GPU, then process
+			 the commands.
+			 */
+
+#ifdef DEBUG
+			std::cout << "CONTROL: Process SDHR" << std::endl;
+#endif
+			while (sdhrMgr->dataState != DATASTATE_e::DATA_IDLE) {};
+			bool processingSucceeded = sdhrMgr->ProcessCommands();
+			sdhrMgr->dataState = DATASTATE_e::DATA_UPDATED;
+			if (processingSucceeded)
 			{
-				case SDHR_CTRL_DISABLE:
 #ifdef DEBUG
-					std::cout << "CONTROL: Disable SDHR" << std::endl;
+				std::cout << "Processing SDHR succeeded!" << std::endl;
 #endif
-					sdhrMgr->ToggleSdhr(false);
-					a2VideoMgr->ToggleA2Video(true);
-					break;
-				case SDHR_CTRL_ENABLE:
-					//#ifdef DEBUG
-					std::cout << "CONTROL: Enable SDHR" << std::endl;
-					//#endif
-					sdhrMgr->ToggleSdhr(true);
-					a2VideoMgr->ToggleA2Video(false);
-					break;
-				case SDHR_CTRL_RESET:
-					//#ifdef DEBUG
-					std::cout << "CONTROL: Reset SDHR" << std::endl;
-					//#endif
-					sdhrMgr->ResetSdhr();
-					break;
-				case SDHR_CTRL_PROCESS:
-				{
-					/*
-					 At this point we have a complete set of commands to process.
-					 Wait for the main thread to finish loading any previous changes into the GPU, then process
-					 the commands.
-					 */
-					
-#ifdef DEBUG
-					std::cout << "CONTROL: Process SDHR" << std::endl;
-#endif
-					while (sdhrMgr->dataState != DATASTATE_e::DATA_IDLE) {};
-					bool processingSucceeded = sdhrMgr->ProcessCommands();
-					sdhrMgr->dataState = DATASTATE_e::DATA_UPDATED;
-					if (processingSucceeded)
-					{
-#ifdef DEBUG
-						std::cout << "Processing SDHR succeeded!" << std::endl;
-#endif
-					}
-					else {
-						//#ifdef DEBUG
-						std::cerr << "ERROR: Processing SDHR failed!" << std::endl;
-						//#endif
-					}
-					sdhrMgr->ClearBuffer();
-					break;
-				}
-				default:
-					std::cerr << "ERROR: Unknown control packet type: " << std::hex << (uint32_t)e.data << std::endl;
-					break;
 			}
+			else {
+				//#ifdef DEBUG
+				std::cerr << "ERROR: Processing SDHR failed!" << std::endl;
+				//#endif
+			}
+			sdhrMgr->ClearBuffer();
 			break;
-		case 0x01:
-			// std::cout << "This is a data packet" << std::endl;
-			sdhrMgr->AddPacketDataToBuffer(e.data);
-			break;
+		}
 		default:
-			std::cerr << "ERROR: Unknown packet type: " << std::hex << e.addr << std::endl;
+			std::cerr << "ERROR: Unknown control packet type: " << std::hex << (uint32_t)e.data << std::endl;
 			break;
+		}
+		break;
+	case 0x01:
+		// std::cout << "This is a data packet" << std::endl;
+		sdhrMgr->AddPacketDataToBuffer(e.data);
+		break;
+	default:
+		std::cerr << "ERROR: Unknown packet type: " << std::hex << e.addr << std::endl;
+		break;
 	}
 }
 
-void process_single_packet_header(SDHRPacketHeader* h,
-								  uint32_t packet_size)
-{
-	uint32_t seqno = h->seqno;
-	
-	// std::cerr << "packet size is: " << packet_size << std::endl;
-	// std::cerr << "Receiving seqno " << seqno << std::endl;
-	
-	if (seqno < prev_seqno)
-		std::cerr << "FOUND EARLIER PACKET" << std::endl;
-	if (seqno != prev_seqno + 1) {
-		if (bFirstDrop) {
-			bFirstDrop = false;
-		}
-		else {
-			std::cerr << "seqno drops: " << seqno - prev_seqno + 1 << std::endl;
-			// this is pretty bad, should probably go into error
-		}
-	}
-	prev_seqno = seqno;
-	switch (h->cmdtype)
-	{
-		case 0:    // bus event
-			break;
-		case 1:    // echo
-				   // TODO
-			return;
-		case 2: // computer reset
-			A2VideoManager::GetInstance()->bShouldReboot = true;
-			return;
-		case 3: // datetime request
-				// TODO
-			return;
-		default:
-			std::cerr << "ignoring cmd" << std::endl;
-			return;
-	};
-	
-	// bus event
-	uint8_t* p = (uint8_t*)h + sizeof(SDHRPacketHeader);
-	uint8_t* e = (uint8_t*)h + packet_size;
-	
-	while (p < e) {
-		uint32_t* event = (uint32_t*)p;
-		p += 4;
-		uint8_t ctrl_bits = (*event >> 24) & 0xff;
-		uint16_t addr = (*event >> 8) & 0xffff;
-		uint8_t data = *event & 0xff;
-		bool m2sel = (ctrl_bits & 0x02) == 0x02;
-		bool m2b0 = (ctrl_bits & 0x04) == 0x04;
-		bool iigs_mode = (ctrl_bits & 0x80) == 0x80;
-		bool rw = (ctrl_bits & 0x01) == 0x01;
-		
-		SDHREvent ev(iigs_mode, m2b0, m2sel, rw, addr, data);
-		process_single_event(ev);
-	}
-}
-
-// Platform-independent event processing
-// Filters and assigns events to memory, control or data
-// Events assigned to data have their data bytes appended to a command_buffer
-// The command_buffer is then further processed by SDHRManager
-int process_events_thread(bool* shouldTerminateProcessing)
-{
-	std::cout << "Starting Processing Thread\n";
-	std::chrono::nanoseconds totalDuration(0);
-	auto start = std::chrono::high_resolution_clock::now();
-
+int process_usb_events_thread(std::atomic<bool>* shouldTerminateProcessing) {
+	std::cout << "starting usb processing thread" << std::endl;
+	bIsConnected = true;
 	while (!(*shouldTerminateProcessing)) {
-		// Get a packet from the queue
-		// Each packet should have a minimum of 64 events
-		auto p = packetInQueue.pop();
-		start = std::chrono::high_resolution_clock::now();
-		if (p->size > 0)
-		{
-			SDHRPacketHeader* h = (SDHRPacketHeader*)p->data;
-			process_single_packet_header(h, p->size);
-			// std::cerr << "Processing: " << h->seqno << std::endl;
+		auto packet = packetInQueue.pop();
+		uint32_t* p = (uint32_t*)packet->data;
+		if (packet->size % 4) {
+                    // this packet is garbage somehow, stop processing
+		    printf("invalid packet size: %u\n", packet->size);
+		    continue;
 		}
-		else {
-			std::cerr << "Empty packet!\n";
+		while ((uint8_t*)p < packet->data + packet->size) {
+			uint32_t hdr = *p++;
+			uint32_t payload_len = hdr & 0x0000ff;
+			uint32_t packet_type = (hdr & 0x0000ff00) >> 8;
+			if (p + payload_len > (uint32_t*)(packet->data + packet->size)) {
+				// shouldn't happen, but also garbage condition
+				printf("payload len exceeds buffer\n");
+				break;
+			}
+			if (packet_type != 1) {
+				// when we start doing different messages we'd handle it here
+				p += payload_len;
+				continue;
+			}
+			else {
+				for (uint32_t i = 0; i < payload_len; ++i) {
+					uint32_t event = *p++;
+					uint16_t addr = event & 0xffff;
+					uint8_t misc = (event >> 16) & 0x0f;
+					uint8_t data = (event >> 20) & 0xff;
+					bool rw = ((misc & 0x01) == 0x01);
+					event_reset = ((misc & 0x02) == 0x02);
+					if ((event_reset == 0) && (event_reset_prev == 1)) {
+						A2VideoManager::GetInstance()->bShouldReboot = true;
+					}
+                    event_reset_prev = event_reset;
+					SDHREvent ev(0, 0, 0, rw, addr, data);
+					process_single_event(ev);
+				}
+			}
 		}
-		packetFreeQueue.push(std::move(p));
-		totalDuration += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start);
-		++num_processed_packets;
-		if (num_processed_packets % 100000 == 0)
-		{
-			// std::cerr << "Max sizes: " << packetInQueue.max_size() << " > " << packetFreeQueue.max_size() << std::endl;
-			duration_packet_processing_ns = totalDuration.count() / 100000;
-			totalDuration = std::chrono::nanoseconds::zero();
-		}
+		packetFreeQueue.push(std::move(packet));
 	}
-	std::cout << "Stopped Processing Thread\n";
 	return 0;
 }
 
-int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
-{
-	std::cout << "Starting Network Thread\n";
-	std::chrono::nanoseconds totalDuration(0);
-	auto start = std::chrono::high_resolution_clock::now();
-
+int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 	eventRecorder = EventRecorder::GetInstance();
-
 	clear_queues();
-
-	prev_seqno = 0;
-	bFirstDrop = false;
-
-#ifdef __NETWORKING_WINDOWS__
-	WSADATA wsaData;
-	int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
-	if (result != 0) {
-		std::cerr << "WSAStartup failed: " << result << std::endl;
-		return 1;
-	}
-#endif
-	
-	auto sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sockfd < 0) {
-		std::cerr << "Error opening socket" << std::endl;
-#ifdef __NETWORKING_WINDOWS__
-		WSACleanup();
-#endif
-		return 1;
-	}
-	
-	struct sockaddr_in serveraddr;
-	memset(&serveraddr, 0, sizeof(serveraddr));
-	serveraddr.sin_family = AF_INET;
-	serveraddr.sin_port = htons((unsigned short)port);
-	serveraddr.sin_addr.s_addr = INADDR_ANY;
-	
-	if (bind(sockfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0) {
-		std::cerr << "Error on binding" << std::endl;
-#ifdef __NETWORKING_WINDOWS__
-		closesocket(sockfd);
-		WSACleanup();
-#else
-		close(sockfd);
-#endif
-		return 1;
-	}
-	
-	// Polling structure
-#ifdef __NETWORKING_WINDOWS__
-	WSAPOLLFD fds[1];
-#else
-	struct pollfd fds[1];
-#endif
-	fds[0].fd = sockfd;
-	fds[0].events = POLLIN; // Check for data to read
-	
-	std::cout << "Waiting for packets..." << std::endl;
-	bIsConnected = false;
-	
-	int64_t last_recv_nsec = 0;
-	int64_t num_packets_received = 0;
-
+	std::cout << "Starting USB thread" << std::endl;
+	FT_HANDLE handle = NULL;
+	bool connected = false;
+	std::chrono::steady_clock::time_point next_connect_timeout{};
 	while (!(*shouldTerminateNetworking)) {
-#ifdef __NETWORKING_WINDOWS__
-		LARGE_INTEGER frequency;        // ticks per second
-		LARGE_INTEGER t1;               // ticks
-		QueryPerformanceFrequency(&frequency);
-		QueryPerformanceCounter(&t1);
-		int64_t nsec = t1.QuadPart * 100'000'000'0ll / frequency.QuadPart;
-#else
-		timespec ts;
-		clock_gettime(CLOCK_MONOTONIC, &ts);
-		int64_t nsec = ts.tv_sec * 100'000'000'0ll + ts.tv_nsec;
-#endif
-		int retval = 0;
-		
-		// Poll and timeout every second to allow for thread termination
-		// Timeout is 1000 ms
-#ifdef __NETWORKING_WINDOWS__
-		retval = WSAPoll(fds, 1, 1000);
-#else
-		retval = poll(fds, 1, 1000);
-#endif
-		
-		if (retval < 0 && errno != EWOULDBLOCK) {
-			std::cerr << "Error in recvmmsg" << std::endl;
-			return 1;
-		}
-		if (bIsConnected && nsec > last_recv_nsec + 1'000'000'000'0ll) {
-			bIsConnected = false;
-			prev_seqno = 0;
-			bFirstDrop = true;
-			A2VideoManager::GetInstance()->DeactivateBeam();
-			std::cout << "Client disconnected" << std::endl;
-			continue;
-		}
-		if (retval < 1) {	// no data
-			continue;
-		}
-
-		// From now on there's data!
-
-		if (!bIsConnected) {
-			bIsConnected = true;
-			A2VideoManager::GetInstance()->ActivateBeam();
-			std::cout << "Client connected" << std::endl;
-		}
-		last_recv_nsec = nsec;
-		
-		if (fds[0].revents & POLLIN) {
-			start = std::chrono::high_resolution_clock::now();
-			auto packet = packetFreeQueue.pop();	// there should _always_ be a free packet available
-			sockaddr_in src_addr;
-			socklen_t addrlen = sizeof(src_addr);
-			
-			packet->size = (uint32_t)recvfrom(sockfd, reinterpret_cast<char*>(packet->data), PKT_BUFSZ, 0, (struct sockaddr *)&src_addr, &addrlen);
-			++num_packets_received;
-			if (!eventRecorder->IsInReplayMode())
-				packetInQueue.push(std::move(packet));
-			else
-				packetFreeQueue.push(std::move(packet));
-			totalDuration += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start);
-			if (num_packets_received % 100000 == 0)
-			{
-				duration_network_processing_ns = totalDuration.count() / 100000;
-				totalDuration = std::chrono::nanoseconds::zero();
+		if (!connected) {
+			if (next_connect_timeout > std::chrono::steady_clock::now()) {
+				SDL_Delay(200);
+				continue;
 			}
+			next_connect_timeout = std::chrono::steady_clock::now() + std::chrono::milliseconds(1000);
+#ifdef __NETWORKING_WINDOWS__
+			unsigned long count;
+#else
+			uint32_t count;
+#endif
+			FT_DEVICE_LIST_INFO_NODE nodes[16];
+
+			activeNode = _FT_DEVICE_LIST_INFO_NODE();
+			std::copy(std::begin("NO DEVICE"), std::end("NO DEVICE"), activeNode.Description);
+
+			ftStatus = FT_CreateDeviceInfoList(&count);
+			if (ftStatus != FT_OK) {
+				// std::cerr << "Failed to list FPGA usb devices: " << get_ft_status_message(ftStatus) << std::endl;
+				continue;
+			}
+			if (count == 0) {
+				ftStatus = FT_DEVICE_NOT_FOUND;
+				// std::cerr << "No FPGA usb devices found" << std::endl;
+				continue;
+			}
+
+			ftStatus = FT_GetDeviceInfoList(nodes, &count);
+			if (ftStatus != FT_OK) {
+				// std::cerr << "Failed to get FPGA usb device info list: " << get_ft_status_message(ftStatus) << std::endl;
+				continue;
+			}
+
+			// Open the first available device
+#ifdef __NETWORKING_WINDOWS__
+			ftStatus = FT_Create((PVOID)nodes[0].SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, &handle);
+#else
+			FT_TRANSFER_CONF conf;
+			memset(&conf, 0, sizeof(conf));
+			conf.wStructSize = sizeof(conf);
+			conf.pipe[FT_PIPE_DIR_IN].fNonThreadSafeTransfer = true;
+			conf.pipe[FT_PIPE_DIR_OUT].fNonThreadSafeTransfer = true;
+			for (uint32_t i = 0; i < 4; ++i) {
+				FT_SetTransferParams(&conf, i);
+			}
+			ftStatus = FT_Create(0, FT_OPEN_BY_INDEX, &handle);
+#endif
+			if (ftStatus != FT_OK) {
+				std::cerr << "Failed to open FPGA usb device handle: " << get_ft_status_message(ftStatus) << std::endl;
+				continue;
+			}
+
+			// Set pipe timeouts. Probably only necessary on Windows
+			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_WRITE_ID, 1000);  // Pipe to write to
+			if (ftStatus != FT_OK) {
+				std::cerr << "Failed to set write pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
+				FT_Close(handle);
+				handle = NULL;
+				continue;
+			}
+			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_READ_ID, 1000);  // Pipe to read from
+			if (ftStatus != FT_OK) {
+				std::cerr << "Failed to set read pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
+				FT_Close(handle);
+				handle = NULL;
+				continue;
+			}
+			/*
+			ftStatus = FT_SetStreamPipe(handle, true, true, 0, PKT_BUFSZ);
+			if (ftStatus != FT_OK) {
+				std::cerr << "Failed to set Stream pipe size" << std::endl;
+				FT_Close(handle);
+				handle = NULL;
+				continue;
+			}
+			*/
+
+			activeNode = nodes[0];
+			std::cerr << "Connected to FPGA usb device" << std::endl;
+			connected = true;
+		}
+
+		auto packet = packetFreeQueue.pop();
+		// Synchronous Read
+#ifdef __NETWORKING_WINDOWS__
+		ftStatus = FT_ReadPipeEx(handle, FT_PIPE_READ_ID, packet->data, PKT_BUFSZ, (ULONG*)&(packet->size), NULL);
+#else
+		ftStatus = FT_ReadPipeEx(handle, 0, packet->data, PKT_BUFSZ, (ULONG*)&(packet->size), 1000);
+#endif
+		if (ftStatus != FT_OK) {
+			// FT_TIMEOUT means the Apple is off. No data is coming in
+			if (ftStatus != FT_TIMEOUT)
+			{
+				std::cerr << "Failed to read from FPGA usb packet pipe: " << get_ft_status_message(ftStatus) << std::endl;
+			}
+			FT_AbortPipe(handle, FT_PIPE_READ_ID);
+			packetFreeQueue.push(std::move(packet));
+			continue;
+		}
+
+		if (!eventRecorder->IsInReplayMode()) {
+			packetInQueue.push(std::move(packet));
+		}
+		else {
+			packetFreeQueue.push(std::move(packet));
 		}
 	}
-	
-#ifdef __NETWORKING_WINDOWS__
-	closesocket(sockfd);
-	WSACleanup();
-#else
-	close(sockfd);
-#endif
-	
+	std::cout << "ending usb read loop" << std::endl;
 	return 0;
 }

@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "A2WindowBeam.h"
+#include "VidHdWindowBeam.h"
 #include "CycleCounter.h"
 #include "imgui.h"
 #include "imgui_memory_editor.h"
@@ -64,6 +65,8 @@ constexpr uint32_t _SCANLINE_START_FRAME = 200 + (_BORDER_HEIGHT_MAX_MULT8 * 8) 
 
 constexpr int _OVERLAY_CHAR_WIDTH = 40;		// Max width of overlay in chars (40 for TEXT)
 
+constexpr int _INTERLACE_MULTIPLIER = 2;	// How much to multiply the size of buffers for interlacing
+
 // Legacy mode VRAM is 4 bytes (main, aux, flags, colors)
 // for each "byte" of screen use
 // colors are 4-bit each of fg and bg colors as in the Apple 2gs
@@ -75,17 +78,27 @@ constexpr int _OVERLAY_CHAR_WIDTH = 40;		// Max width of overlay in chars (40 fo
 // SHR mode VRAM looks like this:
 
 // SCB        PALETTE                    COLOR BYTES
-// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line 0
-// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line 1
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] [  TOP_BORDER ] [R_BORDER]]]	// line 0
+//                         .												// top border lines
+//                         .
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line top_border*8 + 0
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line top_border*8 + 1
 //                         .
 //                         .
 //                         .
 //                         .
-// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line 199
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] 0 ......... 159 [R_BORDER]]]	// line top_border*8 + 199
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] [ BOTM_BORDER ] [R_BORDER]]]	// line top_border*8 + 199 + bottom_border
+//                         .												// bottom border lines
+//                         .
+// [0 [(1 2) (3 4) ... (31 32)] [[L_BORDER] [ BOTM_BORDER ] [R_BORDER]]]	// line top_border*8 + 199 + bottom_border*8 
 
 // The BORDER bytes have the exact border color in their lower 4 bits
 // Each SHR cycle is 4 bytes, and each byte is 4 pixels (2x2 when in 320 mode)
 constexpr uint32_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset every line by 33 (after SCBs and palette)
+
+
+constexpr uint32_t A2VIDEORENDER_ERROR = UINT32_MAX;			// render error
 
 class A2VideoManager
 {
@@ -97,17 +110,6 @@ public:
 
 		// NOTE:	Anything labled "id" is an internal identifier by the GPU
 		//			Anything labled "index" is an actual array or vector index used by the code
-
-		// An image asset is a texture with its metadata (width, height)
-		// The actual texture data is in the GPU memory
-	struct ImageAsset {
-		void AssignByFilename(A2VideoManager* owner, const char* filename);
-
-		// image assets are full 32-bit bitmap files, uploaded from PNG
-		uint32_t image_xcount = 0;	// width and height of asset in pixels
-		uint32_t image_ycount = 0;
-		GLuint tex_id = UINT_MAX;	// Texture ID on the GPU that holds the image data
-	};
 
 	// We'll create 2 BeamRenderVRAMs objects, for double buffering
 	struct BeamRenderVRAMs {
@@ -124,14 +126,16 @@ public:
 		uint8_t* vram_forced_hgr2 = nullptr;
 		GLfloat* offset_buffer = nullptr;
 		int frameSHR4Modes = 0;					// All SHR4 modes in the frame
+		int doubleSHR4Mode = 0;			// DoubleSHR4Mode_e : may use E0 (main) $2000-9FFF for interlace or page flip
 	};
 
 	//////////////////////////////////////////////////////////////////////////
 	// Attributes
 	//////////////////////////////////////////////////////////////////////////
 
-	ImageAsset image_assets[5];
+	OpenGLHelper::ImageAsset image_assets[6];
 	std::unique_ptr<A2WindowBeam> windowsbeam[A2VIDEOBEAM_TOTAL_COUNT];	// beam racing GPU render
+	std::unique_ptr<VidHdWindowBeam> vidhdWindowBeam;					// VidHD Text Modes GPU render
 
 	uint64_t current_frame_idx = 0;
 	uint64_t rendered_frame_idx = UINT64_MAX;
@@ -140,8 +144,12 @@ public:
 	uXY ScreenSize();
 
 	bool bAlwaysRenderBuffer = false;		// If true, forces a rerender even if the VRAM hasn't changed
-	bool bForceSHRWidth = false;			// forces the legacy to have the SHR width
+
+	// Multi-Mode Prefs
+	bool bAlignQuadsToScanline = false;		// Forces all the quads to align to the same scanline (for all modes)
+	bool bForceSHRWidth = false;			// Forces the legacy to have the SHR width, only in Merge mode
 	bool bNoMergedModeWobble = false;		// Don't pixel shift the sine wobble if both SHR and Legacy are on screen
+
 	bool bDEMOMergedMode = false;			// DEMO to show merged mode
 
 	// Enable manually setting a DHGR mode that mixes 140 width 16-col and 560 width b/w
@@ -187,7 +195,7 @@ public:
 	// Methods for the single multipurpose beam racing shader
 	void BeamIsAtPosition(uint32_t _x, uint32_t _y);
 
-	void ForceBeamFullScreenRender();
+	void ForceBeamFullScreenRender(const uint64_t numFrames = 1);
 	
 	bool SelectLegacyShader(const int index);
 	bool SelectSHRShader(const int index);
@@ -195,6 +203,7 @@ public:
 	const uint32_t GetVRAMReadId() { return vrams_read->id; };
 	const uint8_t* GetLegacyVRAMReadPtr() { return vrams_read->vram_legacy; };
 	const uint8_t* GetSHRVRAMReadPtr() { return vrams_read->vram_shr; };
+	const uint8_t* GetSHRVRAMInterlacedReadPtr() { return vrams_read->vram_shr + sizeof(vrams_read->vram_shr) / _INTERLACE_MULTIPLIER; };
 	const uint8_t* GetPAL256VRAMReadPtr() { return vrams_read->vram_pal256; };
 	const uint8_t* GetTEXT1VRAMReadPtr() { return vrams_read->vram_forced_text1; };
 	const uint8_t* GetTEXT2VRAMReadPtr() { return vrams_read->vram_forced_text2; };
@@ -203,26 +212,30 @@ public:
 	const GLfloat* GetOffsetBufferReadPtr() { return vrams_read->offset_buffer; };
 	uint8_t* GetLegacyVRAMWritePtr() { return vrams_write->vram_legacy; };
 	uint8_t* GetSHRVRAMWritePtr() { return vrams_write->vram_shr; };
+	uint8_t* GetSHRVRAMInterlacedWritePtr() { return vrams_write->vram_shr + sizeof(vrams_write->vram_shr) / _INTERLACE_MULTIPLIER; };
 	GLfloat* GetOffsetBufferWritePtr() { return vrams_write->offset_buffer; };
-	GLuint GetOutputTextureId();	// merged output
-	void ActivateBeam();	// The apple 2 is rendering!
-	void DeactivateBeam();	// We don't have a connection to the Apple 2!
-	GLuint Render();		// render whatever mode is active (enabled windows)
+	GLuint GetOutputTextureId();		// merged output
+	bool Render(GLuint &texUnit);	// outputs the texture unit used, and returns if it rendered or not
 
 	inline uint32_t GetVramWidthLegacy() { return (40 + (2 * borders_w_cycles)); };	// in 4 bytes!
 	inline uint32_t GetVramHeightLegacy() { return  (192 + (2 * borders_h_scanlines)); };
 	inline uint32_t GetVramSizeLegacy() { return (GetVramWidthLegacy() * GetVramHeightLegacy() * 4); };	// in bytes
 
-	inline uint32_t GetVramWidthSHR() { return (_COLORBYTESOFFSET + (2 * borders_w_cycles * 4) + 160); };	// in 4 bytes!
+	inline uint32_t GetVramWidthSHR() { return (_COLORBYTESOFFSET + (2 * borders_w_cycles * 4) + 160); };	// in bytes
 	inline uint32_t GetVramHeightSHR() { return  (200 + (2 * borders_h_scanlines)); };
-	inline uint32_t GetVramSizeSHR() { return (GetVramWidthSHR() * GetVramHeightSHR() * 4); };	// in bytes
+	inline uint32_t GetVramSizeSHR() { return (GetVramWidthSHR() * GetVramHeightSHR() * _INTERLACE_MULTIPLIER); };	// in bytes
 
 	// Changing borders reinitializes everything
-	// Pass in a cycle for width (7 or 8 (SHR) lines per increment)
+	// Cycle for width (7 or 8 (SHR) lines per increment)
 	// And a height (8 lines per increment)
-	void SetBordersWithReinit(uint8_t width_cycles, uint8_t height_8s);
+	// Call CheckSetBordersWithReinit() at the start of the main loop
+	void CheckSetBordersWithReinit();
 	uint32_t GetBordersWidthCycles() const { return borders_w_cycles; }
 	uint32_t GetBordersHeightScanlines() const { return borders_h_scanlines; }
+	// The input is x,y,width,height where x,y are top left origin. The output is SDL style inverted Y
+	SDL_FRect NormalizePixelQuad(const SDL_FRect& pixelQuad);
+	SDL_FRect CenteredQuadInFramebuffer(const SDL_FRect& quad);
+	SDL_FRect CenteredQuadInFramebufferWithOffset(const SDL_FRect& quad, const SDL_FPoint& offset);
 
 	nlohmann::json SerializeState();
 	void DeserializeState(const nlohmann::json &jsonState);
@@ -243,23 +256,26 @@ private:
 	static A2VideoManager* s_instance;
 	A2VideoManager()
 	{
-		vrams_array = new BeamRenderVRAMs[2];
+		vrams_array = new BeamRenderVRAMs[2]{};
 		Initialize();
 	}
 	void StartNextFrame();
 	void SwitchToMergedMode(uint32_t scanline);
+	void CreateOrResizeFramebuffer(int fb_width, int fb_height);
 	void InitializeFullQuad();
 	void PrepareOffsetTexture();
 	void ResetGLData();
-	
+
 	//////////////////////////////////////////////////////////////////////////
 	// Internal data
 	//////////////////////////////////////////////////////////////////////////
 	bool bIsReady = false;
 	bool bA2VideoEnabled = true;			// Is standard Apple 2 video enabled?
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
-    bool bIsRebooting = false;              // Rebooting semaphore
+	bool bIsRebooting = false;              // Rebooting semaphore
 	bool bIsSwitchingToMergedMode = false;	// True when refreshing earlier scanlines for merged mode
+	bool bShouldDoubleSHR = false;			// Handles updating E0 (main) for double SHR
+
 	bool bMirrorRepeatOutputTexture = false;	// Choose to mirror repeat texture wrap, or not
 
 	// imgui vars
@@ -268,10 +284,16 @@ private:
 	bool bImguiMemLoadAuxBank = false;
 	int iImguiMemLoadPosition = 0;
 	int overrideSHR4Mode = 0;				// Cached here to keep the value between A2WindowBeam resets
+	int overrideDoubleSHR = 0;				// At 0, don't override. Above 0, substract 1 to get the override value
+	int overrideVidHDTextMode = VIDHDMODE_NONE;
+	int c022TextColorForeNibble = 0;
+	int c022TextColorBackNibble = 0;
+	int vidHdTextAlphaForeNibble = 0b1111;
+	int vidHdTextAlphaBackNibble = 0b1111;
 	std::string sImguiLoadPath = ".";
-	
+	float bWobblePower = 0.200;
+
 	// beam render state variables
-	bool bBeamIsActive = false;				// Is the beam active?
 	BeamState_e beamState = BeamState_e::UNKNOWN;
 	int scanlineSHR4Modes = 0;			// All SHR4 modes in the scanline
 
@@ -292,10 +314,14 @@ private:
 	uint32_t region_scanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
 
 	GLint last_viewport[4];		// Previous viewport used, so we don't clobber it
-	GLuint merged_texture_id;	// the merged texture that merges both legacy+shr
-	GLuint output_texture_id;	// the actual output texture (could be legacy/shr/merged)
-	GLuint FBO_merged = UINT_MAX;		// the framebuffer object for the merge
-	GLuint quadVAO = UINT_MAX;
+	GLuint FBO_A2Video = UINT_MAX;			// the framebuffer object
+	GLuint a2video_texture_id = UINT_MAX;	// the generated texture
+
+	// for debugging, displaying textures TEXT1/2, HGR1/2
+	GLuint FBO_debug[4] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
+	GLuint debug_texture_id[4] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
+
+	GLuint quadVAO = UINT_MAX;	// FOR MERGED MODE TODO: GET RID OF THAT
 	GLuint quadVBO = UINT_MAX;
 
 	// OFFSET buffer texture. Holds one signed int for each scanline to tell the shader
@@ -317,13 +343,14 @@ private:
 	// it has 8 less bottom border scanlines than legacy.
 	uint32_t borders_w_cycles = 3;
 	uint32_t borders_h_scanlines = 8 * 2;	// multiple of 8
+	// Requested border sizes from the UI. Main thread checks if the border
+	// is different than the requested size and sets the borders
+	int border_w_slider_val = 0;
+	int border_h_slider_val = 0;
 
 	// The merged framebuffer width is going to be shr + border
 	GLint fb_width = 0;
 	GLint fb_height = 0;
-	// The actual final output width and height
-	GLint output_width = 0;
-	GLint output_height = 0;
 
 	// Overlay strings handling
 	uint8_t overlay_text[_OVERLAY_CHAR_WIDTH *24];	// text for each overlay

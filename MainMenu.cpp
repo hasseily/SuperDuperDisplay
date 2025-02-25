@@ -14,6 +14,7 @@
 #include "PostProcessor.h"
 #include "EventRecorder.h"
 #include "SDHRManager.h"
+#include "SDHRNetworking.h"
 #include "extras/MemoryLoader.h"
 #include "extras/ImGuiFileDialog.h"
 
@@ -28,8 +29,8 @@ extern SDL_DisplayMode Main_GetFullScreenMode();
 extern void Main_SetFullScreenMode(SDL_DisplayMode mode);
 extern bool Main_IsFullScreen();
 extern void Main_SetFullScreen(bool bIsFullscreen);
-extern int Main_GetVsync();
-extern void Main_SetVsync(bool _on);
+extern SwapInterval_e Main_GetVsync();
+extern void Main_SetVsync(SwapInterval_e _vsync);
 extern void Main_DisplaySplashScreen();
 extern void Main_GetBGColor(float outColor[4]);
 extern void Main_SetBGColor(const float newColor[4]);
@@ -193,7 +194,6 @@ void MainMenu::Render() {
 			ImGui::PopFont();
 			ImGui::EndMenu();
 		}
-		/*
 		ImGui::Spacing();
 		if (ImGui::BeginMenu("Samples")) {
 			ImGui::PushFont(_itemFont);
@@ -201,7 +201,6 @@ void MainMenu::Render() {
 			ImGui::PopFont();
 			ImGui::EndMenu();
 		}
-		 */
 		ImGui::Spacing();
 		if (ImGui::BeginMenu("Developer")) {
 			ImGui::PushFont(_itemFont);
@@ -218,9 +217,13 @@ void MainMenu::Render() {
 			screen_width, screen_height
 		);
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
-		ImGui::Text("Buffer %d, Avg %.3f ms/f (%.1f FPS)",
-					a2VideoManager->GetVRAMReadId(),
-					1000.0f / io.Framerate, io.Framerate);
+		// If the frame rate is halved, io.Framerate would display twice the framerate
+		// because we're flipping backbuffers half as much. So we need to divide by 4
+		// to get the real frame rate
+		auto realFrameRate = (PostProcessor::GetInstance()->IsFrameRateHalved() ? io.Framerate / 2.0f : io.Framerate);
+		ImGui::Text("FrameID: %d, Avg %.3f ms/f (%.1f FPS)",
+					A2VideoManager::GetInstance()->GetVRAMReadId(),
+					1000.0f / realFrameRate, realFrameRate);
 		ImGui::PopFont();
 		
 		ImGui::EndMainMenuBar();
@@ -230,13 +233,11 @@ void MainMenu::Render() {
 			ImGui::PushFont(_menuFont);
 			ImGui::Begin("About", &pGui->bShowAboutWindow, ImGuiWindowFlags_AlwaysAutoResize);
 			ImGui::Text("Super Duper Display");
-			ImGui::PopFont();
 			ImGui::Separator();
-			ImGui::PushFont(_itemFont);
-			ImGui::Text("Version: 0.5.0");
+			ImGui::Text("Version: 0.5.1");
 			ImGui::Text("Software: Henri \"Rikkles\" Asseily");
-			ImGui::Text("Firmware: John \"Elltwo\" Flanagan");
-			ImGui::Text("Appletini design by Elltwo");
+			ImGui::Text("Design & Firmware: John \"Elltwo\" Flanagan");
+			ImGui::Text("Appletini logo by Rikkles+Fatdog");
 			ImGui::Separator();
 			
 			ImGui::TextWrapped("SuperDuperDisplay is a hybrid emulation frontend for Appletini, the Apple 2 Bus Card.");
@@ -332,7 +333,7 @@ void MainMenu::Render() {
 			ImGui::SetNextWindowSizeConstraints(ImVec2(300, 250), ImVec2(FLT_MAX, FLT_MAX));
 			ImGui::Begin("Texture Viewer", &pGui->bShowTextureWindow);
 			ImVec2 avail_size = ImGui::GetContentRegionAvail();
-			ImGui::SliderInt("Texture Slot Number", &pGui->iTextureSlotIdx, 0, _SDHR_MAX_TEXTURES + 1, "slot %d", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderInt("Texture Slot Number", &pGui->iTextureSlotIdx, 0, _SDHR_MAX_TEXTURES + 5, "slot %d", ImGuiSliderFlags_AlwaysClamp);
 			GLint _w, _h;
 			auto glhelper = OpenGLHelper::GetInstance();
 			if (pGui->iTextureSlotIdx < _SDHR_MAX_TEXTURES)
@@ -354,17 +355,65 @@ void MainMenu::Render() {
 			}
 			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 1)
 			{
-				glActiveTexture(_PP_INPUT_TEXTURE_UNIT);
+				glActiveTexture(_TEXUNIT_POSTPROCESS);
 				GLint target_tex_id = 0;
 				glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, target_tex_id);
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
-				ImGui::Text("_PP_INPUT_TEXTURE_UNIT: %d (%d x %d)", target_tex_id, _w, _h);
+				ImGui::Text("_TEXUNIT_POSTPROCESS: %d (%d x %d)", target_tex_id, _w, _h);
 				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
-			glBindTexture(GL_TEXTURE_2D, 0);
+			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 2)
+			{
+				glActiveTexture(_TEXUNIT_PP_PREVIOUS);
+				GLint target_tex_id = 0;
+				glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, target_tex_id);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
+				ImGui::Text("_TEXUNIT_PP_PREVIOUS: %d (%d x %d)", target_tex_id, _w, _h);
+				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+			}
+			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 3)
+			{
+				glActiveTexture(_TEXUNIT_MERGE_LEGACY);
+				GLint target_tex_id = 0;
+				glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, target_tex_id);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
+				ImGui::Text("_TEXUNIT_MERGE_LEGACY: %d (%d x %d)", target_tex_id, _w, _h);
+				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+			}
+			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 4)
+			{
+				glActiveTexture(_TEXUNIT_MERGE_SHR);
+				GLint target_tex_id = 0;
+				glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, target_tex_id);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
+				ImGui::Text("_TEXUNIT_MERGE_SHR: %d (%d x %d)", target_tex_id, _w, _h);
+				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+			}
+			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 5)
+			{
+				glActiveTexture(_TEXUNIT_INPUT_VIDHD);
+				GLint target_tex_id = 0;
+				glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, target_tex_id);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
+				ImGui::Text("_TEXUNIT_INPUT_VIDHD: %d (%d x %d)", target_tex_id, _w, _h);
+				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+			}
+			glActiveTexture(GL_TEXTURE0);
 			ImGui::End();
 		}
 		
@@ -537,24 +586,36 @@ void MainMenu::ShowSDDMenu() {
 		ImGui::EndMenu();
 	}
 #endif
-	int iMMVsync = Main_GetVsync();
-	bool bMMVsync = (iMMVsync == 0 ? 0 : 1);
-	if (ImGui::Checkbox("VSYNC", &bMMVsync)) {
-		Main_SetVsync(bMMVsync);
+	SwapInterval_e iMMVsync = Main_GetVsync();
+	int bMMVsync = 0;
+	if (iMMVsync == SWAPINTERVAL_VSYNC || iMMVsync == SWAPINTERVAL_ADAPTIVE)
+		bMMVsync = 1;
+	else if (iMMVsync == SWAPINTERVAL_APPLE2BUS)
+		bMMVsync = 2;
+	if (ImGui::RadioButton("VSYNC Monitor", &bMMVsync, 1)) {
+		Main_SetVsync(SWAPINTERVAL_ADAPTIVE);
 		iMMVsync = Main_GetVsync();
 	}
-	if (bMMVsync)
+	ImGui::SetItemTooltip("Standard monitor VSYNC, uses adaptive VSYNC when available. \nThis is the default. The Apple 2 renderer still renders at the speed of the \nApple 2 bus, but the final postprocessing is done at the monitor's VSYNC speed");
+	if (iMMVsync == SWAPINTERVAL_VSYNC || iMMVsync == SWAPINTERVAL_ADAPTIVE)
 	{
-		ImGui::SameLine();
-		ImGui::Text("On");
-		if (iMMVsync)
+		if (iMMVsync == SWAPINTERVAL_ADAPTIVE)
 		{
 			ImGui::SameLine();
 			ImGui::Text("(Adaptive)");
 		}
 	}
-	if (bMMVsync)
+	if (ImGui::RadioButton("VSYNC Appletini", &bMMVsync, 2)) {
+		Main_SetVsync(SWAPINTERVAL_APPLE2BUS);
+	}
+	ImGui::SetItemTooltip("Syncs to the Apple 2's bus. Everything will run at PAL \nor NTSC refresh rates, depending on your Apple 2 version");
+	if (ImGui::RadioButton("No VSYNC", &bMMVsync, 0)) {
+		Main_SetVsync(SWAPINTERVAL_NONE);
+	}
+	ImGui::SetItemTooltip("VSYNC disabled. You can choose your own postprocessing refresh speed. \nNot recommended unless you're testing your setup's maximum performance, \nor want to see what would happen if your Apple 2 were to be connected \nto a very slow refresh rate monitor");
+	if (bMMVsync > 0)
 		ImGui::BeginDisabled(true);
+	ImGui::SameLine();ImGui::Spacing();ImGui::SameLine();
 	if (ImGui::BeginMenu("FPS Limiter")) {
 		pGui->iFPSLimiter = Main_GetFPSLimit();
 		if (ImGui::RadioButton("Disabled##FPSLIMIT", &pGui->iFPSLimiter, UINT32_MAX))
@@ -571,6 +632,10 @@ void MainMenu::ShowSDDMenu() {
 			Main_SetFPSLimit(50);
 		if (ImGui::RadioButton("60 Hz##FPSLIMIT", &pGui->iFPSLimiter, 60))
 			Main_SetFPSLimit(60);
+		if (ImGui::RadioButton("100 Hz##FPSLIMIT", &pGui->iFPSLimiter, 100))
+			Main_SetFPSLimit(100);
+		if (ImGui::RadioButton("120 Hz##FPSLIMIT", &pGui->iFPSLimiter, 120))
+			Main_SetFPSLimit(120);
 		ImGui::EndMenu();
 	}
 	if (bMMVsync)
@@ -583,6 +648,16 @@ void MainMenu::ShowSDDMenu() {
 		}
 		ImGui::EndMenu();
 	}
+	ImGui::Separator();
+	if (ImGui::BeginMenu("Appletini")) {
+		ImGui::Text("%s", get_tini_name_string().c_str());
+		if (get_tini_last_error() == 19)	// FT_TIMEOUT
+			ImGui::Text("%s", "No data (Apple 2 is off?)");
+		else
+			ImGui::Text("%s", get_tini_last_error_string().c_str());
+		ImGui::EndMenu();
+	}
+	ImGui::Separator();
 	ImGui::Separator();
 	if (ImGui::MenuItem("Reset SDD")) {
 		auto switch_c034 = MemoryManager::GetInstance()->switch_c034;
@@ -602,42 +677,20 @@ void MainMenu::ShowMotherboardMenu() {
 	if (ImGui::BeginMenu("Region")) {
 		auto cycleCounter = CycleCounter::GetInstance();
 		int vbl_region;
-		if (cycleCounter->isVideoRegionDynamic)
-			vbl_region = 0;
-		else
-			vbl_region = (cycleCounter->GetVideoRegion() == VideoRegion_e::PAL ? 1 : 2);
+		vbl_region = (cycleCounter->GetVideoRegion() == VideoRegion_e::PAL ? 1 : 2);
 
-		if (ImGui::RadioButton("Auto##REGION", &vbl_region, 0))
-		{
-			cycleCounter->isVideoRegionDynamic = true;
-		}
-		if (vbl_region == 0)
-		{
-			ImGui::SameLine();
-			(cycleCounter->GetVideoRegion() == VideoRegion_e::PAL
-			 ? ImGui::Text(" (P)")
-			 : ImGui::Text(" (N)"));
-		}
-		ImGui::SameLine();
 		if (ImGui::RadioButton("PAL##REGION", &vbl_region, 1))
-		{
-			cycleCounter->isVideoRegionDynamic = false;
 			cycleCounter->SetVideoRegion(VideoRegion_e::PAL);
-		}
+
 		ImGui::SameLine();
 		if (ImGui::RadioButton("NTSC##REGION", &vbl_region, 2))
-		{
-			cycleCounter->isVideoRegionDynamic = false;
 			cycleCounter->SetVideoRegion(VideoRegion_e::NTSC);
-		}
-		if (!cycleCounter->isVideoRegionDynamic)
+		int vbl_slider_val = (int)cycleCounter->GetScreenCycles();
+		if (ImGui::InputInt("VBL Start Shift", &vbl_slider_val, 1, (CYCLES_TOTAL_PAL - CYCLES_TOTAL_NTSC) / 10))
 		{
-			int vbl_slider_val = (int)cycleCounter->GetScreenCycles();
-			if (ImGui::InputInt("VBL Start Shift", &vbl_slider_val, 1, (CYCLES_TOTAL_PAL-CYCLES_TOTAL_NTSC)/10))
-			{
-				cycleCounter->SetVBLStart(vbl_slider_val);
-			}
+			cycleCounter->SetVBLStart(vbl_slider_val);
 		}
+		ImGui::SetItemTooltip("Press the '-' button to keep shifting the VBL earlier in the frame \nto realign it manually");
 		ImGui::Separator();
 		ImGui::EndMenu();
 	}
@@ -739,8 +792,7 @@ void MainMenu::ShowSamplesMenu() {
 		legacydemo.seekg(0, std::ios::beg); // Go back to the start of the file
 		legacydemo.read(reinterpret_cast<char*>(MemoryManager::GetInstance()->GetApple2MemPtr()), 0x4000);
 		a2VideoManager->bDEMOMergedMode = true;
-		a2VideoManager->bForceSHRWidth = true;
-		a2VideoManager->bNoMergedModeWobble = true;
+		a2VideoManager->bAlignQuadsToScanline = true;
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
 	if (ImGui::MenuItem("SHR RGGB (Bayer) 320@16")) {
@@ -748,7 +800,7 @@ void MainMenu::ShowSamplesMenu() {
 		memManager->SetSoftSwitch(A2SS_SHR, true);
 		memManager->SetSoftSwitch(A2SS_TEXT, false);
 		memManager->SetSoftSwitch(A2SS_HIRES, false);
-		MemoryLoadSHR("samples/SHR RGGB/320_16_abstracteyear99#C10000.shr");
+		MemoryLoadSHR("samples/SHR RGGB/320_16_abstracteyear99#C10000");
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
 	if (ImGui::MenuItem("SHR RGGB (Bayer) 640@4")) {
@@ -756,7 +808,7 @@ void MainMenu::ShowSamplesMenu() {
 		memManager->SetSoftSwitch(A2SS_SHR, true);
 		memManager->SetSoftSwitch(A2SS_TEXT, false);
 		memManager->SetSoftSwitch(A2SS_HIRES, false);
-		MemoryLoadSHR("samples/SHR RGGB/640_04_abstracteyear99#C10000.shr");
+		MemoryLoadSHR("samples/SHR RGGB/640_04_abstracteyear99#C10000");
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
 	if (ImGui::MenuItem("SHR Animation (PWA $C2)")) {
@@ -764,10 +816,13 @@ void MainMenu::ShowSamplesMenu() {
 		memManager->SetSoftSwitch(A2SS_SHR, true);
 		memManager->SetSoftSwitch(A2SS_TEXT, false);
 		memManager->SetSoftSwitch(A2SS_HIRES, false);
-		std::ifstream animationFile("recordings/anim00032#c20000.shra", std::ios::binary);
+		std::ifstream animationFile("recordings/anim00032#C20000", std::ios::binary);
+		pGui->bShowEventRecorderWindow = true;
 		eventRecorder->ReadPaintWorksAnimationsFile(animationFile);
 	}
-	if (ImGui::MenuItem("Run Karateka Demo", "", &pGui->bSampleRunKarateka)) {
+	auto _smtext = (pGui->bSampleRunKarateka ? "Stop Karateka Demo" : "Run Karateka Demo");
+	if (ImGui::MenuItem(_smtext)) {
+		pGui->bSampleRunKarateka = !pGui->bSampleRunKarateka;
 		if (pGui->bSampleRunKarateka) {
 			std::ifstream karatekafile("./recordings/karateka.vcr", std::ios::binary);
 			Main_ResetA2SS();
@@ -792,6 +847,9 @@ void MainMenu::ShowDeveloperMenu() {
 	auto a2VideoManager = A2VideoManager::GetInstance();
 	if (ImGui::MenuItem("Run Vertical Refresh", "F10"))
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	if (ImGui::MenuItem("Continuous Refresh", "Shift-F10", &a2VideoManager->bAlwaysRenderBuffer)) {
+		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	}
 	ImGui::MenuItem("Load File Into Memory", "", &pGui->bShowLoadFileWindow);
 	ImGui::Separator();
 	ImGui::MenuItem("Soft Switches", "F9", &pGui->bShowSSWindow);
@@ -834,12 +892,6 @@ void MainMenu::ShowDeveloperMenu() {
 	}
 	ImGui::MenuItem("SDD Textures", "", &pGui->bShowTextureWindow);
 	ImGui::Separator();
-	if (ImGui::BeginMenu("Samples")) {
-		ShowSamplesMenu();
-		ImGui::EndMenu();
-	}
-	ImGui::Separator();
-	ImGui::BeginDisabled(true);
 	if (ImGui::BeginMenu("SDHR")) {
 		auto sdhrManager = SDHRManager::GetInstance();
 		ImGui::MenuItem("Untextured Geometry", "", &sdhrManager->bDebugNoTextures);
@@ -847,7 +899,6 @@ void MainMenu::ShowDeveloperMenu() {
 		ImGui::MenuItem("Upload Region Memory Window", "", &pGui->mem_edit_sdhr_upload.Open);
 		ImGui::EndMenu();
 	}
-	ImGui::EndDisabled();
 	ImGui::Separator();
 	ImGui::MenuItem("ImGui Metrics Window", "", &pGui->bShowImGuiMetricsWindow);
 }
