@@ -535,7 +535,7 @@ void main() {
 	if (bHalveFrameRate)
 		FragColor = HalveFrameRate(TexCoords, FragColor);
 	
-	if (GhostingPercent > 0) {
+	if (GhostingPercent > 0.0001) {
 		FragColor = GenerateGhosting(TexCoords, FragColor);
 	}
 }

@@ -5,7 +5,7 @@
 # You will need SDL2 (http://www.libsdl.org) and zlib:
 # Linux:
 #   apt-get install libsdl2-dev
-#   apt-get install zlib
+#   apt-get install zlib (could be already installed using a different package name)
 # Mac OS X:
 #   brew install sdl2
 #   brew install zlib
@@ -15,6 +15,10 @@
 #	pacman -S make
 #   pacman -S mingw-w64-ucrt-x86_64-SDL2
 #   pacman -S mingw-w64-ucrt-x86_64-zlib
+#
+# You will also need, for all platforms, the FTDI USB drivers
+# They can be downloaded at: https://ftdichip.com/drivers/d3xx-drivers/
+# Read the documentation for installation
 #
 
 #CXX = g++
