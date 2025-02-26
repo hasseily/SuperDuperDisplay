@@ -328,7 +328,6 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		glGenTextures(1, &bezelImageAsset.tex_id);
 		glActiveTexture(_TEXUNIT_PP_BEZEL);
 		glBindTexture(GL_TEXTURE_2D, bezelImageAsset.tex_id);
-		glActiveTexture(GL_TEXTURE0);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -340,6 +339,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 			std::string bezelPath = "assets/bezels/" + selectedBezelFile;
 			bezelImageAsset.AssignByFilename(bezelPath.c_str());
 		}
+		glActiveTexture(GL_TEXTURE0);
 	}
 
 	SDL_GL_GetDrawableSize(window, &viewportWidth, &viewportHeight);
@@ -457,10 +457,10 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		//transformBezel = glm::translate(transformBezel, glm::vec3(static_cast<float>(viewportWidth)*bezelWidth, static_cast<float>(viewportHeight) * bezelHeight, 0.0f));
 		transformBezel = glm::scale(transformBezel, glm::vec3(bezelWidth, bezelHeight, 1.0f));
 		shaderProgramBezel.setMat4("uTransform", transformBezel);		// in the vertex shader
-		//glActiveTexture(_TEXUNIT_PP_BEZEL);
+		glActiveTexture(_TEXUNIT_PP_BEZEL);
 		glBindVertexArray(quadVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-		//glActiveTexture(GL_TEXTURE0);
+		glActiveTexture(GL_TEXTURE0);
 	}
 
 	glBindVertexArray(0);
