@@ -457,7 +457,9 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		//transformBezel = glm::translate(transformBezel, glm::vec3(static_cast<float>(viewportWidth)*bezelWidth, static_cast<float>(viewportHeight) * bezelHeight, 0.0f));
 		transformBezel = glm::scale(transformBezel, glm::vec3(bezelWidth, bezelHeight, 1.0f));
 		shaderProgramBezel.setMat4("uTransform", transformBezel);		// in the vertex shader
+		shaderProgramBezel.setInt("A2TextureCurrent", _TEXUNIT_PP_BEZEL - GL_TEXTURE0);
 		glActiveTexture(_TEXUNIT_PP_BEZEL);
+		glBindTexture(GL_TEXTURE_2D, bezelImageAsset.tex_id);
 		glBindVertexArray(quadVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 		glActiveTexture(GL_TEXTURE0);
