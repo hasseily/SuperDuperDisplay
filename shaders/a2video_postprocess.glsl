@@ -171,28 +171,12 @@ vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 	return blended;
 }
 
+// Use the LODs for the phosphor blur, which is much faster than sampling neighbor points
 vec4 PhosphorBlur(sampler2D tex, vec2 uv, vec2 resolution, float blurAmount) {
-	return textureLod(tex, uv, blurAmount);
-	/* if we don't generate the LOD for the texture
-    vec2 texelSize = 1.0 / resolution;
-    vec2 offset = texelSize * blurAmount;
-    
-    vec4 color = vec4(0.0);
-
-    color += texture(tex, uv + offset * vec2(-1.0, -1.0)) * 0.05;
-    color += texture(tex, uv + offset * vec2( 0.0, -1.0)) * 0.10;
-    color += texture(tex, uv + offset * vec2( 1.0, -1.0)) * 0.05;
-
-    color += texture(tex, uv + offset * vec2(-1.0,  0.0)) * 0.10;
-    color += texture(tex, uv + offset * vec2( 0.0,  0.0)) * 0.40;
-    color += texture(tex, uv + offset * vec2( 1.0,  0.0)) * 0.10;
-
-    color += texture(tex, uv + offset * vec2(-1.0,  1.0)) * 0.05;
-    color += texture(tex, uv + offset * vec2( 0.0,  1.0)) * 0.10;
-    color += texture(tex, uv + offset * vec2( 1.0,  1.0)) * 0.05;
-
-    return color;
-	*/
+    vec4 color = textureLod(tex, uv, blurAmount);
+    // Increase brightness linearly based on blurAmount.
+    float brightnessFactor = 1.0 + blurAmount;
+    return color * brightnessFactor;
 }
 
 vec3 Mask(vec2 pos, float CGWG) {
