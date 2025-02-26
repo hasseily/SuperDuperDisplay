@@ -41,6 +41,7 @@ private:
 	void Initialize();
 	void SaveState(int profile_id);
 	void LoadState(int profile_id);
+	int PopulateBezelFiles(std::vector<std::string>& bezelFiles, const std::string& selectedBezelFile);
 	void SelectShader();
 
 	// Singleton pattern
@@ -60,7 +61,10 @@ private:
 
 	bool bImguiWindowIsOpen = false;
 
-	Shader shaderProgram;
+	Shader shaderProgram;		// PP shader program
+	Shader shaderProgramBezel;	// Bezel shader program
+
+	OpenGLHelper::ImageAsset bezelImageAsset;
 
 	// The quad vertices will change based on the change in the requested screen size
 	glm::vec4 quadViewportCoords = glm::vec4(0, 0, 0, 0);	// left, top, right, bottom
@@ -80,6 +84,11 @@ private:
 	int integer_scale = 1;		// Base integer scale used
 	bool bAutoScale = true;		// Automatically scale to max scale?
 	bool bHalveFramerate = false;	// Mixes every pair of frames, to avoid page flip flicker
+#define _PP_NO_BEZEL_FILENAME "NONE"
+	std::string selectedBezelFile = _PP_NO_BEZEL_FILENAME;
+	int currentBezelIndex = 0;
+	float bezelWidth = 1.0f;
+	float bezelHeight = 1.0f;
 
 	// Shader parameter variables
 	bool p_b_smoothCorner = false;

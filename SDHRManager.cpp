@@ -759,7 +759,7 @@ void SDHRManager::create_framebuffer(uint32_t width, uint32_t height)
 
 	glGenFramebuffers(1, &FBO);
 	glGenTextures(1, &output_texture_id);
-	glActiveTexture(_TEXUNIT_INPUT_VIDHD);
+	glActiveTexture(_TEXUNIT_POSTPROCESS);
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 	glBindTexture(GL_TEXTURE_2D, output_texture_id);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
@@ -803,7 +803,7 @@ void SDHRManager::rescale_framebuffer(uint32_t width, uint32_t height)
 		return;
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
 	GLenum glerr;
-	glActiveTexture(_TEXUNIT_INPUT_VIDHD);
+	glActiveTexture(_TEXUNIT_POSTPROCESS);
 	for (int i = 0; i < 2; ++i) {
 		glBindTexture(GL_TEXTURE_2D, output_texture_id);
 		glViewport(0, 0, width, height);

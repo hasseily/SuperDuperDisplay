@@ -38,11 +38,6 @@ uniform sampler2D fontTex;	// font texture to use for the given mode
 uniform uvec2 glyphSize;	// Size of each glyph in the font texture
 uniform uvec2 fontScale;	// How much to increase the size of the font
 
-// the incoming texture to overlay the vidhd text mode on
-// this texture will be scaled to the maximum while centered
-uniform sampler2D inputTex;
-uniform vec2 inputSize;
-
 // Colors for foreground and background
 const vec4 tintcolors[16] = vec4[16](
 	 vec4(0.000000,	0.000000,	0.000000,	1.000000)	/*BLACK,*/

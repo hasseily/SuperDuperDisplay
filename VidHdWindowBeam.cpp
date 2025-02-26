@@ -172,7 +172,7 @@ void VidHdWindowBeam::UpdateVertexArray()
 
 }
 
-void VidHdWindowBeam::Render(GLuint inputTexUnit, glm::vec2 inputSize)
+void VidHdWindowBeam::Render()
 {
 	// std::cerr << "Rendering vidhd mode " << (int)video_mode  << std::endl;
 	if (video_mode == VIDHDMODE_NONE)
@@ -247,7 +247,6 @@ void VidHdWindowBeam::Render(GLuint inputTexUnit, glm::vec2 inputSize)
 	}
 
 	shader.setInt("ticks", SDL_GetTicks());
-	shader.setVec2("inputSize", inputSize);	// Size could change depending on legacy or SHR
 	if (bModeDidChange)
 	{
 		bModeDidChange = false;
@@ -257,8 +256,6 @@ void VidHdWindowBeam::Render(GLuint inputTexUnit, glm::vec2 inputSize)
 		shader.setInt("fontTex", fontTex);
 		shader.setVec2u("glyphSize", glyphSize);
 		shader.setVec2u("fontScale", fontScale);
-
-		shader.setInt("inputTex", inputTexUnit - GL_TEXTURE0);
 	}
 
 

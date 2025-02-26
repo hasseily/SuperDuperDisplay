@@ -39,20 +39,59 @@ void PostProcessor::Initialize()
 	}
 	if (quadVAO == UINT_MAX)
 	{
+		// We're going to generate a static quad that the vertex shader will transform
+		// based on the requested size changes. This way is more efficient than either
+		// always creating a new static quad for every request, or using GL_DYNAMIC_DRAW
+		GLfloat quadVertices[] = {
+			// Positions         // Texture Coords
+			-1.0f,  1.0f,        0.0f, 0.0f,   // Top-left
+			 1.0f, -1.0f,        1.0f, 1.0f,   // Bottom-right
+			 1.0f,  1.0f,        1.0f, 0.0f,   // Top-right
+
+			-1.0f,  1.0f,        0.0f, 0.0f,   // Top-left
+			-1.0f, -1.0f,        0.0f, 1.0f,   // Bottom-left
+			 1.0f, -1.0f,        1.0f, 1.0f    // Bottom-right
+		};
+
 		glGenVertexArrays(1, &quadVAO);
 		glGenBuffers(1, &quadVBO);
+
+		glBindVertexArray(quadVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+
+		// Set up vertex attribute pointers
+		// Attribute 0: position (2 floats)
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
+		glEnableVertexAttribArray(0);
+		// Attribute 1: texture coordinates (2 floats)
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat)));
+		glEnableVertexAttribArray(1);
+
+		// Unbind for cleanliness
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+		GLenum glerr;
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP Initialize: " << glerr << std::endl;
+		}
 	}
 
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
 
+	// PP shader list
 	v_ppshaders.clear();
 	Shader shader_basic = Shader();
-	shader_basic.build(_SHADER_VERTEX_BASIC, _SHADER_FRAGMENT_BASIC);
+	shader_basic.build(_SHADER_VERTEX_BASIC_TRANSFORM, _SHADER_FRAGMENT_BASIC);
 	v_ppshaders.push_back(shader_basic);
 	Shader shader_pp = Shader();
 	shader_pp.build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");
 	v_ppshaders.push_back(shader_pp);
 	memset(preset_name_buffer, 0, sizeof(preset_name_buffer));
+
+	//Bezel shader
+	shaderProgramBezel = Shader();
+	shaderProgramBezel.build(_SHADER_VERTEX_BASIC_TRANSFORM, _SHADER_FRAGMENT_BASIC);
 }
 
 PostProcessor::~PostProcessor()
@@ -82,6 +121,9 @@ nlohmann::json PostProcessor::SerializeState()
 {
 	nlohmann::json jsonState = {
 		{"preset_name", preset_name_buffer},
+		{"bezelName", selectedBezelFile},
+		{"bezelWidth", bezelWidth},
+		{"bezelHeight", bezelHeight},
 		{"p_i_postprocessingLevel", p_i_postprocessingLevel},
 		{"bCRTFillWindow", bCRTFillWindow},
 		{"integer_scale", integer_scale},
@@ -131,6 +173,9 @@ nlohmann::json PostProcessor::SerializeState()
 void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 {
 	std::strncpy(preset_name_buffer, jsonState.value("preset_name", preset_name_buffer).c_str(), sizeof(preset_name_buffer) - 1);
+	selectedBezelFile = jsonState.value("bezelName", selectedBezelFile);
+	bezelWidth = jsonState.value("bezelWidth", bezelWidth);
+	bezelHeight = jsonState.value("bezelHeight", bezelHeight);
 	p_i_postprocessingLevel = jsonState.value("p_i_postprocessingLevel", p_i_postprocessingLevel);
 	bCRTFillWindow = jsonState.value("bCRTFillWindow", bCRTFillWindow);
 	integer_scale = jsonState.value("integer_scale", integer_scale);
@@ -193,6 +238,23 @@ void PostProcessor::LoadState(int profile_id) {
 		file >> jsonState;
 		DeserializeState(jsonState);
 	}
+}
+
+int PostProcessor::PopulateBezelFiles(std::vector<std::string>& _bezelFiles, const std::string& _selectedBezelFile) {
+	int _selIdx = 0;
+	_bezelFiles.clear();
+	_bezelFiles.push_back(_PP_NO_BEZEL_FILENAME);  // Default for no bezel
+
+	// populate bezel files
+	for (const auto& entry : std::filesystem::directory_iterator("assets/bezels/")) {
+		if (entry.is_regular_file() && (entry.path().extension() == ".png" || entry.path().extension() == ".jpg")) {
+			_bezelFiles.push_back(entry.path().filename().string());
+			if (_selectedBezelFile == entry.path().filename().string()) {
+				_selIdx = _bezelFiles.size() - 1;
+			}
+		}
+	}
+	return _selIdx;
 }
 
 void PostProcessor::SelectShader()
@@ -261,6 +323,25 @@ void PostProcessor::SelectShader()
 
 void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint scanlineCount)
 {
+	if (bezelImageAsset.tex_id == UINT_MAX)
+	{
+		glGenTextures(1, &bezelImageAsset.tex_id);
+		glActiveTexture(_TEXUNIT_PP_BEZEL);
+		glBindTexture(GL_TEXTURE_2D, bezelImageAsset.tex_id);
+		glActiveTexture(GL_TEXTURE0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		std::vector<std::string> _bezelFiles;
+		currentBezelIndex = PopulateBezelFiles(_bezelFiles, selectedBezelFile);
+		if (currentBezelIndex > 0)
+		{
+			std::string bezelPath = "assets/bezels/" + selectedBezelFile;
+			bezelImageAsset.AssignByFilename(bezelPath.c_str());
+		}
+	}
+
 	SDL_GL_GetDrawableSize(window, &viewportWidth, &viewportHeight);
 
 	GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
@@ -312,35 +393,22 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	// Determine the quad's origin
 	quadWidth = static_cast<int>(_scale * texWidth);
 	quadHeight = static_cast<int>(_scale * texHeight);
-
+	
+	// Now determine the quad transformations as necessary, to send to the vertex shader
+	glm::mat4 transform = glm::mat4(1.0f);
 	if (bCRTFillWindow && p_i_postprocessingLevel > 1)
 	{
-		quadViewportCoords.x = -1.0;	// left
-		quadViewportCoords.y = -1.0;	// top
-		quadViewportCoords.z = 1.0;		// right
-		quadViewportCoords.w = 1.0;		// bottom
+		// For full-window
+		transform = glm::scale(transform, glm::vec3(1.0f, 1.0f, 1.0f));
 	}
-	else {
-		quadViewportCoords.x = static_cast<float>(-quadWidth) / static_cast<float>(viewportWidth);		// left
-		quadViewportCoords.y = static_cast<float>(-quadHeight) / static_cast<float>(viewportHeight);	// top
-		quadViewportCoords.z = static_cast<float>(quadWidth) / static_cast<float>(viewportWidth);		// right
-		quadViewportCoords.w = static_cast<float>(quadHeight) / static_cast<float>(viewportHeight);		// bottom
+	else
+	{
+		// Compute scale factors based on desired quad dimensions.
+		float scaleX = (quadWidth / static_cast<float>(viewportWidth));
+		float scaleY = (quadHeight / static_cast<float>(viewportHeight));
+		transform = glm::scale(transform, glm::vec3(scaleX, scaleY, 1.0f));
 	}
 
-	GLfloat quadVertices[] = {
-		// Positions												// Texture Coords
-		quadViewportCoords.x, quadViewportCoords.w,  	0.0f, 0.0f,
-		quadViewportCoords.z, quadViewportCoords.y,  	1.0f, 1.0f,
-		quadViewportCoords.z, quadViewportCoords.w,  	1.0f, 0.0f,
-		
-		quadViewportCoords.x, quadViewportCoords.w,  	0.0f, 0.0f,
-		quadViewportCoords.x, quadViewportCoords.y,  	0.0f, 1.0f,
-		quadViewportCoords.z, quadViewportCoords.y,  	1.0f, 1.0f
-	};
-	
-//		std::cout << "Viewport coordinates:" << ": (" << quadViewportCoords[0] << ", " << quadViewportCoords[1]
-//		<< "), (" << quadViewportCoords[2] << ", " << quadViewportCoords[3] << ")" << std::endl;
-	
 	if (bImguiWindowIsOpen || (!shaderProgram.isReady)
 		|| (prev_texWidth != texWidth) || (prev_texHeight != texHeight))
 	{
@@ -362,6 +430,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	}
 
 	// Used for all PP shaders
+	shaderProgram.setMat4("uTransform", transform);		// in the vertex shader
 	shaderProgram.setInt("A2TextureCurrent", texUnitCurrent - GL_TEXTURE0);
 	shaderProgram.setInt("PreviousFrame", _TEXUNIT_PP_PREVIOUS - GL_TEXTURE0);
 	shaderProgram.setInt("iFrameCount", frame_count);
@@ -372,28 +441,28 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		shaderProgram.setUInt("ScanlineCount", scanlineCount);
 	}
 
+	// Bind the quad VAO and draw the quad (static VBO already set up)
+	glBindVertexArray(quadVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 2: " << glerr << std::endl;
 	}
-	
-	// Now always send in the vertices because it all may have been resized upstream
-	glBindVertexArray(quadVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
 
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+	// Now Build and Draw the Bezel if necessary
+	if (currentBezelIndex > 0)
+	{
+		shaderProgramBezel.use();
+		glm::mat4 transformBezel = glm::mat4(1.0f);
+		//transformBezel = glm::translate(transformBezel, glm::vec3(static_cast<float>(viewportWidth)*bezelWidth, static_cast<float>(viewportHeight) * bezelHeight, 0.0f));
+		transformBezel = glm::scale(transformBezel, glm::vec3(bezelWidth, bezelHeight, 1.0f));
+		shaderProgramBezel.setMat4("uTransform", transformBezel);		// in the vertex shader
+		//glActiveTexture(_TEXUNIT_PP_BEZEL);
+		glBindVertexArray(quadVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		//glActiveTexture(GL_TEXTURE0);
+	}
 
-	// Position attribute
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)0);
-
-	// Texture coordinate attribute
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)(2 * sizeof(GLfloat)));
-
-
-	// Render the fullscreen quad
-	// Target the main SDL2 window
-	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -409,11 +478,10 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		// Compute the pixel boundaries of the quad from its normalized coordinates.
 		// The conversion from normalized device coordinates (range [-1,1]) to pixel coordinates is:
 		//    pixel = (ndc * 0.5 + 0.5) * viewportDimension
-		int quadLeft = (int)lround((quadViewportCoords.x * 0.5f + 0.5f) * viewportWidth);
-		int quadRight = (int)lround((quadViewportCoords.z * 0.5f + 0.5f) * viewportWidth);
-		int quadTop = (int)lround((quadViewportCoords.y * 0.5f + 0.5f) * viewportHeight);
-		int quadBottom = (int)lround((quadViewportCoords.w * 0.5f + 0.5f) * viewportHeight);
-
+		int quadLeft = (viewportWidth - quadWidth) / 2;
+		int quadRight = quadLeft + quadWidth;
+		int quadTop = (viewportHeight - quadHeight) / 2;
+		int quadBottom = quadTop + quadHeight;
 
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO_prevFrame);
 		glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
@@ -439,7 +507,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO_prevFrame);
 		glBlitFramebuffer(quadLeft, quadTop, quadRight, quadBottom,	// source rectangle (quad region)
-			0, quadBottom - quadTop, quadRight - quadLeft, 0,				// destination rectangle (Y flipped)
+			0, quadBottom - quadTop, quadRight - quadLeft, 0,		// destination rectangle (Y flipped)
 			GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -562,6 +630,31 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		if (bAutoScale)
 			ImGui::EndDisabled();
 
+		ImGui::Separator();
+
+		ImGui::Text("[ BEZEL ]");
+		currentBezelIndex = 0;
+		std::vector<std::string> _bezelFiles;
+		currentBezelIndex = PopulateBezelFiles(_bezelFiles, selectedBezelFile);
+
+		std::vector<const char*> bezelFileCStrs;
+		for (const auto& file : _bezelFiles) {
+			bezelFileCStrs.push_back(file.c_str());
+		}
+		if (ImGui::Combo("Image", &currentBezelIndex, bezelFileCStrs.data(), static_cast<int>(bezelFileCStrs.size())))
+		{
+			selectedBezelFile = _bezelFiles[currentBezelIndex];
+			if (currentBezelIndex > 0)
+			{
+				std::string bezelPath = "assets/bezels/" + selectedBezelFile;
+				glActiveTexture(_TEXUNIT_PP_BEZEL);
+				bezelImageAsset.AssignByFilename(bezelPath.c_str());
+				glActiveTexture(GL_TEXTURE0);
+			}
+		}
+		// Bezel width and height
+		ImGui::SliderFloat("Relative Width", &bezelWidth, 0.f, 2.f, "%.2f");
+		ImGui::SliderFloat("Relative Height", &bezelHeight, 0.f, 2.f, "%.2f");
 		ImGui::Separator();
 
 		ImGui::Text("[ FRAME MERGING ]");

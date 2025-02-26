@@ -41,9 +41,11 @@ uniform COMPAT_PRECISION vec2 OutputSize;
 uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
 
+uniform mat4 uTransform;
+
 void main()
 {
-	gl_Position = vec4(aPos, 0.0, 1.0);
+	gl_Position = uTransform * vec4(aPos, 0.0, 1.0);
 	TexCoords = TexCoord;
 	scale = OutputSize.xy/TextureSize.xy;
 	ps = 1.0/TextureSize.xy;
@@ -322,6 +324,8 @@ void main() {
 	FragColor = texture(A2TextureCurrent, TexCoords);
 
 	if (POSTPROCESSING_LEVEL == 0) {
+		if (bHalveFrameRate)
+			FragColor = HalveFrameRate(TexCoords, FragColor);
 		if (GhostingPercent > 0.0001)
 			FragColor = GenerateGhosting(TexCoords, FragColor);
 		return;

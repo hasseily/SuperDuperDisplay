@@ -1523,7 +1523,7 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 	// ===============================================================================
 	if (vidhdWindowBeam->GetVideoMode() != VIDHDMODE_NONE)	// VidHD
 	{
-		vidhdWindowBeam->Render(_TEXUNIT_INPUT_VIDHD, glm::vec2(fb_width, fb_height));
+		vidhdWindowBeam->Render();
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "VidHD draw error: " << glerr << std::endl;
 		}

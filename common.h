@@ -72,14 +72,16 @@ enum SwapInterval_e
 // For all modes!
 // The data buffer is always in tex1.
 // The special SHR4 PAL256 vram is in tex2.
-// Image assets can be put in tex4 to tex14
-// Post processing input texture is always in tex15
+// Image assets can be put in tex4 to tex12
+// Post processing input texture is always in tex16
 #define _TEXUNIT_DATABUFFER_R8UI GL_TEXTURE1	// Texunit of the data buffer (R8UI VRAM)
 #define _TEXUNIT_DATABUFFER_RGBA8UI GL_TEXTURE2	// Texunit of the data buffer (RGBA8UI VRAM)
 #define _TEXUNIT_PAL256BUFFER GL_TEXTURE3		// Texunit of the SHR4 PAL256 vram
 #define _TEXUNIT_IMAGE_ASSETS_START GL_TEXTURE4	// Start of the image assets
-#define _TEXUNIT_POSTPROCESS GL_TEXTURE15		// input texunit the PP will use to generate the final output
-#define _TEXUNIT_PP_PREVIOUS GL_TEXTURE16		// The previous frame as a texture
+#define _TEXUNIT_MERGE_OFFSET GL_TEXTURE13		// Merge Offset buffer (for sine wobble)
+#define _TEXUNIT_PP_BEZEL GL_TEXTURE14			// The bezel in postprocessing
+#define _TEXUNIT_PP_PREVIOUS GL_TEXTURE15		// The previous frame as a texture
+#define _TEXUNIT_POSTPROCESS GL_TEXTURE16		// input texunit the PP will use to generate the final output
 // exact asset textures
 #define _TEXUNIT_IMAGE_FONT_ROM_DEFAULT GL_TEXTURE4
 #define _TEXUNIT_IMAGE_FONT_ROM_ALTERNATE GL_TEXTURE5
@@ -88,21 +90,13 @@ enum SwapInterval_e
 #define _TEXUNIT_IMAGE_COMPOSITE_DHGR GL_TEXTURE8
 #define _TEXUNIT_IMAGE_FONT_VIDHD_8X8 GL_TEXTURE9
 
-
-// MERGE textures
-#define _TEXUNIT_MERGE_OFFSET GL_TEXTURE17		// Offset buffer
-#define _TEXUNIT_MERGE_LEGACY GL_TEXTURE18		// legacy output texture
-#define _TEXUNIT_MERGE_SHR GL_TEXTURE19			// SHR output texture
-#define _TEXUNIT_INPUT_VIDHD GL_TEXTURE20		// Texture used as input to overlay the VidHD text modes on
-
-
 // AUDIO
 #define _AUDIO_SAMPLE_RATE 44100
 
 // DEFINITIONS OF SDHR SPECS
 #define _SDHR_UPLOAD_REGION_SIZE 256*256*256	// Upload data region size (should be 16MB)
 #define _SDHR_MAX_WINDOWS 256
-#define _SDHR_MAX_TEXTURES (_TEXUNIT_POSTPROCESS - _TEXUNIT_IMAGE_ASSETS_START)	// Max # of image assets available
+#define _SDHR_MAX_TEXTURES (_TEXUNIT_MERGE_OFFSET - _TEXUNIT_IMAGE_ASSETS_START)	// Max # of image assets available
 #define _SDHR_MAX_UV_SCALE 100.f				// Maximum scale of Mosaic Tile UV
 
 // ORIGINAL APPLE 2 VIDEO MODES
@@ -133,6 +127,7 @@ enum SwapInterval_e
 
 // SHADERS
 #define _SHADER_VERTEX_BASIC "shaders/basic.vert"
+#define _SHADER_VERTEX_BASIC_TRANSFORM "shaders/basic_with_transform.vert"
 #define _SHADER_FRAGMENT_BASIC "shaders/basic.frag"
 
 #define _SHADER_A2_VERTEX_DEFAULT "shaders/a2video.vert"

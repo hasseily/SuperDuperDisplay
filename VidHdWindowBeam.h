@@ -111,7 +111,7 @@ public:
 	uint32_t GetHeight() const;
 	void SetQuadRelativeBounds(SDL_FRect bounds);
 	SDL_FRect GetQuadRelativeBounds() const { return quad; };
-	void Render(GLuint inputTexUnit, glm::vec2 inputSize);
+	void Render();
 	void DisplayImGuiWindow(bool* p_open);
 
 	std::vector<VidHdBeamVertex> vertices;	// Vertices with XYRelative and XYPixels
