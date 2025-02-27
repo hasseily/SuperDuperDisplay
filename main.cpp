@@ -88,6 +88,11 @@ bool initialize_glad() {
 	return true;
 }
 
+SDL_Window* Main_GetSDLWindow()
+{
+	return window;
+}
+
 void Main_RequestAppQuit()
 {
 	g_quitIsRequested = true;
@@ -216,12 +221,17 @@ void Main_SetFullScreen(bool bWantFullscreen) {
 	if ((_flags & SDL_WINDOW_RESIZABLE) == 0)
 		return;
 	
+	bool _fsres = false;
 	if (bWantFullscreen)
 	{
-		SDL_SetWindowDisplayMode(window, &g_fullscreenMode);
-		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+		if (SDL_SetWindowDisplayMode(window, &g_fullscreenMode) == 0)
+		{
+			if (SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) == 0)
+				_fsres = true;
+		}
 	}
-	else {
+	if (_fsres == false)
+	{
 		SDL_SetWindowFullscreen(window, 0);
 		SDL_SetWindowSize(window, g_ww, g_wh);
 		SDL_SetWindowPosition(window, g_wx, g_wy);

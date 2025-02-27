@@ -37,6 +37,7 @@ extern void Main_SetBGColor(const float newColor[4]);
 extern void Main_ResetA2SS();
 extern bool Main_IsFPSOverlay();
 extern void Main_SetFPSOverlay(bool isFPSOverlay);
+extern SDL_Window* Main_GetSDLWindow();
 extern void Main_RequestAppQuit();
 
 class MainMenu::Gui {
@@ -527,7 +528,7 @@ void MainMenu::ShowSDDMenu() {
 	}
 	if (ImGui::BeginMenu("Fullscreen Resolution")) {
 		// FIXME: Figure out the display index for full screen mode
-		int displayIndex = 0;
+		int displayIndex = SDL_GetWindowDisplayIndex(Main_GetSDLWindow());
 		SDL_DisplayMode currentDisplayMode = Main_GetFullScreenMode();
 		int numDisplayModes = SDL_GetNumDisplayModes(displayIndex);
 		SDL_DisplayMode _lastMode;
@@ -548,16 +549,22 @@ void MainMenu::ShowSDDMenu() {
 				_lastMode = mode;
 			}
 		}
+		bool isCurrentMode = false;
 		for (int i = 0; i < pGui->v_displayModes.size(); ++i)
 		{
 			auto mode = pGui->v_displayModes[i];
 			snprintf(modeDescription, 199, "%dx%d @ %dHz", mode.w, mode.h, mode.refresh_rate);
-			bool isCurrentMode = (
+			isCurrentMode = (
 				mode.w == currentDisplayMode.w &&
 				mode.h == currentDisplayMode.h &&
 				mode.refresh_rate == currentDisplayMode.refresh_rate);
 			if (ImGui::MenuItem(modeDescription, "", isCurrentMode))
 				Main_SetFullScreenMode(mode);
+		}
+		if (isCurrentMode == false)
+		{
+			// Couldn't find a mode
+			Main_SetFullScreenMode(pGui->v_displayModes[0]);
 		}
 		ImGui::EndMenu();
 	}
