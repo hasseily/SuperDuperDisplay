@@ -87,8 +87,6 @@ uniform COMPAT_PRECISION float BLACK;
 uniform COMPAT_PRECISION float BR_DEP; 
 uniform COMPAT_PRECISION float BRIGHTNESS;
 uniform COMPAT_PRECISION float C_STR;
-uniform COMPAT_PRECISION float CENTERX;
-uniform COMPAT_PRECISION float CENTERY;
 uniform COMPAT_PRECISION float CONV_B;
 uniform COMPAT_PRECISION float CONV_G;
 uniform COMPAT_PRECISION float CONV_R;
@@ -107,13 +105,12 @@ uniform COMPAT_PRECISION float FILM_GRAIN;
 uniform COMPAT_PRECISION float INTERLACE_WEIGHT;
 uniform COMPAT_PRECISION float SLOTW;
 uniform COMPAT_PRECISION float VIGNETTE_WEIGHT;
-uniform COMPAT_PRECISION float WARPX;
-uniform COMPAT_PRECISION float WARPY;
-uniform COMPAT_PRECISION float ZOOMX;
-uniform COMPAT_PRECISION float ZOOMY;
 uniform COMPAT_PRECISION int iCOLOR_SPACE;
 uniform COMPAT_PRECISION int iM_TYPE;
 uniform COMPAT_PRECISION int iSCANLINE_TYPE;
+uniform COMPAT_PRECISION vec2 vWARP;
+uniform COMPAT_PRECISION vec2 vCENTER;
+uniform COMPAT_PRECISION vec2 vZOOM;
 
 #define fTime (float(iFrameCount) / 60.0)
 #define iResolution OutputSize.xy
@@ -290,7 +287,7 @@ vec3 slot(vec2 pos) {
 
 vec2 Warp(vec2 pos) {
 	pos = pos*2.0-1.0;
-	pos *= vec2(1.0+pos.y*pos.y*WARPX, 1.0+pos.x*pos.x*WARPY);
+	pos *= vec2(1.0+pos.y*pos.y*vWARP.x, 1.0+pos.x*pos.x*vWARP.y);
 	pos = pos*0.5+0.5;
 	return pos;
 }
@@ -364,7 +361,7 @@ void main() {
 		);
 	
 // zoom in and center screen for bezel
-	vec2 pos = Warp(TexCoords*vec2(1.0-ZOOMX,1.0-ZOOMY)-vec2(CENTERX,CENTERY)/100.0);
+	vec2 pos = Warp(TexCoords*vec2(1.0-vZOOM.x,1.0-vZOOM.y)-vec2(vCENTER.x,vCENTER.y)/100.0);
 
 // If people prefer the BarrelDistortion algo
 	pos = BarrelDistortion(pos);

@@ -87,8 +87,7 @@ private:
 #define _PP_NO_BEZEL_FILENAME "NONE"
 	std::string selectedBezelFile = _PP_NO_BEZEL_FILENAME;
 	int currentBezelIndex = 0;
-	float bezelWidth = 1.0f;
-	float bezelHeight = 1.0f;
+	glm::vec2 bezelSize = glm::vec2(1.0f, 1.0f);
 
 	// Shader parameter variables
 	bool p_b_smoothCorner = false;
@@ -99,8 +98,6 @@ private:
 	float p_f_black = 0.0f;
 	float p_f_brDep = 0.2f;
 	float p_f_brightness = 1.0f;
-	float p_f_centerX = 0.0f;
-	float p_f_centerY = 0.0f;
 	float p_f_convB = 0.0f;
 	float p_f_convG = 0.0f;
 	float p_f_convR = 0.0f;
@@ -119,16 +116,19 @@ private:
 	float p_f_interlace = 0.f;
 	float p_f_slotW = 3.0f;
 	float p_f_vignetteWeight = 0.0f;
-	float p_f_warpX = 0.0f;
-	float p_f_warpY = 0.0f;
-	float p_f_zoomX = 0.0f;
-	float p_f_zoomY = 0.0f;
 	int p_i_cSpace = 0;
 	int p_i_maskType = 0;
 	int p_i_postprocessingLevel = 0;
 	int p_i_scanlineType = 2;
 	int p_f_ghostingPercent = 0;	// Percentage of ghosting of previous frame. 0 means no ghosting
 	float p_f_phosphorBlur = 0.0f;	// blur modifier
+	glm::vec2 p_v_warp = glm::vec2(0.0f, 0.0f);	// curvature
+	glm::vec2 p_v_center = glm::vec2(0.0f, 0.0f);
+	glm::vec2 p_v_zoom = glm::vec2(0.0f, 0.0f);
+
+	// imgui vars
+	bool bImGuiLockWarp = false;
+	bool bImGuiLockZoom = false;
 };
 
 #endif	// POSTPROCESSOR_H

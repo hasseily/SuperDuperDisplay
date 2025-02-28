@@ -122,8 +122,8 @@ nlohmann::json PostProcessor::SerializeState()
 	nlohmann::json jsonState = {
 		{"preset_name", preset_name_buffer},
 		{"bezelName", selectedBezelFile},
-		{"bezelWidth", bezelWidth},
-		{"bezelHeight", bezelHeight},
+		{"bezelWidth", bezelSize.x},
+		{"bezelHeight", bezelSize.y},
 		{"p_i_postprocessingLevel", p_i_postprocessingLevel},
 		{"bCRTFillWindow", bCRTFillWindow},
 		{"integer_scale", integer_scale},
@@ -140,8 +140,6 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_f_brightness", p_f_brightness},
 		{"p_i_cSpace", p_i_cSpace},
 		{"p_f_cStr", p_f_cStr},
-		{"p_f_centerX", p_f_centerX},
-		{"p_f_centerY", p_f_centerY},
 		{"p_f_convB", p_f_convB},
 		{"p_f_convG", p_f_convG},
 		{"p_f_convR", p_f_convR},
@@ -159,13 +157,15 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_i_scanlineType", p_i_scanlineType},
 		{"p_f_slotW", p_f_slotW},
 		{"p_f_vignetteWeight", p_f_vignetteWeight},
-		{"p_f_warpX", p_f_warpX},
-		{"p_f_warpY", p_f_warpY},
 		{"p_f_barrelDistortion", p_f_barrelDistortion},
-		{"p_f_zoomX", p_f_zoomX},
-		{"p_f_zoomY", p_f_zoomY},
 		{"p_f_ghostingPercent", p_f_ghostingPercent},
-		{"p_f_phosphorBlur", p_f_phosphorBlur}
+		{"p_f_phosphorBlur", p_f_phosphorBlur},
+		{"p_v_warpX", p_v_warp.x},
+		{"p_v_warpY", p_v_warp.y},
+		{"p_v_centerX", p_v_center.x},
+		{"p_v_centerY", p_v_center.y},
+		{"p_f_zoomX", p_v_zoom.x},
+		{"p_f_zoomY", p_v_zoom.y}
 	};
 	return jsonState;
 }
@@ -174,8 +174,8 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 {
 	std::strncpy(preset_name_buffer, jsonState.value("preset_name", preset_name_buffer).c_str(), sizeof(preset_name_buffer) - 1);
 	selectedBezelFile = jsonState.value("bezelName", selectedBezelFile);
-	bezelWidth = jsonState.value("bezelWidth", bezelWidth);
-	bezelHeight = jsonState.value("bezelHeight", bezelHeight);
+	bezelSize.x = jsonState.value("bezelWidth", bezelSize.x);
+	bezelSize.y = jsonState.value("bezelHeight", bezelSize.y);
 	p_i_postprocessingLevel = jsonState.value("p_i_postprocessingLevel", p_i_postprocessingLevel);
 	bCRTFillWindow = jsonState.value("bCRTFillWindow", bCRTFillWindow);
 	integer_scale = jsonState.value("integer_scale", integer_scale);
@@ -191,8 +191,6 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_f_brightness = jsonState.value("p_f_brightness", p_f_brightness);
 	p_i_cSpace = jsonState.value("p_i_cSpace", p_i_cSpace);
 	p_f_cStr = jsonState.value("p_f_cStr", p_f_cStr);
-	p_f_centerX = jsonState.value("p_f_centerX", p_f_centerX);
-	p_f_centerY = jsonState.value("p_f_centerY", p_f_centerY);
 	p_f_convB = jsonState.value("p_f_convB", p_f_convB);
 	p_f_convG = jsonState.value("p_f_convG", p_f_convG);
 	p_f_convR = jsonState.value("p_f_convR", p_f_convR);
@@ -210,13 +208,16 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_i_scanlineType = jsonState.value("p_i_scanlineType", p_i_scanlineType);
 	p_f_slotW = jsonState.value("p_f_slotW", p_f_slotW);
 	p_f_vignetteWeight = jsonState.value("p_f_vignetteWeight", p_f_vignetteWeight);
-	p_f_warpX = jsonState.value("p_f_warpX", p_f_warpX);
-	p_f_warpY = jsonState.value("p_f_warpY", p_f_warpY);
 	p_f_barrelDistortion = jsonState.value("p_f_barrelDistortion", p_f_barrelDistortion);
-	p_f_zoomX = jsonState.value("p_f_zoomX", p_f_zoomX);
-	p_f_zoomY = jsonState.value("p_f_zoomY", p_f_zoomY);
 	p_f_ghostingPercent = jsonState.value("p_f_ghostingPercent", p_f_ghostingPercent);
 	p_f_phosphorBlur = jsonState.value("p_f_phosphorBlur", p_f_phosphorBlur);
+	p_v_warp.x = jsonState.value("p_v_warpX", p_v_warp.x);
+	p_v_warp.y = jsonState.value("p_v_warpY", p_v_warp.y);
+	p_v_center.x = jsonState.value("p_v_centerX", p_v_center.x);
+	p_v_center.y = jsonState.value("p_v_centerY", p_v_center.y);
+	p_v_zoom.x = jsonState.value("p_v_zoomX", p_v_zoom.x);
+	p_v_zoom.y = jsonState.value("p_v_zoomY", p_v_zoom.y);
+
 }
 
 void PostProcessor::SaveState(int profile_id) {
@@ -288,8 +289,6 @@ void PostProcessor::SelectShader()
 		shaderProgram.setFloat("BR_DEP", p_f_brDep);
 		shaderProgram.setFloat("BRIGHTNESS", p_f_brightness);
 		shaderProgram.setFloat("C_STR", p_f_cStr);
-		shaderProgram.setFloat("CENTERX", p_f_centerX);
-		shaderProgram.setFloat("CENTERY", p_f_centerY);
 		shaderProgram.setFloat("CONV_B", p_f_convB);
 		shaderProgram.setFloat("CONV_G", p_f_convG);
 		shaderProgram.setFloat("CONV_R", p_f_convR);
@@ -307,13 +306,12 @@ void PostProcessor::SelectShader()
 		shaderProgram.setFloat("SLOTW", p_f_slotW);
 		shaderProgram.setFloat("VIGNETTE_WEIGHT", p_f_vignetteWeight);
 		shaderProgram.setFloat("INTERLACE_WEIGHT", p_f_interlace);
-		shaderProgram.setFloat("WARPX", p_f_warpX);
-		shaderProgram.setFloat("WARPY", p_f_warpY);
-		shaderProgram.setFloat("ZOOMX", p_f_zoomX);
-		shaderProgram.setFloat("ZOOMY", p_f_zoomY);
 		shaderProgram.setInt("iCOLOR_SPACE", p_i_cSpace);
 		shaderProgram.setInt("iM_TYPE", p_i_maskType);
 		shaderProgram.setInt("iSCANLINE_TYPE", p_i_scanlineType);
+		shaderProgram.setVec2("vWARP", p_v_warp);
+		shaderProgram.setVec2("vCENTER", p_v_center);
+		shaderProgram.setVec2("vZOOM", p_v_zoom);
 		break;
 	}
 	// common
@@ -454,8 +452,8 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	{
 		shaderProgramBezel.use();
 		glm::mat4 transformBezel = glm::mat4(1.0f);
-		//transformBezel = glm::translate(transformBezel, glm::vec3(static_cast<float>(viewportWidth)*bezelWidth, static_cast<float>(viewportHeight) * bezelHeight, 0.0f));
-		transformBezel = glm::scale(transformBezel, glm::vec3(bezelWidth, bezelHeight, 1.0f));
+		//transformBezel = glm::translate(transformBezel, glm::vec3(static_cast<float>(viewportWidth)*bezelSize.x, static_cast<float>(viewportHeight) * bezelSize.y, 0.0f));
+		transformBezel = glm::scale(transformBezel, glm::vec3(bezelSize.x, bezelSize.y, 1.0f));
 		shaderProgramBezel.setMat4("uTransform", transformBezel);		// in the vertex shader
 		shaderProgramBezel.setInt("A2TextureCurrent", _TEXUNIT_PP_BEZEL - GL_TEXTURE0);
 		glActiveTexture(_TEXUNIT_PP_BEZEL);
@@ -655,8 +653,8 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			}
 		}
 		// Bezel width and height
-		ImGui::SliderFloat("Relative Width", &bezelWidth, 0.f, 2.f, "%.2f");
-		ImGui::SliderFloat("Relative Height", &bezelHeight, 0.f, 2.f, "%.2f");
+		ImGui::SliderFloat("Relative Width", &bezelSize.x, 0.f, 2.f, "%.2f");
+		ImGui::SliderFloat("Relative Height", &bezelSize.y, 0.f, 2.f, "%.2f");
 		ImGui::Separator();
 
 		ImGui::Text("[ FRAME MERGING ]");
@@ -728,18 +726,38 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::Text("[ GEOMETRY SETTINGS ]");
 			if (ImGui::Checkbox("Fill Window", &bCRTFillWindow))
 			{
-				p_f_zoomX = 0;
-				p_f_zoomY = 0;
-				p_f_centerX = 0;
-				p_f_centerY = 0;
+				p_v_zoom.x = 0;
+				p_v_zoom.y = 0;
+				p_v_center.x = 0;
+				p_v_center.y = 0;
 
 			}
-			ImGui::SliderFloat("Zoom Image X", &p_f_zoomX, -2.0f, 2.0f, "%.3f");
-			ImGui::SliderFloat("Zoom Image Y", &p_f_zoomY, -2.0f, 2.0f, "%.3f");
-			ImGui::SliderFloat("Image Center X", &p_f_centerX, -100.0f, 100.0f, "%.2f");
-			ImGui::SliderFloat("Image Center Y", &p_f_centerY, -100.0f, 100.0f, "%.2f");
-			ImGui::SliderFloat("Curvature Horizontal", &p_f_warpX, 0.00f, 0.25f, "%.2f");
-			ImGui::SliderFloat("Curvature Vertical", &p_f_warpY, 0.00f, 0.25f, "%.2f");
+			if (bImGuiLockZoom)
+			{
+				float uniform = p_v_zoom.x;
+				p_v_zoom.y = p_v_zoom.x;
+				if (ImGui::DragFloat("Image Zoom", &uniform, 0.001f, -2.0f, 2.0f, "%.3f"))
+					p_v_zoom = glm::vec2(uniform);
+			}
+			else
+				ImGui::DragFloat2("Image Zoom", reinterpret_cast<float*>(&p_v_zoom), 0.001f, -2.0f, 2.0f, "%.3f");
+			ImGui::SameLine(); ImGui::Spacing();
+			ImGui::SameLine(); ImGui::Checkbox("Uniform##Zoom", &bImGuiLockZoom);
+
+			ImGui::DragFloat2("Image Center", reinterpret_cast<float*>(&p_v_center), 0.1f, -100.0f, 100.0f, "%.2f");
+
+			if (bImGuiLockWarp)
+			{
+				float uniform = p_v_warp.x;
+				p_v_warp.y = p_v_warp.x;
+				if (ImGui::DragFloat("Curvature", &uniform, 0.001f, -0.5f, 0.5f, "%.3f"))
+					p_v_warp = glm::vec2(uniform);
+			}
+			else
+				ImGui::DragFloat2("Curvature", reinterpret_cast<float*>(&p_v_warp), 0.001f, -0.5f, 0.5f, "%.3f");
+			ImGui::SameLine(); ImGui::Spacing();
+			ImGui::SameLine(); ImGui::Checkbox("Uniform##Curvature", &bImGuiLockWarp);
+
 			ImGui::SliderFloat("Barrel Distortion", &p_f_barrelDistortion, -0.30f, 5.00f, "%.2f");
 			ImGui::SliderFloat("Corners Cut", &p_f_corner, 0.f, 100.f, "%.3f");
 			ImGui::Spacing();ImGui::SameLine();ImGui::Checkbox("Smooth Corners", &p_b_smoothCorner);
