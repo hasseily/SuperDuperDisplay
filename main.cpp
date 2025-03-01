@@ -393,7 +393,7 @@ int main(int argc, char* argv[])
 
 	// Special case for Linux console mode, make it fullscreen always
 #if defined(__LINUX__)
-	const char* video_driver = SDL_GetCurrentVideoDriver();
+	video_driver = SDL_GetCurrentVideoDriver();
 	if (strcmp(video_driver, "KMSDRM") == 0) {
 		window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
 			| SDL_WINDOW_FULLSCREEN | SDL_WINDOW_ALLOW_HIGHDPI
