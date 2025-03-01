@@ -343,13 +343,6 @@ int main(int argc, char* argv[])
     chdir(dir);
 #endif
 
-#if defined(__LINUX__)
-	const char* video_driver = SDL_GetCurrentVideoDriver();
-	if (strcmp(video_driver, "KMSDRM") == 0) {
-		g_isLinuxConsole = true;
-	}
-#endif
-
 	GLenum glerr;
     // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
@@ -357,6 +350,14 @@ int main(int argc, char* argv[])
         printf("Error: %s\n", SDL_GetError());
         return -1;
     }
+
+#if defined(__LINUX__)
+	const char* video_driver = SDL_GetCurrentVideoDriver();
+	if (strcmp(video_driver, "KMSDRM") == 0) {
+		g_isLinuxConsole = true;
+	}
+#endif
+
 
     // Decide GL+GLSL versions
     auto glhelper = OpenGLHelper::GetInstance();
