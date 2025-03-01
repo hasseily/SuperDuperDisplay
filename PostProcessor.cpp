@@ -159,8 +159,8 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_v_warpY", p_v_warp.y},
 		{"p_v_centerX", p_v_center.x},
 		{"p_v_centerY", p_v_center.y},
-		{"p_f_zoomX", p_v_zoom.x},
-		{"p_f_zoomY", p_v_zoom.y}
+		{"p_v_zoomX", p_v_zoom.x},
+		{"p_v_zoomY", p_v_zoom.y}
 	};
 	return jsonState;
 }
