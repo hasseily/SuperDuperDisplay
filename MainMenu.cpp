@@ -27,6 +27,7 @@ extern void Main_SetFPSLimit(uint32_t fps);
 extern void Main_ResetFPSCalculations();
 extern SDL_DisplayMode Main_GetFullScreenMode();
 extern void Main_SetFullScreenMode(SDL_DisplayMode mode);
+extern bool Main_IsLinuxConsole();
 extern bool Main_IsFullScreen();
 extern void Main_SetFullScreen(bool bIsFullscreen);
 extern SwapInterval_e Main_GetVsync();
@@ -47,6 +48,7 @@ public:
 	ImFont* fontLarge = nullptr;
 
 	std::vector<SDL_DisplayMode> v_displayModes;
+	int iCurrentDisplayIndex = -1;
 
 	int iFPSLimiter = 0;
 	int iWindowWidth=1200;
@@ -530,38 +532,54 @@ void MainMenu::ShowSDDMenu() {
 		// FIXME: Figure out the display index for full screen mode
 		int displayIndex = SDL_GetWindowDisplayIndex(Main_GetSDLWindow());
 		SDL_DisplayMode currentDisplayMode = Main_GetFullScreenMode();
-		int numDisplayModes = SDL_GetNumDisplayModes(displayIndex);
-		SDL_DisplayMode _lastMode;
-		_lastMode.w = _lastMode.h = _lastMode.refresh_rate = 0;
-		char modeDescription[200];
+		if (pGui->iCurrentDisplayIndex != displayIndex)
+		{
+			// display changed, let's get its info
+			int numDisplayModes = SDL_GetNumDisplayModes(displayIndex);
+			SDL_DisplayMode _lastMode;
+			_lastMode.w = _lastMode.h = _lastMode.refresh_rate = 0;
 
-		pGui->v_displayModes.clear();
-		for (int i = 0; i < numDisplayModes; ++i) {
-			SDL_DisplayMode mode;
-			if (SDL_GetDisplayMode(displayIndex, i, &mode) != 0) {
-				std::cerr << "SDL_GetDisplayMode failed: " << SDL_GetError() << std::endl;
-				continue;
-			}
-			// Only store the highest refresh rate modes
-			if (!(_lastMode.w == mode.w && _lastMode.h == mode.h && _lastMode.refresh_rate > mode.refresh_rate))
-			{
-				pGui->v_displayModes.push_back(mode);
-				_lastMode = mode;
+			pGui->v_displayModes.clear();
+			for (int i = 0; i < numDisplayModes; ++i) {
+				SDL_DisplayMode mode;
+				if (SDL_GetDisplayMode(displayIndex, i, &mode) != 0) {
+					std::cerr << "SDL_GetDisplayMode failed: " << SDL_GetError() << std::endl;
+					continue;
+				}
+				// Only store the highest refresh rate modes
+				if (!(_lastMode.w == mode.w && _lastMode.h == mode.h && _lastMode.refresh_rate > mode.refresh_rate))
+				{
+					pGui->v_displayModes.push_back(mode);
+					_lastMode = mode;
+				}
 			}
 		}
+
+		bool foundCurrentMode = false;
 		bool isCurrentMode = false;
+		char modeDescription[200];
 		for (int i = 0; i < pGui->v_displayModes.size(); ++i)
 		{
 			auto mode = pGui->v_displayModes[i];
 			snprintf(modeDescription, 199, "%dx%d @ %dHz", mode.w, mode.h, mode.refresh_rate);
-			isCurrentMode = (
-				mode.w == currentDisplayMode.w &&
-				mode.h == currentDisplayMode.h &&
-				mode.refresh_rate == currentDisplayMode.refresh_rate);
+			if (foundCurrentMode == false)
+			{
+				isCurrentMode = (
+					mode.w == currentDisplayMode.w &&
+					mode.h == currentDisplayMode.h &&
+					mode.refresh_rate == currentDisplayMode.refresh_rate);
+				isCurrentMode ? foundCurrentMode = true : foundCurrentMode = false;
+			}
+			else
+				isCurrentMode = false;
+			if (!Main_IsLinuxConsole())
+				ImGui::BeginDisabled();
 			if (ImGui::MenuItem(modeDescription, "", isCurrentMode))
 				Main_SetFullScreenMode(mode);
+			if (!Main_IsLinuxConsole())
+				ImGui::EndDisabled();
 		}
-		if (isCurrentMode == false)
+		if (foundCurrentMode == false)
 		{
 			// Couldn't find a mode
 			Main_SetFullScreenMode(pGui->v_displayModes[0]);

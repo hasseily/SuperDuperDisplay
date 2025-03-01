@@ -53,6 +53,8 @@ static MainMenu* menu = nullptr;
 
 static SDL_DisplayMode g_fullscreenMode;
 
+static bool g_isLinuxConsole = false;
+
 // For FPS calculations
 static float fps_worst = 1000000.f;
 static uint64_t fps_frame_count = 0;
@@ -188,13 +190,21 @@ void Main_SetFPSOverlay(bool isFPSOverlay) {
 	}
 }
 
+bool Main_IsLinuxConsole() {
+	return g_isLinuxConsole;
+}
+
 // True for both SDL_WINDOW_FULLSCREEN and SDL_WINDOW_FULLSCREEN_DESKTOP
 bool Main_IsFullScreen() {
 	// Assume non-resizable windows are fullscreen
 	auto _flags = SDL_GetWindowFlags(window);
 	if ((_flags & SDL_WINDOW_RESIZABLE) == 0)
 		return true;
-	return (_flags & SDL_WINDOW_FULLSCREEN);
+	if (_flags & SDL_WINDOW_FULLSCREEN_DESKTOP)
+		return true;
+	if (_flags & SDL_WINDOW_FULLSCREEN)
+		return true;
+	return false;
 }
 
 void Main_SetFullScreen(bool bWantFullscreen) {
@@ -209,9 +219,6 @@ void Main_SetFullScreen(bool bWantFullscreen) {
 		}
 	}
 #endif
-	// Don't do anything if it's already in the requested state.
-	if (Main_IsFullScreen() == bWantFullscreen)
-		return;
 	// Do nothing if it's Apple. Let the user maximize via the OSX UI
 	// Because if the user sets fullscreen via the OSX UI we won't know,
 	// and later setting fullscreen crashes SDL
@@ -226,13 +233,18 @@ void Main_SetFullScreen(bool bWantFullscreen) {
 	{
 		if (SDL_SetWindowDisplayMode(window, &g_fullscreenMode) == 0)
 		{
-			if (SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) == 0)
+			if (SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP) == 0)
 				_fsres = true;
 		}
 	}
 	if (_fsres == false)
 	{
 		SDL_SetWindowFullscreen(window, 0);
+		// Make sure the windowed mode shows the menu bar
+		if (g_wy == 0)
+			g_wy = 23;
+		if ((g_wh + g_wy) > g_fullscreenMode.h)
+			g_wh = g_fullscreenMode.h - g_wy;
 		SDL_SetWindowSize(window, g_ww, g_wh);
 		SDL_SetWindowPosition(window, g_wx, g_wy);
 		SDL_SetWindowBordered(window, SDL_TRUE);
@@ -328,6 +340,14 @@ int main(int argc, char* argv[])
     char *dir = dirname(strdup(argv[0]));
     chdir(dir);
 #endif
+
+#if defined(__LINUX__)
+	const char* video_driver = SDL_GetCurrentVideoDriver();
+	if (strcmp(video_driver, "KMSDRM") == 0) {
+		g_isLinuxConsole = true;
+	}
+#endif
+
 	GLenum glerr;
     // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
@@ -523,11 +543,6 @@ int main(int argc, char* argv[])
 			newMode.h = _sm.value("fullscreen height", g_fullscreenMode.h);
 			newMode.refresh_rate = _sm.value("fullscreen refresh rate", g_fullscreenMode.refresh_rate);
 			SDL_GetClosestDisplayMode(_displayIndex, &newMode, &g_fullscreenMode);
-			// Make sure the windowed mode shows the menu bar
-			if (g_wy == 0)
-				g_wy = 23;
-			if ((g_wh + g_wy) > g_fullscreenMode.h)
-				g_wh = g_fullscreenMode.h - g_wy;
 			Main_SetFullScreen(_sm.value("fullscreen", false));
 			vbl_region = (VideoRegion_e)_sm.value("videoregion", vbl_region);
 			if (vbl_region == VideoRegion_e::Unknown)
