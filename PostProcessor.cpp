@@ -32,11 +32,6 @@ PostProcessor* PostProcessor::s_instance;
 
 void PostProcessor::Initialize()
 {
-	if (FBO_prevFrame == UINT_MAX)
-	{
-		glGenFramebuffers(1, &FBO_prevFrame);
-		glGenTextures(1, &prevFrame_texture_id);
-	}
 	if (quadVAO == UINT_MAX)
 	{
 		// We're going to generate a static quad that the vertex shader will transform
@@ -275,7 +270,6 @@ void PostProcessor::SelectShader()
 		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
 		shaderProgram.setVec2("InputSize", glm::vec2(texWidth, texHeight));
 		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
-		shaderProgram.setVec4("VideoRect", quadViewportCoords);
 
 		// shader specific
 		shaderProgram.setFloat("GhostingPercent", p_f_ghostingPercent);
@@ -310,13 +304,62 @@ void PostProcessor::SelectShader()
 		shaderProgram.setInt("iM_TYPE", p_i_maskType);
 		shaderProgram.setInt("iSCANLINE_TYPE", p_i_scanlineType);
 		shaderProgram.setVec2("vWARP", p_v_warp);
-		shaderProgram.setVec2("vCENTER", p_v_center);
-		shaderProgram.setVec2("vZOOM", p_v_zoom);
 		break;
 	}
 	// common
 	shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
 	shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
+}
+
+void PostProcessor::RegeneratePreviousTexture()
+{
+	// Compute the pixel boundaries of the quad from its normalized coordinates.
+// The conversion from normalized device coordinates (range [-1,1]) to pixel coordinates is:
+//    pixel = (ndc * 0.5 + 0.5) * viewportDimension
+	if (FBO_prevFrame == UINT_MAX)
+	{
+		glGenFramebuffers(1, &FBO_prevFrame);
+		glGenTextures(1, &prevFrame_texture_id);
+	}
+
+	glm::vec4 quadCorners[4] = {
+		glm::vec4(-1.0f, -1.0f, 0.0f, 1.0f),
+		glm::vec4(1.0f, -1.0f, 0.0f, 1.0f),
+		glm::vec4(1.0f,  1.0f, 0.0f, 1.0f),
+		glm::vec4(-1.0f,  1.0f, 0.0f, 1.0f)
+	};
+	glm::vec4 transformed[4];
+	for (int i = 0; i < 4; ++i)
+	{
+		transformed[i] = mTransform * quadCorners[i];
+		if (transformed[i].w != 0.0f)
+			transformed[i] /= transformed[i].w;
+	}
+
+	float nquadLeft = std::min({ transformed[0].x, transformed[1].x, transformed[2].x, transformed[3].x });
+	float nquadRight = std::max({ transformed[0].x, transformed[1].x, transformed[2].x, transformed[3].x });
+	float nquadBottom = std::max({ transformed[0].y, transformed[1].y, transformed[2].y, transformed[3].y });
+	float nquadTop = std::min({ transformed[0].y, transformed[1].y, transformed[2].y, transformed[3].y });
+
+	// rounding is critical, to properly align the previous frame texture
+	tA2Quad.x = std::round((nquadLeft * 0.5 + 0.5) * viewportWidth);
+	tA2Quad.y = std::round((nquadTop * 0.5 + 0.5) * viewportHeight);
+	tA2Quad.w = std::round((nquadRight * 0.5 + 0.5) * viewportWidth - tA2Quad.x);
+	tA2Quad.h = std::round((nquadBottom * 0.5 + 0.5) * viewportHeight - tA2Quad.y);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_prevFrame);
+	glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
+	// Also here use GL_NEAREST to get rid of tiny rounding errors that will compound
+	// dramatically at high ghosting values. Proper rounding and GL_NEAREST fix this.
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tA2Quad.w, tA2Quad.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, prevFrame_texture_id, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
+	GLuint glerr;
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "OpenGL error PP RegeneratePreviousTexture: " << glerr << std::endl;
+	}
 }
 
 void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint scanlineCount)
@@ -393,18 +436,24 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	quadHeight = static_cast<int>(_scale * texHeight);
 	
 	// Now determine the quad transformations as necessary, to send to the vertex shader
-	glm::mat4 transform = glm::mat4(1.0f);
+	glm::mat4 _transform = glm::mat4(1.0f);
 	if (bCRTFillWindow && p_i_postprocessingLevel > 1)
 	{
 		// For full-window
-		transform = glm::scale(transform, glm::vec3(1.0f, 1.0f, 1.0f));
+		quadWidth = viewportWidth;
+		quadHeight = viewportHeight;
 	}
-	else
+	// Compute scale factors based on desired quad dimensions.
+	float scaleX = (quadWidth / static_cast<float>(viewportWidth));
+	float scaleY = (quadHeight / static_cast<float>(viewportHeight));
+	_transform = glm::scale(_transform, glm::vec3(scaleX*p_v_zoom.x, scaleY*p_v_zoom.y, 1.0f));
+	_transform = glm::translate(_transform, glm::vec3(p_v_center.x/100.f, p_v_center.y/100.f, 0.0f));
+	if ((_transform != mTransform)
+		|| (FBO_prevFrame == UINT_MAX))
 	{
-		// Compute scale factors based on desired quad dimensions.
-		float scaleX = (quadWidth / static_cast<float>(viewportWidth));
-		float scaleY = (quadHeight / static_cast<float>(viewportHeight));
-		transform = glm::scale(transform, glm::vec3(scaleX, scaleY, 1.0f));
+		// std::cerr << "regenerating transform" << std::endl;
+		mTransform = _transform;
+		RegeneratePreviousTexture();
 	}
 
 	if (bImguiWindowIsOpen || (!shaderProgram.isReady)
@@ -428,7 +477,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	}
 
 	// Used for all PP shaders
-	shaderProgram.setMat4("uTransform", transform);		// in the vertex shader
+	shaderProgram.setMat4("uTransform", mTransform);		// in the vertex shader
 	shaderProgram.setInt("A2TextureCurrent", texUnitCurrent - GL_TEXTURE0);
 	shaderProgram.setInt("PreviousFrame", _TEXUNIT_PP_PREVIOUS - GL_TEXTURE0);
 	shaderProgram.setInt("iFrameCount", frame_count);
@@ -475,39 +524,21 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	// THIS _DRAMATICALLY_ REDUCES THE FPS ON A RASPBERRY PI
 	if ((p_f_ghostingPercent > 0.0000001f) || bHalveFramerate)
 	{
-		// Compute the pixel boundaries of the quad from its normalized coordinates.
-		// The conversion from normalized device coordinates (range [-1,1]) to pixel coordinates is:
-		//    pixel = (ndc * 0.5 + 0.5) * viewportDimension
-		int quadLeft = (viewportWidth - quadWidth) / 2;
-		int quadRight = quadLeft + quadWidth;
-		int quadTop = (viewportHeight - quadHeight) / 2;
-		int quadBottom = quadTop + quadHeight;
-
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO_prevFrame);
-		glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, quadRight - quadLeft, quadBottom - quadTop, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, prevFrame_texture_id, 0);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL error PP 4: " << glerr << std::endl;
-		}
 		// Always bind the previous frame texture to its dedicated texture unit
 		glActiveTexture(_TEXUNIT_PP_PREVIOUS);
 		glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
 		glActiveTexture(GL_TEXTURE0);
 
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL error PP 5: " << glerr << std::endl;
+			std::cerr << "OpenGL error PP 4: " << glerr << std::endl;
 		}
 
 		// Now copy the screen texture to prevFrame_texture_id, to use it for the next frame
 		// NOTE: prevFrame is flipped on the Y axis, so we flip Y on the destination to realign it
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO_prevFrame);
-		glBlitFramebuffer(quadLeft, quadTop, quadRight, quadBottom,	// source rectangle (quad region)
-			0, quadBottom - quadTop, quadRight - quadLeft, 0,		// destination rectangle (Y flipped)
+		glBlitFramebuffer(tA2Quad.x, tA2Quad.y, tA2Quad.w + tA2Quad.x, tA2Quad.h + tA2Quad.y,	// source rectangle (quad region)
+			0, tA2Quad.h, tA2Quad.w, 0,									// destination rectangle (Y flipped)
 			GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -632,7 +663,31 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 
 		ImGui::Separator();
 
-		ImGui::Text("[ BEZEL ]");
+		ImGui::Text("[ GEOMETRY & OVERLAY]");
+		// GEOMETRY
+		if (ImGui::Checkbox("Fill Window", &bCRTFillWindow))
+		{
+			p_v_zoom.x = 1.0f;
+			p_v_zoom.y = 1.0f;
+			p_v_center.x = 0;
+			p_v_center.y = 0;
+
+		}
+		if (bImGuiLockZoom)
+		{
+			float uniform = p_v_zoom.x;
+			p_v_zoom.y = p_v_zoom.x;
+			if (ImGui::DragFloat("Image Zoom", &uniform, 0.001f, 0.001f, 5.0f, "%.3f"))
+				p_v_zoom = glm::vec2(uniform);
+		}
+		else
+			ImGui::DragFloat2("Image Zoom", reinterpret_cast<float*>(&p_v_zoom), 0.001f, 0.001f, 5.0f, "%.3f");
+		ImGui::SameLine(); ImGui::Spacing();
+		ImGui::SameLine(); ImGui::Checkbox("Uniform##Zoom", &bImGuiLockZoom);
+
+		ImGui::DragFloat2("Image Center", reinterpret_cast<float*>(&p_v_center), 0.1f, -100.0f, 100.0f, "%.2f");
+
+		// OVERLAY
 		currentBezelIndex = 0;
 		std::vector<std::string> _bezelFiles;
 		currentBezelIndex = PopulateBezelFiles(_bezelFiles, selectedBezelFile);
@@ -652,9 +707,9 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 				glActiveTexture(GL_TEXTURE0);
 			}
 		}
-		// Bezel width and height
-		ImGui::SliderFloat("Relative Width", &bezelSize.x, 0.f, 2.f, "%.2f");
-		ImGui::SliderFloat("Relative Height", &bezelSize.y, 0.f, 2.f, "%.2f");
+		ImGui::SliderFloat("Overlay Relative Width", &bezelSize.x, 0.f, 2.f, "%.2f");
+		ImGui::SliderFloat("Overlay Relative Height", &bezelSize.y, 0.f, 2.f, "%.2f");
+
 		ImGui::Separator();
 
 		ImGui::Text("[ FRAME MERGING ]");
@@ -723,29 +778,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::Separator();
 			
 			// Geometry Settings
-			ImGui::Text("[ GEOMETRY SETTINGS ]");
-			if (ImGui::Checkbox("Fill Window", &bCRTFillWindow))
-			{
-				p_v_zoom.x = 0;
-				p_v_zoom.y = 0;
-				p_v_center.x = 0;
-				p_v_center.y = 0;
-
-			}
-			if (bImGuiLockZoom)
-			{
-				float uniform = p_v_zoom.x;
-				p_v_zoom.y = p_v_zoom.x;
-				if (ImGui::DragFloat("Image Zoom", &uniform, 0.001f, -2.0f, 2.0f, "%.3f"))
-					p_v_zoom = glm::vec2(uniform);
-			}
-			else
-				ImGui::DragFloat2("Image Zoom", reinterpret_cast<float*>(&p_v_zoom), 0.001f, -2.0f, 2.0f, "%.3f");
-			ImGui::SameLine(); ImGui::Spacing();
-			ImGui::SameLine(); ImGui::Checkbox("Uniform##Zoom", &bImGuiLockZoom);
-
-			ImGui::DragFloat2("Image Center", reinterpret_cast<float*>(&p_v_center), 0.1f, -100.0f, 100.0f, "%.2f");
-
+			ImGui::Text("[ ADVANCED GEOMETRY ]");
 			if (bImGuiLockWarp)
 			{
 				float uniform = p_v_warp.x;

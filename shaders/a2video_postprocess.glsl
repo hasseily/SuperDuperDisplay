@@ -60,7 +60,6 @@ uniform COMPAT_PRECISION vec2 OutputSize;
 uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
 uniform COMPAT_PRECISION vec2 ViewportSize;
-uniform COMPAT_PRECISION vec4 VideoRect;
 uniform COMPAT_PRECISION uint ScanlineCount;
 uniform sampler2D A2TextureCurrent;
 uniform sampler2D PreviousFrame;
@@ -360,8 +359,8 @@ void main() {
 		-RB, -GB, 1.0
 		);
 	
-// zoom in and center screen for bezel
-	vec2 pos = Warp(TexCoords*vec2(1.0-vZOOM.x,1.0-vZOOM.y)-vec2(vCENTER.x,vCENTER.y)/100.0);
+// Curvature on both axes
+	vec2 pos = Warp(TexCoords);
 
 // If people prefer the BarrelDistortion algo
 	pos = BarrelDistortion(pos);

@@ -43,6 +43,7 @@ private:
 	void LoadState(int profile_id);
 	int PopulateBezelFiles(std::vector<std::string>& bezelFiles, const std::string& selectedBezelFile);
 	void SelectShader();
+	void RegeneratePreviousTexture();
 
 	// Singleton pattern
 	static PostProcessor* s_instance;
@@ -66,16 +67,24 @@ private:
 
 	OpenGLHelper::ImageAsset bezelImageAsset;
 
-	// The quad vertices will change based on the change in the requested screen size
-	glm::vec4 quadViewportCoords = glm::vec4(0, 0, 0, 0);	// left, top, right, bottom
-	bool bCRTFillWindow = false;
-
 	GLint viewportWidth = 0, viewportHeight = 0;
 	GLint quadWidth = 0, quadHeight = 0;
 	GLint texWidth = 0, texHeight = 0;
 	GLint prev_texWidth = INT_MAX, prev_texHeight = INT_MAX;
 
 	GLint texUnitCurrent = INT_MAX, texUnitPrevious = INT_MAX;
+
+	// The transform matrix for the A2 texture quad
+	glm::mat4 mTransform = glm::mat4(1.0f);
+
+	// Transformed A2 render quad
+	// the rectangle (in pixels) where the A2 texture is rendered on screen
+	// based on the transformations requested by the user. This is only necessary
+	// to copy the data into the previous frame texture, as the transformation is
+	// otherwise happening in the vertex shader
+	SDL_Rect tA2Quad;
+
+	bool bCRTFillWindow = false;
 
 	int frame_count = 0;	// Frame count for interlacing, it may not be aligned with A2Video frames
 	int idx_preset = 0;		// Preset chosen
@@ -124,7 +133,7 @@ private:
 	float p_f_phosphorBlur = 0.0f;	// blur modifier
 	glm::vec2 p_v_warp = glm::vec2(0.0f, 0.0f);	// curvature
 	glm::vec2 p_v_center = glm::vec2(0.0f, 0.0f);
-	glm::vec2 p_v_zoom = glm::vec2(0.0f, 0.0f);
+	glm::vec2 p_v_zoom = glm::vec2(1.0f, 1.0f);
 
 	// imgui vars
 	bool bImGuiLockWarp = false;

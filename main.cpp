@@ -241,14 +241,16 @@ void Main_SetFullScreen(bool bWantFullscreen) {
 	{
 		SDL_SetWindowFullscreen(window, 0);
 		// Make sure the windowed mode shows the menu bar
-		if (g_wy == 0)
-			g_wy = 23;
+		if (g_wy < 30)
+			g_wy = 30;
+		if (g_wx < 10)
+			g_wx = 10;
 		if ((g_wh + g_wy) > g_fullscreenMode.h)
 			g_wh = g_fullscreenMode.h - g_wy;
-		SDL_SetWindowSize(window, g_ww, g_wh);
-		SDL_SetWindowPosition(window, g_wx, g_wy);
 		SDL_SetWindowBordered(window, SDL_TRUE);
 		SDL_SetWindowResizable(window, SDL_TRUE);
+		SDL_SetWindowPosition(window, g_wx, g_wy);
+		SDL_SetWindowSize(window, g_ww, g_wh);
 	}
 
 	Main_ResetFPSCalculations();

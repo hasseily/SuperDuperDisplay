@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <string>
-
+#include "glm/gtc/epsilon.hpp"
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include <SDL.h>
@@ -172,3 +172,11 @@ glm::vec2 OpenGLHelper::get_dpi_scaling_factors(SDL_Window* window) {
 	return glm::vec2(scaleX, scaleY);
 }
 
+bool OpenGLHelper::are_matrices_approx_equal(const glm::mat4& m1, const glm::mat4& m2, float epsilon)
+{
+	for (int i = 0; i < 4; ++i) {
+		if (!glm::all(glm::epsilonEqual(m1[i], m2[i], epsilon)))
+			return false;
+	}
+	return true;
+}
