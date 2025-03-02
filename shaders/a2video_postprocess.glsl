@@ -436,8 +436,9 @@ void main() {
 		}
 
 		if (SCANLINE_WEIGHT > 0.00001) {
-			float scans = clamp( 0.35+0.15*sin(2.0*(fTime * SCAN_SPEED)+pos.y*float(ScanlineCount)*2.0), 0.0, 1.0);
+			float scans = clamp( 0.35+0.15*sin(2.0*(-fTime * SCAN_SPEED)+pos.y*float(ScanlineCount)*8.0/2.55), 0.0, 1.0);
 			float s = pow(scans,SCANLINE_WEIGHT);
+			s = pow(s,SCANLINE_WEIGHT);
 			res = res*vec3(s);
 		}
 
@@ -450,21 +451,6 @@ void main() {
 					rand(pos + 0.0001 * fTime + 0.3),
 					rand(pos + 0.0001 * fTime + 0.5)
 				);
-
-
-		/*
-		if (INTERLACE_WEIGHT > 0.00001) {
-			vec3 ires = res;
-			ires *= 1.0-0.15*vec3(clamp((mod(pos.x+o, 2.0)-1.0)*2.0,0.0,1.0));
-
-
-			// res = pow(ires, vec3(0.5+INTERLACE_WEIGHT));
-			float gamma = 0.5 + INTERLACE_WEIGHT;
-			float mid = 0.5;
-			float brightnessCompensation = mid / pow(mid, gamma);
-			res = brightnessCompensation * pow(ires, vec3(gamma));
-		}
-		*/
 	}
 
 	/*
@@ -487,8 +473,6 @@ void main() {
 		float weight = scanlineWeights(s, res, x);
 		float weight2 = scanlineWeights(1.0-s, res, x);
 		res *= weight + weight2;
-	} else {
-		v_pwr = vec3(1.0/((-1.0*0.3+1.0)*(-0.8*CGWG+1.0))-1.2);
 	}
 	*/
 
