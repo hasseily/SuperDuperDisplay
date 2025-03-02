@@ -1856,10 +1856,12 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 				this->ForceBeamFullScreenRender();
 			}
 			const char* _doubleSHRModes[] = { "Default", "Disable", "Interlace", "Page Flip" };
+			ImGui::PushItemWidth(100);
 			if (ImGui::Combo("Force Double SHR", &this->overrideDoubleSHR, _doubleSHRModes, IM_ARRAYSIZE(_doubleSHRModes)))
 			{
 				this->ForceBeamFullScreenRender();
 			}
+			ImGui::PopItemWidth();
 			ImGui::Columns(1);
 
 			// vidhdWindowBeam->DisplayImGuiWindow(p_open);

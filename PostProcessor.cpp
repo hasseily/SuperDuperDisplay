@@ -246,7 +246,7 @@ int PostProcessor::PopulateBezelFiles(std::vector<std::string>& _bezelFiles, con
 		if (entry.is_regular_file() && (entry.path().extension() == ".png" || entry.path().extension() == ".jpg")) {
 			_bezelFiles.push_back(entry.path().filename().string());
 			if (_selectedBezelFile == entry.path().filename().string()) {
-				_selIdx = _bezelFiles.size() - 1;
+				_selIdx = (int)_bezelFiles.size() - 1;
 			}
 		}
 	}
@@ -793,7 +793,8 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 
 			ImGui::SliderFloat("Barrel Distortion", &p_f_barrelDistortion, -0.30f, 5.00f, "%.2f");
 			ImGui::SliderFloat("Corners Cut", &p_f_corner, 0.f, 100.f, "%.3f");
-			ImGui::Spacing();ImGui::SameLine();ImGui::Checkbox("Smooth Corners", &p_b_smoothCorner);
+			ImGui::SameLine(); ImGui::Spacing();
+			ImGui::SameLine(); ImGui::Checkbox("Smooth", &p_b_smoothCorner);
 			ImGui::Separator();
 			
 			// Color Settings
