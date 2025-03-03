@@ -93,7 +93,7 @@ uniform int monitorColorType;
 const vec4 monitorcolors[5] = vec4[5](
     vec4(0.000000,	0.000000,	0.000000,	1.000000)	/*BLACK, -- this is a color monitor */
     ,vec4(1.000000,	1.000000,	1.000000,	1.000000)	/*WHITE PHOSPHOR,*/
-    ,vec4(0.290196,	1.000000,	0.000000,	1.000000)	/*GREEN PHOSPHOR,*/
+    ,vec4(0.000000,	1.000000,	0.290196,	1.000000)	/*GREEN PHOSPHOR,*/
     ,vec4(1.000000,	0.717647,	0.000000,	1.000000)	/*AMBER PHOSPHOR,*/
     ,vec4(1.000000,	0.000000,	0.500000,	1.000000)	/*PINK, -- this option shouldn't exist */
 );
