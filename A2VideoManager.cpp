@@ -538,7 +538,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 #define _TR_ANY_X ((_x + borders_w_cycles + CYCLES_SC_CONTENT) % CYCLES_SC_TOTAL)
 #define _TR_ANY_Y ((_y + borders_h_scanlines) % region_scanlines)
 
-	if (!bIsReady)
+	if (!bIsReady || bIsRebooting)
 		return;
 
 	auto memMgr = MemoryManager::GetInstance();
