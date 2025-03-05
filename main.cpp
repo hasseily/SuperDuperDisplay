@@ -643,11 +643,13 @@ int main(int argc, char* argv[])
 				lastMouseMoveTime = SDL_GetTicks();
                 if (event.motion.state & SDL_BUTTON_RMASK) {
                     // Move the camera when the right mouse button is pressed while moving the mouse
-                    sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
+					if (sdhrManager->IsSdhrEnabled())
+						sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
                 }
                 break;
             case SDL_MOUSEWHEEL:
-				sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
+				if (sdhrManager->IsSdhrEnabled())
+					sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
                 break;
             case SDL_KEYDOWN:
 			{
@@ -686,30 +688,33 @@ int main(int argc, char* argv[])
 					if (Main_IsFullScreen())
 						Main_SetFullScreen(false);
 				}
-				// Camera movement!
-				switch (event.key.keysym.sym)
+				if (sdhrManager->IsSdhrEnabled())
 				{
-				case SDLK_w:
-					sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
-					break;
-				case SDLK_s:
-					sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
-					break;
-				case SDLK_a:
-					sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
-					break;
-				case SDLK_d:
-					sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
-					break;
-				case SDLK_q:
-					sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
-					break;
-				case SDLK_z:
-					sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
-					break;
-				default:
-					break;
-				};
+					// Camera movement!
+					switch (event.key.keysym.sym)
+					{
+					case SDLK_w:
+						sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
+						break;
+					case SDLK_s:
+						sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
+						break;
+					case SDLK_a:
+						sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
+						break;
+					case SDLK_d:
+						sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
+						break;
+					case SDLK_q:
+						sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
+						break;
+					case SDLK_z:
+						sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
+						break;
+					default:
+						break;
+					};
+				}
 			}
                 break;
             default:
