@@ -597,6 +597,8 @@ int main(int argc, char* argv[])
 			std::cerr << "Reset detected" << std::endl;
 			a2VideoManager->bShouldReboot = false;
 			a2VideoManager->ResetComputer();
+			if (bDisplayFPSOnScreen)
+				Main_DrawFPSOverlay();	// It is wiped by the reset
 		}
 		a2VideoManager->CheckSetBordersWithReinit();
 
