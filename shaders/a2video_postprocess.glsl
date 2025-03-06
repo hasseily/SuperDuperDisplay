@@ -1,10 +1,10 @@
-
 /*
+By Rikkles.
 
-Based on 'crt-Cyclon' by DariusG
-
-This shader uses parts from:
-crt-Geom (scanlines)
+This shader is a frankenstein and uses parts from:
+crt-Cyclon by DariusG
+crt-Geom (alternate scanlines)
+Mattias CRT
 Quillez (main filter)
 Dogway's inverse Gamma
 
@@ -162,7 +162,7 @@ vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 			// As we get closer to the color (the higher the ghosting, the higher the cutoff),
 			// at some point we need to accelerate the move. Otherwise at higher ghosting values
 			// the color will never be reached (especially visible when fading to black)
-			blended = mix(currentColor, previousColor, 0.96);
+			blended = mix(currentColor, previousColor, 0.4);
 		else
 			blended = mix(currentColor, previousColor, GhostingPercent/100.0);
 	}
