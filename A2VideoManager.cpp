@@ -218,6 +218,12 @@ void A2VideoManager::Initialize()
 	border_w_slider_val = (int)this->GetBordersWidthCycles();
 	border_h_slider_val = (int)this->GetBordersHeightScanlines() / 8;
 
+	SDL_memset(&event_newframe, 0, sizeof(event_newframe));
+	event_newframe.type = SDL_USEREVENT;
+	event_newframe.user.code = SDLUSEREVENT_A2NEWFRAME;
+	event_newframe.user.data1 = nullptr;
+	event_newframe.user.data2 = nullptr;
+
 	ResetGLData();
 	
 	auto oglHelper = OpenGLHelper::GetInstance();
@@ -504,6 +510,26 @@ void A2VideoManager::StartNextFrame()
 	// Additional frame data resets
 	vrams_write->frameSHR4Modes = 0;
 	vrams_write->doubleSHR4Mode = 0;
+
+	// And finally send an event to the main loop saying that the frame was updated
+	// This is necessary when synching to the Apple 2 VSYNC. Don't create a new event if there are 4
+	// events already in the queue.
+	int _numEvents = SDL_PeepEvents(user_events_active, MAX_USEREVENTS_IN_QUEUE, 
+		SDL_PEEKEVENT, SDL_USEREVENT, SDL_USEREVENT);
+	if (_numEvents < 4)
+	{
+		auto _everr = SDL_PushEvent(&event_newframe);
+		if (_everr == 0)
+			std::cerr << "Event queue is full, could not push event_newframe!" << std::endl;
+		else if (_everr < 0) {
+			std::cerr << "event_newframe error: " << SDL_GetError() << std::endl;
+		}
+	}
+#ifdef DEBUG
+	else {
+		std::cerr << "Max # of A2 frames already in event queue!" << std::endl;
+	}
+#endif
 }
 
 void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
