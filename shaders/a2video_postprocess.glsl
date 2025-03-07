@@ -34,7 +34,6 @@ in vec2 TexCoord;
 out vec2 TexCoords; // Pass texture coordinates to fragment shader
 out vec2 scale;
 out vec2 ps;
-out vec2 v_pos;
 
 uniform COMPAT_PRECISION int iFrameCount;
 uniform COMPAT_PRECISION vec2 OutputSize;
@@ -49,7 +48,6 @@ void main()
 	TexCoords = TexCoord;
 	scale = OutputSize.xy/TextureSize.xy;
 	ps = 1.0/TextureSize.xy;
-	v_pos = gl_Position.xy;
 }
 
 ///////////////////////////////////////// FRAGMENT SHADER /////////////////////////////////////////
@@ -67,7 +65,6 @@ uniform bool bHalveFrameRate;
 in vec2 TexCoords;
 in vec2 scale;
 in vec2 ps;
-in vec2 v_pos;
 out vec4 FragColor;
 
 uniform COMPAT_PRECISION int POSTPROCESSING_LEVEL;
