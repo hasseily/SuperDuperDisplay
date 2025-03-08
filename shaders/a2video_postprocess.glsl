@@ -314,9 +314,9 @@ float rand(vec2 co)
 }
 
 void main() {
-	FragColor = texture(A2TextureCurrent, TexCoords);
 
 	if (POSTPROCESSING_LEVEL == 0) {
+		FragColor = texture(A2TextureCurrent, TexCoords);
 		if (bHalveFrameRate)
 			FragColor = HalveFrameRate(TexCoords, FragColor);
 		if (GhostingPercent > 0.0001)
@@ -336,6 +336,7 @@ void main() {
 	
 // Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1) {
+		FragColor = texture(A2TextureCurrent, TexCoords);
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
 		if (bHalveFrameRate)
 			FragColor = HalveFrameRate(TexCoords, FragColor);
