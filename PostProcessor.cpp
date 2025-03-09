@@ -86,7 +86,7 @@ void PostProcessor::Initialize()
 
 	//Bezel shader
 	shaderProgramBezel = Shader();
-	shaderProgramBezel.build(_SHADER_VERTEX_BASIC_TRANSFORM, _SHADER_FRAGMENT_BASIC);
+	shaderProgramBezel.build("shaders/overlay_bezel.glsl", "shaders/overlay_bezel.glsl");
 }
 
 PostProcessor::~PostProcessor()
@@ -119,6 +119,9 @@ nlohmann::json PostProcessor::SerializeState()
 		{"bezelName", selectedBezelFile},
 		{"bezelWidth", bezelSize.x},
 		{"bezelHeight", bezelSize.y},
+		{"p_f_bezelReflection", p_f_bezelReflection},
+		{"p_f_reflectionAngle", p_f_reflectionAngle},
+		{"p_f_reflectionBlur", p_f_reflectionBlur},
 		{"p_i_postprocessingLevel", p_i_postprocessingLevel},
 		{"bCRTFillWindow", bCRTFillWindow},
 		{"integer_scale", integer_scale},
@@ -160,7 +163,11 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_v_centerX", p_v_center.x},
 		{"p_v_centerY", p_v_center.y},
 		{"p_v_zoomX", p_v_zoom.x},
-		{"p_v_zoomY", p_v_zoom.y}
+		{"p_v_zoomY", p_v_zoom.y},
+		{"p_v_reflectionScaleX", p_v_reflectionScale.x},
+		{"p_v_reflectionScaleY", p_v_reflectionScale.y},
+		{"p_v_reflectionTranslationX", p_v_reflectionTranslation.x},
+		{"p_v_reflectionTranslationY", p_v_reflectionTranslation.y}
 	};
 	return jsonState;
 }
@@ -171,6 +178,9 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	selectedBezelFile = jsonState.value("bezelName", selectedBezelFile);
 	bezelSize.x = jsonState.value("bezelWidth", bezelSize.x);
 	bezelSize.y = jsonState.value("bezelHeight", bezelSize.y);
+	p_f_bezelReflection = jsonState.value("p_f_bezelReflection", p_f_bezelReflection);
+	p_f_reflectionAngle = jsonState.value("p_f_reflectionAngle", p_f_reflectionAngle);
+	p_f_reflectionBlur = jsonState.value("p_f_reflectionBlur", p_f_reflectionBlur);
 	p_i_postprocessingLevel = jsonState.value("p_i_postprocessingLevel", p_i_postprocessingLevel);
 	bCRTFillWindow = jsonState.value("bCRTFillWindow", bCRTFillWindow);
 	integer_scale = jsonState.value("integer_scale", integer_scale);
@@ -212,6 +222,10 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_v_center.y = jsonState.value("p_v_centerY", p_v_center.y);
 	p_v_zoom.x = jsonState.value("p_v_zoomX", p_v_zoom.x);
 	p_v_zoom.y = jsonState.value("p_v_zoomY", p_v_zoom.y);
+	p_v_reflectionScale.x = jsonState.value("p_v_reflectionScaleX", p_v_reflectionScale.x);
+	p_v_reflectionScale.y = jsonState.value("p_v_reflectionScaleY", p_v_reflectionScale.y);
+	p_v_reflectionTranslation.x = jsonState.value("p_v_reflectionTranslationX", p_v_reflectionTranslation.x);
+	p_v_reflectionTranslation.y = jsonState.value("p_v_reflectionTranslationY", p_v_reflectionTranslation.y);
 
 }
 
@@ -356,6 +370,10 @@ void PostProcessor::RegeneratePreviousTexture()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tA2Quad.w, tA2Quad.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, prevFrame_texture_id, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
+	// Always bind the previous frame texture to its dedicated texture unit
+	glActiveTexture(_TEXUNIT_PP_PREVIOUS);
+	glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
+	glActiveTexture(GL_TEXTURE0);
 	GLuint glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP RegeneratePreviousTexture: " << glerr << std::endl;
@@ -504,11 +522,27 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		//transformBezel = glm::translate(transformBezel, glm::vec3(static_cast<float>(viewportWidth)*bezelSize.x, static_cast<float>(viewportHeight) * bezelSize.y, 0.0f));
 		transformBezel = glm::scale(transformBezel, glm::vec3(bezelSize.x, bezelSize.y, 1.0f));
 		shaderProgramBezel.setMat4("uTransform", transformBezel);		// in the vertex shader
-		shaderProgramBezel.setInt("A2TextureCurrent", _TEXUNIT_PP_BEZEL - GL_TEXTURE0);
+		shaderProgramBezel.setInt("uMainTex", _TEXUNIT_PP_BEZEL - GL_TEXTURE0);
+		shaderProgramBezel.setInt("uA2Tex", _TEXUNIT_POSTPROCESS - GL_TEXTURE0);
+		shaderProgramBezel.setFloat("uReflectionAmount", p_f_bezelReflection);
+		shaderProgramBezel.setFloat("uReflectionAngle", p_f_reflectionAngle);
+		shaderProgramBezel.setFloat("uReflectionBlur", p_f_reflectionBlur);
+		shaderProgramBezel.setVec2("uReflectionScale", p_v_reflectionScale);
+		shaderProgramBezel.setVec2("uReflectionTranslation", p_v_reflectionTranslation);
+
+		if (p_f_bezelReflection > 0.00001)
+		{
+			glActiveTexture(_TEXUNIT_POSTPROCESS);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+		}
 		glActiveTexture(_TEXUNIT_PP_BEZEL);
 		glBindTexture(GL_TEXTURE_2D, bezelImageAsset.tex_id);
 		glBindVertexArray(quadVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glActiveTexture(_TEXUNIT_POSTPROCESS);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		glActiveTexture(GL_TEXTURE0);
 	}
 
@@ -524,10 +558,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	// THIS _DRAMATICALLY_ REDUCES THE FPS ON A RASPBERRY PI
 	if ((p_f_ghostingPercent > 0.0000001f) || bHalveFramerate)
 	{
-		// Always bind the previous frame texture to its dedicated texture unit
-		glActiveTexture(_TEXUNIT_PP_PREVIOUS);
-		glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
-		glActiveTexture(GL_TEXTURE0);
+
 
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL error PP 4: " << glerr << std::endl;
@@ -709,13 +740,29 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		}
 		ImGui::SliderFloat("Overlay Relative Width", &bezelSize.x, 0.f, 2.f, "%.2f");
 		ImGui::SliderFloat("Overlay Relative Height", &bezelSize.y, 0.f, 2.f, "%.2f");
+		ImGui::SliderFloat("Bezel Reflection", &p_f_bezelReflection, 0.f, 0.25f, "%.3f");
+		ImGui::SetItemTooltip("WARNING: Tricky to get right. Read on for more info: \n \
+In order to make a very fast fake reflection technique, we mirror the Apple 2\n\
+texture with blur, and superpose it onto the overlay only where the bezel has\n\
+some transparency (>0, <1). Since each overlay is different, and your choice\n\
+of screen, resolution or window size is unique, you're going to have to manually\n\
+tweak the size and position of the mirrored texture to conform to your idea of\n\
+a reflection for your bezel. It takes work but can provide a really valuable\n\
+FX that makes the whole screen 'pop'. Tweak the scale and center when at 0 blur\n\
+and strong reflection, then dial blur up and reflection down.");
+		ImGui::SliderFloat("Reflection Blur", &p_f_reflectionBlur, 0.0f, 5.f, "%.3f");
+		ImGui::DragFloat2("Reflection Scale", reinterpret_cast<float*>(&p_v_reflectionScale), 0.001f, 0.001f, 5.0f, "%.3f");
+		ImGui::DragFloat2("Reflection Center", reinterpret_cast<float*>(&p_v_reflectionTranslation), 0.001f, -4.f, 4.f, "%.3f");
 
 		ImGui::Separator();
 
 		ImGui::Text("[ FRAME MERGING ]");
 		ImGui::Checkbox("Merge Frame Pairs", &bHalveFramerate);
-		ImGui::SetItemTooltip("WARNING: SIGNIFICANT FPS IMPACT! \nMerges every pair of even and odd frames. Effectively halves the frame rate but removes any flickering associated with page flipping images");
-
+		ImGui::SetItemTooltip("WARNING: SIGNIFICANT FPS IMPACT!\n\
+Merges every pair of even and odd frames.\n\
+Effectively halves the frame rate\n\
+but removes any flickering associated\n\
+with page flipping images");
 		if (p_i_postprocessingLevel == 2) {
 			ImGui::Separator();
 			// Scanline and Interlacing
