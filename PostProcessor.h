@@ -103,7 +103,6 @@ private:
 	bool p_b_extGamma = false;
 	bool p_b_slot = false;
 	float p_f_bezelReflection = 0.0f;
-	float p_f_reflectionAngle = 0.0f;
 	float p_f_reflectionBlur = 0.0f;
 	float p_f_barrelDistortion = 0.0f;
 	float p_f_bgr = 0.0f;

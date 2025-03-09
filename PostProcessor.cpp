@@ -120,7 +120,6 @@ nlohmann::json PostProcessor::SerializeState()
 		{"bezelWidth", bezelSize.x},
 		{"bezelHeight", bezelSize.y},
 		{"p_f_bezelReflection", p_f_bezelReflection},
-		{"p_f_reflectionAngle", p_f_reflectionAngle},
 		{"p_f_reflectionBlur", p_f_reflectionBlur},
 		{"p_i_postprocessingLevel", p_i_postprocessingLevel},
 		{"bCRTFillWindow", bCRTFillWindow},
@@ -179,7 +178,6 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	bezelSize.x = jsonState.value("bezelWidth", bezelSize.x);
 	bezelSize.y = jsonState.value("bezelHeight", bezelSize.y);
 	p_f_bezelReflection = jsonState.value("p_f_bezelReflection", p_f_bezelReflection);
-	p_f_reflectionAngle = jsonState.value("p_f_reflectionAngle", p_f_reflectionAngle);
 	p_f_reflectionBlur = jsonState.value("p_f_reflectionBlur", p_f_reflectionBlur);
 	p_i_postprocessingLevel = jsonState.value("p_i_postprocessingLevel", p_i_postprocessingLevel);
 	bCRTFillWindow = jsonState.value("bCRTFillWindow", bCRTFillWindow);
@@ -525,7 +523,6 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		shaderProgramBezel.setInt("uMainTex", _TEXUNIT_PP_BEZEL - GL_TEXTURE0);
 		shaderProgramBezel.setInt("uA2Tex", _TEXUNIT_POSTPROCESS - GL_TEXTURE0);
 		shaderProgramBezel.setFloat("uReflectionAmount", p_f_bezelReflection);
-		shaderProgramBezel.setFloat("uReflectionAngle", p_f_reflectionAngle);
 		shaderProgramBezel.setFloat("uReflectionBlur", p_f_reflectionBlur);
 		shaderProgramBezel.setVec2("uReflectionScale", p_v_reflectionScale);
 		shaderProgramBezel.setVec2("uReflectionTranslation", p_v_reflectionTranslation);
