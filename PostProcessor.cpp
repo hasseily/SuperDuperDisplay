@@ -737,7 +737,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		}
 		ImGui::SliderFloat("Overlay Relative Width", &bezelSize.x, 0.f, 2.f, "%.2f");
 		ImGui::SliderFloat("Overlay Relative Height", &bezelSize.y, 0.f, 2.f, "%.2f");
-		ImGui::SliderFloat("Bezel Reflection", &p_f_bezelReflection, 0.f, 0.25f, "%.3f");
+		ImGui::SliderFloat("Bezel Reflection", &p_f_bezelReflection, 0.f, 0.5f, "%.3f");
 		ImGui::SetItemTooltip("WARNING: Tricky to get right. Read on for more info: \n \
 In order to make a very fast fake reflection technique, we mirror the Apple 2\n\
 texture with blur, and superpose it onto the overlay only where the bezel has\n\
@@ -747,7 +747,7 @@ tweak the size and position of the mirrored texture to conform to your idea of\n
 a reflection for your bezel. It takes work but can provide a really valuable\n\
 FX that makes the whole screen 'pop'. Tweak the scale and center when at 0 blur\n\
 and strong reflection, then dial blur up and reflection down.");
-		ImGui::SliderFloat("Reflection Blur", &p_f_reflectionBlur, 0.0f, 5.f, "%.3f");
+		ImGui::SliderFloat("Reflection Blur", &p_f_reflectionBlur, 0.0f, 10.f, "%.3f");
 		ImGui::DragFloat2("Reflection Scale", reinterpret_cast<float*>(&p_v_reflectionScale), 0.001f, 0.001f, 5.0f, "%.3f");
 		ImGui::DragFloat2("Reflection Center", reinterpret_cast<float*>(&p_v_reflectionTranslation), 0.001f, -4.f, 4.f, "%.3f");
 
