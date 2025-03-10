@@ -102,8 +102,6 @@ private:
 	bool p_b_smoothCorner = false;
 	bool p_b_extGamma = false;
 	bool p_b_slot = false;
-	float p_f_bezelReflection = 0.0f;
-	float p_f_reflectionBlur = 0.0f;
 	float p_f_barrelDistortion = 0.0f;
 	float p_f_bgr = 0.0f;
 	float p_f_black = 0.0f;
@@ -136,8 +134,14 @@ private:
 	glm::vec2 p_v_warp = glm::vec2(0.0f, 0.0f);	// curvature
 	glm::vec2 p_v_center = glm::vec2(0.0f, 0.0f);
 	glm::vec2 p_v_zoom = glm::vec2(1.0f, 1.0f);
+
+	// bezel shader variables
+	bool p_b_outlineQuad = false;
+	float p_f_bezelReflection = 0.0f;
+	float p_f_reflectionBlur = 0.0f;
 	glm::vec2 p_v_reflectionScale = glm::vec2(1.0f, 1.0f);
 	glm::vec2 p_v_reflectionTranslation = glm::vec2(0.0f, 0.0f);
+
 	// imgui vars
 	bool bImGuiLockWarp = false;
 	bool bImGuiLockZoom = false;
