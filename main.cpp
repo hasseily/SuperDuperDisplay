@@ -386,15 +386,15 @@ int main(int argc, char* argv[])
 #if defined(__APPLE__)
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
         | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-        | SDL_WINDOW_SHOWN);
+        | SDL_WINDOW_HIDDEN);
 #elif defined(IMGUI_IMPL_OPENGL_ES2)
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
 		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI 
-		| SDL_WINDOW_SHOWN);
+		| SDL_WINDOW_HIDDEN);
 #else
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
         | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-        | SDL_WINDOW_SHOWN);
+        | SDL_WINDOW_HIDDEN);
 #endif
 
 	// Special case for Linux console mode, make it fullscreen always
@@ -584,7 +584,7 @@ int main(int argc, char* argv[])
 		std::cerr << "No saved Settings.json file" << std::endl;
 	}
 	
-
+	SDL_ShowWindow(window);
 	SDL_GetWindowPosition(window, &g_wx, &g_wy);
 	SDL_GetWindowSize(window, &g_ww, &g_wh);
 		
