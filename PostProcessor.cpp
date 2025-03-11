@@ -525,19 +525,19 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		shaderProgramBezel.setVec2("uReflectionTranslation", p_v_reflectionTranslation);
 		shaderProgramBezel.setBool("uOutlineQuad", p_b_outlineQuad);
 
-		if (p_f_bezelReflection > 0.00001)
+		glActiveTexture(_TEXUNIT_POSTPROCESS);
+		if (p_f_bezelReflection > 0.001)
 		{
-			glActiveTexture(_TEXUNIT_POSTPROCESS);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-		}
+		} else {
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+        }
 		glActiveTexture(_TEXUNIT_PP_BEZEL);
 		glBindTexture(GL_TEXTURE_2D, bezelImageAsset.tex_id);
 		glBindVertexArray(quadVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-		glActiveTexture(_TEXUNIT_POSTPROCESS);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		glActiveTexture(GL_TEXTURE0);
 	}
 

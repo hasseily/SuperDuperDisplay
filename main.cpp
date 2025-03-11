@@ -343,18 +343,18 @@ int main(int argc, char* argv[])
 	(void)argc;		// mark as unused
 	(void)argv;		// mark as unused
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
-    // when double-clicking the app, change to its working directory
-    char *dir = dirname(strdup(argv[0]));
-    chdir(dir);
+	// when double-clicking the app, change to its working directory
+	char *dir = dirname(strdup(argv[0]));
+	chdir(dir);
 #endif
 
 	GLenum glerr;
-    // Setup SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
-    {
-        printf("Error: %s\n", SDL_GetError());
-        return -1;
-    }
+	// Setup SDL
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
+	{
+		printf("Error: %s\n", SDL_GetError());
+		return -1;
+	}
 
 #if defined(__LINUX__)
 	const char* video_driver = SDL_GetCurrentVideoDriver();
@@ -364,13 +364,13 @@ int main(int argc, char* argv[])
 #endif
 
 
-    // Decide GL+GLSL versions
-    auto glhelper = OpenGLHelper::GetInstance();
-    glhelper->set_gl_version();
+	// Decide GL+GLSL versions
+	auto glhelper = OpenGLHelper::GetInstance();
+	glhelper->set_gl_version();
 
-    // From 2.0.18: Enable native IME.
+	// From 2.0.18: Enable native IME.
 #ifdef SDL_HINT_IME_SHOW_UI
-    SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
+	SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
 #endif
 
 #ifdef DEBUG
@@ -378,23 +378,23 @@ int main(int argc, char* argv[])
 #else
 #define _MAINWINDOWNAME "Super Duper Display"
 #endif
-    // Create window with graphics context
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+	// Create window with graphics context
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 #if defined(__APPLE__)
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
-        | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-        | SDL_WINDOW_HIDDEN);
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
+		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
+		| SDL_WINDOW_HIDDEN);
 #elif defined(IMGUI_IMPL_OPENGL_ES2)
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
 		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI 
 		| SDL_WINDOW_HIDDEN);
 #else
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
-        | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-        | SDL_WINDOW_HIDDEN);
+		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
+		| SDL_WINDOW_HIDDEN);
 #endif
 
 	// Special case for Linux console mode, make it fullscreen always
@@ -424,21 +424,21 @@ int main(int argc, char* argv[])
 	// switch display mode to 1200x1000
 #endif
 
-    window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+	window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		g_ww, g_wh, window_flags);
-    SDL_GLContext gl_context = SDL_GL_CreateContext(window);
-    SDL_GL_MakeCurrent(window, gl_context);
+	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+	SDL_GL_MakeCurrent(window, gl_context);
 
-    // Initialize GLAD
-    if (!initialize_glad()) {
-        SDL_GL_DeleteContext(gl_context);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return 1;
-    }
+	// Initialize GLAD
+	if (!initialize_glad()) {
+		SDL_GL_DeleteContext(gl_context);
+		SDL_DestroyWindow(window);
+		SDL_Quit();
+		return 1;
+	}
 
 	while ((glerr = glGetError()) != GL_NO_ERROR) {
-        // reset and clear error
+		// reset and clear error
 		std::cerr << "gladLoadGL error: " << glerr << std::endl;
 	}
 	
@@ -452,16 +452,16 @@ int main(int argc, char* argv[])
 	}
 #endif
 	
-    // glEnable(GL_DEPTH_TEST); // TODO: Check if necessary
-    glEnable(GL_CULL_FACE);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	// glEnable(GL_DEPTH_TEST); // TODO: Check if necessary
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL glEnable error: " << glerr << std::endl;
 	}
 
-    // Our state
+	// Our state
 	static MemoryEditor mem_edit_a2e;
 	static MemoryEditor mem_edit_upload;
 
@@ -470,7 +470,7 @@ int main(int argc, char* argv[])
 
 	std::atomic<bool> bShouldTerminateNetworking = false;
 	std::atomic<bool> bShouldTerminateProcessing = false;
-    bool show_metrics_window = false;
+	bool show_metrics_window = false;
 	bool show_texture_window = false;
 	bool show_a2video_window = true;
 	bool show_postprocessing_window = false;
@@ -508,9 +508,9 @@ int main(int argc, char* argv[])
 	}
 	std::cout << "Renderer Ready!" << std::endl;
 
-    // Delta Time
+	// Delta Time
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
-    uint64_t dt_LAST = 0;
+	uint64_t dt_LAST = 0;
 	float deltaTime = 0.f;
 
 	Main_SetVsync(g_swapInterval);
@@ -599,7 +599,7 @@ int main(int argc, char* argv[])
 	// And run the processing thread
 	std::thread thread_processor(process_usb_events_thread, &bShouldTerminateProcessing);
 
-    while (!g_quitIsRequested)
+	while (!g_quitIsRequested)
 	{
 		// Check if we should reboot
 		if (a2VideoManager->bShouldReboot)
@@ -621,20 +621,20 @@ int main(int argc, char* argv[])
 		if (!eventRecorder->IsInReplayMode())
 			eventRecorder->StartReplay();
 
-        SDL_Event event;
+		SDL_Event event;
 		while (SDL_PollEvent(&event))
-        {
+		{
 			if (Main_IsImGuiOn())
 			{
 				// handled in imgui
 				if (menu->HandleEvent(event))
 					continue;
 			}
-            switch (event.type) {
-            case SDL_QUIT:
+			switch (event.type) {
+			case SDL_QUIT:
 				Main_RequestAppQuit();
-                break;
-            case SDL_WINDOWEVENT:
+				break;
+			case SDL_WINDOWEVENT:
 			{
 				if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
 					glViewport(0, 0, event.window.data1, event.window.data2);
@@ -654,20 +654,20 @@ int main(int argc, char* argv[])
 				if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
 					Main_RequestAppQuit();
 			}
-                break;
-            case SDL_MOUSEMOTION:
+				break;
+			case SDL_MOUSEMOTION:
 				lastMouseMoveTime = SDL_GetTicks();
-                if (event.motion.state & SDL_BUTTON_RMASK) {
-                    // Move the camera when the right mouse button is pressed while moving the mouse
+				if (event.motion.state & SDL_BUTTON_RMASK) {
+					// Move the camera when the right mouse button is pressed while moving the mouse
 					if (sdhrManager->IsSdhrEnabled())
 						sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
-                }
-                break;
-            case SDL_MOUSEWHEEL:
+				}
+				break;
+			case SDL_MOUSEWHEEL:
 				if (sdhrManager->IsSdhrEnabled())
 					sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
-                break;
-            case SDL_KEYDOWN:
+				break;
+			case SDL_KEYDOWN:
 			{
 				if (event.key.keysym.sym == SDLK_F4) {  // Quit on ALT-F4
 					if (SDL_GetModState() & KMOD_ALT) {
@@ -732,7 +732,7 @@ int main(int argc, char* argv[])
 					};
 				}
 			}
-                break;
+				break;
 			case SDL_USEREVENT:
 				if (event.user.code == SDLUSEREVENT_A2NEWFRAME)
 				{
@@ -780,10 +780,10 @@ int main(int argc, char* argv[])
 					}
 				}
 				break;
-            default:
-                break;
-            }   // switch event.type
-        }   // while SDL_PollEvent
+			default:
+				break;
+			}   // switch event.type
+		}   // while SDL_PollEvent
 
 		if (!bIsSwapApple2Bus)
 		{
@@ -845,10 +845,12 @@ int main(int argc, char* argv[])
 		if (g_swapInterval == SWAPINTERVAL_NONE)
 			_newfpsLimit = g_fpsLimit;
 		else if (g_swapInterval == SWAPINTERVAL_APPLE2BUS)
+		{
 			if (tini_is_ok())
 				_newfpsLimit = UINT32_MAX;	// don't delay
 			else
 				_newfpsLimit = 60;			// set a fixed 60 fps, no need for more
+		}
 		if (_newfpsLimit != UINT32_MAX)
 		{
 			float _frameTicks = pfreq / (float)g_fpsLimit;
@@ -906,17 +908,17 @@ int main(int argc, char* argv[])
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL end of render error: " << glerr << std::endl;
 		}
-    }	// main loop
+	}	// main loop
 
 	eventRecorder->StopReplay();
 	soundManager->StopPlay();
 
-    // Stop all threads
+	// Stop all threads
 	bShouldTerminateProcessing = true;
 	terminate_processing_thread();
 	thread_processor.join();
-    bShouldTerminateNetworking = true;
-    thread_server.join();
+	bShouldTerminateNetworking = true;
+	thread_server.join();
 
 	// Serialize settings and save them
 	{
@@ -961,12 +963,12 @@ int main(int argc, char* argv[])
 		}
 	}
 	
-    // Cleanup
+	// Cleanup
 	delete menu;
 	
-    SDL_GL_DeleteContext(gl_context);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+	SDL_GL_DeleteContext(gl_context);
+	SDL_DestroyWindow(window);
+	SDL_Quit();
 
-    return 0;
+	return 0;
 }

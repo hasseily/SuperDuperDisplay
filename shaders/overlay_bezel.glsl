@@ -65,19 +65,19 @@ void main() {
 
         // When the user changes the quad parameters, we outline the quad boundaries in red
         if (uOutlineQuad) {
-            if (a2TexCoord.x > 0 && a2TexCoord.x < 0.01) {
+            if (a2TexCoord.x > 0.00 && a2TexCoord.x < 0.01) {
                 FragColor = vec4(1.0, 0.0, 0.0, 1.0); // red
                 return;
             }
-            if (a2TexCoord.y > 0 && a2TexCoord.y < 0.01) {
+            if (a2TexCoord.y > 0.00 && a2TexCoord.y < 0.01) {
                 FragColor = vec4(1.0, 0.0, 0.0, 1.0); // red
                 return;
             }
-            if (a2TexCoord.x > 1.0-0.01 && a2TexCoord.x < 1.0) {
+            if (a2TexCoord.x > 0.99 && a2TexCoord.x < 1.0) {
                 FragColor = vec4(1.0, 0.0, 0.0, 1.0); // red
                 return;
             }
-            if (a2TexCoord.y > 1.0-0.01 && a2TexCoord.y < 1.0) {
+            if (a2TexCoord.y > 0.99 && a2TexCoord.y < 1.0) {
                 FragColor = vec4(1.0, 0.0, 0.0, 1.0); // red
                 return;
             }
