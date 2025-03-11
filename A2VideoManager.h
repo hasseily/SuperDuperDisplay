@@ -280,8 +280,6 @@ private:
 	bool bIsSwitchingToMergedMode = false;	// True when refreshing earlier scanlines for merged mode
 	bool bShouldDoubleSHR = false;			// Handles updating E0 (main) for double SHR
 
-	bool bMirrorRepeatOutputTexture = false;	// Choose to mirror repeat texture wrap, or not
-
 	// imgui vars
 	bool bImguiWindowIsOpen = false;
 	bool bImguiLoadFileWindowIsOpen = false;

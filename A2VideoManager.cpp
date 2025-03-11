@@ -1491,10 +1491,7 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 
 	glClearColor(0.f, 0.f, 0.f, 0.f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	glActiveTexture(_TEXUNIT_POSTPROCESS);
-	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
+
 
 	// Set the magic bytes, currently only in SHR mode
 	windowsbeam[A2VIDEOBEAM_SHR]->specialModesMask |= vrams_read->frameSHR4Modes;
@@ -1557,8 +1554,8 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 
 	glActiveTexture(_TEXUNIT_POSTPROCESS);
 	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (bMirrorRepeatOutputTexture ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_BORDER));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -1903,7 +1900,6 @@ nlohmann::json A2VideoManager::SerializeState()
 		{"borders_h_8scanlines", border_h_slider_val},
 		{"borders_color", MemoryManager::GetInstance()->switch_c034},
 		{"monitor_type", eA2MonitorType},
-		{"enable_texture_repeat_mirroring", bMirrorRepeatOutputTexture},
 		{"enable_DHGRCOL140Mixed", bUseDHGRCOL140Mixed},
 		{"enable_HGRSPEC1", bUseHGRSPEC1},
 		{"enable_HGRSPEC2", bUseHGRSPEC2},
@@ -1920,7 +1916,6 @@ void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 {
 	MemoryManager::GetInstance()->switch_c034 = jsonState.value("borders_color", MemoryManager::GetInstance()->switch_c034);
 	eA2MonitorType = jsonState.value("monitor_type", eA2MonitorType);
-	bMirrorRepeatOutputTexture = jsonState.value("enable_texture_repeat_mirroring", bMirrorRepeatOutputTexture);
 	bUseDHGRCOL140Mixed = jsonState.value("enable_DHGRCOL140Mixed", bUseDHGRCOL140Mixed);
 	bUseHGRSPEC1 = jsonState.value("enable_HGRSPEC1", bUseHGRSPEC1);
 	bUseHGRSPEC2 = jsonState.value("enable_HGRSPEC2", bUseHGRSPEC2);
