@@ -52,6 +52,8 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) 
 	bool res = false;
 	if (ImGui::Button("Load File"))
 	{
+		if (ImGuiFileDialog::Instance()->IsOpened())
+			ImGuiFileDialog::Instance()->Close();
 		ImGui::SetNextWindowSize(ImVec2(800, 400));
 		IGFD::FileDialogConfig config;
 		config.path = (path.empty() ? "." : path);

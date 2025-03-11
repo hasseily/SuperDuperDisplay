@@ -694,10 +694,10 @@ UserDatas GetUserDatas();                          // Get user data provided by 
 To selecting a new file (for example, a Save As... dialog), use:
 
 ```cpp
-std::string GetFilePathName();                     // Returns the content of the selection field with current file
-extension and current path std::string GetCurrentFileName();                  // Returns the content of the selection
-field with current file extension but no path std::string GetCurrentPath();                      // Returns current path
-only std::string GetCurrentFilter();                    // The file extension
+std::string GetFilePathName();    // Returns the content of the selection field with current file extension and current path 
+std::string GetCurrentFileName(); // Returns the content of the selection field with current file extension but no path 
+std::string GetCurrentPath();     // Returns current path only 
+std::string GetCurrentFilter();   // The file extension
 ```
 
 ################################################################

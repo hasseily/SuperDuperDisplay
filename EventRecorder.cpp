@@ -491,6 +491,8 @@ void EventRecorder::DisplayImGuiWindow(bool* p_open)
 
 		if (ImGui::Button("Load##Recording"))
 		{
+			if (ImGuiFileDialog::Instance()->IsOpened())
+				ImGuiFileDialog::Instance()->Close();
 			this->LoadRecording();
 		}
 		ImGui::SameLine();
@@ -498,6 +500,8 @@ void EventRecorder::DisplayImGuiWindow(bool* p_open)
 		ImGui::SameLine();
 		if (ImGui::Button("Load CSV##Recording"))
 		{
+			if (ImGuiFileDialog::Instance()->IsOpened())
+				ImGuiFileDialog::Instance()->Close();
 			this->LoadTextEventsFromFile();
 		}
 		ImGui::SameLine();
@@ -510,6 +514,8 @@ void EventRecorder::DisplayImGuiWindow(bool* p_open)
 		}
 		if (ImGui::Button("Save##Recording"))
 		{
+			if (ImGuiFileDialog::Instance()->IsOpened())
+				ImGuiFileDialog::Instance()->Close();
 			this->SaveRecording();
 		}
 		if (bHasRecording == false)
