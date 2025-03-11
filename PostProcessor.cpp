@@ -227,21 +227,18 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 
 }
 
-void PostProcessor::SaveState(int profile_id) {
+void PostProcessor::SaveState(std::string filePath) {
 	nlohmann::json jsonState = SerializeState();
-	
-	std::ostringstream filename;
-	filename << "pp_profile_" << profile_id << ".json";
-	std::ofstream file(filename.str());
-	file << jsonState.dump(4); // Save with pretty printing
+	std::ofstream file(filePath);
+	if (file.is_open()) {
+		file << jsonState.dump(4); // Pretty print JSON
+		file.close();
+	}
 }
 
-void PostProcessor::LoadState(int profile_id) {
-	std::ostringstream filename;
-	filename << "pp_profile_" << profile_id << ".json";
-	std::ifstream file(filename.str());
+void PostProcessor::LoadState(std::string filePath) {
+	std::ifstream file(filePath);
 	nlohmann::json jsonState;
-	
 	if (file.is_open()) {
 		file >> jsonState;
 		DeserializeState(jsonState);
@@ -592,57 +589,48 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 	{
 		ImGui::SetNextWindowSizeConstraints(ImVec2(450, 400), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("Post Processing CRT Shader", p_open);
-		// Handle presets. Disable load/save if the chosen button is "Off"
+
+		// Handle presets
 		ImGui::Text("[ PRESETS ]");
-		if (idx_preset == 0)
-		{
-			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f); // Reduce button opacity
-			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true); // Disable button (and make it unclickable)
+		IGFD::FileDialogConfig config;
+		config.path = "./presets/";
+		static ImGuiFileDialog instance_presets;
+		if (ImGui::Button("Load")) {
+			if (instance_presets.IsOpened())
+				instance_presets.Close();
+			ImGui::SetNextWindowSize(ImVec2(800, 400));
+			instance_presets.OpenDialog("LoadStateDlg", "Choose File to Load", ".json", config);
 		}
-		if (ImGui::Button("Load##Presets"))
-		{
-			this->LoadState(idx_preset);
-		}
-		if (idx_preset == 0)
-		{
-			ImGui::PopItemFlag();
-			ImGui::PopStyleVar();
-		}
-		ImGui::SameLine();
-		ImGui::Dummy(ImVec2(5.0f, 0.0f));
-		ImGui::SameLine();
-		ImGui::RadioButton("None##Presets", &idx_preset, 0); ImGui::SameLine();
-		ImGui::RadioButton("1##Presets", &idx_preset, 1); ImGui::SameLine();
-		ImGui::RadioButton("2##Presets", &idx_preset, 2); ImGui::SameLine();
-		ImGui::RadioButton("3##Presets", &idx_preset, 3); ImGui::SameLine();
-		ImGui::RadioButton("4##Presets", &idx_preset, 4); ImGui::SameLine();
-		ImGui::RadioButton("5##Presets", &idx_preset, 5); ImGui::SameLine();
-		ImGui::RadioButton("6##Presets", &idx_preset, 6); ImGui::SameLine();
-		ImGui::RadioButton("7##Presets", &idx_preset, 7);
-		ImGui::SameLine();
-		ImGui::Dummy(ImVec2(5.0f, 0.0f));
-		ImGui::SameLine();
-		
-		if (idx_preset == 0)
-		{
-			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f); // Reduce button opacity
-			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true); // Disable button (and make it unclickable)
-		}
-		if (ImGui::Button("Save##Presets"))
-		{
-			this->SaveState(idx_preset);
-		}
-		if (idx_preset == 0)
-		{
-			ImGui::PopItemFlag();
-			ImGui::PopStyleVar();
-		}
+		ImGui::SameLine(); ImGui::Spacing(); ImGui::SameLine();	// Start Name
 		if (std::strlen(preset_name_buffer) == 0) {
 			std::strncpy(preset_name_buffer, "Unnamed", sizeof(preset_name_buffer) - 1);
 		}
 		ImGui::PushItemWidth(200);
-		ImGui::InputText("Preset Name", preset_name_buffer, sizeof(preset_name_buffer));
+		ImGui::InputText("Name", preset_name_buffer, sizeof(preset_name_buffer));
 		ImGui::PopItemWidth();
+		ImGui::SameLine(); ImGui::Spacing(); ImGui::SameLine();	// End Name
+		if (ImGui::Button("Save")) {
+			if (instance_presets.IsOpened())
+				instance_presets.Close();
+			ImGui::SetNextWindowSize(ImVec2(800, 400));
+			instance_presets.OpenDialog("SaveStateDlg", "Choose Save Location", ".json", config);
+		}
+
+		if (instance_presets.Display("LoadStateDlg")) {
+			if (instance_presets.IsOk()) {
+				std::string filePath = instance_presets.GetFilePathName();
+				LoadState(filePath);
+			}
+			instance_presets.Close();
+		}
+
+		if (instance_presets.Display("SaveStateDlg")) {
+			if (instance_presets.IsOk()) {
+				std::string filePath = instance_presets.GetFilePathName();
+				SaveState(filePath);
+			}
+			instance_presets.Close();
+		}
 
 		ImGui::PushItemWidth(200);
 

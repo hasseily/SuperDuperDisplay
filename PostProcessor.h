@@ -39,8 +39,8 @@ public:
 	std::vector<Shader>v_ppshaders;
 private:
 	void Initialize();
-	void SaveState(int profile_id);
-	void LoadState(int profile_id);
+	void SaveState(std::string filePath);
+	void LoadState(std::string filePath);
 	int PopulateBezelFiles(std::vector<std::string>& bezelFiles, const std::string& selectedBezelFile);
 	void SelectShader();
 	void RegeneratePreviousTexture();
