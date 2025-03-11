@@ -582,6 +582,69 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	++frame_count;
 }
 
+
+void PostProcessor::ResetToDefaults()
+{
+	memset(preset_name_buffer, 0, sizeof(preset_name_buffer));
+
+	max_integer_scale = 1;
+	integer_scale = 1;		// Base integer scale used
+	bAutoScale = true;		// Automatically scale to max scale?
+	bHalveFramerate = false;	// Mixes every pair of frames, to avoid page flip flicker
+	bCRTFillWindow = false;
+
+	selectedBezelFile = _PP_NO_BEZEL_FILENAME;
+	currentBezelIndex = 0;
+	bezelSize = glm::vec2(1.0f, 1.0f);
+
+	p_b_smoothCorner = false;
+	p_b_extGamma = false;
+	p_b_slot = false;
+	p_f_barrelDistortion = 0.0f;
+	p_f_bgr = 0.0f;
+	p_f_black = 0.0f;
+	p_f_brDep = 0.2f;
+	p_f_brightness = 1.0f;
+	p_f_convB = 0.0f;
+	p_f_convG = 0.0f;
+	p_f_convR = 0.0f;
+	p_f_corner = 0.0f;
+	p_f_cStr = 0.0f;
+	p_f_hueGB = 0.0f;
+	p_f_hueRB = 0.0f;
+	p_f_hueRG = 0.0f;
+	p_f_maskHigh = 0.75f;
+	p_f_maskLow = 0.3f;
+	p_f_maskSize = 1.0f;
+	p_f_saturation = 1.0f;
+	p_f_scanlineWeight = 1.0f;
+	p_f_scanSpeed = 1.0f;
+	p_f_filmGrain = 0.0f;
+	p_f_interlace = 0.f;
+	p_f_slotW = 3.0f;
+	p_f_vignetteWeight = 0.0f;
+	p_i_cSpace = 0;
+	p_i_maskType = 0;
+	p_i_postprocessingLevel = 0;
+	p_i_scanlineType = 2;
+	p_f_ghostingPercent = 0;
+	p_f_phosphorBlur = 0.0f;
+	p_v_warp = glm::vec2(0.0f, 0.0f);
+	p_v_center = glm::vec2(0.0f, 0.0f);
+	p_v_zoom = glm::vec2(1.0f, 1.0f);
+
+	// bezel shader variables
+	p_b_outlineQuad = false;
+	p_f_bezelReflection = 0.0f;
+	p_f_reflectionBlur = 0.0f;
+	p_v_reflectionScale = glm::vec2(1.0f, 1.0f);
+	p_v_reflectionTranslation = glm::vec2(0.0f, 0.0f);
+
+	// imgui vars
+	bImGuiLockWarp = false;
+	bImGuiLockZoom = false;
+}
+
 void PostProcessor::DisplayImGuiWindow(bool* p_open)
 {
 	bImguiWindowIsOpen = p_open;
@@ -589,6 +652,11 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 	{
 		ImGui::SetNextWindowSizeConstraints(ImVec2(450, 400), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("Post Processing CRT Shader", p_open);
+
+		if (ImGui::Button("Reset to defaults"))
+		{
+			ResetToDefaults();
+		}
 
 		// Handle presets
 		ImGui::Text("[ PRESETS ]");
@@ -603,7 +671,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		}
 		ImGui::SameLine(); ImGui::Spacing(); ImGui::SameLine();	// Start Name
 		if (std::strlen(preset_name_buffer) == 0) {
-			std::strncpy(preset_name_buffer, "Unnamed", sizeof(preset_name_buffer) - 1);
+			std::strncpy(preset_name_buffer, "Untitled", sizeof(preset_name_buffer) - 1);
 		}
 		ImGui::PushItemWidth(200);
 		ImGui::InputText("Name", preset_name_buffer, sizeof(preset_name_buffer));
@@ -638,11 +706,11 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		ImGui::Separator();
 		ImGui::Text("[ POSTPROCESSING LEVEL ]");
 		ImGui::RadioButton("None##PPLEVEL", &p_i_postprocessingLevel, 0); ImGui::SameLine();
-		ImGui::SetItemTooltip("No postprocessing, fast");
+		ImGui::SetItemTooltip("No postprocessing, optional bezel. Fastest!");
 		ImGui::RadioButton("Scanline only##PPLEVEL", &p_i_postprocessingLevel, 1); ImGui::SameLine();
-		ImGui::SetItemTooltip("Simple alternating scanlines, fastest");
+		ImGui::SetItemTooltip("Simple alternating scanlines, optional bezel. Fast.");
 		ImGui::RadioButton("Full CRT##PPLEVEL", &p_i_postprocessingLevel, 2);
-		ImGui::SetItemTooltip("Customizable CRT shader, slow");
+		ImGui::SetItemTooltip("The one and only Super Duper CRT shader. Customize away!");
 		ImGui::Separator();
 		if (p_i_postprocessingLevel == 2) {
 			ImGui::AlignTextToFramePadding();

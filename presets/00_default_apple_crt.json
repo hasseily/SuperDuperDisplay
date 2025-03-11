@@ -3,7 +3,7 @@
     "bCRTFillWindow": false,
     "bezelHeight": 1.0,
     "bezelName": "Apple_Monitor_Only_Reflections.png",
-    "bezelWidth": 1.0,
+    "bezelWidth": 1.0099999904632568,
     "integer_scale": 2,
     "p_b_extGamma": false,
     "p_b_slot": false,
@@ -41,13 +41,13 @@
     "p_i_scanlineType": 2,
     "p_v_centerX": 0.0,
     "p_v_centerY": 0.0,
-    "p_v_reflectionScaleX": 2.0,
-    "p_v_reflectionScaleY": 1.4859999418258667,
+    "p_v_reflectionScaleX": 2.2109999656677246,
+    "p_v_reflectionScaleY": 1.4900000095367432,
     "p_v_reflectionTranslationX": 0.0,
     "p_v_reflectionTranslationY": 0.0,
     "p_v_warpX": 0.0,
     "p_v_warpY": 0.0,
-    "p_v_zoomX": 1.0,
-    "p_v_zoomY": 1.0,
-    "preset_name": "Basic CRT"
+    "p_v_zoomX": 0.9179999828338623,
+    "p_v_zoomY": 0.9179999828338623,
+    "preset_name": "CRT With reflection"
 }

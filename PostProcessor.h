@@ -44,6 +44,7 @@ private:
 	int PopulateBezelFiles(std::vector<std::string>& bezelFiles, const std::string& selectedBezelFile);
 	void SelectShader();
 	void RegeneratePreviousTexture();
+	void ResetToDefaults();
 
 	// Singleton pattern
 	static PostProcessor* s_instance;
@@ -87,7 +88,6 @@ private:
 	bool bCRTFillWindow = false;
 
 	int frame_count = 0;	// Frame count for interlacing, it may not be aligned with A2Video frames
-	int idx_preset = 0;		// Preset chosen
 	char preset_name_buffer[28];	// Preset's name
 	int max_integer_scale = 1;	// Maximum possible integer scale given screen size
 	int integer_scale = 1;		// Base integer scale used
