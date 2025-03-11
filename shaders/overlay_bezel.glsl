@@ -59,41 +59,43 @@ void main() {
     vec4 mainColor = texture2D(uMainTex, vTexCoord);
 
     // We only do the "special compositing" if alpha is strictly between 0 and 1
-    if (mainColor.a > 0.0 && mainColor.a < 1.0)
+    if (uReflectionAmount > 0.00001)
     {
-        vec2 a2TexCoord = (vTexCoord - vec2(0.5)) * uReflectionScale + vec2(0.5) + uReflectionTranslation;
+        if (mainColor.a > 0.0 && mainColor.a < 1.0)
+        {
+            vec2 a2TexCoord = (vTexCoord - vec2(0.5)) * uReflectionScale + vec2(0.5) + uReflectionTranslation;
 
-        // When the user changes the quad parameters, we outline the quad boundaries in red
-        if (uOutlineQuad) {
-            if (a2TexCoord.x > 0.00 && a2TexCoord.x < 0.01) {
-                FragColor = vec4(1.0, 0.0, 0.0, 1.0); // red
-                return;
+            // When the user changes the quad parameters, we outline the quad boundaries in red
+            if (uOutlineQuad) {
+                if (a2TexCoord.x > 0.00 && a2TexCoord.x < 0.01) {
+                    FragColor = vec4(1.0, 0.0, 0.0, 1.0); // red
+                    return;
+                }
+                if (a2TexCoord.y > 0.00 && a2TexCoord.y < 0.01) {
+                    FragColor = vec4(1.0, 0.0, 0.0, 1.0); // red
+                    return;
+                }
+                if (a2TexCoord.x > 0.99 && a2TexCoord.x < 1.0) {
+                    FragColor = vec4(1.0, 0.0, 0.0, 1.0); // red
+                    return;
+                }
+                if (a2TexCoord.y > 0.99 && a2TexCoord.y < 1.0) {
+                    FragColor = vec4(1.0, 0.0, 0.0, 1.0); // red
+                    return;
+                }
             }
-            if (a2TexCoord.y > 0.00 && a2TexCoord.y < 0.01) {
-                FragColor = vec4(1.0, 0.0, 0.0, 1.0); // red
-                return;
-            }
-            if (a2TexCoord.x > 0.99 && a2TexCoord.x < 1.0) {
-                FragColor = vec4(1.0, 0.0, 0.0, 1.0); // red
-                return;
-            }
-            if (a2TexCoord.y > 0.99 && a2TexCoord.y < 1.0) {
-                FragColor = vec4(1.0, 0.0, 0.0, 1.0); // red
-                return;
-            }
+
+            vec4 a2Color = textureLod(uA2Tex, a2TexCoord, uReflectionBlur);
+
+            // Combine the mainColor over the a2Color, forcing alpha=1.0
+            // Standard "over" alpha compositing: final = foreground * a + background * (1-a)
+            float finalReflection = (1.0 - uReflectionAmount)*a2Color.a;
+            vec3 finalRgb = mainColor.rgb * finalReflection + a2Color.rgb * (1.0 - finalReflection);
+            FragColor  = vec4(finalRgb, 1.0);
+        } else {
+            FragColor = mainColor;
         }
-
-        vec4 a2Color = textureLod(uA2Tex, a2TexCoord, uReflectionBlur);
-
-        // Combine the mainColor over the a2Color, forcing alpha=1.0
-        // Standard "over" alpha compositing: final = foreground * a + background * (1-a)
-        float finalReflection = (1.0 - uReflectionAmount)*a2Color.a;
-        vec3 finalRgb = mainColor.rgb * finalReflection + a2Color.rgb * (1.0 - finalReflection);
-        FragColor  = vec4(finalRgb, 1.0);
-    }
-    else
-    {
-        // If alpha=0 or alpha=1, just use the main color
+    } else {
         FragColor = mainColor;
     }
     return;
