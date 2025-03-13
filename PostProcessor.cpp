@@ -175,6 +175,12 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 {
 	std::strncpy(preset_name_buffer, jsonState.value("preset_name", preset_name_buffer).c_str(), sizeof(preset_name_buffer) - 1);
 	selectedBezelFile = jsonState.value("bezelName", selectedBezelFile);
+	if (selectedBezelFile != _PP_NO_BEZEL_FILENAME)
+	{
+		LoadSelectedBezel();
+		if (bezelImageAsset.image_xcount == 0)
+			selectedBezelFile = _PP_NO_BEZEL_FILENAME;
+	}
 	bezelSize.x = jsonState.value("bezelWidth", bezelSize.x);
 	bezelSize.y = jsonState.value("bezelHeight", bezelSize.y);
 	p_f_bezelReflection = jsonState.value("p_f_bezelReflection", p_f_bezelReflection);
@@ -785,12 +791,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		{
 			selectedBezelFile = _bezelFiles[currentBezelIndex];
 			if (currentBezelIndex > 0)
-			{
-				std::string bezelPath = "assets/bezels/" + selectedBezelFile;
-				glActiveTexture(_TEXUNIT_PP_BEZEL);
-				bezelImageAsset.AssignByFilename(bezelPath.c_str());
-				glActiveTexture(GL_TEXTURE0);
-			}
+				LoadSelectedBezel();
 		}
 		ImGui::SliderFloat("Overlay Relative Width", &bezelSize.x, 0.f, 2.f, "%.2f");
 		ImGui::SliderFloat("Overlay Relative Height", &bezelSize.y, 0.f, 2.f, "%.2f");

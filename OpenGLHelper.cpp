@@ -44,6 +44,8 @@ void OpenGLHelper::ImageAsset::AssignByFilename(const char* filename) {
 	if (data == NULL) {
 		std::cerr << "ERROR: STBI load failure: " << stbi_failure_reason() << std::endl;
 		std::cerr << "Tried loading: " << filename << std::endl;
+		image_xcount = 0;
+		image_ycount = 0;
 		return;
 	}
 	if (tex_id != UINT_MAX)
