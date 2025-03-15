@@ -56,7 +56,7 @@ uniform bool uOutlineQuad;
 void main() {
 	
     // Sample the main texture at the incoming texture coordinate
-    vec4 mainColor = texture2D(uMainTex, vTexCoord);
+    vec4 mainColor = texture(uMainTex, vTexCoord);
 
     // We only do the "special compositing" if alpha is strictly between 0 and 1
     if (uReflectionAmount > 0.00001)
