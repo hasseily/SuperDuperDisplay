@@ -44,6 +44,7 @@
 		BBC172FB2B6658700044B194 /* imgui.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBC172FA2B6658700044B194 /* imgui.cpp */; };
 		BBC172FD2B6658AD0044B194 /* imgui_impl_sdl2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBC172FC2B6658AD0044B194 /* imgui_impl_sdl2.cpp */; };
 		BBC43F6B2B98CDE50035071D /* MemoryManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBC43F6A2B98CDE50035071D /* MemoryManager.cpp */; };
+		BBCF87052D8612E3002E26CD /* presets in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBCF87042D8612E3002E26CD /* presets */; };
 		BBD102082B7CF23A00360B33 /* CycleCounter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBD102072B7CF23A00360B33 /* CycleCounter.cpp */; };
 		BBD102112B829B7C00360B33 /* EventRecorder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */; };
 		BBE17D862C81CDCB008EF443 /* SSI263.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBE17D842C81CDCB008EF443 /* SSI263.cpp */; };
@@ -59,6 +60,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 16;
 			files = (
+				BBCF87052D8612E3002E26CD /* presets in CopyFiles */,
 				BB6B2FDD2CD17D03008BC3F2 /* samples in CopyFiles */,
 				BBF6D2C82C35A1B900E85E1E /* recordings in CopyFiles */,
 				BB01620B2B83643D00A3D503 /* assets in CopyFiles */,
@@ -151,6 +153,7 @@
 		BBC43F692B98CDE50035071D /* MemoryManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MemoryManager.h; sourceTree = "<group>"; };
 		BBC43F6A2B98CDE50035071D /* MemoryManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MemoryManager.cpp; sourceTree = "<group>"; };
 		BBC48E172B71DA7D00D70DBD /* nlohmann */ = {isa = PBXFileReference; lastKnownFileType = folder; path = nlohmann; sourceTree = "<group>"; };
+		BBCF87042D8612E3002E26CD /* presets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = presets; sourceTree = "<group>"; };
 		BBD102062B7CF23100360B33 /* CycleCounter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CycleCounter.h; sourceTree = "<group>"; };
 		BBD102072B7CF23A00360B33 /* CycleCounter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CycleCounter.cpp; sourceTree = "<group>"; };
 		BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EventRecorder.cpp; sourceTree = "<group>"; };
@@ -189,6 +192,7 @@
 		BB8330CD2B6645B300071F38 = {
 			isa = PBXGroup;
 			children = (
+				BBCF87042D8612E3002E26CD /* presets */,
 				BBB525272B664A7D00A65C62 /* Frameworks */,
 				BBC172F42B6657710044B194 /* glad.cpp */,
 				BB96E3EC2B66513700A3077C /* imgui_demo.cpp */,
