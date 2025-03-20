@@ -876,7 +876,7 @@ with page flipping images");
 			ImGui::RadioButton("None##Mask", &p_i_maskType, 0); ImGui::SameLine();
 			ImGui::RadioButton("CGWG##Mask", &p_i_maskType, 1); ImGui::SameLine();
 			ImGui::RadioButton("RGB##Mask", &p_i_maskType, 2);
-			ImGui::SliderFloat("Mask Size", &p_f_maskSize, 1.0f, 2.0f, "%.1f");
+			ImGui::DragFloat("Mask Size", &p_f_maskSize, 0.001f, 0.001f, 20.0f, "%.3f");
 			ImGui::Checkbox("Slot Mask On/Off", &p_b_slot);
 			ImGui::SliderFloat("Slot Mask Width", &p_f_slotW, 2.0f, 3.0f, "%.1f");
 			ImGui::SliderFloat("Subpixels BGR/RGB", &p_f_bgr, 0.0f, 1.0f, "%.1f");

@@ -475,7 +475,7 @@ void main() {
 	*/
 
 // Masks
-	vec2 xy = TexCoords*OutputSize.xy*scale/MSIZE;	
+	vec2 xy = TexCoords*OutputSize.xy/MSIZE;	
 	res *= Mask(xy, CGWG);
 
 // Apply slot mask on top of Trinitron-like mask
