@@ -509,7 +509,7 @@ void A2VideoManager::StartNextFrame()
 	merge_last_change_y = UINT_MAX;
 	// Additional frame data resets
 	vrams_write->frameSHR4Modes = 0;
-	vrams_write->doubleSHR4Mode = 0;
+	vrams_write->pagedMode = 0;
 
 	// And finally send an event to the main loop saying that the frame was updated
 	// This is necessary when synching to the Apple 2 VSYNC. Don't create a new event if there are 4
@@ -682,7 +682,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		}
 	}
 
-	auto vramInterlaceOffset = GetVramSizeSHR() / _INTERLACE_MULTIPLIER;	// Offset to 2nd half of the vram
+	auto vramSHRInterlaceOffset = GetVramSizeSHR() / _INTERLACE_MULTIPLIER;	// Offset to 2nd half of the vram
 
 	// Always at the start of the row, set the SHR SCB to 0x10
 	// Because we check bit 4 of the SCB to know if that line is drawn as SHR
@@ -694,7 +694,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		{
 			// Set both regular and interlaced areas SCBs
 			vrams_write->vram_shr[GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
-			vrams_write->vram_shr[vramInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
+			vrams_write->vram_shr[vramSHRInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y] = 0x10;
 
 			if (vrams_write->mode == A2Mode_e::MERGED)
 			{
@@ -776,7 +776,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 
 		// For the additional interlacing mode data, use main mem and the second part of vram_shr
 		auto memInterlacePtr = memMgr->GetApple2MemPtr();				// main mem (E0)
-		uint8_t* lineInterlaceStartPtr = vrams_write->vram_shr + vramInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y;
+		uint8_t* lineInterlaceStartPtr = vrams_write->vram_shr + vramSHRInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y;
 
 		// get the SCB and palettes if we're starting a line
 		// and it's part of the content area. The top & bottom border areas don't care about SCB
@@ -801,14 +801,14 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 					scanlineSHR4Modes |= (1 << ((lineStartPtr[2 + 2*i] >> 4) + 4));	// second byte of each palette color (skip SCB byte 1)
 				}
 				vrams_write->frameSHR4Modes |= scanlineSHR4Modes;	// Add to the frame's SHR4 modes the new modes found on this line
-				vrams_write->doubleSHR4Mode = (memPtr + _A2VIDEO_SHR_MAGIC_BYTES - 1)[0];	// the previous byte has the Double SHR4 information
+				vrams_write->pagedMode = (memPtr + _A2VIDEO_SHR_MAGIC_BYTES - 1)[0];	// the previous byte has the Double SHR4 information
 			} else {
-				vrams_write->doubleSHR4Mode = 0;	// double mode can only be enabled in SHR4 mode
+				vrams_write->pagedMode = 0;	// double mode can only be enabled in SHR4 mode
 			}
 
 			// Do the SCB and palettes for interlacing if requested
-			bShouldDoubleSHR = ( overrideDoubleSHR > 0 ? 1 : (vrams_write->doubleSHR4Mode > 0));
-			if (bShouldDoubleSHR)
+			bShouldPageDouble = ( overrideDoubleSHR > 0 ? 1 : (vrams_write->pagedMode > 0));
+			if (bShouldPageDouble)
 			{
 				lineInterlaceStartPtr[0] = memInterlacePtr[_A2VIDEO_SHR_SCB_START + _y];
 				// Get the palette
@@ -833,7 +833,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		case BeamState_e::BORDER_TOP:
 		case BeamState_e::BORDER_BOTTOM:
 			memset(lineStartPtr + _COLORBYTESOFFSET + (_TR_ANY_X * 4), (uint8_t)memMgr->switch_c034, 4);
-			if (bShouldDoubleSHR)
+			if (bShouldPageDouble)
 				memset(lineInterlaceStartPtr + _COLORBYTESOFFSET + (_TR_ANY_X * 4), (uint8_t)memMgr->switch_c034, 4);
 			break;
 		case BeamState_e::CONTENT:
@@ -887,7 +887,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			}
 
 			// Do the exact same thing for double SHR if necessary, getting the data from main RAM
-			if (bShouldDoubleSHR)
+			if (bShouldPageDouble)
 			{
 				scb = lineInterlaceStartPtr[0];
 				memcpy(lineInterlaceStartPtr + _COLORBYTESOFFSET + _TR_ANY_X * 4,
@@ -963,6 +963,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 	// bits 4-7: foreground color
 	uint8_t colors = 0;
 	
+	bShouldPageDouble = (overrideLegacyPaging > 0 ? 1 : 0);
+
 	switch (beamState)
 	{
 	case BeamState_e::UNKNOWN:
@@ -1044,6 +1046,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		// 4 bytes in VRAM for each beam byte
 		uint8_t* byteStartPtr = vrams_write->vram_legacy +
 			(GetVramWidthLegacy() * _TR_ANY_Y + _TR_ANY_X) * 4;
+		auto _vramInterlaceOffset = GetVramSizeLegacy() / _INTERLACE_MULTIPLIER;	// Offset to 2nd half of the vram
+		uint8_t* byteStartPtrInterlace = byteStartPtr + _vramInterlaceOffset;	// For paged mode
 		uint32_t startMem;
 		
 		// Determine where in memory we should get the data from, and get it
@@ -1054,6 +1058,12 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 				startMem = _A2VIDEO_TEXT2_START;
 			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
 			byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
+			if (bShouldPageDouble)
+			{
+				startMem = _A2VIDEO_TEXT2_START;		// does nothing if already in page 2
+				byteStartPtrInterlace[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
+				byteStartPtrInterlace[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
+			}
 		}
 		else {		// D/HIRES
 			startMem = _A2VIDEO_HGR1_START;
@@ -1061,10 +1071,21 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 				startMem = _A2VIDEO_HGR2_START;
 			byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
 			byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
+			if (bShouldPageDouble)
+			{
+				startMem = _A2VIDEO_HGR2_START;		// does nothing if already in page 2
+				byteStartPtrInterlace[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
+				byteStartPtrInterlace[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_HGROffsets[_y] + (_x - CYCLES_SC_HBL));
+			}
 		}
 		byteStartPtr[2] = flags;
 		byteStartPtr[3] = colors;
-		
+		if (bShouldPageDouble)
+		{
+			byteStartPtrInterlace[2] = flags;
+			byteStartPtrInterlace[3] = colors;
+		}
+
 		// Generate the debug VRAMs if necessary
 		if (bRenderTEXT1)
 		{
@@ -1495,7 +1516,7 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 
 	// Set the magic bytes, currently only in SHR mode
 	windowsbeam[A2VIDEOBEAM_SHR]->specialModesMask |= vrams_read->frameSHR4Modes;
-	windowsbeam[A2VIDEOBEAM_SHR]->doubleSHR4 = ( overrideDoubleSHR > 0 ? overrideDoubleSHR - 1 : vrams_read->doubleSHR4Mode);
+	windowsbeam[A2VIDEOBEAM_SHR]->doubleSHR4 = ( overrideDoubleSHR > 0 ? overrideDoubleSHR - 1 : vrams_read->pagedMode);
 
 	// if we're in merged mode, prepare the offset texture
 	if (vrams_read->mode == A2Mode_e::MERGED)
@@ -1749,7 +1770,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 	bImguiWindowIsOpen = p_open;
 	if (p_open)
 	{
-		ImGui::SetNextWindowSizeConstraints(ImVec2(400, 400), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(420, 400), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("Apple 2 Video Manager", p_open);
 		if (!ImGui::IsWindowCollapsed())
 		{
@@ -1830,6 +1851,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 				this->ForceBeamFullScreenRender();
 			}
 
+			ImGui::Columns(2, "Legacy_Columns", false);
 			ImGui::SeparatorText("[ LEGACY EXTRA MODES ]");
 			if (ImGui::Checkbox("HGR SPEC1", &bUseHGRSPEC1))
 				this->ForceBeamFullScreenRender();
@@ -1841,6 +1863,21 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 				this->ForceBeamFullScreenRender();
 			ImGui::SetItemTooltip("A DHGR mode that mixes 16 colors and b/w, found in certain RGB cards");
 			
+			ImGui::NextColumn();
+			ImGui::SeparatorText("[ LEGACY PAGING ]");
+			if (ImGui::RadioButton("Normal##Legacyoverride", overrideLegacyPaging == DOUBLE_NONE))
+				overrideLegacyPaging = DOUBLE_NONE;
+			if (ImGui::RadioButton("Interlace##Legacyoverride", overrideLegacyPaging == DOUBLE_INTERLACE))
+				overrideLegacyPaging = DOUBLE_INTERLACE;
+			if (ImGui::RadioButton("Page Flip##Legacyoverride", overrideLegacyPaging == DOUBLE_PAGEFLIP))
+				overrideLegacyPaging = DOUBLE_PAGEFLIP;
+			if (windowsbeam[A2VIDEOBEAM_LEGACY]->pagingMode != overrideLegacyPaging)
+			{
+				windowsbeam[A2VIDEOBEAM_LEGACY]->pagingMode = overrideLegacyPaging;
+				this->ForceBeamFullScreenRender();
+			}
+			ImGui::Columns(1);
+
 			ImGui::Columns(2, "SHR_Columns", false);
 			ImGui::SeparatorText("[ SHR EXTRA MODES ]");
 			bool isNoneActive = (vrams_read->frameSHR4Modes == A2_VSM_NONE);
@@ -1848,8 +1885,8 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			bool isSHR4RGGBActive = (vrams_read->frameSHR4Modes & A2_VSM_SHR4RGGB) != 0;
 			bool isSHR4PAL256Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4PAL256) != 0;
 			bool isSHR4R4G4B4Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4R4G4B4) != 0;
-			bool isSHRInterlaced = (vrams_read->doubleSHR4Mode == DSHR4_INTERLACE);
-			bool isSHRPageFlip = (vrams_read->doubleSHR4Mode == DSHR4_PAGEFLIP);
+			bool isSHRInterlaced = (vrams_read->pagedMode == DOUBLE_INTERLACE);
+			bool isSHRPageFlip = (vrams_read->pagedMode == DOUBLE_PAGEFLIP);
 
 			ImGui::BeginDisabled();
 			ImGui::Checkbox("None##SHR4", &isNoneActive);

@@ -18,7 +18,7 @@ This shader expects as input a VRAMTEX texture that has the following features:
 - Color B is 8 bits of state, including the graphics mode and soft switches
 - Color A is the fore and background colors, as specified in the C022 softswitch
 - 40 pixels wide, where MAIN and AUX are interleaved, starting with AUX
-- 192 lines high, which is the Apple 2 scanlines
+- 2x192 lines high, where the second part is unused unless interlace/paging is requested
 
 The flags byte (Color B) is:
 	bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO, BORDER)
@@ -63,6 +63,8 @@ uniform sampler2D a2ModesTex2;			// LGR
 uniform sampler2D a2ModesTex3;			// HGR
 uniform sampler2D a2ModesTex4;			// DHGR
 
+uniform int pagingMode;					// 0: NONE, 1: INTERLACE, 2: PAGEFLIP
+uniform int pagingOffset;				// Y offset if paging
 uniform bool bForceSHRWidth;			// if on, stretch to SHR width. If off,
 uniform bool bIsMergedMode;				// if on, then only display lines that are legacy
 uniform sampler2D OFFSETTEX;			// X Offset texture for merged mode
@@ -131,8 +133,17 @@ uint ROL_NIB(uint x)
 
 void main()
 {
-	// for bForceSHRWidth
+	// for bForceSHRWidth or paging modes
 	vec2 vFragUpdatedPos = vFragPos;
+
+	// Shift based on paging mode
+	uint isInterlace = (pagingMode == 1 ? 1u : 0u);
+	uint isPageFlip = (pagingMode == 2 ? 1u : 0u);
+	uint yOffsetLines = 0u;
+	if (isInterlace == 1u)	// the offset is used for odd lines (*2 because lines are doubled)
+		vFragUpdatedPos.y += float(pagingOffset*2) * float(uint(vFragUpdatedPos.y) & 1u);
+	if (isPageFlip == 1u)	// the offset is used for odd frames
+		vFragUpdatedPos.y += float(pagingOffset*2) * (float(frameIsOdd));
 
 	// Check if we're in merged mode. If so, determine if the line is a legacy line.
 	// If not, exit early. If it is legacy, then shift accordingly

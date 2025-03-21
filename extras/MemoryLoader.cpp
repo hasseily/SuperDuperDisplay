@@ -100,7 +100,6 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) 
 bool MemoryLoadHGR(const std::string &filePath) {
 	bool res = false;
 	uint8_t* pMem;
-	pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x2000;
 	std::ifstream file(filePath, std::ios::binary);
 	if (file)
 	{
@@ -108,13 +107,19 @@ bool MemoryLoadHGR(const std::string &filePath) {
 		file.seekg(0, std::ios::end);
 		size_t fileSize = file.tellg();
 		
-		if (fileSize == 0x2000) {
-			file.seekg(0, std::ios::beg); // Go back to the start of the file
-			file.read(reinterpret_cast<char*>(pMem), fileSize);
-			res = true;
-		} else {
+		if (!((fileSize == 0x2000) || (fileSize == 0x4000))) {
 			std::cerr << "Error: HGR file is not the correct size." << std::endl;
+			return res;
 		}
+
+		file.seekg(0, std::ios::beg); // Go back to the start of the file
+		pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x2000;
+		file.read(reinterpret_cast<char*>(pMem), 0x2000);
+		if (fileSize == 0x4000) {	// interlace or page flip
+			pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x4000;
+			file.read(reinterpret_cast<char*>(pMem), 0x2000);
+		}
+		res = true;
 	}
 	return res;
 }
@@ -128,18 +133,25 @@ bool MemoryLoadDHR(const std::string &filePath) {
 		// Move to the end to get the file size
 		file.seekg(0, std::ios::end);
 		size_t fileSize = file.tellg();
-		
-		if (fileSize == 0x4000) {
-			file.seekg(0, std::ios::beg); // Go back to the start of the file
-			// Read first the aux and then the main memory
-			pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + 0x2000;
-			file.read(reinterpret_cast<char*>(pMem), 0x2000);
-			pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x2000;
-			file.read(reinterpret_cast<char*>(pMem), 0x2000);
-			res = true;
-		} else {
+
+		if (!((fileSize == 0x4000) || (fileSize == 0x8000))) {
 			std::cerr << "Error: DHR file is not the correct size." << std::endl;
+			return res;
 		}
+
+		file.seekg(0, std::ios::beg); // Go back to the start of the file
+		// Read first the aux and then the main memory
+		pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + 0x2000;
+		file.read(reinterpret_cast<char*>(pMem), 0x2000);
+		pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x2000;
+		file.read(reinterpret_cast<char*>(pMem), 0x2000);
+		if (fileSize == 0x8000) {	// interlace or page flip
+			pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + 0x4000;
+			file.read(reinterpret_cast<char*>(pMem), 0x2000);
+			pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x4000;
+			file.read(reinterpret_cast<char*>(pMem), 0x2000);
+		}
+		res = true;
 	}
 	return res;
 }

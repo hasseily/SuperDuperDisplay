@@ -128,7 +128,7 @@ public:
 		uint8_t* vram_forced_hgr2 = nullptr;
 		GLfloat* offset_buffer = nullptr;
 		int frameSHR4Modes = 0;					// All SHR4 modes in the frame
-		int doubleSHR4Mode = 0;			// DoubleSHR4Mode_e : may use E0 (main) $2000-9FFF for interlace or page flip
+		int pagedMode = 0;			// DoubleSHR4Mode_e : may use E0 (main) $2000-9FFF for interlace or page flip
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -221,7 +221,7 @@ public:
 
 	inline uint32_t GetVramWidthLegacy() { return (40 + (2 * borders_w_cycles)); };	// in 4 bytes!
 	inline uint32_t GetVramHeightLegacy() { return  (192 + (2 * borders_h_scanlines)); };
-	inline uint32_t GetVramSizeLegacy() { return (GetVramWidthLegacy() * GetVramHeightLegacy() * 4); };	// in bytes
+	inline uint32_t GetVramSizeLegacy() { return (GetVramWidthLegacy() * GetVramHeightLegacy() * 4 * _INTERLACE_MULTIPLIER); };	// in bytes
 
 	inline uint32_t GetVramWidthSHR() { return (_COLORBYTESOFFSET + (2 * borders_w_cycles * 4) + 160); };	// in bytes
 	inline uint32_t GetVramHeightSHR() { return  (200 + (2 * borders_h_scanlines)); };
@@ -278,7 +278,7 @@ private:
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
 	bool bIsRebooting = false;              // Rebooting semaphore
 	bool bIsSwitchingToMergedMode = false;	// True when refreshing earlier scanlines for merged mode
-	bool bShouldDoubleSHR = false;			// Handles updating E0 (main) for double SHR
+	bool bShouldPageDouble = false;			// Handles updating for double paged mode
 
 	// imgui vars
 	bool bImguiWindowIsOpen = false;
@@ -288,6 +288,7 @@ private:
 	int overrideSHR4Mode = 0;				// Cached here to keep the value between A2WindowBeam resets
 	int overrideDoubleSHR = 0;				// At 0, don't override. Above 0, substract 1 to get the override value
 	int overrideVidHDTextMode = VIDHDMODE_NONE;
+	int overrideLegacyPaging = 0;			// Forces paging in legacy modes
 	int c022TextColorForeNibble = 0;
 	int c022TextColorBackNibble = 0;
 	int vidHdTextAlphaForeNibble = 0b1111;
