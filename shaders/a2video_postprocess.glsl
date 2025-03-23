@@ -7,6 +7,7 @@ crt-Geom (alternate scanlines)
 Mattias CRT
 Quillez (main filter)
 Dogway's inverse Gamma
+Sik NTSC
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the Free
@@ -204,7 +205,7 @@ vec4 PhosphorBlur(sampler2D tex, vec2 uv, vec2 resolution, float blurAmount) {
     vec4 color = textureLod(tex, uv, blurAmount);
     // Increase brightness linearly based on blurAmount.
     float brightnessFactor = 1.0 + blurAmount;
-    return color * brightnessFactor;
+    return 	clamp(color * brightnessFactor,0.0,1.0);
 }
 
 vec3 Mask(vec2 pos, float CGWG) {
@@ -422,7 +423,7 @@ void main() {
 	vec3 res;
 	if (bNTSC) {
 		// NTSC
-		float factorX = 0.15 * OutputSize.x * (1.0 / TextureSize.x) / 170.667;
+		float factorX = 0.5 / 170.667;
 		float gamma = NTSC_GAMMA_CORRECTION / 2.2;
 		float x = pos.x;
 		float y = pos.y;
@@ -440,21 +441,21 @@ void main() {
 		}
 		float y_mix = (raw_y[0] + raw_y[1] + raw_y[2] + raw_y[3]) * 0.25;
 		float i_mix =
-		0.125 * raw_iq[0] * sin(phase[0]) +
-		0.25  * raw_iq[1] * sin(phase[1]) +
-		0.375 * raw_iq[2] * sin(phase[2]) +
-		0.5   * raw_iq[3] * sin(phase[3]) +
-		0.375 * raw_iq[4] * sin(phase[4]) +
-		0.25  * raw_iq[5] * sin(phase[5]) +
-		0.125 * raw_iq[6] * sin(phase[6]);
+			0.125 * raw_iq[0] * sin(phase[0]) +
+			0.25  * raw_iq[1] * sin(phase[1]) +
+			0.375 * raw_iq[2] * sin(phase[2]) +
+			0.5   * raw_iq[3] * sin(phase[3]) +
+			0.375 * raw_iq[4] * sin(phase[4]) +
+			0.25  * raw_iq[5] * sin(phase[5]) +
+			0.125 * raw_iq[6] * sin(phase[6]);
 		float q_mix =
-		0.125 * raw_iq[0] * cos(phase[0]) +
-		0.25  * raw_iq[1] * cos(phase[1]) +
-		0.375 * raw_iq[2] * cos(phase[2]) +
-		0.5   * raw_iq[3] * cos(phase[3]) +
-		0.375 * raw_iq[4] * cos(phase[4]) +
-		0.25  * raw_iq[5] * cos(phase[5]) +
-		0.125 * raw_iq[6] * cos(phase[6]);
+			0.125 * raw_iq[0] * cos(phase[0]) +
+			0.25  * raw_iq[1] * cos(phase[1]) +
+			0.375 * raw_iq[2] * cos(phase[2]) +
+			0.5   * raw_iq[3] * cos(phase[3]) +
+			0.375 * raw_iq[4] * cos(phase[4]) +
+			0.25  * raw_iq[5] * cos(phase[5]) +
+			0.125 * raw_iq[6] * cos(phase[6]);
 		res0 = pow(yiq2rgba(vec3(y_mix, i_mix, q_mix)),
 						vec4(gamma, gamma, gamma, 1.0));
 		if (BlurSize > 0.000001)
@@ -481,6 +482,7 @@ void main() {
 			res = res0.rgb;
 		}
 	}
+	res = clamp(res,0.0,1.0);
 	float l = dot(vec3(BR_DEP),res);
 
  // Color Spaces 
@@ -498,7 +500,7 @@ void main() {
 		res *= vec3(0.29,0.6,0.11); 
 		res = clamp(res,0.0,1.0);
 	}
-	
+
 	// Mask CGWG definition, used for scanlines
 	float CGWG = 0.3;
 	if (bSLOT)
@@ -575,6 +577,8 @@ void main() {
 	res *= hue;
 	res -= vec3(BLACK);
 	res *= blck;
+
+	res = clamp(res,0.0,1.0);
 
 	FragColor = vec4(res, corn);
 
