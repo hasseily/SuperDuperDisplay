@@ -111,6 +111,7 @@ private:
 	bool p_b_smoothCorner = false;
 	bool p_b_extGamma = false;
 	bool p_b_slot = false;
+	bool p_b_ntsc = false;
 	float p_f_barrelDistortion = 0.0f;
 	float p_f_bgr = 0.0f;
 	float p_f_black = 0.0f;
@@ -134,6 +135,8 @@ private:
 	float p_f_interlace = 0.f;
 	float p_f_slotW = 3.0f;
 	float p_f_vignetteWeight = 0.0f;
+	float p_f_ntscCombStrength = 0.8f;
+	float p_f_ntscGammaCorrection = 2.5f;
 	int p_i_cSpace = 0;
 	int p_i_maskType = 0;
 	int p_i_postprocessingLevel = 0;
