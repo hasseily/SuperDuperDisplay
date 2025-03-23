@@ -7,7 +7,6 @@ crt-Geom (alternate scanlines)
 Mattias CRT
 Quillez (main filter)
 Dogway's inverse Gamma
-Sik NTSC
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the Free
@@ -78,7 +77,6 @@ uniform bool bEXT_GAMMA;
 uniform bool bPOTATO; 
 uniform bool bSLOT;
 uniform bool bVIGNETTE;
-uniform bool bNTSC;
 uniform COMPAT_PRECISION float BARRELDISTORTION;
 uniform COMPAT_PRECISION float BGR;
 uniform COMPAT_PRECISION float BLACK; 
@@ -103,8 +101,6 @@ uniform COMPAT_PRECISION float FILM_GRAIN;
 uniform COMPAT_PRECISION float INTERLACE_WEIGHT;
 uniform COMPAT_PRECISION float SLOTW;
 uniform COMPAT_PRECISION float VIGNETTE_WEIGHT;
-uniform COMPAT_PRECISION float NTSC_COMB_STR;
-uniform COMPAT_PRECISION float NTSC_GAMMA_CORRECTION;
 uniform COMPAT_PRECISION int iCOLOR_SPACE;
 uniform COMPAT_PRECISION int iM_TYPE;
 uniform COMPAT_PRECISION int iSCANLINE_TYPE;
@@ -116,35 +112,6 @@ uniform COMPAT_PRECISION vec2 vZOOM;
 #define fTime (float(iFrameCount) / 60.0)
 #define iResolution OutputSize.xy
 #define fragCoord gl_FragCoord.xy
-
-// For NTSC
-float phase[7];		// Colorburst phase (in radians)
-float raw_y[7];    // Luma isolated from raw composite signal
-float raw_iq[7];   // Chroma isolated from raw composite signal
-// Converts from RGB to YIQ
-vec3 rgba2yiq(vec4 rgba)
-{
-	return vec3(
-				rgba[0] * 0.3 + rgba[1] * 0.59 + rgba[2] * 0.11,
-				rgba[0] * 0.599 + rgba[1] * -0.2773 + rgba[2] * -0.3217,
-				rgba[0] * 0.213 + rgba[1] * -0.5251 + rgba[2] * 0.3121
-				);
-}
-// Encodes YIQ into composite
-float yiq2raw(vec3 yiq, float phase)
-{
-	return yiq[0] + yiq[1] * sin(phase) + yiq[2] * cos(phase);
-}
-// Converts from YIQ to RGB
-vec4 yiq2rgba(vec3 yiq)
-{
-	return vec4(
-				yiq[0] + yiq[1] * 0.9469 + yiq[2] * 0.6236,
-				yiq[0] - yiq[1] * 0.2748 - yiq[2] * 0.6357,
-				yiq[0] - yiq[1] * 1.1 + yiq[2] * 1.7,
-				1.0
-				);
-}
 
 // Utility functions to convert from/to sRGB/linear space
 vec3 toLinear(vec3 srgbColor) {
@@ -421,66 +388,24 @@ void main() {
 
 	vec4 res0;
 	vec3 res;
-	if (bNTSC) {
-		// NTSC
-		float factorX = 0.5 / 170.667;
-		float gamma = NTSC_GAMMA_CORRECTION / 2.2;
-		float x = pos.x;
-		float y = pos.y;
-		for (int n = 0; n < 7; n++, x -= factorX * 0.5) {
-			phase[n] = x / factorX * 3.1415926;
-			float y_above = y - y / TextureSize.y;
-			float raw1 = yiq2raw(rgba2yiq(
-										  texture(A2TextureCurrent, pos)
-										  ), phase[n]);
-			float raw2 = yiq2raw(rgba2yiq(
-										  texture(A2TextureCurrent, vec2(x, y_above))
-										  ), phase[n] + 3.1415926);
-			raw_y[n] = (raw1 + raw2) * 0.5;
-			raw_iq[n] = raw1 - (raw1 + raw2) * (NTSC_COMB_STR * 0.5);
-		}
-		float y_mix = (raw_y[0] + raw_y[1] + raw_y[2] + raw_y[3]) * 0.25;
-		float i_mix =
-			0.125 * raw_iq[0] * sin(phase[0]) +
-			0.25  * raw_iq[1] * sin(phase[1]) +
-			0.375 * raw_iq[2] * sin(phase[2]) +
-			0.5   * raw_iq[3] * sin(phase[3]) +
-			0.375 * raw_iq[4] * sin(phase[4]) +
-			0.25  * raw_iq[5] * sin(phase[5]) +
-			0.125 * raw_iq[6] * sin(phase[6]);
-		float q_mix =
-			0.125 * raw_iq[0] * cos(phase[0]) +
-			0.25  * raw_iq[1] * cos(phase[1]) +
-			0.375 * raw_iq[2] * cos(phase[2]) +
-			0.5   * raw_iq[3] * cos(phase[3]) +
-			0.375 * raw_iq[4] * cos(phase[4]) +
-			0.25  * raw_iq[5] * cos(phase[5]) +
-			0.125 * raw_iq[6] * cos(phase[6]);
-		res0 = pow(yiq2rgba(vec3(y_mix, i_mix, q_mix)),
-						vec4(gamma, gamma, gamma, 1.0));
-		if (BlurSize > 0.000001)
-			res0 = mix(res0, PhosphorBlur(A2TextureCurrent, pos, TextureSize, BlurSize), 0.2f);
-		res = res0.rgb;
+
+	if (BlurSize > 0.001)
+		res0 = PhosphorBlur(A2TextureCurrent, pos, TextureSize, BlurSize);
+	else
+		res0 = texture(A2TextureCurrent,pos);
+
+	// Convergence
+	if ((CONV_R+CONV_G+CONV_B) > 0.001) {
+		float resr = texture(A2TextureCurrent,pos + dx*CONV_R).r;
+		float resg = texture(A2TextureCurrent,pos + dx*CONV_G).g;
+		float resb = texture(A2TextureCurrent,pos + dx*CONV_B).b;
+
+		res = vec3(res0.r*(1.0-C_STR) + resr*C_STR,
+					res0.g*(1.0-C_STR) + resg*C_STR,
+					res0.b*(1.0-C_STR) + resb*C_STR
+					);
 	} else {
-		// NOT NTSC
-		if (BlurSize > 0.001)
-			res0 = PhosphorBlur(A2TextureCurrent, pos, TextureSize, BlurSize);
-		else
-			res0 = texture(A2TextureCurrent,pos);
-
-		// Convergence
-		if ((CONV_R+CONV_G+CONV_B) > 0.001) {
-			float resr = texture(A2TextureCurrent,pos + dx*CONV_R).r;
-			float resg = texture(A2TextureCurrent,pos + dx*CONV_G).g;
-			float resb = texture(A2TextureCurrent,pos + dx*CONV_B).b;
-
-			res = vec3(res0.r*(1.0-C_STR) + resr*C_STR,
-					   res0.g*(1.0-C_STR) + resg*C_STR,
-					   res0.b*(1.0-C_STR) + resb*C_STR
-					   );
-		} else {
-			res = res0.rgb;
-		}
+		res = res0.rgb;
 	}
 	res = clamp(res,0.0,1.0);
 	float l = dot(vec3(BR_DEP),res);

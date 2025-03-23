@@ -157,9 +157,6 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_f_barrelDistortion", p_f_barrelDistortion},
 		{"p_f_ghostingPercent", p_f_ghostingPercent},
 		{"p_f_phosphorBlur", p_f_phosphorBlur},
-		{"p_b_ntsc", p_b_ntsc},
-		{"p_f_ntscCombStrength", p_f_ntscCombStrength},
-		{"p_f_ntscGammaCorrection", p_f_ntscGammaCorrection},
 		{"p_v_warpX", p_v_warp.x},
 		{"p_v_warpY", p_v_warp.y},
 		{"p_v_centerX", p_v_center.x},
@@ -223,9 +220,6 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_f_barrelDistortion = jsonState.value("p_f_barrelDistortion", p_f_barrelDistortion);
 	p_f_ghostingPercent = jsonState.value("p_f_ghostingPercent", p_f_ghostingPercent);
 	p_f_phosphorBlur = jsonState.value("p_f_phosphorBlur", p_f_phosphorBlur);
-	p_b_ntsc = jsonState.value("p_b_ntsc", p_b_ntsc);
-	p_f_ntscCombStrength = jsonState.value("p_f_ntscCombStrength", p_f_ntscCombStrength);
-	p_f_ntscGammaCorrection = jsonState.value("p_f_ntscGammaCorrection", p_f_ntscGammaCorrection);
 	p_v_warp.x = jsonState.value("p_v_warpX", p_v_warp.x);
 	p_v_warp.y = jsonState.value("p_v_warpY", p_v_warp.y);
 	p_v_center.x = jsonState.value("p_v_centerX", p_v_center.x);
@@ -325,9 +319,6 @@ void PostProcessor::SelectShader()
 		shaderProgram.setInt("iM_TYPE", p_i_maskType);
 		shaderProgram.setInt("iSCANLINE_TYPE", p_i_scanlineType);
 		shaderProgram.setVec2("vWARP", p_v_warp);
-		shaderProgram.setBool("bNTSC", p_b_ntsc);
-		shaderProgram.setFloat("NTSC_COMB_STR", p_f_ntscCombStrength);
-		shaderProgram.setFloat("NTSC_GAMMA_CORRECTION", p_f_ntscGammaCorrection);
 		break;
 	}
 	// common
@@ -615,7 +606,6 @@ void PostProcessor::ResetToDefaults()
 	p_b_smoothCorner = false;
 	p_b_extGamma = false;
 	p_b_slot = false;
-	p_b_ntsc = false;
 	p_f_barrelDistortion = 0.0f;
 	p_f_bgr = 0.0f;
 	p_f_black = 0.0f;
@@ -639,8 +629,6 @@ void PostProcessor::ResetToDefaults()
 	p_f_interlace = 0.f;
 	p_f_slotW = 3.0f;
 	p_f_vignetteWeight = 0.0f;
-	p_f_ntscCombStrength = 0.8f;
-	p_f_ntscGammaCorrection = 2.5f;
 	p_i_cSpace = 0;
 	p_i_maskType = 0;
 	p_i_postprocessingLevel = 0;
@@ -931,19 +919,10 @@ with page flipping images");
 			
 			// Convergence Settings
 			ImGui::Text("[ CONVERGENCE SETTINGS ]");
-			ImGui::Checkbox("NTSC", &p_b_ntsc);
-			if (p_b_ntsc)
-			{
-				ImGui::SliderFloat("NTSC Comb Strength", &p_f_ntscCombStrength, 0.f, 1.f, "%.2f");
-				ImGui::SetItemTooltip("0.8 for model 1, 0.9 for model 2");
-				ImGui::SliderFloat("NTSC Gamma Correction", &p_f_ntscGammaCorrection, 0.5f, 4.f, "%.1f");
-				ImGui::SetItemTooltip("sRGB is 2.2, NTSC is 2.5");
-			} else {
-				ImGui::SliderFloat("Convergence Overall Strength", &p_f_cStr, 0.0f, 0.5f, "%.2f");
-				ImGui::SliderFloat("Convergence Red X-Axis", &p_f_convR, -3.0f, 3.0f, "%.2f");
-				ImGui::SliderFloat("Convergence Green X-axis", &p_f_convG, -3.0f, 3.0f, "%.2f");
-				ImGui::SliderFloat("Convergence Blue X-Axis", &p_f_convB, -3.0f, 3.0f, "%.2f");
-			}
+			ImGui::SliderFloat("Convergence Overall Strength", &p_f_cStr, 0.0f, 0.5f, "%.2f");
+			ImGui::SliderFloat("Convergence Red X-Axis", &p_f_convR, -3.0f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Convergence Green X-axis", &p_f_convG, -3.0f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Convergence Blue X-Axis", &p_f_convB, -3.0f, 3.0f, "%.2f");
 		}
 
 		ImGui::PopItemWidth();

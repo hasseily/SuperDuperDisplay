@@ -295,6 +295,9 @@ private:
 	int vidHdTextAlphaBackNibble = 0b1111;
 	std::string sImguiLoadPath = ".";
 	float bWobblePower = 0.200;
+	bool p_b_ntsc = false;
+	float p_f_ntscCombStrength = 0.8f;
+	float p_f_ntscGammaCorrection = 2.5f;
 
 	// beam render state variables
 	BeamState_e beamState = BeamState_e::UNKNOWN;

@@ -1813,6 +1813,30 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 				this->ForceBeamFullScreenRender();
 			}
 
+			// NTSC
+			if (ImGui::Checkbox("NTSC", &p_b_ntsc))
+			{
+				windowsbeam[A2VIDEOBEAM_LEGACY]->bIsNTSC = p_b_ntsc;
+				windowsbeam[A2VIDEOBEAM_LEGACY]->fNTSCCombStrength = p_f_ntscCombStrength;
+				windowsbeam[A2VIDEOBEAM_LEGACY]->fNTSCGammaCorrection = p_f_ntscGammaCorrection;
+				this->ForceBeamFullScreenRender();
+			}
+			if (p_b_ntsc)
+			{
+				if (ImGui::SliderFloat("NTSC Comb Strength", &p_f_ntscCombStrength, 0.f, 1.f, "%.2f"))
+				{
+					windowsbeam[A2VIDEOBEAM_LEGACY]->fNTSCCombStrength = p_f_ntscCombStrength;
+					this->ForceBeamFullScreenRender();
+				}
+				ImGui::SetItemTooltip("0.8 for model 1, 0.9 for model 2");
+				if (ImGui::SliderFloat("NTSC Gamma Correction", &p_f_ntscGammaCorrection, 0.5f, 4.f, "%.1f"))
+				{
+					windowsbeam[A2VIDEOBEAM_LEGACY]->fNTSCGammaCorrection = p_f_ntscGammaCorrection;
+					this->ForceBeamFullScreenRender();
+				}
+				ImGui::SetItemTooltip("sRGB is 2.2, NTSC is 2.5");
+			}
+
 			ImGui::SeparatorText("[ VIDHD TEXT MODES ]");
 			// VidHdMode_e
 			const char* vidHdModes[] = { "OFF", "40x24", "80x24", "80x45", "120x67", "240x135" };
@@ -1945,6 +1969,9 @@ nlohmann::json A2VideoManager::SerializeState()
 		{"no_merged_mode_wobble", bNoMergedModeWobble},
 		{"font_rom_regular_index", font_rom_regular_idx},
 		{"font_rom_slternate_index", font_rom_alternate_idx},
+		{"p_b_ntsc", p_b_ntsc},
+		{"p_f_ntscCombStrength", p_f_ntscCombStrength},
+		{"p_f_ntscGammaCorrection", p_f_ntscGammaCorrection},
 	};
 	return jsonState;
 }
@@ -1961,7 +1988,14 @@ void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 	bNoMergedModeWobble = jsonState.value("no_merged_mode_wobble", bNoMergedModeWobble);
 	font_rom_regular_idx = jsonState.value("font_rom_regular_index", font_rom_regular_idx);
 	font_rom_alternate_idx = jsonState.value("font_rom_slternate_index", font_rom_alternate_idx);
+	p_b_ntsc = jsonState.value("p_b_ntsc", p_b_ntsc);
+	p_f_ntscCombStrength = jsonState.value("p_f_ntscCombStrength", p_f_ntscCombStrength);
+	p_f_ntscGammaCorrection = jsonState.value("p_f_ntscGammaCorrection", p_f_ntscGammaCorrection);
 
 	border_w_slider_val = jsonState.value("borders_w_cycles", border_w_slider_val);
 	border_h_slider_val = jsonState.value("borders_h_8scanlines", border_h_slider_val);
+
+	windowsbeam[A2VIDEOBEAM_LEGACY]->bIsNTSC = p_b_ntsc;
+	windowsbeam[A2VIDEOBEAM_LEGACY]->fNTSCCombStrength = p_f_ntscCombStrength;
+	windowsbeam[A2VIDEOBEAM_LEGACY]->fNTSCGammaCorrection = p_f_ntscGammaCorrection;
 }

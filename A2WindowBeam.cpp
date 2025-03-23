@@ -267,6 +267,9 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 	else {
 		shader.setInt("VRAMTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
 		shader.setBool("bForceSHRWidth", bForceSHRWidth);
+		shader.setBool("bNTSC", bIsNTSC);
+		shader.setFloat("NTSC_COMB_STR", fNTSCCombStrength);
+		shader.setFloat("NTSC_GAMMA_CORRECTION", fNTSCGammaCorrection);
 	}
 
 	// And set all the modes textures that the shader will use

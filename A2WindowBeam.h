@@ -94,6 +94,11 @@ public:
 	int pagingMode = DOUBLE_NONE;			// Override of paging for legacy
 	int monitorColorType = A2_MON_COLOR;	// Monitor color type A2VideoMonitorType_e
 
+	// For NTSC. This is only used in legacy modes (SHR is RGB)
+	bool bIsNTSC = false;
+	float fNTSCCombStrength = 0.8f;
+	float fNTSCGammaCorrection = 0.5f;
+
 private:
 	bool vramTextureExists = false;						// true if the VRAM texture exists and only needs an update
 	A2VideoModeBeam_e video_mode = A2VIDEOBEAM_LEGACY;	// Which video mode is used
