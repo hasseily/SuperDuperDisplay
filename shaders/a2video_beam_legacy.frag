@@ -581,7 +581,7 @@ void main()
 {
 	if (bNTSC && (!bIsMonoNTSC) && (vFragPos.y > 0.9999)) {
 		// NTSC, code adapted from Sik
-		float factorX = 560 * 0.5 / 170.667;
+		float factorX = 560.0 * 0.5 / 170.667;
 		float gamma = NTSC_GAMMA_CORRECTION / 2.2;
 		float x = vFragPos.x;
 		float y = vFragPos.y;
