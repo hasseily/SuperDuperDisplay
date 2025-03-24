@@ -376,12 +376,6 @@ void A2VideoManager::ResetGLData() {
 	if (OFFSETTEX != UINT_MAX)
 		glDeleteTextures(1, &OFFSETTEX);
 
-	if (quadVAO != UINT_MAX)
-	{
-		glDeleteVertexArrays(1, &quadVAO);
-		glDeleteBuffers(1, &quadVBO);
-	}
-
 	if (FBO_A2Video != UINT_MAX)
 	{
 		glDeleteFramebuffers(1, &FBO_A2Video);
@@ -400,8 +394,6 @@ void A2VideoManager::ResetGLData() {
 	}
 
 	OFFSETTEX = UINT_MAX;
-	quadVAO = UINT_MAX;
-	quadVBO = UINT_MAX;
 }
 
 void A2VideoManager::ResetComputer()
@@ -1231,42 +1223,6 @@ bool A2VideoManager::SelectSHRShader(const int index)
 uXY A2VideoManager::ScreenSize()
 {
 	return uXY({ (uint32_t)fb_width, (uint32_t)fb_height});
-}
-
-void A2VideoManager::InitializeFullQuad() {
-	// Define the quad vertices with position and texture coordinates
-	GLfloat quadVertices[] = {
-		// Positions   // Texture Coords
-		-1.0f, -1.0f,  0.0f, 0.0f,
-		 1.0f,  1.0f,  1.0f, 1.0f,
-		 -1.0f, 1.0f,  0.0f, 1.0f,
-
-		-1.0f, -1.0f,  0.0f, 0.0f,
-		1.0f,  -1.0f,  1.0f, 0.0f,
-		 1.0f,  1.0f,  1.0f, 1.0f
-	};
-
-	// Generate and bind the Vertex Array Object (VAO)
-	glGenVertexArrays(1, &quadVAO);
-	glBindVertexArray(quadVAO);
-
-	// Generate and bind the Vertex Buffer Object (VBO)
-	if (quadVBO == UINT_MAX)
-		glGenBuffers(1, &quadVBO);
-	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
-
-	// Position attribute
-	glEnableVertexAttribArray(0); // Enable the vertex attribute (0: position)
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
-
-	// Texture coordinate attribute
-	glEnableVertexAttribArray(1); // Enable the vertex attribute (1: texture coordinate)
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat)));
-
-	// Unbind the VBO and VAO to make sure they are not accidentally modified
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
 }
 
 void A2VideoManager::PrepareOffsetTexture() {

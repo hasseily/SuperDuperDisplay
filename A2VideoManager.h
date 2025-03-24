@@ -327,9 +327,6 @@ private:
 	GLuint FBO_debug[4] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
 	GLuint debug_texture_id[4] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
 
-	GLuint quadVAO = UINT_MAX;	// FOR MERGED MODE TODO: GET RID OF THAT
-	GLuint quadVBO = UINT_MAX;
-
 	// OFFSET buffer texture. Holds one signed int for each scanline to tell the shader
 	// how much to offset by x a line for the sine wobble of the merge
 	// The offset is negative for 14->16MHz and positive for 16->14MHz
