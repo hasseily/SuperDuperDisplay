@@ -295,7 +295,7 @@ private:
 	int vidHdTextAlphaBackNibble = 0b1111;
 	std::string sImguiLoadPath = ".";
 	float bWobblePower = 0.200;
-	bool p_b_ntsc = false;
+	bool p_b_ntsc = false;					// if true, there is a first render pass into FBO_NTSC
 	float p_f_ntscCombStrength = 0.8f;
 	float p_f_ntscGammaCorrection = 2.5f;
 
@@ -322,6 +322,14 @@ private:
 	GLint last_viewport[4];		// Previous viewport used, so we don't clobber it
 	GLuint FBO_A2Video = UINT_MAX;			// the framebuffer object
 	GLuint a2video_texture_id = UINT_MAX;	// the generated texture
+
+	// These are for when NTSC is requested. Because NTSC needs to sample 16 times
+	// the texture, we first generate the legacy texture in a different FBO,
+	// then run the NTSC shader on that texture into the FBO_A2Video.
+	// Otherwise the innards of legacy shader code would need to run 15 more times
+	// to determine the value of all 15 neighboring pixels.
+	GLuint FBO_NTSC = UINT_MAX;
+	GLuint ntsc_texture_id = UINT_MAX;
 
 	// for debugging, displaying textures TEXT1/2, HGR1/2
 	GLuint FBO_debug[4] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };

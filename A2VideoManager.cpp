@@ -380,8 +380,11 @@ void A2VideoManager::ResetGLData() {
 	{
 		glDeleteFramebuffers(1, &FBO_A2Video);
 		glDeleteTextures(1, &a2video_texture_id);
+		glDeleteFramebuffers(1, &FBO_NTSC);
+		glDeleteTextures(1, &ntsc_texture_id);
 	}
 	FBO_A2Video = UINT_MAX;
+	FBO_NTSC = UINT_MAX;
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -1266,6 +1269,8 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 	{
 		glGenFramebuffers(1, &FBO_A2Video);
 		glGenTextures(1, &a2video_texture_id);
+		glGenFramebuffers(1, &FBO_NTSC);
+		glGenTextures(1, &ntsc_texture_id);
 	}
 
 	// Create all the debug FBOs and textures, those have a static size and can be generated once only
@@ -1276,6 +1281,7 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 		for (int i = 0; i < 4; i++)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[i]);
+			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, debug_texture_id[i]);
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -1292,39 +1298,59 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
-	glActiveTexture(_TEXUNIT_POSTPROCESS);	// this will go to postprocessing
+	// for when NTSC is requested for legacy,
+	// there's a pre-render pass into _TEXUNIT_PRE_NTSC
+	glActiveTexture(_TEXUNIT_PRE_NTSC);
+	glBindTexture(GL_TEXTURE_2D, ntsc_texture_id);
+
+	// this will go to postprocessing
+	glActiveTexture(_TEXUNIT_POSTPROCESS);
+	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
 
 	// Check if the textures already have the desired dimensions.
 	GLint width = 0, height = 0;
-	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
 
 	if (width == fb_width && height == fb_height)
 	{
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 		return;
 	}
 
-	// ------------------------
-	// Setup framebuffer object
-	// ------------------------
+	// -------------------------
+	// Setup framebuffer objects
+	// -------------------------
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
-
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, a2video_texture_id, 0);
-
 	GLenum _statusFBO = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	if (_statusFBO != GL_FRAMEBUFFER_COMPLETE)
 	{
-		std::cerr << "Framebuffer is not complete: " << _statusFBO << std::endl;
+		std::cerr << "Framebuffer A2Video is not complete: " << _statusFBO << std::endl;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_NTSC);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, ntsc_texture_id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ntsc_texture_id, 0);
+	_statusFBO = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (_statusFBO != GL_FRAMEBUFFER_COMPLETE)
+	{
+		std::cerr << "Framebuffer NTSC is not complete: " << _statusFBO << std::endl;
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	// std::cerr << "Generated two FBOs with size " << fb_width << " x " << fb_height << std::endl;
 }
@@ -1499,7 +1525,22 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 		windowsbeam[A2VIDEOBEAM_LEGACY]->monitorColorType = eA2MonitorType;
 		windowsbeam[A2VIDEOBEAM_LEGACY]->bIsMergedMode = (vrams_read->mode == A2Mode_e::MERGED);
 		windowsbeam[A2VIDEOBEAM_LEGACY]->bForceSHRWidth = bForceSHRWidth;
+
+		// If NTSC output for legacy is requested, render first into this texture
+		// and then apply the NTSC shader to this texture into the FBO_A2Video
+		if (p_b_ntsc)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, FBO_NTSC);
+			glViewport(0, 0, fb_width, fb_height);
+			glClearColor(0.f, 0.f, 0.f, 0.f);
+			glClear(GL_COLOR_BUFFER_BIT);
+		}
 		windowsbeam[A2VIDEOBEAM_LEGACY]->Render(current_frame_idx);
+		if (p_b_ntsc)
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
+			// TODO: render ntsc_texture_id onto FBO_A2Video using the NTSC shader
+		}
 		// std::cerr << "Rendered legacy to viewport " << fb_width << "x" << fb_height << " - " << current_frame_idx << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "Legacy Mode draw error: " << glerr << std::endl;
@@ -1553,25 +1594,21 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 	if (bRenderTEXT1) {
 		glViewport(0, 0, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT);
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[0]);
-		glBindTexture(GL_TEXTURE_2D, debug_texture_id[0]);
 		windowsbeam[A2VIDEOBEAM_FORCED_TEXT1]->Render(current_frame_idx);
 	}
 	if (bRenderTEXT2) {
 		glViewport(0, 0, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT);
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[1]);
-		glBindTexture(GL_TEXTURE_2D, debug_texture_id[1]);
 		windowsbeam[A2VIDEOBEAM_FORCED_TEXT2]->Render(current_frame_idx);
 	}
 	if (bRenderHGR1) {
 		glViewport(0, 0, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT);
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[2]);
-		glBindTexture(GL_TEXTURE_2D, debug_texture_id[2]);
 		windowsbeam[A2VIDEOBEAM_FORCED_HGR1]->Render(current_frame_idx);
 	}
 	if (bRenderHGR2) {
 		glViewport(0, 0, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT);
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[3]);
-		glBindTexture(GL_TEXTURE_2D, debug_texture_id[3]);
 		windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->Render(current_frame_idx);
 	}
 	if ((glerr = glGetError()) != GL_NO_ERROR) {

@@ -78,10 +78,11 @@ enum SwapInterval_e
 #define _TEXUNIT_DATABUFFER_RGBA8UI GL_TEXTURE2	// Texunit of the data buffer (RGBA8UI VRAM)
 #define _TEXUNIT_PAL256BUFFER GL_TEXTURE3		// Texunit of the SHR4 PAL256 vram
 #define _TEXUNIT_IMAGE_ASSETS_START GL_TEXTURE4	// Start of the image assets
-#define _TEXUNIT_MERGE_OFFSET GL_TEXTURE14		// Merge Offset buffer (for sine wobble)
-#define _TEXUNIT_PP_BEZEL GL_TEXTURE17			// The bezel in postprocessing
+#define _TEXUNIT_MERGE_OFFSET GL_TEXTURE13		// Merge Offset buffer (for sine wobble)
+#define _TEXUNIT_PRE_NTSC GL_TEXTURE14			// If NTSC legacy output requested, this is the non-NTSC tex
 #define _TEXUNIT_PP_PREVIOUS GL_TEXTURE15		// The previous frame as a texture
 #define _TEXUNIT_POSTPROCESS GL_TEXTURE16		// input texunit the PP will use to generate the final output
+#define _TEXUNIT_PP_BEZEL GL_TEXTURE17			// The bezel in postprocessing
 // exact asset textures
 #define _TEXUNIT_IMAGE_FONT_ROM_DEFAULT GL_TEXTURE4
 #define _TEXUNIT_IMAGE_FONT_ROM_ALTERNATE GL_TEXTURE5
