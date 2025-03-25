@@ -111,6 +111,9 @@
     <ClCompile Include="VidHdWindowBeam.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="BasicQuad.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -231,6 +234,9 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="VidHdWindowBeam.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="BasicQuad.h">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

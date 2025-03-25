@@ -177,6 +177,7 @@
   <ItemGroup>
     <ClCompile Include="A2WindowBeam.cpp" />
     <ClCompile Include="Ayumi.cpp" />
+    <ClCompile Include="BasicQuad.cpp" />
     <ClCompile Include="CycleCounter.cpp" />
     <ClCompile Include="EventRecorder.cpp" />
     <ClCompile Include="extras\ImGuiFileDialog.cpp" />
@@ -209,6 +210,7 @@
     <ClInclude Include="A2VideoManager.h" />
     <ClInclude Include="A2WindowBeam.h" />
     <ClInclude Include="Ayumi.h" />
+    <ClInclude Include="BasicQuad.h" />
     <ClInclude Include="beeper.h" />
     <ClInclude Include="ByteBuffer.h" />
     <ClInclude Include="camera.h" />
