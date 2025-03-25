@@ -30,14 +30,23 @@ public:
 
 	BasicQuad(const char* shaderVertexPath, const char* shaderFragmentPath);
 	~BasicQuad();
-	uint32_t GetWidth() const;
-	uint32_t GetHeight() const;
+	uint32_t GetWidth() const { return screen_count.x; };
+	uint32_t GetHeight() const { return screen_count.y; }
+	void SetScreenCount(uint32_t _x, uint32_t _y) { 
+		screen_count.x = _x; 
+		screen_count.y = _y; 
+		this->UpdateVertexArray();
+	}
+
 	void SetQuadRelativeBounds(SDL_FRect bounds);
 	SDL_FRect GetQuadRelativeBounds() const { return quad; };
 	void Render(uint64_t frame_idx, const ShaderDictionary& shaderDict = ShaderDictionary{});
 
 	Shader* GetShader() { return &shader; };
 	void SetShaderPrograms(const char* shaderVertexPath, const char* shaderFragmentPath);
+
+	GLuint GetInputTextureUnit() const { return inputTextureUnit; }
+	void SetInputTextureUnit(GLuint val) { inputTextureUnit = val; }
 
 	std::vector<BasicQuadVertex> vertices;	// Vertices with XYRelative and XYPixels
 	unsigned int VAO = UINT_MAX;			// Vertex Array Object (holds buffers that are vertex related)
@@ -46,6 +55,7 @@ public:
 private:
 	Shader shader = Shader();				// Shader used
 	uXY screen_count = {0,0};				// width,height in pixels of visible screen area of window
+	GLint inputTextureUnit = GL_TEXTURE0;	// Texture unit to use as input
 
 	SDL_FRect quad = { -1.f, 1.f, 2.f, -2.f };	// x, y, width, height
 

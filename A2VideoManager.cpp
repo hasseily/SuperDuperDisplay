@@ -25,6 +25,7 @@
 #include "GRAddr2XY.h"
 #include "imgui.h"
 #include "SDL_rect.h"
+#include "BasicQuad.h"
 
 // Aspect constraint callback to enforce a fixed aspect ratio for ImGui windows.
 // The aspect ratio is provided via the UserData pointer
@@ -340,6 +341,8 @@ void A2VideoManager::Initialize()
 	windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->SetBorder(0, 0);
 
 	vidhdWindowBeam = std::make_unique<VidHdWindowBeam>(VIDHDMODE_NONE);
+	
+	legacyNTSCQuad = std::make_unique<BasicQuad>(_SHADER_VERTEX_BASIC, "shaders/ntsc_sik.frag");
 
 	// The framebuffer width. That will change depending on the layers that are rendered:
 	// If a VidHD text modes > 80x24 is active, then 1920x1080
@@ -1539,7 +1542,20 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 		if (p_b_ntsc)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
-			// TODO: render ntsc_texture_id onto FBO_A2Video using the NTSC shader
+
+			legacyNTSCQuad->SetInputTextureUnit(_TEXUNIT_PRE_NTSC);
+			if (windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth() != legacyNTSCQuad->GetWidth() ||
+				windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight() != legacyNTSCQuad->GetHeight())
+			{
+				legacyNTSCQuad->SetScreenCount(
+					windowsbeam[A2VIDEOBEAM_LEGACY]->GetWidth(),
+					windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight()
+				);
+			}
+			ShaderDictionary _ntscDict;
+			_ntscDict["NTSC_COMB_STR"] = p_f_ntscCombStrength;
+			_ntscDict["NTSC_GAMMA_CORRECTION"] = p_f_ntscGammaCorrection;
+			legacyNTSCQuad->Render(current_frame_idx, _ntscDict);
 		}
 		// std::cerr << "Rendered legacy to viewport " << fb_width << "x" << fb_height << " - " << current_frame_idx << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -1807,27 +1823,19 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			}
 
 			// NTSC
-			if (ImGui::Checkbox("NTSC", &p_b_ntsc))
+			if (eA2MonitorType == A2_MON_COLOR)
 			{
-				windowsbeam[A2VIDEOBEAM_LEGACY]->bIsNTSC = p_b_ntsc;
-				windowsbeam[A2VIDEOBEAM_LEGACY]->fNTSCCombStrength = p_f_ntscCombStrength;
-				windowsbeam[A2VIDEOBEAM_LEGACY]->fNTSCGammaCorrection = p_f_ntscGammaCorrection;
-				this->ForceBeamFullScreenRender();
-			}
-			if (p_b_ntsc)
-			{
-				if (ImGui::SliderFloat("NTSC Comb Strength", &p_f_ntscCombStrength, 0.f, 1.f, "%.2f"))
-				{
-					windowsbeam[A2VIDEOBEAM_LEGACY]->fNTSCCombStrength = p_f_ntscCombStrength;
+				if (ImGui::Checkbox("NTSC", &p_b_ntsc))
 					this->ForceBeamFullScreenRender();
-				}
-				ImGui::SetItemTooltip("0.8 for model 1, 0.9 for model 2");
-				if (ImGui::SliderFloat("NTSC Gamma Correction", &p_f_ntscGammaCorrection, 0.5f, 4.f, "%.1f"))
+				if (p_b_ntsc)
 				{
-					windowsbeam[A2VIDEOBEAM_LEGACY]->fNTSCGammaCorrection = p_f_ntscGammaCorrection;
-					this->ForceBeamFullScreenRender();
+					if (ImGui::SliderFloat("NTSC Comb Strength", &p_f_ntscCombStrength, 0.f, 1.f, "%.2f"))
+						this->ForceBeamFullScreenRender();
+					ImGui::SetItemTooltip("0.8 for model 1, 0.9 for model 2");
+					if (ImGui::SliderFloat("NTSC Gamma Correction", &p_f_ntscGammaCorrection, 0.5f, 4.f, "%.1f"))
+						this->ForceBeamFullScreenRender();
+					ImGui::SetItemTooltip("sRGB is 2.2, NTSC is 2.5");
 				}
-				ImGui::SetItemTooltip("sRGB is 2.2, NTSC is 2.5");
 			}
 
 			ImGui::SeparatorText("[ VIDHD TEXT MODES ]");
@@ -1987,8 +1995,4 @@ void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 
 	border_w_slider_val = jsonState.value("borders_w_cycles", border_w_slider_val);
 	border_h_slider_val = jsonState.value("borders_h_8scanlines", border_h_slider_val);
-
-	windowsbeam[A2VIDEOBEAM_LEGACY]->bIsNTSC = p_b_ntsc;
-	windowsbeam[A2VIDEOBEAM_LEGACY]->fNTSCCombStrength = p_f_ntscCombStrength;
-	windowsbeam[A2VIDEOBEAM_LEGACY]->fNTSCGammaCorrection = p_f_ntscGammaCorrection;
 }

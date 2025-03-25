@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "common.h"
+#include "BasicQuad.h"
 #include "A2WindowBeam.h"
 #include "VidHdWindowBeam.h"
 #include "CycleCounter.h"
@@ -330,6 +331,9 @@ private:
 	// to determine the value of all 15 neighboring pixels.
 	GLuint FBO_NTSC = UINT_MAX;
 	GLuint ntsc_texture_id = UINT_MAX;
+	// This quad will get rendered using the previously generated legacy texture
+	// and use the NTSC shader, into the FBO_A2Video
+	std::unique_ptr<BasicQuad> legacyNTSCQuad;
 
 	// for debugging, displaying textures TEXT1/2, HGR1/2
 	GLuint FBO_debug[4] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };

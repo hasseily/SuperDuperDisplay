@@ -6,6 +6,7 @@
 
 BasicQuad::BasicQuad(const char* shaderVertexPath, const char* shaderFragmentPath)
 {
+	UpdateVertexArray();
 	shader = Shader();
 	shader.build(shaderVertexPath, shaderFragmentPath);
 }
@@ -24,17 +25,6 @@ void BasicQuad::SetShaderPrograms(const char* shaderVertexPath, const char* shad
 	this->shader.build(shaderVertexPath, shaderFragmentPath);
 }
 
-
-uint32_t BasicQuad::GetWidth() const
-{
-	return screen_count.x;
-}
-
-uint32_t BasicQuad::GetHeight() const
-{
-	return screen_count.y;
-}
-
 void BasicQuad::SetQuadRelativeBounds(SDL_FRect bounds)
 {
 	quad = bounds;
@@ -47,12 +37,12 @@ void BasicQuad::UpdateVertexArray()
 	// The first 2 values are the relative XY, bound from -1 to 1.
 	// The second pair of values is the actual pixel value on screen
 	vertices.clear();
-	vertices.push_back(BasicQuadVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, screen_count.y) }));	// top left
-	vertices.push_back(BasicQuadVertex({ glm::vec2(quad.x + quad.w, quad.y + quad.h), glm::ivec2(screen_count.x, 0) }));	// bottom right
-	vertices.push_back(BasicQuadVertex({ glm::vec2(quad.x + quad.w, quad.y), glm::ivec2(screen_count.x, screen_count.y) }));	// top right
-	vertices.push_back(BasicQuadVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, screen_count.y) }));	// top left
+	vertices.push_back(BasicQuadVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, 1) }));	// top left
+	vertices.push_back(BasicQuadVertex({ glm::vec2(quad.x + quad.w, quad.y + quad.h), glm::ivec2(1, 0) }));	// bottom right
+	vertices.push_back(BasicQuadVertex({ glm::vec2(quad.x + quad.w, quad.y), glm::ivec2(1, 1) }));	// top right
+	vertices.push_back(BasicQuadVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, 1) }));	// top left
 	vertices.push_back(BasicQuadVertex({ glm::vec2(quad.x, quad.y + quad.h), glm::ivec2(0, 0) }));	// bottom left
-	vertices.push_back(BasicQuadVertex({ glm::vec2(quad.x + quad.w, quad.y + quad.h), glm::ivec2(screen_count.x, 0) }));	// bottom right
+	vertices.push_back(BasicQuadVertex({ glm::vec2(quad.x + quad.w, quad.y + quad.h), glm::ivec2(1, 0) }));	// bottom right
 }
 
 void BasicQuad::Render(uint64_t frame_idx, const ShaderDictionary& shaderDict)
@@ -102,6 +92,7 @@ void BasicQuad::Render(uint64_t frame_idx, const ShaderDictionary& shaderDict)
 
 	shader.setInt("ticks", SDL_GetTicks());
 	shader.setInt("frameIsOdd", (int)(frame_idx & 1));
+	shader.setInt("TEXIN", inputTextureUnit - GL_TEXTURE0);
 
 	// And set the shader parameters that were passed in
 	for (const auto& [key, value] : shaderDict) {

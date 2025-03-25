@@ -310,6 +310,9 @@
     <None Include="shaders\overlay_bezel.glsl">
       <Filter>shaders</Filter>
     </None>
+    <None Include="shaders\ntsc_sik.frag">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="assets\Apple2eFont7x16 - Alternate.png">

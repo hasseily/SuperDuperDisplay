@@ -69,11 +69,6 @@ uniform bool bForceSHRWidth;			// if on, stretch to SHR width. If off,
 uniform bool bIsMergedMode;				// if on, then only display lines that are legacy
 uniform sampler2D OFFSETTEX;			// X Offset texture for merged mode
 
-// for NTSC blending
-uniform bool bNTSC;
-uniform COMPAT_PRECISION float NTSC_COMB_STR;
-uniform COMPAT_PRECISION float NTSC_GAMMA_CORRECTION;
-
 // Special modes mask for legacy only is
 // enum A2VideoSpecialMode_e
 // {
@@ -132,7 +127,7 @@ out vec4 fragColor;
 float phase[7];		// Colorburst phase (in radians)
 float raw_y[7];    // Luma isolated from raw composite signal
 float raw_iq[7];   // Chroma isolated from raw composite signal
-bool bIsMonoNTSC = false;		// if the main color is mono, then don't do NTSC color
+
 // Converts from RGB to YIQ
 vec3 rgba2yiq(vec4 rgba)
 {
@@ -165,10 +160,10 @@ uint ROL_NIB(uint x)
         return ((x << 1) & 0xFu) | ((x >> 3) & 0x1u);
 }
 
-vec4 getcolor(float x, float y)
+void main()
 {
 	// for bForceSHRWidth or paging modes
-	vec2 vFragUpdatedPos = vec2(x, y);
+	vec2 vFragUpdatedPos = vFragPos;
 
 	// Shift based on paging mode
 	uint isInterlace = (pagingMode == 1 ? 1u : 0u);
@@ -192,7 +187,8 @@ vec4 getcolor(float x, float y)
 		if (xOffsetMerge < 0.0) {		// it is LEGACY, fix and use the offset
 			xOffsetMerge = xOffsetMerge + 10.0;
 		} else {						// it is SHR, discard the line
-			return vec4(0.0,0.0,0.0,0.0);
+			fragColor = vec4(0.0,0.0,0.0,0.0);
+			return;
 		}	
 		if ((vFragUpdatedPos.x + xOffsetMerge) < 0.0)
 		{
@@ -203,7 +199,8 @@ vec4 getcolor(float x, float y)
 				vFragUpdatedPos.x -= xOffsetMerge;
 			} else {
 				// This part clears the left side between the SHR boundary of the quad, and the actual Legacy boundary.
-				return vec4(0.0,0.0,0.0,0.0);
+				fragColor = vec4(0.0,0.0,0.0,0.0);
+				return;
 			}
 		}
 	}
@@ -221,13 +218,10 @@ vec4 getcolor(float x, float y)
 	// Extract the lower 3 bits to determine which mode to use
 	uint a2mode = targetTexel.b & 7u;	// 7 = 0b111 to mask lower 3 bits
 
-	vec4 outColor;
-
 	switch (a2mode) {
 		case 0u:	// TEXT
 		case 1u:	// DTEXT
 		{
-			bIsMonoNTSC = true;		// TEXT mode is always mono in NTSC
 			// Get the character value
 			// In TEXT mode (1u - a2mode), all 14 dots are from MAIN
 			// In DTEXT mode (a2mode), the first 7 dots are AUX, last 7 are MAIN.
@@ -276,16 +270,18 @@ vec4 getcolor(float x, float y)
 			if (monitorColorType > 0)
 			{
 				if (length(tex.rgb) > 0.f)	// phosphor color (dot is on)
-					outColor = monitorcolors[monitorColorType];
+					fragColor = monitorcolors[monitorColorType];
 				else					// black (dot is off)
-					outColor = monitorcolors[0];
+					fragColor = monitorcolors[0];
+				fragColor.a = 0.9; // To make the NTSC pass know it's mono
 			} else {
 				// Color monitor
 				// Also provide for tint coloring that the 2gs can do
-				outColor = (tex * tintcolors[(targetTexel.a & 0xF0u) >> 4])		// foreground (dot is on)
+				fragColor = (tex * tintcolors[(targetTexel.a & 0xF0u) >> 4])		// foreground (dot is on)
 				+ ((1.f - tex) * tintcolors[targetTexel.a & 0x0Fu]);	// background (dot is off)
+				fragColor.a = 0.9;	// to make the NTSC pass know it's mono
 			}
-			return outColor;
+			return;
 			break;
 		}
 		case 2u:	// LGR
@@ -312,19 +308,19 @@ vec4 getcolor(float x, float y)
 
 			ivec2 textureSize2d = textureSize(a2ModesTex2,0);
 			// if we're in DLGR (a2mode - 2u), get every other column
-			outColor = texture(a2ModesTex2,
+			fragColor = texture(a2ModesTex2,
 								(vec2(byteOrigin) + vec2(fragOffset * uvec2(1u + (a2mode - 2u), 1u)) + vec2(0.5,0.5)) / vec2(textureSize2d));
 			
 			// TODO: use a proper monochrome lookup for LGR. The patterns shouldn't be filled
 			if (monitorColorType > 0)	// monitor is monochrome
 			{
-				bIsMonoNTSC = true;
-				if (length(outColor.rgb) > 0.f)	// phosphor color (dot is on)
-					outColor = monitorcolors[monitorColorType];
+				if (length(fragColor.rgb) > 0.f)	// phosphor color (dot is on)
+					fragColor = monitorcolors[monitorColorType];
 				else							// black (dot is off)
-					outColor = monitorcolors[0];
+					fragColor = monitorcolors[0];
+				fragColor.a = 0.9; // To make the NTSC pass know it's mono
 			}
-			return outColor;
+			return;
 			break;
 		}
 		case 4u:	// HGR
@@ -362,10 +358,10 @@ For each pixel, determine which memory byte it is part of,
 
 			if (monitorColorType > 0)		// Special monochrome version
 			{
-				bIsMonoNTSC = true;
 				uint xFragPos = uFragPos.x - uint(hborder * 14);
-				outColor = monitorcolors[monitorColorType] * float(clamp(targetTexel.r & (1u << ((xFragPos % 14u)/2u)), 0u, 1u));
-				return outColor;
+				fragColor = monitorcolors[monitorColorType] * float(clamp(targetTexel.r & (1u << ((xFragPos % 14u)/2u)), 0u, 1u));
+				fragColor.a = 0.9; // To make the NTSC pass know it's mono
+				return;
 			}
 			
 			// Grab the other byte values that matter
@@ -409,7 +405,8 @@ For each pixel, determine which memory byte it is part of,
 					// For SPEC1 mode, 11011 returns black
 					if (fiveCenteredBits == 0x1Bu)	// 11011
 					{
-						return vec4(0.0,0.0,0.0,1.0);
+						fragColor = vec4(0.0,0.0,0.0,1.0);
+						return;
 					}
 				}
 				if ((specialModesMask & 0x4) > 0)// HGRSPEC2
@@ -417,7 +414,8 @@ For each pixel, determine which memory byte it is part of,
 					// For SPEC2 mode, 00100 returns white
 					if (fiveCenteredBits == 0x4u)	// 00100
 					{
-						return vec4(1.0,1.0,1.0,1.0);
+						fragColor = vec4(1.0,1.0,1.0,1.0);
+						return;
 					}
 				}
 			} // HGRSPEC1 or HGRSPEC2
@@ -426,8 +424,8 @@ For each pixel, determine which memory byte it is part of,
 			// Now get the texture color. We know the X offset as well as the fragment's offset on top of that.
 			// The y value is just the byte's value
 			ivec2 textureSize2d = textureSize(a2ModesTex3,0);
-			outColor = texture(a2ModesTex3, (vec2(texXOffset + int(fragOffset.x), targetTexel.r) + vec2(0.5,0.5)) / vec2(textureSize2d));
-			return outColor;
+			fragColor = texture(a2ModesTex3, (vec2(texXOffset + int(fragOffset.x), targetTexel.r) + vec2(0.5,0.5)) / vec2(textureSize2d));
+			return;
 			break;
 		}
 		case 5u:	// DHGR
@@ -446,10 +444,10 @@ For each pixel, determine which memory byte it is part of,
 			
 			if (monitorColorType > 0)		// Special monochrome version (basically DHGRMONO)
 			{
-				bIsMonoNTSC = true;
 				uint xFragPos = uFragPos.x - uint(hborder * 14);
-				outColor = monitorcolors[monitorColorType] * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
-				return outColor;
+				fragColor = monitorcolors[monitorColorType] * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
+				fragColor.a = 0.9; // To make the NTSC pass know it's mono
+				return;
 			}
 			
 			// We need a previous MAIN byte and a subsequent AUX byte to calculate the colors
@@ -508,9 +506,9 @@ For each pixel, determine which memory byte it is part of,
 				if (isColor == 0u)	// we're in bw mode!
 				{
 					// Same as DHGRMONO
-					bIsMonoNTSC = true;
-					outColor = vec4(1.0f) * float(clamp(((byteVal3 << 7) | (byteVal2 & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
-					return outColor;
+					fragColor = vec4(1.0f) * float(clamp(((byteVal3 << 7) | (byteVal2 & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
+					fragColor.a = 0.9; // To make the NTSC pass know it's mono
+					return;
 				}
 			}	// end bDHGRCOL140Mixed
 			
@@ -524,26 +522,26 @@ For each pixel, determine which memory byte it is part of,
 			int xVal = 10 * ((vValue >> 8) & 0xFF) + vColor;
 			int yVal = vValue & 0xFF;
 			ivec2 textureSize2d = textureSize(a2ModesTex4,0);
-			outColor = texture(a2ModesTex4, (vec2(xVal, yVal) + vec2(0.5, 0.5)) / vec2(textureSize2d));
-			return outColor;
+			fragColor = texture(a2ModesTex4, (vec2(xVal, yVal) + vec2(0.5, 0.5)) / vec2(textureSize2d));
+			return;
 			break;
 		}
 		case 6u:	// DHGR MONO
 		{
-			bIsMonoNTSC = true;
 			// Use the .g (AUX) if the dot is one of the first 7, otherwise .r (MAIN)
 			// Find out if the related bit is on, and set the color to white or black
 			uint xFragPos = uFragPos.x - uint(hborder * 14);
 			int mColorType = max(monitorColorType, 1);	// Force color to be white
-			outColor = monitorcolors[mColorType] * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
-			return outColor;
+			fragColor = monitorcolors[mColorType] * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
+			fragColor.a = 0.9; // To make the NTSC pass know it's mono
+			return;
 			break;
 		}
 		case 7u:	// BORDER
 		{
 			// Special border mode to give to the //e the border features like the 2gs
 			// It just looks at the flags byte and grabs the border color in the upper 4 bits
-			outColor = tintcolors[(targetTexel.b & 0xF0u) >> 4];
+			fragColor = tintcolors[(targetTexel.b & 0xF0u) >> 4];
 			/*
 				// The other option is to use the LGR texture colors
 				uint borderColor = targetTexel.b >> 4;
@@ -552,66 +550,29 @@ For each pixel, determine which memory byte it is part of,
 
 				// get the color from the LGR texture
 				uvec2 byteOrigin = uvec2(0u, borderColor * 16u);
-				outColor = texture(a2ModesTex2,
+				fragColor = texture(a2ModesTex2,
 									(vec2(byteOrigin) + vec2(fragOffset) + vec2(0.5,0.5)) / vec2(textureSize2d));
 			*/
 			
 			if (monitorColorType > 0)	// Monitor is monochrome
 			{
 				if (((targetTexel.b & 0xF0u) >> 4) > 0u)	// phosphor color (dot is on)
-					outColor = monitorcolors[monitorColorType];
+					fragColor = monitorcolors[monitorColorType];
 				else							// black (dot is off)
-					outColor = monitorcolors[0];
+					fragColor = monitorcolors[0];
+				fragColor.a = 0.9; // To make the NTSC pass know it's mono
 			}
-			return outColor;
+			return;
 			break;
 		}
 		default:
 		{
 			// should never happen! Set to pink for visibility
-			return vec4(1.0f, 0.f, 0.5f, 1.f);
+			fragColor = vec4(1.0f, 0.f, 0.5f, 1.f);
+			return;
 			break;
 		}
 	}
 	// Shouldn't happen either
-	return vec4(0.f, 1.0f, 0.5f, 1.f);
-}
-
-void main()
-{
-	if (bNTSC && (!bIsMonoNTSC) && (vFragPos.y > 0.9999)) {
-		// NTSC, code adapted from Sik
-		float factorX = 560.0 * 0.5 / 170.667;
-		float gamma = NTSC_GAMMA_CORRECTION / 2.2;
-		float x = vFragPos.x;
-		float y = vFragPos.y;
-		for (int n = 0; n < 7; n++, x -= factorX * 0.5) {
-			phase[n] = x / factorX * 3.1415926;
-			float raw1 = yiq2raw(rgba2yiq(getcolor(x, y)), phase[n]);
-			float raw2 = yiq2raw(rgba2yiq(getcolor(x, y - 1.0)), phase[n] + 3.1415926);
-			raw_y[n] = (raw1 + raw2) * 0.5;
-			raw_iq[n] = raw1 - (raw1 + raw2) * (NTSC_COMB_STR * 0.5);
-		}
-		float y_mix = (raw_y[0] + raw_y[1] + raw_y[2] + raw_y[3]) * 0.25;
-		float i_mix =
-			0.125 * raw_iq[0] * sin(phase[0]) +
-			0.25  * raw_iq[1] * sin(phase[1]) +
-			0.375 * raw_iq[2] * sin(phase[2]) +
-			0.5   * raw_iq[3] * sin(phase[3]) +
-			0.375 * raw_iq[4] * sin(phase[4]) +
-			0.25  * raw_iq[5] * sin(phase[5]) +
-			0.125 * raw_iq[6] * sin(phase[6]);
-		float q_mix =
-			0.125 * raw_iq[0] * cos(phase[0]) +
-			0.25  * raw_iq[1] * cos(phase[1]) +
-			0.375 * raw_iq[2] * cos(phase[2]) +
-			0.5   * raw_iq[3] * cos(phase[3]) +
-			0.375 * raw_iq[4] * cos(phase[4]) +
-			0.25  * raw_iq[5] * cos(phase[5]) +
-			0.125 * raw_iq[6] * cos(phase[6]);
-		fragColor = pow(yiq2rgba(vec3(y_mix, i_mix, q_mix)),
-						vec4(gamma, gamma, gamma, 1.0));
-	} else {
-		fragColor = getcolor(vFragPos.x, vFragPos.y);	// standard main color
-	}
+	fragColor vec4(0.f, 1.0f, 0.5f, 1.f);
 }
