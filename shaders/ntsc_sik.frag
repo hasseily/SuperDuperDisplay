@@ -33,31 +33,21 @@ float phase[7];		// Colorburst phase (in radians)
 float raw_y[7];    // Luma isolated from raw composite signal
 float raw_iq[7];   // Chroma isolated from raw composite signal
 
-// Converts from RGB to YIQ
-vec3 rgba2yiq(vec4 rgba)
-{
-	return vec3(
-				rgba[0] * 0.3 + rgba[1] * 0.59 + rgba[2] * 0.11,
-				rgba[0] * 0.599 + rgba[1] * -0.2773 + rgba[2] * -0.3217,
-				rgba[0] * 0.213 + rgba[1] * -0.5251 + rgba[2] * 0.3121
-				);
-}
+const mat3 RGB2YIQ = mat3(	0.299,  0.596,  0.211,
+							0.587, -0.274, -0.523,
+							0.114, -0.322,  0.312
+						);
+
+const mat3 YIQ2RGB = mat3(	1.000, 1.000, 1.000,
+							0.956,-0.272,-1.106,
+							0.621,-0.647, 1.703
+						);
+
 // Encodes YIQ into composite
 float yiq2raw(vec3 yiq, float phase)
 {
 	return yiq[0] + yiq[1] * sin(phase) + yiq[2] * cos(phase);
 }
-// Converts from YIQ to RGB
-vec4 yiq2rgba(vec3 yiq)
-{
-	return vec4(
-				yiq[0] + yiq[1] * 0.9469 + yiq[2] * 0.6236,
-				yiq[0] - yiq[1] * 0.2748 - yiq[2] * 0.6357,
-				yiq[0] - yiq[1] * 1.1 + yiq[2] * 1.7,
-				1.0
-				);
-}
-
 
 void main()
 {
@@ -76,8 +66,14 @@ void main()
 	float y = vTexCoords.y;
 	for (int n = 0; n < 7; n++, x -= factorX * 0.5) {
 		phase[n] = x / factorX * 3.1415926;
-		float raw1 = yiq2raw(rgba2yiq(texture(TEXIN, vec2(x, y))), phase[n]);
-		float raw2 = yiq2raw(rgba2yiq(texture(TEXIN, vec2(x, y - 1.0))), phase[n] + 3.1415926);
+		float raw1 = 0.0;
+		float raw2 = 0.0;
+		if (x >= 0.0)
+		{
+			raw1 = yiq2raw(RGB2YIQ * texture(TEXIN, vec2(x, y)).rgb, phase[n]);
+			if (vTexCoords.y > 0.999)
+				raw2 = yiq2raw(RGB2YIQ * texture(TEXIN, vec2(x, y - 1.0)).rgb, phase[n] + 3.1415926);
+		}
 		raw_y[n] = (raw1 + raw2) * 0.5;
 		raw_iq[n] = raw1 - (raw1 + raw2) * (NTSC_COMB_STR * 0.5);
 	}
@@ -98,6 +94,7 @@ void main()
 		0.375 * raw_iq[4] * cos(phase[4]) +
 		0.25  * raw_iq[5] * cos(phase[5]) +
 		0.125 * raw_iq[6] * cos(phase[6]);
-	fragColor = pow(yiq2rgba(vec3(y_mix, i_mix, q_mix)),
-					vec4(gamma, gamma, gamma, 1.0));
+	fragColor.rgb = pow(YIQ2RGB * vec3(y_mix, i_mix, q_mix),
+					vec3(gamma, gamma, gamma));
+	fragColor.a = 1.0;
 }
