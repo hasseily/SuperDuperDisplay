@@ -574,5 +574,5 @@ For each pixel, determine which memory byte it is part of,
 		}
 	}
 	// Shouldn't happen either
-	fragColor vec4(0.f, 1.0f, 0.5f, 1.f);
+	fragColor = vec4(0.f, 1.0f, 0.5f, 1.f);
 }
