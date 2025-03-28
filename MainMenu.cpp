@@ -756,7 +756,27 @@ void MainMenu::ShowSamplesMenu() {
 		MemoryLoad("samples/tomahawk2_hgr.bin", 0, false);
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
+	if (ImGui::MenuItem("DLGR")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, false);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_80COL, true);
+		memManager->SetSoftSwitch(A2SS_HIRES, false);
+		memManager->SetSoftSwitch(A2SS_DHGR, true);
+		MemoryLoadDGR("samples/deater_rewind2.dgr");
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
 	if (ImGui::MenuItem("DHGR")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, false);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_80COL, true);
+		memManager->SetSoftSwitch(A2SS_HIRES, true);
+		memManager->SetSoftSwitch(A2SS_DHGR, true);
+		MemoryLoadDHR("samples/dazzledraw_flower.dhr");
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("DHGR Mixed")) {
 		Main_ResetA2SS();
 		memManager->SetSoftSwitch(A2SS_SHR, false);
 		memManager->SetSoftSwitch(A2SS_TEXT, false);
@@ -874,6 +894,31 @@ void MainMenu::ShowDeveloperMenu() {
 		ImGui::MenuItem("HGR2", "", &a2VideoManager->bRenderHGR2);
 		ImGui::EndMenu();
 	}
+	if (ImGui::BeginMenu("Save Memory to File")) {
+		std::string _sfpath = GetMemorySaveFilePath();
+		if (ImGui::MenuItem("LGR", ""))
+			MemorySaveLGR(_sfpath);
+		if (ImGui::MenuItem("LGR 2K", ""))
+			MemorySaveLGR(_sfpath, 0x800);
+		if (ImGui::MenuItem("DGR", ""))
+			MemorySaveDGR(_sfpath);
+		if (ImGui::MenuItem("DGR 4K", ""))
+			MemorySaveDGR(_sfpath, 0x1000);
+		if (ImGui::MenuItem("HGR", ""))
+			MemorySaveHGR(_sfpath);
+		if (ImGui::MenuItem("HGR 16K", ""))
+			MemorySaveHGR(_sfpath, 0x4000);
+		if (ImGui::MenuItem("DHGR", ""))
+			MemorySaveDHR(_sfpath);
+		if (ImGui::MenuItem("DHGR 32K", ""))
+			MemorySaveDHR(_sfpath, 0x8000);
+		if (ImGui::MenuItem("SHR", ""))
+			MemorySaveDHR(_sfpath);
+		if (ImGui::MenuItem("SHR 64K", ""))
+			MemorySaveDHR(_sfpath, 0x10000);
+		ImGui::EndMenu();
+	}
+
 	/*
 	if (ImGui::BeginMenu("Shaders")) {
 		ImGui::Text("Legacy Shader");
