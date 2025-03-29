@@ -86,7 +86,7 @@ void PostProcessor::Initialize()
 
 	//Bezel shader
 	shaderProgramBezel = Shader();
-	shaderProgramBezel.build(_SHADER_VERTEX_BASIC_TRANSFORM, _SHADER_FRAGMENT_BASIC);
+	shaderProgramBezel.build("shaders/overlay_bezel.glsl", "shaders/overlay_bezel.glsl");
 }
 
 PostProcessor::~PostProcessor()
@@ -119,6 +119,8 @@ nlohmann::json PostProcessor::SerializeState()
 		{"bezelName", selectedBezelFile},
 		{"bezelWidth", bezelSize.x},
 		{"bezelHeight", bezelSize.y},
+		{"p_f_bezelReflection", p_f_bezelReflection},
+		{"p_f_reflectionBlur", p_f_reflectionBlur},
 		{"p_i_postprocessingLevel", p_i_postprocessingLevel},
 		{"bCRTFillWindow", bCRTFillWindow},
 		{"integer_scale", integer_scale},
@@ -160,7 +162,11 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_v_centerX", p_v_center.x},
 		{"p_v_centerY", p_v_center.y},
 		{"p_v_zoomX", p_v_zoom.x},
-		{"p_v_zoomY", p_v_zoom.y}
+		{"p_v_zoomY", p_v_zoom.y},
+		{"p_v_reflectionScaleX", p_v_reflectionScale.x},
+		{"p_v_reflectionScaleY", p_v_reflectionScale.y},
+		{"p_v_reflectionTranslationX", p_v_reflectionTranslation.x},
+		{"p_v_reflectionTranslationY", p_v_reflectionTranslation.y}
 	};
 	return jsonState;
 }
@@ -169,8 +175,16 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 {
 	std::strncpy(preset_name_buffer, jsonState.value("preset_name", preset_name_buffer).c_str(), sizeof(preset_name_buffer) - 1);
 	selectedBezelFile = jsonState.value("bezelName", selectedBezelFile);
+	if (selectedBezelFile != _PP_NO_BEZEL_FILENAME)
+	{
+		LoadSelectedBezel();
+		if (bezelImageAsset.image_xcount == 0)
+			selectedBezelFile = _PP_NO_BEZEL_FILENAME;
+	}
 	bezelSize.x = jsonState.value("bezelWidth", bezelSize.x);
 	bezelSize.y = jsonState.value("bezelHeight", bezelSize.y);
+	p_f_bezelReflection = jsonState.value("p_f_bezelReflection", p_f_bezelReflection);
+	p_f_reflectionBlur = jsonState.value("p_f_reflectionBlur", p_f_reflectionBlur);
 	p_i_postprocessingLevel = jsonState.value("p_i_postprocessingLevel", p_i_postprocessingLevel);
 	bCRTFillWindow = jsonState.value("bCRTFillWindow", bCRTFillWindow);
 	integer_scale = jsonState.value("integer_scale", integer_scale);
@@ -212,24 +226,25 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_v_center.y = jsonState.value("p_v_centerY", p_v_center.y);
 	p_v_zoom.x = jsonState.value("p_v_zoomX", p_v_zoom.x);
 	p_v_zoom.y = jsonState.value("p_v_zoomY", p_v_zoom.y);
+	p_v_reflectionScale.x = jsonState.value("p_v_reflectionScaleX", p_v_reflectionScale.x);
+	p_v_reflectionScale.y = jsonState.value("p_v_reflectionScaleY", p_v_reflectionScale.y);
+	p_v_reflectionTranslation.x = jsonState.value("p_v_reflectionTranslationX", p_v_reflectionTranslation.x);
+	p_v_reflectionTranslation.y = jsonState.value("p_v_reflectionTranslationY", p_v_reflectionTranslation.y);
 
 }
 
-void PostProcessor::SaveState(int profile_id) {
+void PostProcessor::SaveState(std::string filePath) {
 	nlohmann::json jsonState = SerializeState();
-	
-	std::ostringstream filename;
-	filename << "pp_profile_" << profile_id << ".json";
-	std::ofstream file(filename.str());
-	file << jsonState.dump(4); // Save with pretty printing
+	std::ofstream file(filePath);
+	if (file.is_open()) {
+		file << jsonState.dump(4); // Pretty print JSON
+		file.close();
+	}
 }
 
-void PostProcessor::LoadState(int profile_id) {
-	std::ostringstream filename;
-	filename << "pp_profile_" << profile_id << ".json";
-	std::ifstream file(filename.str());
+void PostProcessor::LoadState(std::string filePath) {
+	std::ifstream file(filePath);
 	nlohmann::json jsonState;
-	
 	if (file.is_open()) {
 		file >> jsonState;
 		DeserializeState(jsonState);
@@ -356,6 +371,10 @@ void PostProcessor::RegeneratePreviousTexture()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tA2Quad.w, tA2Quad.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, prevFrame_texture_id, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
+	// Always bind the previous frame texture to its dedicated texture unit
+	glActiveTexture(_TEXUNIT_PP_PREVIOUS);
+	glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
+	glActiveTexture(GL_TEXTURE0);
 	GLuint glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP RegeneratePreviousTexture: " << glerr << std::endl;
@@ -504,7 +523,23 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		//transformBezel = glm::translate(transformBezel, glm::vec3(static_cast<float>(viewportWidth)*bezelSize.x, static_cast<float>(viewportHeight) * bezelSize.y, 0.0f));
 		transformBezel = glm::scale(transformBezel, glm::vec3(bezelSize.x, bezelSize.y, 1.0f));
 		shaderProgramBezel.setMat4("uTransform", transformBezel);		// in the vertex shader
-		shaderProgramBezel.setInt("A2TextureCurrent", _TEXUNIT_PP_BEZEL - GL_TEXTURE0);
+		shaderProgramBezel.setInt("uMainTex", _TEXUNIT_PP_BEZEL - GL_TEXTURE0);
+		shaderProgramBezel.setInt("uA2Tex", _TEXUNIT_POSTPROCESS - GL_TEXTURE0);
+		shaderProgramBezel.setFloat("uReflectionAmount", p_f_bezelReflection);
+		shaderProgramBezel.setFloat("uReflectionBlur", p_f_reflectionBlur);
+		shaderProgramBezel.setVec2("uReflectionScale", p_v_reflectionScale);
+		shaderProgramBezel.setVec2("uReflectionTranslation", p_v_reflectionTranslation);
+		shaderProgramBezel.setBool("uOutlineQuad", p_b_outlineQuad);
+
+		glActiveTexture(_TEXUNIT_POSTPROCESS);
+		if (p_f_bezelReflection > 0.001)
+		{
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+		} else {
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        }
 		glActiveTexture(_TEXUNIT_PP_BEZEL);
 		glBindTexture(GL_TEXTURE_2D, bezelImageAsset.tex_id);
 		glBindVertexArray(quadVAO);
@@ -524,10 +559,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	// THIS _DRAMATICALLY_ REDUCES THE FPS ON A RASPBERRY PI
 	if ((p_f_ghostingPercent > 0.0000001f) || bHalveFramerate)
 	{
-		// Always bind the previous frame texture to its dedicated texture unit
-		glActiveTexture(_TEXUNIT_PP_PREVIOUS);
-		glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
-		glActiveTexture(GL_TEXTURE0);
+
 
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL error PP 4: " << glerr << std::endl;
@@ -556,6 +588,69 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	++frame_count;
 }
 
+
+void PostProcessor::ResetToDefaults()
+{
+	memset(preset_name_buffer, 0, sizeof(preset_name_buffer));
+
+	max_integer_scale = 1;
+	integer_scale = 1;		// Base integer scale used
+	bAutoScale = true;		// Automatically scale to max scale?
+	bHalveFramerate = false;	// Mixes every pair of frames, to avoid page flip flicker
+	bCRTFillWindow = false;
+
+	selectedBezelFile = _PP_NO_BEZEL_FILENAME;
+	currentBezelIndex = 0;
+	bezelSize = glm::vec2(1.0f, 1.0f);
+
+	p_b_smoothCorner = false;
+	p_b_extGamma = false;
+	p_b_slot = false;
+	p_f_barrelDistortion = 0.0f;
+	p_f_bgr = 0.0f;
+	p_f_black = 0.0f;
+	p_f_brDep = 0.2f;
+	p_f_brightness = 1.0f;
+	p_f_convB = 0.0f;
+	p_f_convG = 0.0f;
+	p_f_convR = 0.0f;
+	p_f_corner = 0.0f;
+	p_f_cStr = 0.0f;
+	p_f_hueGB = 0.0f;
+	p_f_hueRB = 0.0f;
+	p_f_hueRG = 0.0f;
+	p_f_maskHigh = 0.75f;
+	p_f_maskLow = 0.3f;
+	p_f_maskSize = 1.0f;
+	p_f_saturation = 1.0f;
+	p_f_scanlineWeight = 1.0f;
+	p_f_scanSpeed = 1.0f;
+	p_f_filmGrain = 0.0f;
+	p_f_interlace = 0.f;
+	p_f_slotW = 3.0f;
+	p_f_vignetteWeight = 0.0f;
+	p_i_cSpace = 0;
+	p_i_maskType = 0;
+	p_i_postprocessingLevel = 0;
+	p_i_scanlineType = 2;
+	p_f_ghostingPercent = 0;
+	p_f_phosphorBlur = 0.0f;
+	p_v_warp = glm::vec2(0.0f, 0.0f);
+	p_v_center = glm::vec2(0.0f, 0.0f);
+	p_v_zoom = glm::vec2(1.0f, 1.0f);
+
+	// bezel shader variables
+	p_b_outlineQuad = false;
+	p_f_bezelReflection = 0.0f;
+	p_f_reflectionBlur = 0.0f;
+	p_v_reflectionScale = glm::vec2(1.0f, 1.0f);
+	p_v_reflectionTranslation = glm::vec2(0.0f, 0.0f);
+
+	// imgui vars
+	bImGuiLockWarp = false;
+	bImGuiLockZoom = false;
+}
+
 void PostProcessor::DisplayImGuiWindow(bool* p_open)
 {
 	bImguiWindowIsOpen = p_open;
@@ -563,57 +658,53 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 	{
 		ImGui::SetNextWindowSizeConstraints(ImVec2(450, 400), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("Post Processing CRT Shader", p_open);
-		// Handle presets. Disable load/save if the chosen button is "Off"
+
+		if (ImGui::Button("Reset to defaults"))
+		{
+			ResetToDefaults();
+		}
+
+		// Handle presets
 		ImGui::Text("[ PRESETS ]");
-		if (idx_preset == 0)
-		{
-			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f); // Reduce button opacity
-			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true); // Disable button (and make it unclickable)
+		IGFD::FileDialogConfig config;
+		config.path = "./presets/";
+		static ImGuiFileDialog instance_presets;
+		if (ImGui::Button("Load")) {
+			if (instance_presets.IsOpened())
+				instance_presets.Close();
+			ImGui::SetNextWindowSize(ImVec2(800, 400));
+			instance_presets.OpenDialog("LoadStateDlg", "Choose File to Load", ".json", config);
 		}
-		if (ImGui::Button("Load##Presets"))
-		{
-			this->LoadState(idx_preset);
-		}
-		if (idx_preset == 0)
-		{
-			ImGui::PopItemFlag();
-			ImGui::PopStyleVar();
-		}
-		ImGui::SameLine();
-		ImGui::Dummy(ImVec2(5.0f, 0.0f));
-		ImGui::SameLine();
-		ImGui::RadioButton("None##Presets", &idx_preset, 0); ImGui::SameLine();
-		ImGui::RadioButton("1##Presets", &idx_preset, 1); ImGui::SameLine();
-		ImGui::RadioButton("2##Presets", &idx_preset, 2); ImGui::SameLine();
-		ImGui::RadioButton("3##Presets", &idx_preset, 3); ImGui::SameLine();
-		ImGui::RadioButton("4##Presets", &idx_preset, 4); ImGui::SameLine();
-		ImGui::RadioButton("5##Presets", &idx_preset, 5); ImGui::SameLine();
-		ImGui::RadioButton("6##Presets", &idx_preset, 6); ImGui::SameLine();
-		ImGui::RadioButton("7##Presets", &idx_preset, 7);
-		ImGui::SameLine();
-		ImGui::Dummy(ImVec2(5.0f, 0.0f));
-		ImGui::SameLine();
-		
-		if (idx_preset == 0)
-		{
-			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f); // Reduce button opacity
-			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true); // Disable button (and make it unclickable)
-		}
-		if (ImGui::Button("Save##Presets"))
-		{
-			this->SaveState(idx_preset);
-		}
-		if (idx_preset == 0)
-		{
-			ImGui::PopItemFlag();
-			ImGui::PopStyleVar();
-		}
+		ImGui::SameLine(); ImGui::Spacing(); ImGui::SameLine();	// Start Name
 		if (std::strlen(preset_name_buffer) == 0) {
-			std::strncpy(preset_name_buffer, "Unnamed", sizeof(preset_name_buffer) - 1);
+			std::strncpy(preset_name_buffer, "Untitled", sizeof(preset_name_buffer) - 1);
 		}
 		ImGui::PushItemWidth(200);
-		ImGui::InputText("Preset Name", preset_name_buffer, sizeof(preset_name_buffer));
+		ImGui::InputText("Name", preset_name_buffer, sizeof(preset_name_buffer));
 		ImGui::PopItemWidth();
+		ImGui::SameLine(); ImGui::Spacing(); ImGui::SameLine();	// End Name
+		if (ImGui::Button("Save")) {
+			if (instance_presets.IsOpened())
+				instance_presets.Close();
+			ImGui::SetNextWindowSize(ImVec2(800, 400));
+			instance_presets.OpenDialog("SaveStateDlg", "Choose Save Location", ".json", config);
+		}
+
+		if (instance_presets.Display("LoadStateDlg")) {
+			if (instance_presets.IsOk()) {
+				std::string filePath = instance_presets.GetFilePathName();
+				LoadState(filePath);
+			}
+			instance_presets.Close();
+		}
+
+		if (instance_presets.Display("SaveStateDlg")) {
+			if (instance_presets.IsOk()) {
+				std::string filePath = instance_presets.GetFilePathName();
+				SaveState(filePath);
+			}
+			instance_presets.Close();
+		}
 
 		ImGui::PushItemWidth(200);
 
@@ -621,11 +712,11 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		ImGui::Separator();
 		ImGui::Text("[ POSTPROCESSING LEVEL ]");
 		ImGui::RadioButton("None##PPLEVEL", &p_i_postprocessingLevel, 0); ImGui::SameLine();
-		ImGui::SetItemTooltip("No postprocessing, fast");
+		ImGui::SetItemTooltip("No postprocessing, optional bezel. Fastest!");
 		ImGui::RadioButton("Scanline only##PPLEVEL", &p_i_postprocessingLevel, 1); ImGui::SameLine();
-		ImGui::SetItemTooltip("Simple alternating scanlines, fastest");
+		ImGui::SetItemTooltip("Simple alternating scanlines, optional bezel. Fast.");
 		ImGui::RadioButton("Full CRT##PPLEVEL", &p_i_postprocessingLevel, 2);
-		ImGui::SetItemTooltip("Customizable CRT shader, slow");
+		ImGui::SetItemTooltip("The one and only Super Duper CRT shader. Customize away!");
 		ImGui::Separator();
 		if (p_i_postprocessingLevel == 2) {
 			ImGui::AlignTextToFramePadding();
@@ -700,22 +791,38 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		{
 			selectedBezelFile = _bezelFiles[currentBezelIndex];
 			if (currentBezelIndex > 0)
-			{
-				std::string bezelPath = "assets/bezels/" + selectedBezelFile;
-				glActiveTexture(_TEXUNIT_PP_BEZEL);
-				bezelImageAsset.AssignByFilename(bezelPath.c_str());
-				glActiveTexture(GL_TEXTURE0);
-			}
+				LoadSelectedBezel();
 		}
 		ImGui::SliderFloat("Overlay Relative Width", &bezelSize.x, 0.f, 2.f, "%.2f");
 		ImGui::SliderFloat("Overlay Relative Height", &bezelSize.y, 0.f, 2.f, "%.2f");
+		p_b_outlineQuad = false;
+		ImGui::SliderFloat("Bezel Reflection", &p_f_bezelReflection, 0.f, 0.5f, "%.3f");
+		ImGui::SetItemTooltip("WARNING: Tricky to get right. Read on for more info: \n \
+In order to make a very fast fake reflection technique, we mirror the Apple 2\n\
+texture with blur, and superpose it onto the overlay only where the bezel has\n\
+some transparency (>0, <1). Since each overlay is different, and your choice\n\
+of screen, resolution or window size is unique, you're going to have to manually\n\
+tweak the size and position of the mirrored texture to conform to your idea of\n\
+a reflection for your bezel. It takes work but can provide a really valuable\n\
+FX that makes the whole screen 'pop'. Tweak the scale and center when at 0 blur\n\
+and strong reflection, then dial blur up and reflection down.");
+		ImGui::SliderFloat("Reflection Blur", &p_f_reflectionBlur, 0.0f, 10.f, "%.3f");
+		if (ImGui::DragFloat2("Reflection Scale", reinterpret_cast<float*>(&p_v_reflectionScale), 
+			0.001f, 0.001f, 5.0f, "%.3f"))
+			p_b_outlineQuad = true;
+		if (ImGui::DragFloat2("Reflection Center", reinterpret_cast<float*>(&p_v_reflectionTranslation),
+			0.001f, -4.f, 4.f, "%.3f"))
+			p_b_outlineQuad = true;
 
 		ImGui::Separator();
 
 		ImGui::Text("[ FRAME MERGING ]");
 		ImGui::Checkbox("Merge Frame Pairs", &bHalveFramerate);
-		ImGui::SetItemTooltip("WARNING: SIGNIFICANT FPS IMPACT! \nMerges every pair of even and odd frames. Effectively halves the frame rate but removes any flickering associated with page flipping images");
-
+		ImGui::SetItemTooltip("WARNING: SIGNIFICANT FPS IMPACT!\n\
+Merges every pair of even and odd frames.\n\
+Effectively halves the frame rate\n\
+but removes any flickering associated\n\
+with page flipping images");
 		if (p_i_postprocessingLevel == 2) {
 			ImGui::Separator();
 			// Scanline and Interlacing
@@ -769,7 +876,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::RadioButton("None##Mask", &p_i_maskType, 0); ImGui::SameLine();
 			ImGui::RadioButton("CGWG##Mask", &p_i_maskType, 1); ImGui::SameLine();
 			ImGui::RadioButton("RGB##Mask", &p_i_maskType, 2);
-			ImGui::SliderFloat("Mask Size", &p_f_maskSize, 1.0f, 2.0f, "%.1f");
+			ImGui::DragFloat("Mask Size", &p_f_maskSize, 0.001f, 0.001f, 20.0f, "%.3f");
 			ImGui::Checkbox("Slot Mask On/Off", &p_b_slot);
 			ImGui::SliderFloat("Slot Mask Width", &p_f_slotW, 2.0f, 3.0f, "%.1f");
 			ImGui::SliderFloat("Subpixels BGR/RGB", &p_f_bgr, 0.0f, 1.0f, "%.1f");
@@ -804,9 +911,9 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			ImGui::SliderFloat("Saturation", &p_f_saturation, 0.0f, 3.0f, "%.2f");
 			ImGui::SliderFloat("Brightness", &p_f_brightness, 0.0f, 4.0f, "%.2f");
 			ImGui::SliderFloat("Black Level", &p_f_black, -0.50f, 0.50f, "%.2f");
-			ImGui::SliderFloat("Green <-to-> Red Hue", &p_f_hueRG, -0.25f, 0.25f, "%.2f");
-			ImGui::SliderFloat("Blue <-to-> Red Hue", &p_f_hueRB, -0.25f, 0.25f, "%.2f");
-			ImGui::SliderFloat("Blue <-to-> Green Hue", &p_f_hueGB, -0.25f, 0.25f, "%.2f");
+			ImGui::SliderFloat("Green <-to-> Red Hue", &p_f_hueRG, -2.50f, 2.50f, "%.2f");
+			ImGui::SliderFloat("Blue <-to-> Red Hue", &p_f_hueRB, -2.50f, 2.50f, "%.2f");
+			ImGui::SliderFloat("Blue <-to-> Green Hue", &p_f_hueGB, -2.50f, 2.50f, "%.2f");
 			ImGui::Checkbox("External Gamma In (Glow etc)", &p_b_extGamma);
 			ImGui::Separator();
 			

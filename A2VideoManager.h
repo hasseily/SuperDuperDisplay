@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "common.h"
+#include "BasicQuad.h"
 #include "A2WindowBeam.h"
 #include "VidHdWindowBeam.h"
 #include "CycleCounter.h"
@@ -99,6 +100,8 @@ constexpr uint32_t _COLORBYTESOFFSET = 1 + 32;	// the color bytes are offset eve
 
 
 constexpr uint32_t A2VIDEORENDER_ERROR = UINT32_MAX;			// render error
+constexpr int32_t SDLUSEREVENT_A2NEWFRAME = 1001;				// user code for new frame event
+constexpr int32_t MAX_USEREVENTS_IN_QUEUE = 4;					// maximum frames in queue when VSYNC to Apple 2 bus
 
 class A2VideoManager
 {
@@ -126,7 +129,7 @@ public:
 		uint8_t* vram_forced_hgr2 = nullptr;
 		GLfloat* offset_buffer = nullptr;
 		int frameSHR4Modes = 0;					// All SHR4 modes in the frame
-		int doubleSHR4Mode = 0;			// DoubleSHR4Mode_e : may use E0 (main) $2000-9FFF for interlace or page flip
+		int pagedMode = 0;			// DoubleSHR4Mode_e : may use E0 (main) $2000-9FFF for interlace or page flip
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -219,11 +222,13 @@ public:
 
 	inline uint32_t GetVramWidthLegacy() { return (40 + (2 * borders_w_cycles)); };	// in 4 bytes!
 	inline uint32_t GetVramHeightLegacy() { return  (192 + (2 * borders_h_scanlines)); };
-	inline uint32_t GetVramSizeLegacy() { return (GetVramWidthLegacy() * GetVramHeightLegacy() * 4); };	// in bytes
+	inline uint32_t GetVramSizeLegacy() { return (GetVramWidthLegacy() * GetVramHeightLegacy() * 4 * _INTERLACE_MULTIPLIER); };	// in bytes
 
 	inline uint32_t GetVramWidthSHR() { return (_COLORBYTESOFFSET + (2 * borders_w_cycles * 4) + 160); };	// in bytes
 	inline uint32_t GetVramHeightSHR() { return  (200 + (2 * borders_h_scanlines)); };
 	inline uint32_t GetVramSizeSHR() { return (GetVramWidthSHR() * GetVramHeightSHR() * _INTERLACE_MULTIPLIER); };	// in bytes
+
+	inline const VideoRegion_e GetCurrentRegion() { return current_region; };
 
 	// Changing borders reinitializes everything
 	// Cycle for width (7 or 8 (SHR) lines per increment)
@@ -274,9 +279,7 @@ private:
 	bool bShouldInitializeRender = true;	// Used to tell the render method to run initialization
 	bool bIsRebooting = false;              // Rebooting semaphore
 	bool bIsSwitchingToMergedMode = false;	// True when refreshing earlier scanlines for merged mode
-	bool bShouldDoubleSHR = false;			// Handles updating E0 (main) for double SHR
-
-	bool bMirrorRepeatOutputTexture = false;	// Choose to mirror repeat texture wrap, or not
+	bool bShouldPageDouble = false;			// Handles updating for double paged mode
 
 	// imgui vars
 	bool bImguiWindowIsOpen = false;
@@ -286,12 +289,16 @@ private:
 	int overrideSHR4Mode = 0;				// Cached here to keep the value between A2WindowBeam resets
 	int overrideDoubleSHR = 0;				// At 0, don't override. Above 0, substract 1 to get the override value
 	int overrideVidHDTextMode = VIDHDMODE_NONE;
+	int overrideLegacyPaging = 0;			// Forces paging in legacy modes
 	int c022TextColorForeNibble = 0;
 	int c022TextColorBackNibble = 0;
 	int vidHdTextAlphaForeNibble = 0b1111;
 	int vidHdTextAlphaBackNibble = 0b1111;
 	std::string sImguiLoadPath = ".";
 	float bWobblePower = 0.200;
+	bool p_b_ntsc = false;					// if true, there is a first render pass into FBO_NTSC
+	float p_f_ntscCombStrength = 0.8f;
+	float p_f_ntscGammaCorrection = 2.5f;
 
 	// beam render state variables
 	BeamState_e beamState = BeamState_e::UNKNOWN;
@@ -317,12 +324,20 @@ private:
 	GLuint FBO_A2Video = UINT_MAX;			// the framebuffer object
 	GLuint a2video_texture_id = UINT_MAX;	// the generated texture
 
+	// These are for when NTSC is requested. Because NTSC needs to sample 16 times
+	// the texture, we first generate the legacy texture in a different FBO,
+	// then run the NTSC shader on that texture into the FBO_A2Video.
+	// Otherwise the innards of legacy shader code would need to run 15 more times
+	// to determine the value of all 15 neighboring pixels.
+	GLuint FBO_NTSC = UINT_MAX;
+	GLuint ntsc_texture_id = UINT_MAX;
+	// This quad will get rendered using the previously generated legacy texture
+	// and use the NTSC shader, into the FBO_A2Video
+	std::unique_ptr<BasicQuad> legacyNTSCQuad;
+
 	// for debugging, displaying textures TEXT1/2, HGR1/2
 	GLuint FBO_debug[4] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
 	GLuint debug_texture_id[4] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
-
-	GLuint quadVAO = UINT_MAX;	// FOR MERGED MODE TODO: GET RID OF THAT
-	GLuint quadVBO = UINT_MAX;
 
 	// OFFSET buffer texture. Holds one signed int for each scanline to tell the shader
 	// how much to offset by x a line for the sine wobble of the merge
@@ -351,6 +366,11 @@ private:
 	// The merged framebuffer width is going to be shr + border
 	GLint fb_width = 0;
 	GLint fb_height = 0;
+
+	// user event for new frame
+	SDL_Event event_newframe;
+	// used to determine how many user events are active
+	SDL_Event user_events_active[MAX_USEREVENTS_IN_QUEUE];
 
 	// Overlay strings handling
 	uint8_t overlay_text[_OVERLAY_CHAR_WIDTH *24];	// text for each overlay

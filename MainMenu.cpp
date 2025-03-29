@@ -237,7 +237,7 @@ void MainMenu::Render() {
 			ImGui::Begin("About", &pGui->bShowAboutWindow, ImGuiWindowFlags_AlwaysAutoResize);
 			ImGui::Text("Super Duper Display");
 			ImGui::Separator();
-			ImGui::Text("Version: 0.5.1");
+			ImGui::Text("Version: 0.6.2");
 			ImGui::Text("Software: Henri \"Rikkles\" Asseily");
 			ImGui::Text("Design & Firmware: John \"Elltwo\" Flanagan");
 			ImGui::Text("Appletini logo by Rikkles+Fatdog");
@@ -336,7 +336,7 @@ void MainMenu::Render() {
 			ImGui::SetNextWindowSizeConstraints(ImVec2(300, 250), ImVec2(FLT_MAX, FLT_MAX));
 			ImGui::Begin("Texture Viewer", &pGui->bShowTextureWindow);
 			ImVec2 avail_size = ImGui::GetContentRegionAvail();
-			ImGui::SliderInt("Texture Slot Number", &pGui->iTextureSlotIdx, 0, _SDHR_MAX_TEXTURES + 3, "slot %d", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderInt("Texture Slot Number", &pGui->iTextureSlotIdx, 0, _SDHR_MAX_TEXTURES + 4, "slot %d", ImGuiSliderFlags_AlwaysClamp);
 			GLint _w, _h;
 			auto glhelper = OpenGLHelper::GetInstance();
 			if (pGui->iTextureSlotIdx < _SDHR_MAX_TEXTURES)
@@ -390,6 +390,18 @@ void MainMenu::Render() {
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
 				ImGui::Text("_TEXUNIT_POSTPROCESS: %d (%d x %d)", target_tex_id, _w, _h);
+				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
+			}
+			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 4)
+			{
+				glActiveTexture(_TEXUNIT_PRE_NTSC);
+				GLint target_tex_id = 0;
+				glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, target_tex_id);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
+				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &_h);
+				ImGui::Text("_TEXUNIT_PRE_NTSC: %d (%d x %d)", target_tex_id, _w, _h);
 				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
 			glActiveTexture(GL_TEXTURE0);
@@ -744,7 +756,27 @@ void MainMenu::ShowSamplesMenu() {
 		MemoryLoad("samples/tomahawk2_hgr.bin", 0, false);
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
+	if (ImGui::MenuItem("DLGR")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, false);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_80COL, true);
+		memManager->SetSoftSwitch(A2SS_HIRES, false);
+		memManager->SetSoftSwitch(A2SS_DHGR, true);
+		MemoryLoadDGR("samples/deater_rewind2.dgr");
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
 	if (ImGui::MenuItem("DHGR")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, false);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_80COL, true);
+		memManager->SetSoftSwitch(A2SS_HIRES, true);
+		memManager->SetSoftSwitch(A2SS_DHGR, true);
+		MemoryLoadDHR("samples/dazzledraw_flower.dhr");
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
+	if (ImGui::MenuItem("DHGR Mixed")) {
 		Main_ResetA2SS();
 		memManager->SetSoftSwitch(A2SS_SHR, false);
 		memManager->SetSoftSwitch(A2SS_TEXT, false);
@@ -862,6 +894,31 @@ void MainMenu::ShowDeveloperMenu() {
 		ImGui::MenuItem("HGR2", "", &a2VideoManager->bRenderHGR2);
 		ImGui::EndMenu();
 	}
+	if (ImGui::BeginMenu("Save Memory to File")) {
+		std::string _sfpath = GetMemorySaveFilePath();
+		if (ImGui::MenuItem("LGR", ""))
+			MemorySaveLGR(_sfpath);
+		if (ImGui::MenuItem("LGR 2K", ""))
+			MemorySaveLGR(_sfpath, 0x800);
+		if (ImGui::MenuItem("DGR", ""))
+			MemorySaveDGR(_sfpath);
+		if (ImGui::MenuItem("DGR 4K", ""))
+			MemorySaveDGR(_sfpath, 0x1000);
+		if (ImGui::MenuItem("HGR", ""))
+			MemorySaveHGR(_sfpath);
+		if (ImGui::MenuItem("HGR 16K", ""))
+			MemorySaveHGR(_sfpath, 0x4000);
+		if (ImGui::MenuItem("DHGR", ""))
+			MemorySaveDHR(_sfpath);
+		if (ImGui::MenuItem("DHGR 32K", ""))
+			MemorySaveDHR(_sfpath, 0x8000);
+		if (ImGui::MenuItem("SHR", ""))
+			MemorySaveDHR(_sfpath);
+		if (ImGui::MenuItem("SHR 64K", ""))
+			MemorySaveDHR(_sfpath, 0x10000);
+		ImGui::EndMenu();
+	}
+
 	/*
 	if (ImGui::BeginMenu("Shaders")) {
 		ImGui::Text("Legacy Shader");

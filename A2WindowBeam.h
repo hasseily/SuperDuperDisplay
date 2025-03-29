@@ -37,13 +37,15 @@ enum A2VideoSpecialMode_e
 	A2_VSM_SHR4R4G4B4		= 0b1000'0000,	// New SHR4 modes - r4G4B4 (see shader for details)
 };
 
-// Special double SHR4 modes that use both E0 and E1 banks
-enum DoubleSHR4Mode_e
+// Special paged modes that use both E0 and E1 banks
+// For SHR, it uses E1$2000 for the main page, and E0$2000 for the alternate page
+// For legacy, it uses $2000 for the main page, and $4000 for the alternate page
+enum DoubleMode_e
 {
-	DSHR4_NONE = 0,
-	DSHR4_INTERLACE,
-	DSHR4_PAGEFLIP,
-	DSHR4_TOTAL_COUNT
+	DOUBLE_NONE = 0,
+	DOUBLE_INTERLACE,
+	DOUBLE_PAGEFLIP,
+	DOULBE_TOTAL_COUNT
 };
 
 // Monitor color type
@@ -87,7 +89,9 @@ public:
 
 	int specialModesMask = A2_VSM_NONE;		// Or'ed A2VideoSpecialMode_e
 	int overrideSHR4Mode = 0;				// Debugging to override the SHR4 modes in the shader
-	int doubleSHR4 = DSHR4_NONE;
+// TODO: merge pagingMode with doubleSHR4
+	int doubleSHR4 = DOUBLE_NONE;
+	int pagingMode = DOUBLE_NONE;			// Override of paging for legacy
 	int monitorColorType = A2_MON_COLOR;	// Monitor color type A2VideoMonitorType_e
 
 private:

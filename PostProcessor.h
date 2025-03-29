@@ -26,6 +26,7 @@ public:
 
 	void Render(SDL_Window* window, GLuint inputTextureSlot, GLuint scanlineCount);
 	void DisplayImGuiWindow(bool* p_open);
+
 	nlohmann::json SerializeState();
 	void DeserializeState(const nlohmann::json &jsonState);
 
@@ -39,11 +40,20 @@ public:
 	std::vector<Shader>v_ppshaders;
 private:
 	void Initialize();
-	void SaveState(int profile_id);
-	void LoadState(int profile_id);
+	void SaveState(std::string filePath);
+	void LoadState(std::string filePath);
 	int PopulateBezelFiles(std::vector<std::string>& bezelFiles, const std::string& selectedBezelFile);
 	void SelectShader();
 	void RegeneratePreviousTexture();
+	void ResetToDefaults();
+
+	void LoadSelectedBezel()
+	{
+		std::string bezelPath = "assets/bezels/" + selectedBezelFile;
+		glActiveTexture(_TEXUNIT_PP_BEZEL);
+		bezelImageAsset.AssignByFilename(bezelPath.c_str());
+		glActiveTexture(GL_TEXTURE0);
+	}
 
 	// Singleton pattern
 	static PostProcessor* s_instance;
@@ -87,7 +97,6 @@ private:
 	bool bCRTFillWindow = false;
 
 	int frame_count = 0;	// Frame count for interlacing, it may not be aligned with A2Video frames
-	int idx_preset = 0;		// Preset chosen
 	char preset_name_buffer[28];	// Preset's name
 	int max_integer_scale = 1;	// Maximum possible integer scale given screen size
 	int integer_scale = 1;		// Base integer scale used
@@ -134,6 +143,13 @@ private:
 	glm::vec2 p_v_warp = glm::vec2(0.0f, 0.0f);	// curvature
 	glm::vec2 p_v_center = glm::vec2(0.0f, 0.0f);
 	glm::vec2 p_v_zoom = glm::vec2(1.0f, 1.0f);
+
+	// bezel shader variables
+	bool p_b_outlineQuad = false;
+	float p_f_bezelReflection = 0.0f;
+	float p_f_reflectionBlur = 0.0f;
+	glm::vec2 p_v_reflectionScale = glm::vec2(1.0f, 1.0f);
+	glm::vec2 p_v_reflectionTranslation = glm::vec2(0.0f, 0.0f);
 
 	// imgui vars
 	bool bImGuiLockWarp = false;

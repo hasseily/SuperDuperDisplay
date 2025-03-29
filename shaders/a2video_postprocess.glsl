@@ -1,10 +1,10 @@
-
 /*
+By Rikkles.
 
-Based on 'crt-Cyclon' by DariusG
-
-This shader uses parts from:
-crt-Geom (scanlines)
+This shader is a frankenstein and uses parts from:
+crt-Cyclon by DariusG
+crt-Geom (alternate scanlines)
+Mattias CRT
 Quillez (main filter)
 Dogway's inverse Gamma
 
@@ -34,7 +34,6 @@ in vec2 TexCoord;
 out vec2 TexCoords; // Pass texture coordinates to fragment shader
 out vec2 scale;
 out vec2 ps;
-out vec2 v_pos;
 
 uniform COMPAT_PRECISION int iFrameCount;
 uniform COMPAT_PRECISION vec2 OutputSize;
@@ -49,7 +48,6 @@ void main()
 	TexCoords = TexCoord;
 	scale = OutputSize.xy/TextureSize.xy;
 	ps = 1.0/TextureSize.xy;
-	v_pos = gl_Position.xy;
 }
 
 ///////////////////////////////////////// FRAGMENT SHADER /////////////////////////////////////////
@@ -67,7 +65,6 @@ uniform bool bHalveFrameRate;
 in vec2 TexCoords;
 in vec2 scale;
 in vec2 ps;
-in vec2 v_pos;
 out vec4 FragColor;
 
 uniform COMPAT_PRECISION int POSTPROCESSING_LEVEL;
@@ -79,7 +76,7 @@ uniform bool bCORNER_SMOOTH;
 uniform bool bEXT_GAMMA;
 uniform bool bPOTATO; 
 uniform bool bSLOT;
-uniform bool bVIGNETTE; 
+uniform bool bVIGNETTE;
 uniform COMPAT_PRECISION float BARRELDISTORTION;
 uniform COMPAT_PRECISION float BGR;
 uniform COMPAT_PRECISION float BLACK; 
@@ -110,6 +107,7 @@ uniform COMPAT_PRECISION int iSCANLINE_TYPE;
 uniform COMPAT_PRECISION vec2 vWARP;
 uniform COMPAT_PRECISION vec2 vCENTER;
 uniform COMPAT_PRECISION vec2 vZOOM;
+
 
 #define fTime (float(iFrameCount) / 60.0)
 #define iResolution OutputSize.xy
@@ -162,7 +160,7 @@ vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 			// As we get closer to the color (the higher the ghosting, the higher the cutoff),
 			// at some point we need to accelerate the move. Otherwise at higher ghosting values
 			// the color will never be reached (especially visible when fading to black)
-			blended = mix(currentColor, previousColor, 0.96);
+			blended = mix(currentColor, previousColor, 0.4);
 		else
 			blended = mix(currentColor, previousColor, GhostingPercent/100.0);
 	}
@@ -174,7 +172,7 @@ vec4 PhosphorBlur(sampler2D tex, vec2 uv, vec2 resolution, float blurAmount) {
     vec4 color = textureLod(tex, uv, blurAmount);
     // Increase brightness linearly based on blurAmount.
     float brightnessFactor = 1.0 + blurAmount;
-    return color * brightnessFactor;
+    return 	clamp(color * brightnessFactor,0.0,1.0);
 }
 
 vec3 Mask(vec2 pos, float CGWG) {
@@ -317,9 +315,9 @@ float rand(vec2 co)
 }
 
 void main() {
-	FragColor = texture(A2TextureCurrent, TexCoords);
 
 	if (POSTPROCESSING_LEVEL == 0) {
+		FragColor = texture(A2TextureCurrent, TexCoords);
 		if (bHalveFrameRate)
 			FragColor = HalveFrameRate(TexCoords, FragColor);
 		if (GhostingPercent > 0.0001)
@@ -339,6 +337,7 @@ void main() {
 	
 // Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1) {
+		FragColor = texture(A2TextureCurrent, TexCoords);
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
 		if (bHalveFrameRate)
 			FragColor = HalveFrameRate(TexCoords, FragColor);
@@ -387,22 +386,28 @@ void main() {
 				discard;
 	}
 
-	if (BlurSize > 0.000001)
-		FragColor = PhosphorBlur(A2TextureCurrent, pos, TextureSize, BlurSize);
+	vec4 res0;
+	vec3 res;
+
+	if (BlurSize > 0.001)
+		res0 = PhosphorBlur(A2TextureCurrent, pos, TextureSize, BlurSize);
 	else
-		FragColor = texture(A2TextureCurrent,pos);
+		res0 = texture(A2TextureCurrent,pos);
 
-// Convergence
-	vec3 res0 = FragColor.rgb;
-	float resr = texture(A2TextureCurrent,pos + dx*CONV_R).r;
-	float resg = texture(A2TextureCurrent,pos + dx*CONV_G).g;
-	float resb = texture(A2TextureCurrent,pos + dx*CONV_B).b;
+	// Convergence
+	if ((CONV_R+CONV_G+CONV_B) > 0.001) {
+		float resr = texture(A2TextureCurrent,pos + dx*CONV_R).r;
+		float resg = texture(A2TextureCurrent,pos + dx*CONV_G).g;
+		float resb = texture(A2TextureCurrent,pos + dx*CONV_B).b;
 
-	vec3 res = vec3(res0.r*(1.0-C_STR) + resr*C_STR,
+		res = vec3(res0.r*(1.0-C_STR) + resr*C_STR,
 					res0.g*(1.0-C_STR) + resg*C_STR,
 					res0.b*(1.0-C_STR) + resb*C_STR
 					);
-	
+	} else {
+		res = res0.rgb;
+	}
+	res = clamp(res,0.0,1.0);
 	float l = dot(vec3(BR_DEP),res);
 
  // Color Spaces 
@@ -420,7 +425,7 @@ void main() {
 		res *= vec3(0.29,0.6,0.11); 
 		res = clamp(res,0.0,1.0);
 	}
-	
+
 	// Mask CGWG definition, used for scanlines
 	float CGWG = 0.3;
 	if (bSLOT)
@@ -477,7 +482,7 @@ void main() {
 	*/
 
 // Masks
-	vec2 xy = TexCoords*OutputSize.xy*scale/MSIZE;	
+	vec2 xy = TexCoords*OutputSize.xy/MSIZE;	
 	res *= Mask(xy, CGWG);
 
 // Apply slot mask on top of Trinitron-like mask
@@ -497,6 +502,8 @@ void main() {
 	res *= hue;
 	res -= vec3(BLACK);
 	res *= blck;
+
+	res = clamp(res,0.0,1.0);
 
 	FragColor = vec4(res, corn);
 

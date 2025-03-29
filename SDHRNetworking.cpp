@@ -123,6 +123,8 @@ const std::string get_tini_last_error_string() { return get_ft_status_message(ft
 
 const bool tini_is_ok()
 {
+	if (!bIsConnected)
+		return FT_SUCCESS(FT_DEVICE_NOT_CONNECTED);
 	return FT_SUCCESS(ftStatus);
 }
 
@@ -327,7 +329,6 @@ void process_single_event(SDHREvent& e)
 
 int process_usb_events_thread(std::atomic<bool>* shouldTerminateProcessing) {
 	std::cout << "starting usb processing thread" << std::endl;
-	bIsConnected = true;
 	while (!(*shouldTerminateProcessing)) {
 		auto packet = packetInQueue.pop();
 		uint32_t* p = (uint32_t*)packet->data;
@@ -385,10 +386,10 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 	clear_queues();
 	std::cout << "Starting USB thread" << std::endl;
 	FT_HANDLE handle = NULL;
-	bool connected = false;
+	bIsConnected = false;
 	std::chrono::steady_clock::time_point next_connect_timeout{};
 	while (!(*shouldTerminateNetworking)) {
-		if (!connected) {
+		if (!bIsConnected) {
 			if (next_connect_timeout > std::chrono::steady_clock::now()) {
 				SDL_Delay(200);
 				continue;
@@ -467,7 +468,7 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 
 			activeNode = nodes[0];
 			std::cerr << "Connected to FPGA usb device" << std::endl;
-			connected = true;
+			bIsConnected = true;
 		}
 
 		auto packet = packetFreeQueue.pop();

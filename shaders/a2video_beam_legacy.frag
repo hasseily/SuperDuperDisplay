@@ -18,7 +18,7 @@ This shader expects as input a VRAMTEX texture that has the following features:
 - Color B is 8 bits of state, including the graphics mode and soft switches
 - Color A is the fore and background colors, as specified in the C022 softswitch
 - 40 pixels wide, where MAIN and AUX are interleaved, starting with AUX
-- 192 lines high, which is the Apple 2 scanlines
+- 2x192 lines high, where the second part is unused unless interlace/paging is requested
 
 The flags byte (Color B) is:
 	bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO, BORDER)
@@ -63,6 +63,8 @@ uniform sampler2D a2ModesTex2;			// LGR
 uniform sampler2D a2ModesTex3;			// HGR
 uniform sampler2D a2ModesTex4;			// DHGR
 
+uniform int pagingMode;					// 0: NONE, 1: INTERLACE, 2: PAGEFLIP
+uniform int pagingOffset;				// Y offset if paging
 uniform bool bForceSHRWidth;			// if on, stretch to SHR width. If off,
 uniform bool bIsMergedMode;				// if on, then only display lines that are legacy
 uniform sampler2D OFFSETTEX;			// X Offset texture for merged mode
@@ -93,7 +95,7 @@ uniform int monitorColorType;
 const vec4 monitorcolors[5] = vec4[5](
     vec4(0.000000,	0.000000,	0.000000,	1.000000)	/*BLACK, -- this is a color monitor */
     ,vec4(1.000000,	1.000000,	1.000000,	1.000000)	/*WHITE PHOSPHOR,*/
-    ,vec4(0.290196,	1.000000,	0.000000,	1.000000)	/*GREEN PHOSPHOR,*/
+    ,vec4(0.000000,	1.000000,	0.290196,	1.000000)	/*GREEN PHOSPHOR,*/
     ,vec4(1.000000,	0.717647,	0.000000,	1.000000)	/*AMBER PHOSPHOR,*/
     ,vec4(1.000000,	0.000000,	0.500000,	1.000000)	/*PINK, -- this option shouldn't exist */
 );
@@ -121,6 +123,35 @@ const vec4 tintcolors[16] = vec4[16](
 in vec2 vFragPos;       // The fragment position in pixels
 out vec4 fragColor;
 
+// For NTSC
+float phase[7];		// Colorburst phase (in radians)
+float raw_y[7];    // Luma isolated from raw composite signal
+float raw_iq[7];   // Chroma isolated from raw composite signal
+
+// Converts from RGB to YIQ
+vec3 rgba2yiq(vec4 rgba)
+{
+	return vec3(
+				rgba[0] * 0.3 + rgba[1] * 0.59 + rgba[2] * 0.11,
+				rgba[0] * 0.599 + rgba[1] * -0.2773 + rgba[2] * -0.3217,
+				rgba[0] * 0.213 + rgba[1] * -0.5251 + rgba[2] * 0.3121
+				);
+}
+// Encodes YIQ into composite
+float yiq2raw(vec3 yiq, float phase)
+{
+	return yiq[0] + yiq[1] * sin(phase) + yiq[2] * cos(phase);
+}
+// Converts from YIQ to RGB
+vec4 yiq2rgba(vec3 yiq)
+{
+	return vec4(
+				yiq[0] + yiq[1] * 0.9469 + yiq[2] * 0.6236,
+				yiq[0] - yiq[1] * 0.2748 - yiq[2] * 0.6357,
+				yiq[0] - yiq[1] * 1.1 + yiq[2] * 1.7,
+				1.0
+				);
+}
 
 // Perform left rotation on a 4-bit nibble (for DLGR AUX memory)
 // Because AUX is one cycle before MAIN (for DHGR, it's embedded in the texture)
@@ -131,8 +162,17 @@ uint ROL_NIB(uint x)
 
 void main()
 {
-	// for bForceSHRWidth
+	// for bForceSHRWidth or paging modes
 	vec2 vFragUpdatedPos = vFragPos;
+
+	// Shift based on paging mode
+	uint isInterlace = (pagingMode == 1 ? 1u : 0u);
+	uint isPageFlip = (pagingMode == 2 ? 1u : 0u);
+	uint yOffsetLines = 0u;
+	if (isInterlace == 1u)	// the offset is used for odd lines (*2 because lines are doubled)
+		vFragUpdatedPos.y += float(pagingOffset*2) * float(uint(vFragUpdatedPos.y) & 1u);
+	if (isPageFlip == 1u)	// the offset is used for odd frames
+		vFragUpdatedPos.y += float(pagingOffset*2) * (float(frameIsOdd));
 
 	// Check if we're in merged mode. If so, determine if the line is a legacy line.
 	// If not, exit early. If it is legacy, then shift accordingly
@@ -233,11 +273,13 @@ void main()
 					fragColor = monitorcolors[monitorColorType];
 				else					// black (dot is off)
 					fragColor = monitorcolors[0];
+				fragColor.a = 0.9; // To make the NTSC pass know it's mono
 			} else {
 				// Color monitor
 				// Also provide for tint coloring that the 2gs can do
 				fragColor = (tex * tintcolors[(targetTexel.a & 0xF0u) >> 4])		// foreground (dot is on)
 				+ ((1.f - tex) * tintcolors[targetTexel.a & 0x0Fu]);	// background (dot is off)
+				fragColor.a = 0.9;	// to make the NTSC pass know it's mono
 			}
 			return;
 			break;
@@ -276,6 +318,7 @@ void main()
 					fragColor = monitorcolors[monitorColorType];
 				else							// black (dot is off)
 					fragColor = monitorcolors[0];
+				fragColor.a = 0.9; // To make the NTSC pass know it's mono
 			}
 			return;
 			break;
@@ -317,6 +360,7 @@ For each pixel, determine which memory byte it is part of,
 			{
 				uint xFragPos = uFragPos.x - uint(hborder * 14);
 				fragColor = monitorcolors[monitorColorType] * float(clamp(targetTexel.r & (1u << ((xFragPos % 14u)/2u)), 0u, 1u));
+				fragColor.a = 0.9; // To make the NTSC pass know it's mono
 				return;
 			}
 			
@@ -402,6 +446,7 @@ For each pixel, determine which memory byte it is part of,
 			{
 				uint xFragPos = uFragPos.x - uint(hborder * 14);
 				fragColor = monitorcolors[monitorColorType] * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
+				fragColor.a = 0.9; // To make the NTSC pass know it's mono
 				return;
 			}
 			
@@ -462,6 +507,7 @@ For each pixel, determine which memory byte it is part of,
 				{
 					// Same as DHGRMONO
 					fragColor = vec4(1.0f) * float(clamp(((byteVal3 << 7) | (byteVal2 & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
+					fragColor.a = 0.9; // To make the NTSC pass know it's mono
 					return;
 				}
 			}	// end bDHGRCOL140Mixed
@@ -487,6 +533,7 @@ For each pixel, determine which memory byte it is part of,
 			uint xFragPos = uFragPos.x - uint(hborder * 14);
 			int mColorType = max(monitorColorType, 1);	// Force color to be white
 			fragColor = monitorcolors[mColorType] * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
+			fragColor.a = 0.9; // To make the NTSC pass know it's mono
 			return;
 			break;
 		}
@@ -513,6 +560,7 @@ For each pixel, determine which memory byte it is part of,
 					fragColor = monitorcolors[monitorColorType];
 				else							// black (dot is off)
 					fragColor = monitorcolors[0];
+				fragColor.a = 0.9; // To make the NTSC pass know it's mono
 			}
 			return;
 			break;

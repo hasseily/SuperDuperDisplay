@@ -56,15 +56,21 @@ static SDL_DisplayMode g_fullscreenMode;
 static bool g_isLinuxConsole = false;
 
 // For FPS calculations
+static auto pfreq = SDL_GetPerformanceFrequency();
 static float fps_worst = 1000000.f;
 static uint64_t fps_frame_count = 0;
 static uint64_t fps_last_counter_display = 0;
 static char fps_str_buf[40];
 
-bool _bDisableVideoRender = false;
-bool _bDisablePPRender = false;
-bool bDisplayFPSOnScreen = false;
-float _fpsAverageTimeWindow = 1.f;	// in seconds
+float fpsAverageTimeWindow = 1.f;	// in seconds
+
+// State booleans to determine what to do
+bool bDisplayFPSOnScreen = false;	// Show FPS on screen
+bool bIsSwapApple2Bus = false;		// Swap interval is the Apple 2 bus & tini is active
+bool bShouldRenderA2Video = true;	// Render the Apple 2 video buffer
+bool bA2VideoDidRender = false;		// Did the Apple 2 video render, or no need?
+bool bShouldPostProcess = false;	// Send to PP and possibly to flip the frame
+bool bShouldSwapFrame = true;		// After PP, frame should be swapped
 
 // OpenGL Debug callback function
 void GLAPIENTRY DebugCallbackKHR(GLenum source,
@@ -337,18 +343,18 @@ int main(int argc, char* argv[])
 	(void)argc;		// mark as unused
 	(void)argv;		// mark as unused
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
-    // when double-clicking the app, change to its working directory
-    char *dir = dirname(strdup(argv[0]));
-    chdir(dir);
+	// when double-clicking the app, change to its working directory
+	char *dir = dirname(strdup(argv[0]));
+	chdir(dir);
 #endif
 
 	GLenum glerr;
-    // Setup SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
-    {
-        printf("Error: %s\n", SDL_GetError());
-        return -1;
-    }
+	// Setup SDL
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
+	{
+		printf("Error: %s\n", SDL_GetError());
+		return -1;
+	}
 
 #if defined(__LINUX__)
 	const char* video_driver = SDL_GetCurrentVideoDriver();
@@ -358,13 +364,13 @@ int main(int argc, char* argv[])
 #endif
 
 
-    // Decide GL+GLSL versions
-    auto glhelper = OpenGLHelper::GetInstance();
-    glhelper->set_gl_version();
+	// Decide GL+GLSL versions
+	auto glhelper = OpenGLHelper::GetInstance();
+	glhelper->set_gl_version();
 
-    // From 2.0.18: Enable native IME.
+	// From 2.0.18: Enable native IME.
 #ifdef SDL_HINT_IME_SHOW_UI
-    SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
+	SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
 #endif
 
 #ifdef DEBUG
@@ -372,23 +378,23 @@ int main(int argc, char* argv[])
 #else
 #define _MAINWINDOWNAME "Super Duper Display"
 #endif
-    // Create window with graphics context
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+	// Create window with graphics context
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 #if defined(__APPLE__)
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
-        | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-        | SDL_WINDOW_SHOWN);
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
+		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
+		| SDL_WINDOW_HIDDEN);
 #elif defined(IMGUI_IMPL_OPENGL_ES2)
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
 		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI 
-		| SDL_WINDOW_SHOWN);
+		| SDL_WINDOW_HIDDEN);
 #else
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
-        | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-        | SDL_WINDOW_SHOWN);
+		| SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
+		| SDL_WINDOW_HIDDEN);
 #endif
 
 	// Special case for Linux console mode, make it fullscreen always
@@ -418,21 +424,21 @@ int main(int argc, char* argv[])
 	// switch display mode to 1200x1000
 #endif
 
-    window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+	window = SDL_CreateWindow(_MAINWINDOWNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		g_ww, g_wh, window_flags);
-    SDL_GLContext gl_context = SDL_GL_CreateContext(window);
-    SDL_GL_MakeCurrent(window, gl_context);
+	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+	SDL_GL_MakeCurrent(window, gl_context);
 
-    // Initialize GLAD
-    if (!initialize_glad()) {
-        SDL_GL_DeleteContext(gl_context);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return 1;
-    }
+	// Initialize GLAD
+	if (!initialize_glad()) {
+		SDL_GL_DeleteContext(gl_context);
+		SDL_DestroyWindow(window);
+		SDL_Quit();
+		return 1;
+	}
 
 	while ((glerr = glGetError()) != GL_NO_ERROR) {
-        // reset and clear error
+		// reset and clear error
 		std::cerr << "gladLoadGL error: " << glerr << std::endl;
 	}
 	
@@ -446,16 +452,16 @@ int main(int argc, char* argv[])
 	}
 #endif
 	
-    // glEnable(GL_DEPTH_TEST); // TODO: Check if necessary
-    glEnable(GL_CULL_FACE);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	// glEnable(GL_DEPTH_TEST); // TODO: Check if necessary
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL glEnable error: " << glerr << std::endl;
 	}
 
-    // Our state
+	// Our state
 	static MemoryEditor mem_edit_a2e;
 	static MemoryEditor mem_edit_upload;
 
@@ -464,12 +470,16 @@ int main(int argc, char* argv[])
 
 	std::atomic<bool> bShouldTerminateNetworking = false;
 	std::atomic<bool> bShouldTerminateProcessing = false;
-    bool show_metrics_window = false;
+	bool show_metrics_window = false;
 	bool show_texture_window = false;
 	bool show_a2video_window = true;
 	bool show_postprocessing_window = false;
 	bool show_recorder_window = false;
 	VideoRegion_e vbl_region = VideoRegion_e::NTSC;		// videoregion_e::Unknown is auto
+	
+	// texture unit used by the main renderer,
+	// to send to postprocessing
+	GLuint A2VIDEO_TEX_UNIT = 0;
 
 	// Get the instances of all singletons before creating threads
 	// This ensures thread safety
@@ -498,9 +508,9 @@ int main(int argc, char* argv[])
 	}
 	std::cout << "Renderer Ready!" << std::endl;
 
-    // Delta Time
+	// Delta Time
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
-    uint64_t dt_LAST = 0;
+	uint64_t dt_LAST = 0;
 	float deltaTime = 0.f;
 
 	Main_SetVsync(g_swapInterval);
@@ -549,6 +559,8 @@ int main(int argc, char* argv[])
 			vbl_region = (VideoRegion_e)_sm.value("videoregion", vbl_region);
 			if (vbl_region == VideoRegion_e::Unknown)
 				cycleCounter->SetVideoRegion(VideoRegion_e::NTSC);
+			else
+				cycleCounter->SetVideoRegion(vbl_region);
 			if (_sm.value("show F1 window", true))
 				Main_ToggleImGui(gl_context);
 			show_a2video_window = _sm.value("show Apple 2 Video window", show_a2video_window);
@@ -574,7 +586,7 @@ int main(int argc, char* argv[])
 		std::cerr << "No saved Settings.json file" << std::endl;
 	}
 	
-
+	SDL_ShowWindow(window);
 	SDL_GetWindowPosition(window, &g_wx, &g_wy);
 	SDL_GetWindowSize(window, &g_ww, &g_wh);
 		
@@ -589,7 +601,7 @@ int main(int argc, char* argv[])
 	// And run the processing thread
 	std::thread thread_processor(process_usb_events_thread, &bShouldTerminateProcessing);
 
-    while (!g_quitIsRequested)
+	while (!g_quitIsRequested)
 	{
 		// Check if we should reboot
 		if (a2VideoManager->bShouldReboot)
@@ -597,26 +609,34 @@ int main(int argc, char* argv[])
 			std::cerr << "Reset detected" << std::endl;
 			a2VideoManager->bShouldReboot = false;
 			a2VideoManager->ResetComputer();
+			if (bDisplayFPSOnScreen)
+				Main_DrawFPSOverlay();	// It is wiped by the reset
 		}
 		a2VideoManager->CheckSetBordersWithReinit();
+
+		bShouldRenderA2Video = true;
+		bA2VideoDidRender = false;
+		bShouldPostProcess = false;
+		bShouldSwapFrame = true;
+		bIsSwapApple2Bus = (g_swapInterval == SWAPINTERVAL_APPLE2BUS) && tini_is_ok();
 
 		if (!eventRecorder->IsInReplayMode())
 			eventRecorder->StartReplay();
 
-        SDL_Event event;
+		SDL_Event event;
 		while (SDL_PollEvent(&event))
-        {
+		{
 			if (Main_IsImGuiOn())
 			{
 				// handled in imgui
 				if (menu->HandleEvent(event))
 					continue;
 			}
-            switch (event.type) {
-            case SDL_QUIT:
+			switch (event.type) {
+			case SDL_QUIT:
 				Main_RequestAppQuit();
-                break;
-            case SDL_WINDOWEVENT:
+				break;
+			case SDL_WINDOWEVENT:
 			{
 				if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
 					glViewport(0, 0, event.window.data1, event.window.data2);
@@ -636,18 +656,20 @@ int main(int argc, char* argv[])
 				if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
 					Main_RequestAppQuit();
 			}
-                break;
-            case SDL_MOUSEMOTION:
+				break;
+			case SDL_MOUSEMOTION:
 				lastMouseMoveTime = SDL_GetTicks();
-                if (event.motion.state & SDL_BUTTON_RMASK) {
-                    // Move the camera when the right mouse button is pressed while moving the mouse
-                    sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
-                }
-                break;
-            case SDL_MOUSEWHEEL:
-				sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
-                break;
-            case SDL_KEYDOWN:
+				if (event.motion.state & SDL_BUTTON_RMASK) {
+					// Move the camera when the right mouse button is pressed while moving the mouse
+					if (sdhrManager->IsSdhrEnabled())
+						sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
+				}
+				break;
+			case SDL_MOUSEWHEEL:
+				if (sdhrManager->IsSdhrEnabled())
+					sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
+				break;
+			case SDL_KEYDOWN:
 			{
 				if (event.key.keysym.sym == SDLK_F4) {  // Quit on ALT-F4
 					if (SDL_GetModState() & KMOD_ALT) {
@@ -684,130 +706,190 @@ int main(int argc, char* argv[])
 					if (Main_IsFullScreen())
 						Main_SetFullScreen(false);
 				}
-				// Camera movement!
-				switch (event.key.keysym.sym)
+				if (sdhrManager->IsSdhrEnabled())
 				{
-				case SDLK_w:
-					sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
-					break;
-				case SDLK_s:
-					sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
-					break;
-				case SDLK_a:
-					sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
-					break;
-				case SDLK_d:
-					sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
-					break;
-				case SDLK_q:
-					sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
-					break;
-				case SDLK_z:
-					sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
-					break;
-				default:
-					break;
-				};
+					// Camera movement!
+					switch (event.key.keysym.sym)
+					{
+					case SDLK_w:
+						sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
+						break;
+					case SDLK_s:
+						sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
+						break;
+					case SDLK_a:
+						sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
+						break;
+					case SDLK_d:
+						sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
+						break;
+					case SDLK_q:
+						sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
+						break;
+					case SDLK_z:
+						sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
+						break;
+					default:
+						break;
+					};
+				}
 			}
-                break;
-            default:
-                break;
-            }   // switch event.type
-        }   // while SDL_PollEvent
+				break;
+			case SDL_USEREVENT:
+				if (event.user.code == SDLUSEREVENT_A2NEWFRAME)
+				{
+					if (bIsSwapApple2Bus)
+					{
+						// This is a special case for handling the VSYNC with the Apple 2 bus:
+						// An A2NEWFRAME event is sent when the beam racing code has just finished a frame.
+						// We go through the A2->PP->frameSwap process unless the PP forbids the
+						// frame swapping for reasons of frame merging.
+						// NOTE: These events could be very close to each other, and multiple ones could
+						// be in the queue. We must absolutely process all of them fully to be VSYNC'ed to
+						// the bus itself. However, if we get 2+ events in one loop then we're just
+						// going to be reusing the last VRAM read buffer for all the frames. It's not ideal but
+						// there's no way to do better unless we triple or quadruple buffer the VRAM buffers,
+						// or use a variable queue. Still though, if the host is too slow the buffers will
+						// always overrun, so we max the # of frame events in the queue at MAX_USEREVENTS_IN_QUEUE
+						bA2VideoDidRender = a2VideoManager->Render(A2VIDEO_TEX_UNIT);
+						// if (bA2VideoDidRender == false)
+							// std::cerr << "Multiple A2 frames in one loop" << std::endl;
+						if (A2VIDEO_TEX_UNIT == A2VIDEORENDER_ERROR)
+							std::cerr << "ERROR: NO RENDERER OUTPUT!" << std::endl;
+						glBindFramebuffer(GL_FRAMEBUFFER, 0);
+						glClearColor(
+							window_bgcolor[0],
+							window_bgcolor[1],
+							window_bgcolor[2],
+							window_bgcolor[3]);
+						glClear(GL_COLOR_BUFFER_BIT);
+						postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
+						if (!postProcessor->ShouldFrameBeSkipped())
+						{
+							if (Main_IsImGuiOn())
+							{
+								menu->Render();
+							}
+							else {
+								if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
+									SDL_ShowCursor(SDL_DISABLE);
+								else
+									SDL_ShowCursor(SDL_ENABLE);
+							}
+							SDL_GL_SwapWindow(window);
+							fps_frame_count++;
+						}
+					}
+				}
+				break;
+			default:
+				break;
+			}   // switch event.type
+		}   // while SDL_PollEvent
 
-		// texture unit used by the main renderer,
-		// to send to postprocessing
-		GLuint A2VIDEO_TEX_UNIT = 0;
-		bool a2VideoDidRender = false;
-		if (!_bDisableVideoRender)
+		if (!bIsSwapApple2Bus)
 		{
 			// if (sdhrManager->IsSdhrEnabled())
 			// 		A2VIDEO_TEX_UNIT = sdhrManager->Render();
 			// else
-			a2VideoDidRender = a2VideoManager->Render(A2VIDEO_TEX_UNIT);
-		}
+			if (bShouldRenderA2Video)
+				bA2VideoDidRender = a2VideoManager->Render(A2VIDEO_TEX_UNIT);
+			if (A2VIDEO_TEX_UNIT == A2VIDEORENDER_ERROR)
+				std::cerr << "ERROR: NO RENDERER OUTPUT!" << std::endl;
 
-		if (A2VIDEO_TEX_UNIT == A2VIDEORENDER_ERROR)
-			std::cerr << "ERROR: NO RENDERER OUTPUT!" << std::endl;
-		
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		
-		glClearColor(
-			window_bgcolor[0], 
-			window_bgcolor[1], 
-			window_bgcolor[2],
-			window_bgcolor[3]);
-		glClear(GL_COLOR_BUFFER_BIT);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// Now run the postprocessing.
-		// If we asked for the Apple 2 bus vsync, then only post process if the A2 renderer ran
-		if (!_bDisablePPRender)
-		{
-			if ((g_swapInterval == SWAPINTERVAL_APPLE2BUS) && tini_is_ok())
+			glClearColor(
+				window_bgcolor[0],
+				window_bgcolor[1],
+				window_bgcolor[2],
+				window_bgcolor[3]);
+			glClear(GL_COLOR_BUFFER_BIT);
+
+			// Now run the postprocessing (not for IsSwapApple2Bus)
+			if (!bIsSwapApple2Bus)
 			{
-				if (a2VideoDidRender)
-					postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
-			} else {
 				postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
 			}
-		}
 
-		if (Main_IsImGuiOn())
-		{
-			menu->Render();
-		}
-		else {
-			// Disable mouse if unused after cursorHideDelay
-			// It's possible that the cursor won't get disabled when in windowed mode
-			// (MacOS doesn't allow this, for example)
-			if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
-				SDL_ShowCursor(SDL_DISABLE);
-			else
-				SDL_ShowCursor(SDL_ENABLE);
-		}
+			// Determine if frame should be swapped, or nothing done
+			// Do that after the postprocessing phase, because PP may
+			// be asking to skip a frame for merging even/odd frames
+			if (postProcessor->ShouldFrameBeSkipped())
+				bShouldSwapFrame = false;	// PP asking to not display the frame
 
-		if (!postProcessor->ShouldFrameBeSkipped())
-		{
-			// This is for halving the frame rate
-			// If we're halving the frame rate, then even frames do not display
-			// They're rendered in the postprocessing phase and copied to the prev_texture
-			// but they're not displayed. Then on the next odd frame, both are mixed
-			// at 50% and output
-			SDL_GL_SwapWindow(window);
-		}
+			if (bShouldSwapFrame)
+			{
+				// This frame will be shown, so update ImGui and swap
+				if (Main_IsImGuiOn())
+				{
+					menu->Render();
+				}
+				else {
+					// Disable mouse if unused after cursorHideDelay
+					// It's possible that the cursor won't get disabled when in windowed mode
+					// (MacOS doesn't allow this, for example)
+					if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
+						SDL_ShowCursor(SDL_DISABLE);
+					else
+						SDL_ShowCursor(SDL_ENABLE);
+				}
+				SDL_GL_SwapWindow(window);
+				fps_frame_count++;
+			}
+		}	// !bIsSwapApple2Bus
 
-		// FRAME COUNTS, FREQUENCY AND RATES
-		fps_frame_count++;
-		dt_LAST = dt_NOW;
-		auto _pfreq = SDL_GetPerformanceFrequency();
-		// Allow for custom FPS when not in VSYNC
+		// DELAY MANAGEMENT (to reduce wasteful CPU usage every loop)
+		// Add a delay when not in monitor VSYNC to optimize CPU usage, and allow for custom FPS
+		// This does not apply to SWAPINTERVAL_APPLE2BUS and an active Appletini, which must 
+		// go as quickly as possible in order to have ideally a maximum of one frame per loop
+		auto _newfpsLimit = UINT32_MAX;
 		if (g_swapInterval == SWAPINTERVAL_NONE)
+			_newfpsLimit = g_fpsLimit;
+		else if (g_swapInterval == SWAPINTERVAL_APPLE2BUS)
 		{
+			if (tini_is_ok())
+				_newfpsLimit = UINT32_MAX;	// don't delay
+			else
+				_newfpsLimit = 60;			// set a fixed 60 fps, no need for more
+		}
+		if (_newfpsLimit != UINT32_MAX)
+		{
+			float _frameTicks = pfreq / (float)g_fpsLimit;
+			float _regionFps = (a2VideoManager->GetCurrentRegion() == VideoRegion_e::NTSC ? 59.95 : 50.00);
+			if (g_swapInterval == SWAPINTERVAL_APPLE2BUS)
+				_frameTicks = pfreq / _regionFps;
+			uint64_t _elapsedTicks;
+			uint32_t delayMs;
 			while (true)
 			{
-				if ((SDL_GetPerformanceCounter() - dt_LAST) >=
-					(_pfreq / g_fpsLimit))
+				_elapsedTicks = SDL_GetPerformanceCounter() - dt_NOW;
+				if (_elapsedTicks >= _frameTicks)
+					break;
+				double _remainingTicks = _frameTicks - _elapsedTicks;
+				delayMs = static_cast<uint32_t>((_remainingTicks * 1000) / pfreq);
+				if (delayMs > 1)
+				{
+					SDL_Delay(delayMs-1);
+					// std::cerr << "Delaying " << 1 << std::endl;
+				}
+			}
+			while (true)
+			{
+				if ((SDL_GetPerformanceCounter() - dt_NOW) >= (_frameTicks - pfreq/1000))
 					break;
 			}
 		}
-		// And if we've requested to sync to the tini, and it's not ready,
-		// max the fps at 60
-		if ((g_swapInterval == SWAPINTERVAL_APPLE2BUS) && !tini_is_ok())
-		{
-			while (true)
-			{
-				if ((SDL_GetPerformanceCounter() - dt_LAST) >=
-					(_pfreq / 60))
-					break;
-			}
-		}
+
+		// Finalize the frame info
+		dt_LAST = dt_NOW;
 		dt_NOW = SDL_GetPerformanceCounter();
-		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)_pfreq);
+		deltaTime = 1000.f * (float)((dt_NOW - dt_LAST) / (float)pfreq);
 		// Calculate and display frame rate every second
 		auto _fps_delta = dt_NOW - fps_last_counter_display;
-		if (_fps_delta > (_fpsAverageTimeWindow * _pfreq))
+		if (_fps_delta > (fpsAverageTimeWindow * pfreq))
 		{
-			float fps = fps_frame_count / ((float)_fps_delta / _pfreq);
+			float fps = fps_frame_count / ((float)_fps_delta / pfreq);
 			if ((fps_worst > fps) && (fps > 0))
 				fps_worst = fps;
 
@@ -828,17 +910,17 @@ int main(int argc, char* argv[])
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL end of render error: " << glerr << std::endl;
 		}
-    }	// main loop
+	}	// main loop
 
 	eventRecorder->StopReplay();
 	soundManager->StopPlay();
 
-    // Stop all threads
+	// Stop all threads
 	bShouldTerminateProcessing = true;
 	terminate_processing_thread();
 	thread_processor.join();
-    bShouldTerminateNetworking = true;
-    thread_server.join();
+	bShouldTerminateNetworking = true;
+	thread_server.join();
 
 	// Serialize settings and save them
 	{
@@ -883,12 +965,12 @@ int main(int argc, char* argv[])
 		}
 	}
 	
-    // Cleanup
+	// Cleanup
 	delete menu;
 	
-    SDL_GL_DeleteContext(gl_context);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+	SDL_GL_DeleteContext(gl_context);
+	SDL_DestroyWindow(window);
+	SDL_Quit();
 
-    return 0;
+	return 0;
 }

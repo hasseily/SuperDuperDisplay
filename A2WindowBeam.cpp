@@ -175,7 +175,7 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 					// Adjust the unpack alignment for textures with arbitrary widths
 					glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 					// Don't update the interlace part if unnecessary
-					int _hasDSHR4 = (doubleSHR4 == DSHR4_NONE ? 0 : 1);
+					int _hasDSHR4 = (doubleSHR4 == DOUBLE_NONE ? 0 : 1);
 					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_w_with_border * 4),
 									(_A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines)) * (_hasDSHR4 + 1),
 									GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
@@ -203,7 +203,10 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 40, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetHGR2VRAMReadPtr());
 				break;
 			default:
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_w_with_border, 192 + (2 * border_height_scanlines), GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+				int _hasDoubleSize = (pagingMode == DOUBLE_NONE ? 0 : 1);
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cycles_w_with_border, 
+					(192 + (2 * border_height_scanlines)) * (_hasDoubleSize + 1),
+						GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
 		}
 	}
@@ -238,7 +241,9 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetHGR2VRAMReadPtr());
 				break;
 			default:
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, cycles_w_with_border, 192 + (2 * border_height_scanlines), 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI,
+					cycles_w_with_border, (192 + (2 * border_height_scanlines))*_INTERLACE_MULTIPLIER,
+					0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetLegacyVRAMReadPtr());
 				break;
 		}
 		vramTextureExists = true;
@@ -272,11 +277,15 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 		shader.setInt("PAL256TEX", _TEXUNIT_PAL256BUFFER - GL_TEXTURE0);
 		shader.setInt("overrideSHR4Mode", overrideSHR4Mode);
 		shader.setInt("doubleSHR4Mode", doubleSHR4);
-		int _hasDSHR4 = (doubleSHR4 == DSHR4_NONE ? 0 : 1);
+		int _hasDSHR4 = (doubleSHR4 == DOUBLE_NONE ? 0 : 1);
 		shader.setInt("doubleSHR4YOffset", _hasDSHR4 * (_A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines)));
 		shader.setInt("doublePal256YOffset", _hasDSHR4 * (_A2VIDEO_SHR_SCANLINES));
 	}
-	else {
+	else 
+	{
+		shader.setInt("pagingMode", pagingMode);
+		int _hasPaging = (pagingMode == DOUBLE_NONE ? 0 : 1);
+		shader.setInt("pagingOffset", _hasPaging * (192 + (2 * border_height_scanlines)));
 		shader.setInt("a2ModesTex0", _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0);
 		shader.setInt("a2ModesTex1", _TEXUNIT_IMAGE_FONT_ROM_ALTERNATE - GL_TEXTURE0);
 		shader.setInt("a2ModesTex2", _TEXUNIT_IMAGE_COMPOSITE_LGR - GL_TEXTURE0);

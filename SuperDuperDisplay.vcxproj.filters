@@ -111,6 +111,9 @@
     <ClCompile Include="VidHdWindowBeam.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="BasicQuad.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -233,6 +236,9 @@
     <ClInclude Include="VidHdWindowBeam.h">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="BasicQuad.h">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
@@ -299,6 +305,12 @@
       <Filter>shaders</Filter>
     </None>
     <None Include="shaders\basic_with_transform.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\overlay_bezel.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\ntsc_sik.frag">
       <Filter>shaders</Filter>
     </None>
   </ItemGroup>
