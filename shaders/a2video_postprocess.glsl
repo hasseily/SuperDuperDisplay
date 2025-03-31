@@ -113,12 +113,20 @@ uniform COMPAT_PRECISION vec2 vZOOM;
 #define iResolution OutputSize.xy
 #define fragCoord gl_FragCoord.xy
 
-// Utility functions to convert from/to sRGB/linear space
-vec3 toLinear(vec3 srgbColor) {
-	return pow(srgbColor, vec3(2.2));
+#define GAMMA 2.2
+
+//Decode gamma to linear color
+vec4 gamma_decode(vec4 srgb)
+{
+	if (bEXT_GAMMA)
+		return srgb;
+	return pow(srgb, vec4(GAMMA,GAMMA,GAMMA,1.0));
 }
-vec3 toGamma(vec3 linearColor) {
-	return pow(linearColor, vec3(1.0 / 2.2));
+
+//Encode linear color to gamma
+vec4 gamma_encode(vec4 lrgb)
+{
+	return pow(lrgb, 1.0/vec4(GAMMA,GAMMA,GAMMA,1.0));
 }
 
 // This function merges 2 generated frames: if it's an even frame nothing
@@ -127,28 +135,25 @@ vec3 toGamma(vec3 linearColor) {
 // The background buffer isn't flipped and we overwrite it. The end result
 // is that the frame rate is halved, and we only display even+odd during
 // odd frames
+// NOTE: currentColor must be in linear space already
 vec4 HalveFrameRate(vec2 coords, vec4 currentColor)
 {
 	if ((iFrameCount & 1) == 1) {
-		vec4 previousColor = texture(PreviousFrame, coords);
-
-		// Convert both colors to linear space
-		vec3 linearCurrent = toLinear(currentColor.rgb);
-		vec3 linearPrevious = toLinear(previousColor.rgb);
+		vec3 previousColor = gamma_decode(texture(PreviousFrame, coords)).rgb;
 
 		// Perform the mix in linear space
-		vec3 linearMix = (linearCurrent + linearPrevious) * 0.5;
+		vec3 linearMix = (currentColor.rgb + previousColor) * 0.5;
 
-		// Convert the mixed color back to sRGB space
-		vec3 gammaMix = toGamma(linearMix);
-		return vec4(gammaMix, 1.0);
+		return vec4(linearMix, 1.0);
 	}
 	return currentColor;
 }
 
+// Creates a ghosting effect by mixing in the previous frame
+// NOTE: currentColor must be in linear space already
 vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 {
-	vec4 previousColor = texture(PreviousFrame, coords);
+	vec4 previousColor = gamma_decode(texture(PreviousFrame, coords));
 	// Calculate the intensity levels of both frames
 	float currentIntensity = dot(currentColor.rgb, vec3(0.299, 0.587, 0.114));
 	float previousIntensity = dot(previousColor.rgb, vec3(0.299, 0.587, 0.114));
@@ -168,11 +173,12 @@ vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 }
 
 // Use the LODs for the phosphor blur, which is much faster than sampling neighbor points
+// NOTE: returns color in linear space
 vec4 PhosphorBlur(sampler2D tex, vec2 uv, vec2 resolution, float blurAmount) {
-    vec4 color = textureLod(tex, uv, blurAmount);
+    vec4 color = gamma_decode(textureLod(tex, uv, blurAmount));
     // Increase brightness linearly based on blurAmount.
     float brightnessFactor = 1.0 + blurAmount;
-    return 	clamp(color * brightnessFactor,0.0,1.0);
+    return clamp(color * brightnessFactor,0.0,1.0);
 }
 
 vec3 Mask(vec2 pos, float CGWG) {
@@ -318,10 +324,14 @@ void main() {
 
 	if (POSTPROCESSING_LEVEL == 0) {
 		FragColor = texture(A2TextureCurrent, TexCoords);
-		if (bHalveFrameRate)
-			FragColor = HalveFrameRate(TexCoords, FragColor);
-		if (GhostingPercent > 0.0001)
-			FragColor = GenerateGhosting(TexCoords, FragColor);
+		if (bHalveFrameRate || ((GhostingPercent > 0.0001))) {
+			FragColor = gamma_decode(FragColor);
+			if (bHalveFrameRate)
+				FragColor = HalveFrameRate(TexCoords, FragColor);
+			if (GhostingPercent > 0.0001)
+				FragColor = GenerateGhosting(TexCoords, FragColor);
+			FragColor = gamma_encode(FragColor);
+		}
 		return;
 	}
 
@@ -337,12 +347,13 @@ void main() {
 	
 // Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1) {
-		FragColor = texture(A2TextureCurrent, TexCoords);
+		FragColor = gamma_decode(texture(A2TextureCurrent, TexCoords));
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
 		if (bHalveFrameRate)
 			FragColor = HalveFrameRate(TexCoords, FragColor);
 		if (GhostingPercent > 0.0001)
 			FragColor = GenerateGhosting(TexCoords, FragColor);
+		FragColor = gamma_encode(FragColor);
 		return;
 	}
 
@@ -392,27 +403,27 @@ void main() {
 	if (BlurSize > 0.001)
 		res0 = PhosphorBlur(A2TextureCurrent, pos, TextureSize, BlurSize);
 	else
-		res0 = texture(A2TextureCurrent,pos);
+		res0 = gamma_decode(texture(A2TextureCurrent,pos));
 
+	res = res0.rgb;
 	// Convergence
-	if ((CONV_R+CONV_G+CONV_B) > 0.001) {
-		float resr = texture(A2TextureCurrent,pos + dx*CONV_R).r;
-		float resg = texture(A2TextureCurrent,pos + dx*CONV_G).g;
-		float resb = texture(A2TextureCurrent,pos + dx*CONV_B).b;
+	if (C_STR > 0.0001) {
+		if ((CONV_R+CONV_G+CONV_B) > 0.001) {
+			float resr = gamma_decode(texture(A2TextureCurrent,pos + dx*CONV_R)).r;
+			float resg = gamma_decode(texture(A2TextureCurrent,pos + dx*CONV_G)).g;
+			float resb = gamma_decode(texture(A2TextureCurrent,pos + dx*CONV_B)).b;
 
-		res = vec3(res0.r*(1.0-C_STR) + resr*C_STR,
-					res0.g*(1.0-C_STR) + resg*C_STR,
-					res0.b*(1.0-C_STR) + resb*C_STR
-					);
-	} else {
-		res = res0.rgb;
+			res = vec3(res0.r*(1.0-C_STR) + resr*C_STR,
+					   res0.g*(1.0-C_STR) + resg*C_STR,
+					   res0.b*(1.0-C_STR) + resb*C_STR
+					   );
+		}
 	}
+
 	res = clamp(res,0.0,1.0);
 	float l = dot(vec3(BR_DEP),res);
 
- // Color Spaces 
-	if(!bEXT_GAMMA)
-		res *= res;
+ // Color Spaces
 	if (iCOLOR_SPACE != 0) {
 		if (iCOLOR_SPACE == 1)
 			res *= PAL;
@@ -489,10 +500,6 @@ void main() {
 	if (bSLOT)
 		res *= mix(slot(xy/2.0),vec3(1.0),CGWG);
 
-// Fix up the gamma
-	res = sqrt(res);
-	res *= mix(1.3,1.1,l);
-
 // Saturation
 	float lum = dot(vec3(0.29,0.60,0.11),res);
 	res = mix(vec3(lum),res,SATURATION);
@@ -513,6 +520,7 @@ void main() {
 	if (GhostingPercent > 0.0001) {
 		FragColor = GenerateGhosting(TexCoords, FragColor);
 	}
+	FragColor = gamma_encode(FragColor);
 }
 
 #endif

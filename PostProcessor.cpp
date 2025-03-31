@@ -914,12 +914,14 @@ with page flipping images");
 			ImGui::SliderFloat("Green <-to-> Red Hue", &p_f_hueRG, -2.50f, 2.50f, "%.2f");
 			ImGui::SliderFloat("Blue <-to-> Red Hue", &p_f_hueRB, -2.50f, 2.50f, "%.2f");
 			ImGui::SliderFloat("Blue <-to-> Green Hue", &p_f_hueGB, -2.50f, 2.50f, "%.2f");
-			ImGui::Checkbox("External Gamma In (Glow etc)", &p_b_extGamma);
+			ImGui::Checkbox("External Gamma In", &p_b_extGamma);
+			ImGui::SetItemTooltip("Should be checked if input is already in linear space. Keep it unchecked generally.");
 			ImGui::Separator();
 			
 			// Convergence Settings
 			ImGui::Text("[ CONVERGENCE SETTINGS ]");
 			ImGui::SliderFloat("Convergence Overall Strength", &p_f_cStr, 0.0f, 0.5f, "%.2f");
+			ImGui::SetItemTooltip("WARNING: Some FPS impact.");
 			ImGui::SliderFloat("Convergence Red X-Axis", &p_f_convR, -3.0f, 3.0f, "%.2f");
 			ImGui::SliderFloat("Convergence Green X-axis", &p_f_convG, -3.0f, 3.0f, "%.2f");
 			ImGui::SliderFloat("Convergence Blue X-Axis", &p_f_convB, -3.0f, 3.0f, "%.2f");
