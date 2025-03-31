@@ -383,8 +383,8 @@ void MockingboardManager::Util_SpeakDemoPhrase()
 	// Data is formatted like the sample phrases in the MB disk1
 	// Sets of 5 bytes, starting with the highest register (FF) and
 	// ending with the Duration/Phoneme register
-	const uint8_t phrase[220] = {
-		0x50, 0xD0, 0x00, 0xCF, 0x00,	// PAUSE
+	const uint8_t phrase[210] = {
+		0x50, 0x50, 0x00, 0xCF, 0x00,	// PAUSE
 		0xE8, 0x70, 0xA8, 0x5F, 0x00,	// PAUSE
 		0xE8, 0x70, 0xA8, 0x5F, 0x00,	// PAUSE
 		0xE8, 0x70, 0xA8, 0x5F, 0x00,	// PAUSE
@@ -426,8 +426,8 @@ void MockingboardManager::Util_SpeakDemoPhrase()
 		0xE8, 0x78, 0xA8, 0x41, 0x30,	// S
 		0xE8, 0x70, 0xA8, 0x39, 0xFF,	// LB
 		0xE8, 0x70, 0xA8, 0x39, 0x00,	// PAUSE
-		0xE8, 0xFF, 0xA8, 0x39, 0x00,	// PAUSE
-		0xE8, 0x7B, 0xA8, 0x47, 0xFF,	// LB
+//		0xE8, 0xFF, 0xA8, 0x39, 0x00,	// PAUSE
+//		0xE8, 0x7B, 0xA8, 0x47, 0xFF,	// LB
 	};
 	// The active SSI263 chip is at index 1
 	ssi[1].ResetRegisters();
@@ -435,14 +435,14 @@ void MockingboardManager::Util_SpeakDemoPhrase()
 	EventReceived(0xC443, 0x80, 0);	// Reg 3, raise CTL
 	EventReceived(0xC440, 0xC0, 0);	// Set TRANSITIONED_INFLECTION
 	EventReceived(0xC443, 0x70, 0);	// Reg 3, lower CTL
-	
+
 	for (auto i=0; i < sizeof(phrase); i+=5) {
 		for (auto j=0; j < 5; ++j)
 		{
 			EventReceived(0xC440 + (4-j), phrase[i+j], 0);
 		}
-		
-		if (i < (sizeof(phrase) - 1))
+
+		if (i < sizeof(phrase))
 		{
 			if (ssi[1].IsPowered())	// When unpowered there won't be an IRQ
 			{

@@ -12,6 +12,8 @@
 
 #define _DEBUG_SSI263 0
 
+constexpr int SSI263_FILTER_FREQ_SILENCE = 0xFF;
+
 SSI263::SSI263()
 {
 	bIsEnabled = false;
@@ -42,9 +44,10 @@ void SSI263::ResetRegisters()
 {
 	// Reset all registers to their default values on power-on
 	speechRate = 0;
-	filterFrequency = 0xFF; // Register 4
+	filterFrequency = SSI263_FILTER_FREQ_SILENCE; // Register 4
 	articulationRate = 0;
-	durationMode = SSI263DR_DISABLED_AR;
+	durationMode = SSI263DR_PHONEME_IMMEDIATE;
+	previousDurationMode = durationMode;
 	phoneme = 0;
 	amplitude = 0;
 	inflection = 0;
@@ -59,6 +62,13 @@ void SSI263::ResetRegisters()
 	regCTL = true; // Power down
 	
 	v_samples.clear();
+
+	for (int i = 0; i < SSI263_DCADJ_BUFLEN; ++i) {
+		dcadj_buf[i] = 0.0;
+	}
+	dcadj_sum = 0.0;
+	dcadj_pos = 0;
+
 	bIsEnabled = true;
 }
 
@@ -94,7 +104,7 @@ void SSI263::LoadRegister()
 		case 0b001:
 			{
 				// Clear and update bits 3-10
-				inflection &= ~(0x00FF << 3);
+				inflection &= 0b1000'0000'0111;
 				inflection |= (byteData << 3);
 				irqIsSet = false;
 				if constexpr (_DEBUG_SSI263 > 0)
@@ -104,7 +114,7 @@ void SSI263::LoadRegister()
 		case 0b010:
 			{
 				// Clear bits 0-2 and 11 of inflection
-				inflection &= 0x7f8;
+				inflection &= 0b0111'1111'1000;;
 				// Update bits 0-2
 				inflection |= (byteData & 0b111);
 				// bit 3 of byteData is bit 11 of inflection
@@ -136,6 +146,12 @@ void SSI263::LoadRegister()
 					regCTL = !regCTL;
 					if (regCTL == false)
 					{
+						// SSI263DR_DISABLED_AR disables the A!R output but leaves
+						// the duration mode unchanged. So we need to remember the
+						// previous duration mode as the actual mode in use if we're
+						// in SSI263DR_DISABLED_AR
+						if (durationMode != SSI263DR_DISABLED_AR)
+							previousDurationMode = durationMode;
 						durationMode = phonemeDuration;
 						// SSI263DR_FRAME_IMMEDIATE not implemented
 						// Also, transitioned mode is not fully implemented,
@@ -148,7 +164,7 @@ void SSI263::LoadRegister()
 					}
 
 					if (_DEBUG_SSI263 > 0)
-						std::cerr << "CTL:" << regCTL << " PAUSE is 1!" << std::endl;
+						std::cerr << "CTL:" << regCTL << " DMode: " << durationMode << std::endl;
 				}
 			}
 			break;
@@ -199,7 +215,7 @@ float SSI263::DCAdjust(float sample)
 	dcadj_sum += sample;
 	dcadj_buf[dcadj_pos] = sample;
 	dcadj_pos = (dcadj_pos + 1) & (SSI263_DCADJ_BUFLEN-1);
-	return (dcadj_sum / SSI263_DCADJ_BUFLEN);
+	return (sample - (dcadj_sum / SSI263_DCADJ_BUFLEN));
 }
 
 void SSI263::GeneratePhonemeSamples()
@@ -209,7 +225,8 @@ void SSI263::GeneratePhonemeSamples()
 	//	- phoneme length
 	//	- speech rate
 	// TODO: articulation rate (linear move to the new sample)
-	
+	// TODO: Filter Frequency
+
 	if (!bIsEnabled)
 		return;
 	
@@ -218,7 +235,9 @@ void SSI263::GeneratePhonemeSamples()
 	
 	// Apply pitch factor, no transition. Instant pitch change
 	float _speedFactor = 1.0f;
-	if (durationMode == SSI263DR_PHONEME_TRANSITIONED)
+	if ((durationMode == SSI263DR_PHONEME_TRANSITIONED)
+		|| (durationMode == SSI263DR_DISABLED_AR && (previousDurationMode == SSI263DR_PHONEME_TRANSITIONED))
+		)
 	{
 		// Pitch is 5 bits, and apply as (32 - _inflPitch)
 		int _inflPitch = (inflection >> 6) & 0b11111;
@@ -243,30 +262,64 @@ void SSI263::GeneratePhonemeSamples()
 	std::unique_lock<std::mutex> lock(this->d_mutex_accessing_phoneme);
 	v_samples.clear();
 	m_currentSampleIdx = 0;
+
+	 // NOTE: This code chunk attempts to resample the phonemes based on the requested register values
 	for (int i=0; i<_phonemeLength; ++i) {
-		// Do the resampling due to the new speed
-		float _fIndex = i * _speedFactor;
-		int _iIndex = (int)_fIndex;
-		float _frac = _fIndex - _iIndex;
-		
 		float _newSample;	// Resampled sample!
-		if (_iIndex + 1 < (_basePhonemeLength / (1 + phonemeDuration))) {
-			float sample1 = static_cast<float>(g_nPhonemeData[_offset + _iIndex]) / UINT16_MAX;
-			int32_t sample2 = static_cast<float>(g_nPhonemeData[_offset + _iIndex + 1]) / UINT16_MAX;
-			_newSample = sample1 + _frac * (sample2 - sample1);
-		} else {
-			_newSample = static_cast<float>(g_nPhonemeData[_offset + _iIndex]) / UINT16_MAX;
+		if (filterFrequency == SSI263_FILTER_FREQ_SILENCE)	// plays silence
+			_newSample = 0.f;
+		else if (regCTL)											// it's off
+			_newSample = 0.f;
+		else
+		{
+			// Do the resampling due to the new speed
+			float _fIndex = i * _speedFactor;
+			int _iIndex = (int)_fIndex;
+			float _frac = _fIndex - _iIndex;
+
+			if (_iIndex + 1 < (_basePhonemeLength / (1 + phonemeDuration))) {
+				float sample1 = static_cast<float>(g_nPhonemeData[_offset + _iIndex]) / static_cast<float>(UINT16_MAX);
+				int32_t sample2 = static_cast<float>(g_nPhonemeData[_offset + _iIndex + 1]) / static_cast<float>(UINT16_MAX);
+				_newSample = sample1 + _frac * (sample2 - sample1);
+			} else {
+				_newSample = static_cast<float>(g_nPhonemeData[_offset + _iIndex]) / static_cast<float>(UINT16_MAX);
+			}
+			_newSample = (2.f * _newSample) - 1.f;
+			// Apply the amplitude (0 to 16, typically 10)
+			_newSample = (_newSample * amplitude) / 16.f;
+			if (_newSample > 1.f) _newSample = 1.f;
+			if (_newSample < -1.f) _newSample = -1.f;
 		}
-		_newSample = (2.f * _newSample) - 1.f;
-		// Apply the amplitude (0 to 16, typically 10)
-		_newSample = (_newSample * amplitude) / 16.f;
-		if (_newSample > 1.f) _newSample = 1.f;
-		if (_newSample < -1.f) _newSample = -1.f;
+
+		_newSample *= 0.6f;									// Reduce power to remove scratches
 
 		v_samples.push_back(DCAdjust(_newSample));
 	}
+	/*
+	// NOTE: The below just doesn't resample and disregards the register values except for amplitude
+	for (int i=0; i<_basePhonemeLength; ++i) {
+		float _newSample = static_cast<float>(g_nPhonemeData[_offset + i]) / static_cast<float>(UINT16_MAX);
+		_newSample = (2.f * _newSample) - 1.f;
+		// Apply the amplitude (0 to 15, typically 10)
+		_newSample = (_newSample * amplitude) / 16.f;
+		if (filterFrequency == SSI263_FILTER_FREQ_SILENCE)	// plays silence
+			_newSample = 0.f;
+		if (regCTL)											// it's off
+			_newSample = 0.f;
+
+		_newSample *= 0.6f;									// Reduce power to remove scratches
+
+		if (_newSample > 1.f) _newSample = 1.f;
+		if (_newSample < -1.f) _newSample = -1.f;
+
+		// Right now the samples are at 22,050 Hz, which is half the sample size of the main audio stream (44,100)
+		// So each sample will be duplicated.
+		v_samples.push_back(DCAdjust(_newSample));
+		v_samples.push_back(DCAdjust(_newSample));
+	}
+	 */
 	if (_DEBUG_SSI263 > 0)
-		std::cerr << "Added phoneme " << phoneme << ", sample count: " << _basePhonemeLength << std::endl;
+		std::cerr << "Added phoneme " << phoneme << ", sample count: " << v_samples.size() << std::endl;
 }
 
 // Call GetSample on every audio callback from the main audio stream
@@ -280,30 +333,35 @@ float SSI263::GetSample() {
 		return 0.f;
 	}
 
-	// Right now the samples are at 22,050 Hz, which is half the sample size of the main audio stream (44,100)
-	// So each sample will be duplicated.
-	const int freq_mult = _AUDIO_SAMPLE_RATE / SSI263_SAMPLE_RATE;
-	float sample_to_return = v_samples[m_currentSampleIdx/freq_mult];
-	if (_DEBUG_SSI263 > 3)
-		std::cerr << "Getting sample: " << m_currentSampleIdx / freq_mult << " of " << v_samples.size() << " val: " << sample_to_return << std::endl;
+	float sample_to_return = v_samples[m_currentSampleIdx];
+	if constexpr (_DEBUG_SSI263 > 3)
+		std::cerr << "Getting sample: " << m_currentSampleIdx << " of " << v_samples.size() << " val: " << sample_to_return << std::endl;
 	++m_currentSampleIdx;
-	if (m_currentSampleIdx == (v_samples.size() * freq_mult))
+	if (m_currentSampleIdx == (v_samples.size() - 100))
 	{
-		std::cerr << " --- Finished getting samples of phoneme --- " << std::endl;
-		// this was the second call to the last sample of the phoneme, so trigger the IRQ if needed
+		// The phoneme is almost finished, so trigger the IRQ if needed
+		if constexpr (_DEBUG_SSI263 > 0)
+			std::cerr << " --- Almost finished getting samples of phoneme --- " << std::endl;
 		if (durationMode != SSI263DR_DISABLED_AR)
 		{
 			if (!irqIsSet)
 			{
 				irqIsSet = true;
 				irqShouldProcess = true;
-				std::cerr << " >> SETTING IRQ" << std::endl;
+				if constexpr (_DEBUG_SSI263 > 0)
+					std::cerr << " >> SETTING IRQ" << std::endl;
 			}
 		}
 		else {
-			std::cerr << " >> IRQ not set. Duration mode disabled " << std::endl;
+			if constexpr (_DEBUG_SSI263 > 0)
+				std::cerr << " >> IRQ not set. Duration mode disabled " << std::endl;
 		}
+	}
+
+	if (m_currentSampleIdx == v_samples.size()) {
+		// Here we really finished playing the phoneme, time to replay it
 		m_currentSampleIdx = 0;	// reset to replay the phoneme
 	}
+
 	return sample_to_return;
 }
