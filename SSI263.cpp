@@ -9,6 +9,7 @@
 #include "SSI263Phonemes.h"
 #include "common.h"
 #include <iostream>
+#include <algorithm>
 
 #define _DEBUG_SSI263 0
 
@@ -263,61 +264,38 @@ void SSI263::GeneratePhonemeSamples()
 	v_samples.clear();
 	m_currentSampleIdx = 0;
 
-	 // NOTE: This code chunk attempts to resample the phonemes based on the requested register values
-	for (int i=0; i<_phonemeLength; ++i) {
-		float _newSample;	// Resampled sample!
+	// NOTE: The below disregards the register values except for amplitude
+	// Any application of register values other than amplitude would necessitate
+	// complex resampling that is not effective when the original samples are of
+	// such low quality.
+	std::vector<float> _rawBuffer;
+	for (int i=_offset; i<_offset+_basePhonemeLength; ++i) {
+		int16_t _sample = static_cast<int16_t>(g_nPhonemeData[i]);
+		// Clamp the value to the valid range for int16_t.
+		if (_sample < -32768) _sample = -32768;
+		if (_sample > 32767) _sample = 32767;
+		// Convert to a float sample in the range [-1.0, 1.0].
+		float _sampleF = static_cast<float>(_sample) / 32768.0f;
 		if (filterFrequency == SSI263_FILTER_FREQ_SILENCE)	// plays silence
-			_newSample = 0.f;
-		else if (regCTL)											// it's off
-			_newSample = 0.f;
-		else
-		{
-			// Do the resampling due to the new speed
-			float _fIndex = i * _speedFactor;
-			int _iIndex = (int)_fIndex;
-			float _frac = _fIndex - _iIndex;
-
-			if (_iIndex + 1 < (_basePhonemeLength / (1 + phonemeDuration))) {
-				float sample1 = static_cast<float>(g_nPhonemeData[_offset + _iIndex]) / static_cast<float>(UINT16_MAX);
-				int32_t sample2 = static_cast<float>(g_nPhonemeData[_offset + _iIndex + 1]) / static_cast<float>(UINT16_MAX);
-				_newSample = sample1 + _frac * (sample2 - sample1);
-			} else {
-				_newSample = static_cast<float>(g_nPhonemeData[_offset + _iIndex]) / static_cast<float>(UINT16_MAX);
-			}
-			_newSample = (2.f * _newSample) - 1.f;
-			// Apply the amplitude (0 to 16, typically 10)
-			_newSample = (_newSample * amplitude) / 16.f;
-			if (_newSample > 1.f) _newSample = 1.f;
-			if (_newSample < -1.f) _newSample = -1.f;
-		}
-
-		_newSample *= 0.6f;									// Reduce power to remove scratches
-
-		v_samples.push_back(DCAdjust(_newSample));
-	}
-	/*
-	// NOTE: The below just doesn't resample and disregards the register values except for amplitude
-	for (int i=0; i<_basePhonemeLength; ++i) {
-		float _newSample = static_cast<float>(g_nPhonemeData[_offset + i]) / static_cast<float>(UINT16_MAX);
-		_newSample = (2.f * _newSample) - 1.f;
-		// Apply the amplitude (0 to 15, typically 10)
-		_newSample = (_newSample * amplitude) / 16.f;
-		if (filterFrequency == SSI263_FILTER_FREQ_SILENCE)	// plays silence
-			_newSample = 0.f;
+			_sampleF = 0.f;
 		if (regCTL)											// it's off
-			_newSample = 0.f;
-
-		_newSample *= 0.6f;									// Reduce power to remove scratches
-
-		if (_newSample > 1.f) _newSample = 1.f;
-		if (_newSample < -1.f) _newSample = -1.f;
-
-		// Right now the samples are at 22,050 Hz, which is half the sample size of the main audio stream (44,100)
-		// So each sample will be duplicated.
-		v_samples.push_back(DCAdjust(_newSample));
-		v_samples.push_back(DCAdjust(_newSample));
+			_sampleF = 0.f;
+		// Apply the amplitude (0 to 15, typically 10)
+		_sampleF = (_sampleF * amplitude) / 16.f;
+		_rawBuffer.push_back(DCAdjust(_sampleF));
 	}
-	 */
+	// resample to float 44.1kHz
+	if (!_rawBuffer.empty())
+	{
+		// Resize the resampled buffer to (2 * N - 1) samples.
+		for (size_t i = 0; i < _rawBuffer.size() - 1; ++i)
+		{
+			v_samples.push_back(_rawBuffer[i]);
+			v_samples.push_back((_rawBuffer[i] + _rawBuffer[i + 1]) * 0.5f);
+		}
+		v_samples.push_back(_rawBuffer.back());
+	}
+
 	if (_DEBUG_SSI263 > 0)
 		std::cerr << "Added phoneme " << phoneme << ", sample count: " << v_samples.size() << std::endl;
 }
