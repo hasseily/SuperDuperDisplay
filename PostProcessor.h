@@ -105,6 +105,7 @@ private:
 	bool p_b_smoothCorner = false;
 	bool p_b_extGamma = false;
 	bool p_b_slot = false;
+	bool p_b_phosphorGlow = false;
 	float p_f_barrelDistortion = 0.0f;
 	float p_f_bgr = 0.0f;
 	float p_f_black = 0.0f;

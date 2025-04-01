@@ -157,6 +157,7 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_f_barrelDistortion", p_f_barrelDistortion},
 		{"p_f_ghostingPercent", p_f_ghostingPercent},
 		{"p_f_phosphorBlur", p_f_phosphorBlur},
+		{"p_b_phosphorGlow", p_b_phosphorGlow},
 		{"p_v_warpX", p_v_warp.x},
 		{"p_v_warpY", p_v_warp.y},
 		{"p_v_centerX", p_v_center.x},
@@ -220,6 +221,7 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_f_barrelDistortion = jsonState.value("p_f_barrelDistortion", p_f_barrelDistortion);
 	p_f_ghostingPercent = jsonState.value("p_f_ghostingPercent", p_f_ghostingPercent);
 	p_f_phosphorBlur = jsonState.value("p_f_phosphorBlur", p_f_phosphorBlur);
+	p_b_phosphorGlow = jsonState.value("p_b_phosphorGlow", p_b_phosphorGlow);
 	p_v_warp.x = jsonState.value("p_v_warpX", p_v_warp.x);
 	p_v_warp.y = jsonState.value("p_v_warpY", p_v_warp.y);
 	p_v_center.x = jsonState.value("p_v_centerX", p_v_center.x);
@@ -306,6 +308,7 @@ void PostProcessor::SelectShader()
 		// shader specific
 		shaderProgram.setFloat("GhostingPercent", p_f_ghostingPercent);
 		shaderProgram.setFloat("BlurSize", p_f_phosphorBlur);
+		shaderProgram.setFloat("bBlurGlow", p_b_phosphorGlow);
 		shaderProgram.setBool("bCORNER_SMOOTH", p_b_smoothCorner);
 		shaderProgram.setBool("bEXT_GAMMA", p_b_extGamma);
 		shaderProgram.setBool("bSLOT", p_b_slot);
@@ -652,6 +655,7 @@ void PostProcessor::ResetToDefaults()
 	p_i_scanlineType = 2;
 	p_f_ghostingPercent = 0;
 	p_f_phosphorBlur = 0.0f;
+	p_b_phosphorGlow = 0.0f;
 	p_v_warp = glm::vec2(0.0f, 0.0f);
 	p_v_center = glm::vec2(0.0f, 0.0f);
 	p_v_zoom = glm::vec2(1.0f, 1.0f);
@@ -872,6 +876,8 @@ with page flipping images");
 			// Blurring and Ghosting
 			ImGui::Text("[ BLUR & GHOSTING ]");
 			ImGui::SliderFloat("Phosphor Blur", &p_f_phosphorBlur, 0.0, 2.0, "%.2f");
+			ImGui::SetItemTooltip("Some screen blur");
+			ImGui::SameLine();ImGui::Checkbox("Glow", &p_b_phosphorGlow);
 			ImGui::SetItemTooltip("Some screen blur");
 
 			// We'll use a normalized slider value in [0,1]

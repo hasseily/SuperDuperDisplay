@@ -71,6 +71,7 @@ uniform COMPAT_PRECISION int POSTPROCESSING_LEVEL;
 
 uniform COMPAT_PRECISION float GhostingPercent;
 uniform COMPAT_PRECISION float BlurSize;
+uniform bool bBlurGlow;
 
 uniform bool bCORNER_SMOOTH;
 uniform bool bEXT_GAMMA;
@@ -91,7 +92,6 @@ uniform COMPAT_PRECISION float GB;
 uniform COMPAT_PRECISION float MASKH;
 uniform COMPAT_PRECISION float MASKL;
 uniform COMPAT_PRECISION float MSIZE;
-uniform COMPAT_PRECISION float P_GLOW;
 uniform COMPAT_PRECISION float RB;
 uniform COMPAT_PRECISION float RG;
 uniform COMPAT_PRECISION float SATURATION;
@@ -175,7 +175,11 @@ vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 // Use the LODs for the phosphor blur, which is much faster than sampling neighbor points
 // NOTE: returns color in linear space
 vec4 PhosphorBlur(sampler2D tex, vec2 uv, vec2 resolution, float blurAmount) {
-    vec4 color = gamma_decode(textureLod(tex, uv, blurAmount));
+    vec4 color = gamma_decode(textureLod(tex, uv, blurAmount * 4.0));
+	// To get a glowing style, we overlay the regular texture data at 30%
+	if (bBlurGlow)
+		color = mix(color, gamma_decode(texture(tex, uv)), 0.3);
+	return clamp(color,0.0,1.0);
     // Increase brightness linearly based on blurAmount.
     float brightnessFactor = 1.0 + blurAmount;
     return clamp(color * brightnessFactor,0.0,1.0);
