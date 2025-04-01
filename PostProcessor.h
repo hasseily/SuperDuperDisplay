@@ -47,13 +47,7 @@ private:
 	void RegeneratePreviousTexture();
 	void ResetToDefaults();
 
-	void LoadSelectedBezel()
-	{
-		std::string bezelPath = "assets/bezels/" + selectedBezelFile;
-		glActiveTexture(_TEXUNIT_PP_BEZEL);
-		bezelImageAsset.AssignByFilename(bezelPath.c_str());
-		glActiveTexture(GL_TEXTURE0);
-	}
+	void LoadSelectedBezel();
 
 	// Singleton pattern
 	static PostProcessor* s_instance;

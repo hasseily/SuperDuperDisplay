@@ -251,6 +251,23 @@ void PostProcessor::LoadState(std::string filePath) {
 	}
 }
 
+void PostProcessor::LoadSelectedBezel()
+{
+	std::string bezelPath = "assets/bezels/" + selectedBezelFile;
+	glActiveTexture(_TEXUNIT_PP_BEZEL);
+	if (bezelImageAsset.tex_id == UINT_MAX)
+	{
+		glGenTextures(1, &bezelImageAsset.tex_id);
+		glBindTexture(GL_TEXTURE_2D, bezelImageAsset.tex_id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
+	bezelImageAsset.AssignByFilename(bezelPath.c_str());
+	glActiveTexture(GL_TEXTURE0);
+}
+
 int PostProcessor::PopulateBezelFiles(std::vector<std::string>& _bezelFiles, const std::string& _selectedBezelFile) {
 	int _selIdx = 0;
 	_bezelFiles.clear();
