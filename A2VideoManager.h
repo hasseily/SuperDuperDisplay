@@ -297,6 +297,7 @@ private:
 	std::string sImguiLoadPath = ".";
 	float bWobblePower = 0.200;
 	bool p_b_ntsc = false;					// if true, there is a first render pass into FBO_NTSC
+	bool p_b_ntscNoFilterMono = true;		// if true, don't filter through NTSC monochrome pixels
 	float p_f_ntscCombStrength = 0.8f;
 	float p_f_ntscGammaCorrection = 2.5f;
 
