@@ -731,10 +731,7 @@ void MainMenu::ShowVideoMenu() {
 }
 
 void MainMenu::ShowSoundMenu() {
-	if (ImGui::BeginMenu("HDMI Speaker")) {
-		SoundManager::GetInstance()->DisplayImGuiChunk();
-		ImGui::EndMenu();
-	}
+	SoundManager::GetInstance()->DisplayImGuiChunk();
 	if (ImGui::BeginMenu("Mockingboard")) {
 		MockingboardManager::GetInstance()->DisplayImGuiChunk();
 		ImGui::EndMenu();

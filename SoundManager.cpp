@@ -133,6 +133,13 @@ void SoundManager::EventReceived(bool isC03x) {
 void SoundManager::AudioCallback(void* userdata, uint8_t* stream, int len)
 {
 	SoundManager* self = static_cast<SoundManager*>(userdata);
+
+	if (self->master_volume < 0.01f)	// if master volume is zero, turn off the sound
+	{
+		SDL_memset(stream, 0, len);		// shouldn't be necessary, but better be safe
+		return;
+	}
+
 	int samples = len / (sizeof(float) * 2); 	// Number of samples to fill
 
 	// Need to mix the speaker and the mockingboard Audio
@@ -158,8 +165,11 @@ void SoundManager::AudioCallback(void* userdata, uint8_t* stream, int len)
 			mmMgr->GetSamples(mm_left, mm_right);
 
 		// Mix in the mono beeper and stereo Mockingboard streams
-		self->audioCallbackBuffer[2 * i] = 0.5 * self->beeper_volume * beeper_sample + 0.5 * mm_left;
-		self->audioCallbackBuffer[2 * i + 1] = 0.5 * self->beeper_volume * beeper_sample + 0.5 * mm_right;
+		auto _relBeeperVol = self->beeper_volume / (self->beeper_volume + self->mockingboard_volume);
+		auto _leftmix = self->master_volume * (_relBeeperVol * beeper_sample + (1.f - _relBeeperVol) * mm_left);
+		auto _rightmix = self->master_volume * (_relBeeperVol * beeper_sample + (1.f - _relBeeperVol) * mm_right);
+		self->audioCallbackBuffer[2 * i] = _leftmix;
+		self->audioCallbackBuffer[2 * i + 1] = _rightmix;
 	}
 
 	// Copy the buffer to the stream
@@ -175,41 +185,51 @@ void SoundManager::AudioCallback(void* userdata, uint8_t* stream, int len)
 
 void SoundManager::DisplayImGuiChunk()
 {
-	if (ImGui::Checkbox("Enable HDMI Sound", &bIsEnabled))
-	{
-		if (bIsEnabled)
-			BeginPlay();
-		else
-			StopPlay();
+	if (ImGui::BeginMenu("Volume Mix")) {
+		ImGui::SliderFloat("Master Volume", &master_volume, 0.f, 1.f);
+		ImGui::SliderFloat("Beeper Volume", &beeper_volume, 0.f, 1.f);
+		ImGui::SliderFloat("Mockingboard Volume", &mockingboard_volume, 0.f, 1.f);
+		ImGui::EndMenu();
 	}
-	ImGui::SameLine();
-	ImGui::TextDisabled("(!)");
-	if (ImGui::BeginItemTooltip())
-	{
-		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-		ImGui::TextUnformatted(
-							   "WARNING:\n"
-							   "Do not enable HDMI sound when the Apple 2 is emitting sounds.\n"
-							   "There is a chance that the sound will be reversed, i.e:\n"
-							   "Sound will be on when it should be off, and vice versa.\n"
-							   "So make sure you check this box only when you're certain the Apple 2 is silent.\n");
-		ImGui::PopTextWrapPos();
-		ImGui::EndTooltip();
+	if (ImGui::BeginMenu("HDMI Speaker")) {
+		if (ImGui::Checkbox("Enable HDMI Beeper Sound", &bIsEnabled))
+		{
+			if (bIsEnabled)
+				BeginPlay();
+			else
+				StopPlay();
+		}
+		ImGui::SameLine();
+		ImGui::TextDisabled("(!)");
+		if (ImGui::BeginItemTooltip())
+		{
+			ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+			ImGui::TextUnformatted(
+								   "WARNING:\n"
+								   "Do not enable HDMI sound when the Apple 2 is emitting sounds.\n"
+								   "There is a chance that the sound will be reversed, i.e:\n"
+								   "Sound will be on when it should be off, and vice versa.\n"
+								   "So make sure you check this box only when you're certain the Apple 2 is silent.\n");
+			ImGui::PopTextWrapPos();
+			ImGui::EndTooltip();
+		}
+		ImGui::Separator();
+		static int sm_imgui_samples_delay = (SM_BEEPER_BUFFER_SIZE + beeper_samples_idx_write - beeper_samples_idx_read) % SM_BEEPER_BUFFER_SIZE;
+		if ((SDL_GetTicks64() & 0xC0) == 0)
+			sm_imgui_samples_delay = (SM_BEEPER_BUFFER_SIZE + beeper_samples_idx_write - beeper_samples_idx_read) % SM_BEEPER_BUFFER_SIZE;
+		ImGui::Text("Write-Read Samples Delay: %d", sm_imgui_samples_delay);
+		ImGui::Text("Current Audio Driver: %s\n", SDL_GetCurrentAudioDriver());
+		ImGui::EndMenu();
 	}
-	ImGui::SliderFloat("Volume", &beeper_volume, 0.f, 1.f);
-	ImGui::Separator();
-	static int sm_imgui_samples_delay = (SM_BEEPER_BUFFER_SIZE + beeper_samples_idx_write - beeper_samples_idx_read) % SM_BEEPER_BUFFER_SIZE;
-	if ((SDL_GetTicks64() & 0xC0) == 0)
-		sm_imgui_samples_delay = (SM_BEEPER_BUFFER_SIZE + beeper_samples_idx_write - beeper_samples_idx_read) % SM_BEEPER_BUFFER_SIZE;
-	ImGui::Text("Write-Read Samples Delay: %d", sm_imgui_samples_delay);
-	ImGui::Text("Current Audio Driver: %s\n", SDL_GetCurrentAudioDriver());
 }
 
 nlohmann::json SoundManager::SerializeState()
 {
 	nlohmann::json jsonState = {
 		{"sound_enabled", bIsEnabled},
-		{"sound_volume", beeper_volume}
+		{"sound_volume", beeper_volume},
+		{"mockingboard_volume", mockingboard_volume},
+		{"master_volume", master_volume}
 	};
 	return jsonState;
 }
@@ -218,4 +238,6 @@ void SoundManager::DeserializeState(const nlohmann::json &jsonState)
 {
 	bIsEnabled = jsonState.value("sound_enabled", bIsEnabled);
 	beeper_volume = jsonState.value("sound_volume", beeper_volume);
+	mockingboard_volume = jsonState.value("mockingboard_volume", mockingboard_volume);
+	master_volume = jsonState.value("master_volume", master_volume);
 }
