@@ -157,6 +157,7 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_f_barrelDistortion", p_f_barrelDistortion},
 		{"p_f_ghostingPercent", p_f_ghostingPercent},
 		{"p_f_phosphorBlur", p_f_phosphorBlur},
+		{"p_b_phosphorGlow", p_b_phosphorGlow},
 		{"p_v_warpX", p_v_warp.x},
 		{"p_v_warpY", p_v_warp.y},
 		{"p_v_centerX", p_v_center.x},
@@ -220,6 +221,7 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_f_barrelDistortion = jsonState.value("p_f_barrelDistortion", p_f_barrelDistortion);
 	p_f_ghostingPercent = jsonState.value("p_f_ghostingPercent", p_f_ghostingPercent);
 	p_f_phosphorBlur = jsonState.value("p_f_phosphorBlur", p_f_phosphorBlur);
+	p_b_phosphorGlow = jsonState.value("p_b_phosphorGlow", p_b_phosphorGlow);
 	p_v_warp.x = jsonState.value("p_v_warpX", p_v_warp.x);
 	p_v_warp.y = jsonState.value("p_v_warpY", p_v_warp.y);
 	p_v_center.x = jsonState.value("p_v_centerX", p_v_center.x);
@@ -249,6 +251,23 @@ void PostProcessor::LoadState(std::string filePath) {
 		file >> jsonState;
 		DeserializeState(jsonState);
 	}
+}
+
+void PostProcessor::LoadSelectedBezel()
+{
+	std::string bezelPath = "assets/bezels/" + selectedBezelFile;
+	glActiveTexture(_TEXUNIT_PP_BEZEL);
+	if (bezelImageAsset.tex_id == UINT_MAX)
+	{
+		glGenTextures(1, &bezelImageAsset.tex_id);
+		glBindTexture(GL_TEXTURE_2D, bezelImageAsset.tex_id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
+	bezelImageAsset.AssignByFilename(bezelPath.c_str());
+	glActiveTexture(GL_TEXTURE0);
 }
 
 int PostProcessor::PopulateBezelFiles(std::vector<std::string>& _bezelFiles, const std::string& _selectedBezelFile) {
@@ -289,6 +308,7 @@ void PostProcessor::SelectShader()
 		// shader specific
 		shaderProgram.setFloat("GhostingPercent", p_f_ghostingPercent);
 		shaderProgram.setFloat("BlurSize", p_f_phosphorBlur);
+		shaderProgram.setFloat("bBlurGlow", p_b_phosphorGlow);
 		shaderProgram.setBool("bCORNER_SMOOTH", p_b_smoothCorner);
 		shaderProgram.setBool("bEXT_GAMMA", p_b_extGamma);
 		shaderProgram.setBool("bSLOT", p_b_slot);
@@ -635,6 +655,7 @@ void PostProcessor::ResetToDefaults()
 	p_i_scanlineType = 2;
 	p_f_ghostingPercent = 0;
 	p_f_phosphorBlur = 0.0f;
+	p_b_phosphorGlow = 0.0f;
 	p_v_warp = glm::vec2(0.0f, 0.0f);
 	p_v_center = glm::vec2(0.0f, 0.0f);
 	p_v_zoom = glm::vec2(1.0f, 1.0f);
@@ -856,6 +877,8 @@ with page flipping images");
 			ImGui::Text("[ BLUR & GHOSTING ]");
 			ImGui::SliderFloat("Phosphor Blur", &p_f_phosphorBlur, 0.0, 2.0, "%.2f");
 			ImGui::SetItemTooltip("Some screen blur");
+			ImGui::SameLine();ImGui::Checkbox("Glow", &p_b_phosphorGlow);
+			ImGui::SetItemTooltip("Some screen blur");
 
 			// We'll use a normalized slider value in [0,1]
 			static float _ghostingSV = 100.0f * (1.0f - pow(1.0f - p_f_ghostingPercent / 100.0f, 0.25f));
@@ -914,12 +937,14 @@ with page flipping images");
 			ImGui::SliderFloat("Green <-to-> Red Hue", &p_f_hueRG, -2.50f, 2.50f, "%.2f");
 			ImGui::SliderFloat("Blue <-to-> Red Hue", &p_f_hueRB, -2.50f, 2.50f, "%.2f");
 			ImGui::SliderFloat("Blue <-to-> Green Hue", &p_f_hueGB, -2.50f, 2.50f, "%.2f");
-			ImGui::Checkbox("External Gamma In (Glow etc)", &p_b_extGamma);
+			ImGui::Checkbox("External Gamma In", &p_b_extGamma);
+			ImGui::SetItemTooltip("Should be checked if input is already in linear space. Keep it unchecked generally.");
 			ImGui::Separator();
 			
 			// Convergence Settings
 			ImGui::Text("[ CONVERGENCE SETTINGS ]");
 			ImGui::SliderFloat("Convergence Overall Strength", &p_f_cStr, 0.0f, 0.5f, "%.2f");
+			ImGui::SetItemTooltip("WARNING: Some FPS impact.");
 			ImGui::SliderFloat("Convergence Red X-Axis", &p_f_convR, -3.0f, 3.0f, "%.2f");
 			ImGui::SliderFloat("Convergence Green X-axis", &p_f_convG, -3.0f, 3.0f, "%.2f");
 			ImGui::SliderFloat("Convergence Blue X-Axis", &p_f_convB, -3.0f, 3.0f, "%.2f");

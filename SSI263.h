@@ -50,7 +50,10 @@
 #include <mutex>
 
 constexpr int SSI263_SAMPLE_RATE = 22050;
-constexpr int SSI263_DCADJ_BUFLEN = 256;
+constexpr int SSI263_DCADJ_BUFLEN = 4096;
+// Number of samples remaining for the IRQ to trigger. If we wait until the phoneme finishes playing,
+// then there's just no way it'll get the next phoneme before it starts again.
+constexpr int SSI263_REMAINING_SAMPLES_WHEN_IRQ_TRIGGERS = 256;
 
 enum SSI263DurationModes_e
 {
@@ -91,7 +94,8 @@ private:
 	int speechRate;
 	int filterFrequency;
 	int articulationRate;
-	int durationMode;
+	int durationMode;			// values of SSI263DurationModes_e
+	int previousDurationMode;	// necessary for SSI263DR_DISABLED_AR mode
 	// TARGET data
 	// Upon loading "target" data the device will begin to move
 	// towards that target at the prescribed transition rates

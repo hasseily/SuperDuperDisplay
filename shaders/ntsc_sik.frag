@@ -24,6 +24,7 @@ uniform sampler2D TEXIN;
 // for NTSC blending
 uniform COMPAT_PRECISION float NTSC_COMB_STR;
 uniform COMPAT_PRECISION float NTSC_GAMMA_CORRECTION;
+uniform bool bNOFILTERMONO;	// Do not filter monochrome pixels
 
 in vec2 vTexCoords;
 out vec4 fragColor;
@@ -52,7 +53,7 @@ float yiq2raw(vec3 yiq, float phase)
 void main()
 {
 	fragColor = texture(TEXIN, vTexCoords);
-	if (fragColor.a < 0.91)	// it's a monochrome pixel or transparent
+	if (bNOFILTERMONO && fragColor.a < 0.91)	// it's a monochrome pixel or transparent
 	{
 		// if not transparent, set to full opaque
 		if (fragColor.a > 0.001)
