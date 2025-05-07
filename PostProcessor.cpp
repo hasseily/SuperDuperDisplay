@@ -167,7 +167,8 @@ nlohmann::json PostProcessor::SerializeState()
 		{"p_v_reflectionScaleX", p_v_reflectionScale.x},
 		{"p_v_reflectionScaleY", p_v_reflectionScale.y},
 		{"p_v_reflectionTranslationX", p_v_reflectionTranslation.x},
-		{"p_v_reflectionTranslationY", p_v_reflectionTranslation.y}
+		{"p_v_reflectionTranslationY", p_v_reflectionTranslation.y},
+		{"p_f_glassThickness", p_f_glassThickness},
 	};
 	return jsonState;
 }
@@ -232,6 +233,7 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	p_v_reflectionScale.y = jsonState.value("p_v_reflectionScaleY", p_v_reflectionScale.y);
 	p_v_reflectionTranslation.x = jsonState.value("p_v_reflectionTranslationX", p_v_reflectionTranslation.x);
 	p_v_reflectionTranslation.y = jsonState.value("p_v_reflectionTranslationY", p_v_reflectionTranslation.y);
+	p_f_glassThickness = jsonState.value("p_f_glassThickness", p_f_glassThickness);
 
 }
 
@@ -255,7 +257,7 @@ void PostProcessor::LoadState(std::string filePath) {
 
 void PostProcessor::LoadSelectedBezel()
 {
-	std::string bezelPath = "assets/bezels/" + selectedBezelFile;
+	std::string _pathStr = "assets/bezels/" + selectedBezelFile;
 	glActiveTexture(_TEXUNIT_PP_BEZEL);
 	if (bezelImageAsset.tex_id == UINT_MAX)
 	{
@@ -266,7 +268,30 @@ void PostProcessor::LoadSelectedBezel()
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
-	bezelImageAsset.AssignByFilename(bezelPath.c_str());
+	bezelImageAsset.AssignByFilename(_pathStr.c_str());
+
+	// check if there's a .glass filename as well
+	auto pos = _pathStr.find_last_of('.');	// there's always a dot
+	_pathStr.replace(pos, 1, ".glass.");
+	std::filesystem::path bezelGlassPath = _pathStr;
+	if (std::filesystem::is_regular_file(bezelGlassPath)) {
+		glActiveTexture(_TEXUNIT_PP_BEZEL_GLASS);
+		if (bezelGlassImageAsset.tex_id == UINT_MAX)
+		{
+			glGenTextures(1, &bezelGlassImageAsset.tex_id);
+			glBindTexture(GL_TEXTURE_2D, bezelGlassImageAsset.tex_id);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		}
+		bezelGlassImageAsset.AssignByFilename(bezelGlassPath.string().c_str());
+	}
+	else {
+		bezelGlassImageAsset.image_xcount = 0;
+		bezelGlassImageAsset.image_ycount = 0;
+	}
+
 	glActiveTexture(GL_TEXTURE0);
 }
 
@@ -278,6 +303,10 @@ int PostProcessor::PopulateBezelFiles(std::vector<std::string>& _bezelFiles, con
 	// populate bezel files
 	for (const auto& entry : std::filesystem::directory_iterator("assets/bezels/")) {
 		if (entry.is_regular_file() && (entry.path().extension() == ".png" || entry.path().extension() == ".jpg")) {
+			// omit xxx.glass.png or yyy.glass.jpg, the glass layer
+			if (entry.path().stem().extension() == ".glass")
+				continue;
+			
 			_bezelFiles.push_back(entry.path().filename().string());
 			if (_selectedBezelFile == entry.path().filename().string()) {
 				_selIdx = (int)_bezelFiles.size() - 1;
@@ -405,21 +434,10 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 {
 	if (bezelImageAsset.tex_id == UINT_MAX)
 	{
-		glGenTextures(1, &bezelImageAsset.tex_id);
-		glActiveTexture(_TEXUNIT_PP_BEZEL);
-		glBindTexture(GL_TEXTURE_2D, bezelImageAsset.tex_id);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		std::vector<std::string> _bezelFiles;
 		currentBezelIndex = PopulateBezelFiles(_bezelFiles, selectedBezelFile);
 		if (currentBezelIndex > 0)
-		{
-			std::string bezelPath = "assets/bezels/" + selectedBezelFile;
-			bezelImageAsset.AssignByFilename(bezelPath.c_str());
-		}
-		glActiveTexture(GL_TEXTURE0);
+			LoadSelectedBezel();
 	}
 
 	SDL_GL_GetDrawableSize(window, &viewportWidth, &viewportHeight);
@@ -435,7 +453,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 0: " << glerr << std::endl;
 	}
-	
+
 	// Bind the texture we're given
 	// And get its actual size.
 	texUnitCurrent  = inputTextureSlot;
@@ -536,7 +554,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	}
 
 	// Now Build and Draw the Bezel if necessary
-	if (currentBezelIndex > 0)
+	if (selectedBezelFile != _PP_NO_BEZEL_FILENAME)
 	{
 		shaderProgramBezel.use();
 		glm::mat4 transformBezel = glm::mat4(1.0f);
@@ -550,6 +568,14 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		shaderProgramBezel.setVec2("uReflectionScale", p_v_reflectionScale);
 		shaderProgramBezel.setVec2("uReflectionTranslation", p_v_reflectionTranslation);
 		shaderProgramBezel.setBool("uOutlineQuad", p_b_outlineQuad);
+		if (bezelGlassImageAsset.image_xcount > 0) {
+			shaderProgramBezel.setInt("uGlassTex", _TEXUNIT_PP_BEZEL_GLASS - GL_TEXTURE0);
+			shaderProgramBezel.setFloat("uGlassThickness", p_f_glassThickness);
+		}
+		else {
+			shaderProgramBezel.setInt("uGlassTex", 0);
+			shaderProgramBezel.setFloat("uGlassThickness", 0.f);
+		}
 
 		glActiveTexture(_TEXUNIT_POSTPROCESS);
 		if (p_f_bezelReflection > 0.001)
@@ -560,8 +586,6 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
         }
-		glActiveTexture(_TEXUNIT_PP_BEZEL);
-		glBindTexture(GL_TEXTURE_2D, bezelImageAsset.tex_id);
 		glBindVertexArray(quadVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 		glActiveTexture(GL_TEXTURE0);
@@ -666,6 +690,7 @@ void PostProcessor::ResetToDefaults()
 	p_f_reflectionBlur = 0.0f;
 	p_v_reflectionScale = glm::vec2(1.0f, 1.0f);
 	p_v_reflectionTranslation = glm::vec2(0.0f, 0.0f);
+	p_f_glassThickness = 1.0f;
 
 	// imgui vars
 	bImGuiLockWarp = false;
@@ -816,6 +841,9 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 		}
 		ImGui::SliderFloat("Overlay Relative Width", &bezelSize.x, 0.f, 2.f, "%.2f");
 		ImGui::SliderFloat("Overlay Relative Height", &bezelSize.y, 0.f, 2.f, "%.2f");
+		if (bezelGlassImageAsset.image_xcount > 0) {
+			ImGui::SliderFloat("Glass Thickness", &p_f_glassThickness, 0.f, 2.f, "%.2f");
+		}
 		p_b_outlineQuad = false;
 		ImGui::SliderFloat("Bezel Reflection", &p_f_bezelReflection, 0.f, 0.5f, "%.3f");
 		ImGui::SetItemTooltip("WARNING: Tricky to get right. Read on for more info: \n \

@@ -83,6 +83,7 @@ enum SwapInterval_e
 #define _TEXUNIT_PP_PREVIOUS GL_TEXTURE15		// The previous frame as a texture
 #define _TEXUNIT_POSTPROCESS GL_TEXTURE16		// input texunit the PP will use to generate the final output
 #define _TEXUNIT_PP_BEZEL GL_TEXTURE17			// The bezel in postprocessing
+#define _TEXUNIT_PP_BEZEL_GLASS GL_TEXTURE18	// The bezel glass in postprocessing
 // exact asset textures
 #define _TEXUNIT_IMAGE_FONT_ROM_DEFAULT GL_TEXTURE4
 #define _TEXUNIT_IMAGE_FONT_ROM_ALTERNATE GL_TEXTURE5

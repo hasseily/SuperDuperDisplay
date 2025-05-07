@@ -69,7 +69,11 @@ private:
 	Shader shaderProgram;		// PP shader program
 	Shader shaderProgramBezel;	// Bezel shader program
 
+	// The bezel image may have 2 layers: The bezel itself, and the glass which
+	// comes on top. The bezel alpha (0<a<1) determines the reflection amount
+	// The glass alpha is just standard alpha.
 	OpenGLHelper::ImageAsset bezelImageAsset;
+	OpenGLHelper::ImageAsset bezelGlassImageAsset;
 
 	GLint viewportWidth = 0, viewportHeight = 0;
 	GLint quadWidth = 0, quadHeight = 0;
@@ -143,6 +147,7 @@ private:
 	bool p_b_outlineQuad = false;
 	float p_f_bezelReflection = 0.0f;
 	float p_f_reflectionBlur = 0.0f;
+	float p_f_glassThickness = 1.0f;
 	glm::vec2 p_v_reflectionScale = glm::vec2(1.0f, 1.0f);
 	glm::vec2 p_v_reflectionTranslation = glm::vec2(0.0f, 0.0f);
 

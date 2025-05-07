@@ -13,6 +13,9 @@ This transformation is handled by uniforms.
 Hence in order to create the reflection for the overlay image, you modify the alpha.
 The lower the alpha value, the less translation the shader will make, and the closer
 to the bezel the light will be "reflected" (using a cheap LOD 1 lookup to simulate blur)
+
+There is also an optional Glass texture. This one is a straightforward RGBA texture
+that is applied on top of the final result. It is to be used for the CRT glass.
 */
 
 #ifdef GL_ES
@@ -43,6 +46,9 @@ void main()
 
 uniform sampler2D uMainTex;  // Overlay texture
 uniform sampler2D uA2Tex;    // Apple 2 output texture
+
+uniform sampler2D uGlassTex;    // Glass overlay texture (the top layer)
+uniform float uGlassThickness;  // 0 means no glass applied
 
 in vec2 vTexCoord;
 out vec4 FragColor;
@@ -97,6 +103,17 @@ void main() {
         }
     } else {
         FragColor = mainColor;
+    }
+    // glass overlay
+    if (uGlassThickness > 0.0001) {
+        vec4 glassColor = texture(uGlassTex, vTexCoord);
+        glassColor.a *= uGlassThickness;
+        float outA = glassColor.a + FragColor.a * (1.0 - glassColor.a);
+        FragColor.rgb = (glassColor.rgb * glassColor.a + 
+                        FragColor.rgb * FragColor.a * (1.0 - glassColor.a))
+                        / outA;
+        FragColor.a = outA;
+        //FragColor = clamp(FragColor + glassColor,0.0,1.0);
     }
     return;
 }
