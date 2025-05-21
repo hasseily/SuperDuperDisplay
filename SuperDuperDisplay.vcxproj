@@ -302,7 +302,7 @@
     <Font Include="assets\ProggyTiny.ttf" />
   </ItemGroup>
   <ItemGroup>
-    <Library Include="lib\Win_x64\FTD3XXWU.lib" />
+    <Library Include="lib\Win_x64\FTD3XX.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -351,10 +351,10 @@ int process_usb_events_thread(std::atomic<bool>* shouldTerminateProcessing) {
 					A2VideoManager::GetInstance()->bShouldReboot = true;
 				}
 				event_reset_prev = event_reset;
-				if ((_evct & 0xFFFFF) == 0)
-					printf("\n");
-				if ((_evct & 0xFFFFF) < 10)
-					printf("EVENT: %d 0x%04X 0x%02X\n", rw, addr, data);
+				//if ((_evct & 0xFFFFF) == 0)
+				//	printf("\n");
+				//if ((_evct & 0xFFFFF) < 10)
+				//	printf("EVENT: %d 0x%04X 0x%02X\n", rw, addr, data);
 				SDHREvent ev(0, 0, 0, rw, addr, data);
 				process_single_event(ev);
 				_evct++;
