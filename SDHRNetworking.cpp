@@ -60,6 +60,7 @@ const std::string get_ft_status_message(FT_STATUS status) {
 		return "Insufficient resources";
 	case FT_INVALID_PARAMETER:
 		return "Invalid parameter provided";
+#ifndef __NETWORKING_WINDOWS__
 	case FT_INVALID_BAUD_RATE:
 		return "Invalid baud rate specified";
 	case FT_DEVICE_NOT_OPENED_FOR_ERASE:
@@ -78,6 +79,7 @@ const std::string get_ft_status_message(FT_STATUS status) {
 		return "EEPROM not present on device";
 	case FT_EEPROM_NOT_PROGRAMMED:
 		return "EEPROM is not programmed";
+#endif
 	case FT_INVALID_ARGS:
 		return "Invalid arguments provided";
 	case FT_NOT_SUPPORTED:
@@ -329,9 +331,36 @@ void process_single_event(SDHREvent& e)
 
 int process_usb_events_thread(std::atomic<bool>* shouldTerminateProcessing) {
 	std::cout << "starting usb processing thread" << std::endl;
+	size_t _evct = 0;
 	while (!(*shouldTerminateProcessing)) {
 		auto packet = packetInQueue.pop();
 		uint32_t* p = (uint32_t*)packet->data;
+		uint32_t idx_pread = 0;	// packet read index
+		for (size_t idxp = 0; idxp < packet->size; idxp += 4)
+		{
+			uint8_t* p_ev = packet->data + idxp;
+			//printf("EVENT: 0x%02X 0x%02X 0x%02X 0x%02x\n", p_ev[0], p_ev[1], p_ev[2], p_ev[3]);
+			if ((p_ev[1] >> 4) == 0xF)	// it's not a header
+			{
+				uint16_t addr = ((uint16_t)p_ev[3] << 8) | p_ev[2];
+				uint8_t misc = p_ev[0] & 0xF;
+				uint8_t data = (p_ev[1] << 4) | (p_ev[0] >> 4);
+				bool rw = (misc & 0x01) == 0x01;
+				event_reset = ((misc & 0x02) == 0x02);
+				if ((event_reset == 0) && (event_reset_prev == 1)) {
+					A2VideoManager::GetInstance()->bShouldReboot = true;
+				}
+				event_reset_prev = event_reset;
+				if ((_evct & 0xFFFFF) == 0)
+					printf("\n");
+				if ((_evct & 0xFFFFF) < 10)
+					printf("EVENT: %d 0x%04X 0x%02X\n", rw, addr, data);
+				SDHREvent ev(0, 0, 0, rw, addr, data);
+				process_single_event(ev);
+				_evct++;
+			}
+		}
+		/*
 		while ((uint8_t*)p < packet->data + packet->size) {
 			uint32_t hdr = *p;
 			uint32_t packet_len = hdr & 0x0000ffff;
@@ -355,6 +384,7 @@ int process_usb_events_thread(std::atomic<bool>* shouldTerminateProcessing) {
 			}
 			if (packet_type != 1) {
 				// when we start doing different messages we'd handle it here
+				printf("packet error, type must be 1\n");
 				p += (packet_len / 4);
 				continue;
 			}
@@ -371,11 +401,13 @@ int process_usb_events_thread(std::atomic<bool>* shouldTerminateProcessing) {
 						A2VideoManager::GetInstance()->bShouldReboot = true;
 					}
 					event_reset_prev = event_reset;
+					// printf("EVENT: %d 0x%04X 0x%02x\n", rw, addr, data);
 					SDHREvent ev(0, 0, 0, rw, addr, data);
 					process_single_event(ev);
 				}
 			}
 		}
+		*/
 		packetFreeQueue.push(std::move(packet));
 	}
 	return 0;
@@ -407,12 +439,12 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 
 			ftStatus = FT_CreateDeviceInfoList(&count);
 			if (ftStatus != FT_OK) {
-				// std::cerr << "Failed to list FPGA usb devices: " << get_ft_status_message(ftStatus) << std::endl;
+				std::cerr << "Failed to list FPGA usb devices: " << get_ft_status_message(ftStatus) << std::endl;
 				continue;
 			}
 			if (count == 0) {
 				ftStatus = FT_DEVICE_NOT_FOUND;
-				// std::cerr << "No FPGA usb devices found" << std::endl;
+				std::cerr << "No FPGA usb devices found" << std::endl;
 				continue;
 			}
 
