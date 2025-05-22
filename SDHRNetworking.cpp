@@ -473,6 +473,14 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 				continue;
 			}
 
+			ftStatus = FT_SetStreamPipe(handle, false, true, FT_PIPE_WRITE_ID, 256*4);
+			if (ftStatus != FT_OK) {
+				std::cerr << "Failed to set read pipe stream size: " << get_ft_status_message(ftStatus) << std::endl;
+				FT_Close(handle);
+				handle = NULL;
+				continue;
+			}
+
 			// Set pipe timeouts. Probably only necessary on Windows
 			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_WRITE_ID, 1000);  // Pipe to write to
 			if (ftStatus != FT_OK) {
