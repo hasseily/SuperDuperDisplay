@@ -367,7 +367,7 @@ int process_usb_events_thread(std::atomic<bool> *shouldTerminateProcessing)
 			}
 			uint32_t addr = b[1];
 			b += 2;
-			//printf("%u\n", data_count);
+			// printf("%u\n", data_count);
 			for (uint32_t i = 0; i < data_count; ++i)
 			{
 				switch (addr)
@@ -386,7 +386,7 @@ int process_usb_events_thread(std::atomic<bool> *shouldTerminateProcessing)
 					uint8_t data = (event >> 20) & 0xff;
 					bool rw = (misc & 0x01) == 0x01;
 					event_reset = ((misc & 0x02) == 0x02);
-					//printf("A:%04x D:%02x RW:%u\n", addr, data, rw);
+					// printf("A:%04x D:%02x RW:%u\n", addr, data, rw);
 					if ((event_reset == 0) && (event_reset_prev == 1))
 					{
 						A2VideoManager::GetInstance()->bShouldReboot = true;
@@ -519,12 +519,34 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			activeNode = nodes[0];
 			std::cerr << "Connected to FPGA usb device" << std::endl;
 			bIsConnected = true;
+
+			// set the no slot clock time
+			time_t t = time(NULL);
+			struct tm time_val;
+			localtime_r(&t, &time_val);
+			uint32_t set_time_buf[4];
+			set_time_buf[0] = 0x80000002; // incr set, 2 data fields;
+			set_time_buf[1] = 0x00000014; // address of time set location
+			ULONG bytes_transferred;
+			uint8_t* p = (uint8_t*)(&set_time_buf[2]);
+			*p++ = 0;
+			*p++ = ((time_val.tm_sec / 10) << 4) + (time_val.tm_sec % 10);
+			*p++ = ((time_val.tm_min / 10) << 4) + (time_val.tm_min % 10);
+			*p++ = ((time_val.tm_hour / 10) << 4) + (time_val.tm_hour % 10);
+			*p++ = (((time_val.tm_wday+1) / 10) << 4) + ((time_val.tm_wday+1) % 10);
+			*p++ = ((time_val.tm_mday / 10) << 4) + (time_val.tm_mday % 10);
+			*p++ = (((time_val.tm_mon+1) / 10) << 4) + ((time_val.tm_mon+1) % 10);
+			*p++ = (((time_val.tm_year % 100) / 10) << 4) + ((time_val.tm_year % 100) % 10);
+			printf("setting time: %04x%04x\n",set_time_buf[3],set_time_buf[2]);
+			uint32_t set_time_msg_len = 16;
+			FT_WritePipeEx(handle, 0, (uint8_t *)set_time_buf, set_time_msg_len, &bytes_transferred, 0);
+		
+			// enable bus events
 			uint32_t enable_msg_buf[3];
 			enable_msg_buf[0] = 0x80000001; // incr set, 1 data field
 			enable_msg_buf[1] = 0x00001000; // address of bus_event_control
 			enable_msg_buf[2] = 0x00000001; // bit 0 indicates enable bus events
 			uint32_t enable_msg_buf_len = 12;
-			ULONG bytes_transferred;
 			FT_WritePipeEx(handle, 0, (uint8_t *)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
 		}
 
