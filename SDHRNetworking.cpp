@@ -23,13 +23,13 @@
 // Read from Appletini
 #define FT_PIPE_READ_ID 0x82
 
-static EventRecorder* eventRecorder;
+static EventRecorder *eventRecorder;
 static bool bIsConnected = false;
 static uint64_t num_processed_packets = 0;
 static uint64_t duration_packet_processing_ns = 0;
 static uint64_t duration_network_processing_ns = 0;
-static FT_STATUS ftStatus;	// latest FT60x status
-static FT_DEVICE_LIST_INFO_NODE activeNode;	// currently active USB device
+static FT_STATUS ftStatus;					// latest FT60x status
+static FT_DEVICE_LIST_INFO_NODE activeNode; // currently active USB device
 
 // Only do a single reset if a string of reset events arrive
 static bool event_reset = 1;
@@ -44,8 +44,12 @@ const uint64_t get_duration_network_processing_ns() { return duration_network_pr
 const size_t get_packet_pool_count() { return packetFreeQueue.max_size(); };
 const size_t get_max_incoming_packets() { return packetInQueue.max_size(); };
 
-const std::string get_ft_status_message(FT_STATUS status) {
-	switch (status) {
+std::vector<uint8_t> rx_message_buffer;
+
+const std::string get_ft_status_message(FT_STATUS status)
+{
+	switch (status)
+	{
 	case FT_OK:
 		return "OK";
 	case FT_INVALID_HANDLE:
@@ -137,16 +141,16 @@ void clear_queues()
 {
 	packetInQueue.clear();
 	packetFreeQueue.clear();
-	for (size_t allocSize = 0; allocSize < 10000; allocSize++)	// preallocate 10,000 packets
+	for (size_t allocSize = 0; allocSize < 10000; allocSize++) // preallocate 10,000 packets
 	{
 		auto packet = std::make_shared<Packet>();
 		packetFreeQueue.push(std::move(packet));
 	}
 }
 
-void insert_event(SDHREvent* e)
+void insert_event(SDHREvent *e)
 {
-	(void)e;	// mark as unused
+	(void)e; // mark as unused
 	assert("ERROR: CANNOT INSERT EVENT");
 }
 
@@ -158,7 +162,7 @@ void terminate_processing_thread()
 	packetInQueue.push(std::move(packet));
 }
 
-void process_single_event(SDHREvent& e)
+void process_single_event(SDHREvent &e)
 {
 	/*
 		Uncomment the below code to log specific events between 2 gates at 03FE and 03FF
@@ -215,11 +219,13 @@ void process_single_event(SDHREvent& e)
 	auto mockingboardMgr = MockingboardManager::GetInstance();
 	mockingboardMgr->EventReceived(e.addr, e.data, e.rw);
 
-	if (e.is_iigs && e.m2sel) {
+	if (e.is_iigs && e.m2sel)
+	{
 		// ignore updates from iigs_mode firmware with m2sel high
 		return;
 	}
-	if (e.rw && ((e.addr & 0xF000) != 0xC000)) {
+	if (e.rw && ((e.addr & 0xF000) != 0xC000))
+	{
 		// ignoring all read events not softswitches
 		return;
 	}
@@ -231,7 +237,8 @@ void process_single_event(SDHREvent& e)
 	 HANDLE SIMPLE MEMORY WRITE EVENTS
 	 *********************************
 	 */
-	if ((e.addr >= _A2_MEMORY_SHADOW_BEGIN) && (e.addr < _A2_MEMORY_SHADOW_END)) {
+	if ((e.addr >= _A2_MEMORY_SHADOW_BEGIN) && (e.addr < _A2_MEMORY_SHADOW_END))
+	{
 		memMgr->WriteToMemory(e.addr, e.data, e.m2b0, e.is_iigs);
 		return;
 	}
@@ -240,9 +247,10 @@ void process_single_event(SDHREvent& e)
 	 HANDLE SOFT SWITCHES EVENTS
 	 *********************************
 	 */
-	 // TODO: *** SDHR IS DISABLED FOR 2GS ***
-	 //		because we're getting spurious 0xC0A0 events from the GS
-	if ((e.is_iigs == true) || ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA))) {
+	// TODO: *** SDHR IS DISABLED FOR 2GS ***
+	//		because we're getting spurious 0xC0A0 events from the GS
+	if ((e.is_iigs == true) || ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)))
+	{
 		if (e.addr >> 8 == 0xc0)
 			memMgr->ProcessSoftSwitch(e.addr, e.data, e.rw, e.is_iigs);
 		// ignore non-control
@@ -253,7 +261,7 @@ void process_single_event(SDHREvent& e)
 	 HANDLE SDHR (0xC0A0/1) EVENTS
 	 *********************************
 	 */
-	 //std::cerr << "cmd " << e.addr << " " << (uint32_t) e.data << std::endl;
+	// std::cerr << "cmd " << e.addr << " " << (uint32_t) e.data << std::endl;
 	auto sdhrMgr = SDHRManager::GetInstance();
 	auto a2VideoMgr = A2VideoManager::GetInstance();
 	SDHRCtrl_e _ctrl;
@@ -272,16 +280,16 @@ void process_single_event(SDHREvent& e)
 			a2VideoMgr->ToggleA2Video(true);
 			break;
 		case SDHR_CTRL_ENABLE:
-			//#ifdef DEBUG
+			// #ifdef DEBUG
 			std::cout << "CONTROL: Enable SDHR" << std::endl;
-			//#endif
+			// #endif
 			sdhrMgr->ToggleSdhr(true);
 			a2VideoMgr->ToggleA2Video(false);
 			break;
 		case SDHR_CTRL_RESET:
-			//#ifdef DEBUG
+			// #ifdef DEBUG
 			std::cout << "CONTROL: Reset SDHR" << std::endl;
-			//#endif
+			// #endif
 			sdhrMgr->ResetSdhr();
 			break;
 		case SDHR_CTRL_PROCESS:
@@ -295,7 +303,9 @@ void process_single_event(SDHREvent& e)
 #ifdef DEBUG
 			std::cout << "CONTROL: Process SDHR" << std::endl;
 #endif
-			while (sdhrMgr->dataState != DATASTATE_e::DATA_IDLE) {};
+			while (sdhrMgr->dataState != DATASTATE_e::DATA_IDLE)
+			{
+			};
 			bool processingSucceeded = sdhrMgr->ProcessCommands();
 			sdhrMgr->dataState = DATASTATE_e::DATA_UPDATED;
 			if (processingSucceeded)
@@ -304,10 +314,11 @@ void process_single_event(SDHREvent& e)
 				std::cout << "Processing SDHR succeeded!" << std::endl;
 #endif
 			}
-			else {
-				//#ifdef DEBUG
+			else
+			{
+				// #ifdef DEBUG
 				std::cerr << "ERROR: Processing SDHR failed!" << std::endl;
-				//#endif
+				// #endif
 			}
 			sdhrMgr->ClearBuffer();
 			break;
@@ -327,70 +338,102 @@ void process_single_event(SDHREvent& e)
 	}
 }
 
-int process_usb_events_thread(std::atomic<bool>* shouldTerminateProcessing) {
+int process_usb_events_thread(std::atomic<bool> *shouldTerminateProcessing)
+{
 	std::cout << "starting usb processing thread" << std::endl;
-	while (!(*shouldTerminateProcessing)) {
+	while (!(*shouldTerminateProcessing))
+	{
 		auto packet = packetInQueue.pop();
-		uint32_t* p = (uint32_t*)packet->data;
-		while ((uint8_t*)p < packet->data + packet->size) {
-			uint32_t hdr = *p;
-			uint32_t packet_len = hdr & 0x0000ffff;
-			uint32_t packet_version = (hdr & 0xff000000) >> 24;
-			uint32_t packet_type = (hdr & 0x00ff0000) >> 16;
-			if (packet_len == 0 || packet_len > 1024 || ((packet_len % 4) != 0)) {
-				printf("invalid packet len: %u\n", packet_len);
-				// this packet is garbage somehow, stop processing
+		rx_message_buffer.insert(rx_message_buffer.end(),
+								 packet->data, packet->data + packet->size);
+		packetFreeQueue.push(std::move(packet));
+		uint32_t *s = (uint32_t *)&rx_message_buffer[0];
+		uint32_t *b = s;
+		auto word_size = rx_message_buffer.size() / 4;
+		uint32_t *e = b + word_size;
+		while (b < e)
+		{
+			if ((e - b) < 2)
+			{
+				// not enough for a header
 				break;
 			}
-			if ((uint8_t*)p + packet_len > packet->data + packet->size) {
-				// shouldn't happen, but also garbage condition
-				printf("packet len exceeds buffer\n");
+			bool addr_incr = (b[0] & (1 << 31)) != 0;
+			uint32_t data_count = b[0] & 0xff;
+			if ((e - b) < (2 + data_count))
+			{
+				// not enough for all data
 				break;
 			}
-			if (packet_version != 1) {
-				// shouldn't happen
-				printf("packet error, version must be 1\n");
-				p += (packet_len / 4);
-				continue;
-			}
-			if (packet_type != 1) {
-				// when we start doing different messages we'd handle it here
-				p += (packet_len / 4);
-				continue;
-			}
-			else {
-				++p;
-				for (uint32_t i = 1; i < packet_len / 4; ++i) {
-					uint32_t event = *p++;
-					uint16_t addr = (event >> 16) & 0xffff;
-					uint8_t misc = (event) & 0x0f;
-					uint8_t data = (event >> 4) & 0xff;
+			uint32_t addr = b[1];
+			b += 2;
+			// printf("%u\n", data_count);
+			for (uint32_t i = 0; i < data_count; ++i)
+			{
+				switch (addr)
+				{
+				case 0x1000:
+				{
+					uint32_t bus_event_state = b[i];
+					std::cerr << "received bus event state: " << bus_event_state << std::endl;
+				}
+				break;
+				case 0x1004:
+				{
+					uint32_t event = b[i];
+					uint16_t addr = event & 0xffff;
+					uint8_t misc = (event >> 16) & 0x0f;
+					uint8_t data = (event >> 20) & 0xff;
 					bool rw = (misc & 0x01) == 0x01;
 					event_reset = ((misc & 0x02) == 0x02);
-					if ((event_reset == 0) && (event_reset_prev == 1)) {
+					// printf("A:%04x D:%02x RW:%u\n", addr, data, rw);
+					if ((event_reset == 0) && (event_reset_prev == 1))
+					{
 						A2VideoManager::GetInstance()->bShouldReboot = true;
 					}
 					event_reset_prev = event_reset;
 					SDHREvent ev(0, 0, 0, rw, addr, data);
 					process_single_event(ev);
 				}
+				}
+				if (addr_incr)
+				{
+					addr += 4;
+				}
+			}
+			b += data_count;
+		}
+		uint32_t data_removed = (b - s);
+		if (data_removed > 0)
+		{
+			if (data_removed * 4 == rx_message_buffer.size())
+			{
+				rx_message_buffer.clear();
+			}
+			else
+			{
+				rx_message_buffer.erase(rx_message_buffer.begin(),
+										rx_message_buffer.begin() + data_removed * 4);
 			}
 		}
-		packetFreeQueue.push(std::move(packet));
 	}
 	return 0;
 }
 
-int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
+int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
+{
 	eventRecorder = EventRecorder::GetInstance();
 	clear_queues();
 	std::cout << "Starting USB thread" << std::endl;
 	FT_HANDLE handle = NULL;
 	bIsConnected = false;
 	std::chrono::steady_clock::time_point next_connect_timeout{};
-	while (!(*shouldTerminateNetworking)) {
-		if (!bIsConnected) {
-			if (next_connect_timeout > std::chrono::steady_clock::now()) {
+	while (!(*shouldTerminateNetworking))
+	{
+		if (!bIsConnected)
+		{
+			if (next_connect_timeout > std::chrono::steady_clock::now())
+			{
 				SDL_Delay(200);
 				continue;
 			}
@@ -406,18 +449,21 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 			std::copy(std::begin("NO DEVICE"), std::end("NO DEVICE"), activeNode.Description);
 
 			ftStatus = FT_CreateDeviceInfoList(&count);
-			if (ftStatus != FT_OK) {
+			if (ftStatus != FT_OK)
+			{
 				// std::cerr << "Failed to list FPGA usb devices: " << get_ft_status_message(ftStatus) << std::endl;
 				continue;
 			}
-			if (count == 0) {
+			if (count == 0)
+			{
 				ftStatus = FT_DEVICE_NOT_FOUND;
 				// std::cerr << "No FPGA usb devices found" << std::endl;
 				continue;
 			}
 
 			ftStatus = FT_GetDeviceInfoList(nodes, &count);
-			if (ftStatus != FT_OK) {
+			if (ftStatus != FT_OK)
+			{
 				// std::cerr << "Failed to get FPGA usb device info list: " << get_ft_status_message(ftStatus) << std::endl;
 				continue;
 			}
@@ -431,26 +477,30 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 			conf.wStructSize = sizeof(conf);
 			conf.pipe[FT_PIPE_DIR_IN].fNonThreadSafeTransfer = true;
 			conf.pipe[FT_PIPE_DIR_OUT].fNonThreadSafeTransfer = true;
-			for (uint32_t i = 0; i < 4; ++i) {
+			for (uint32_t i = 0; i < 4; ++i)
+			{
 				FT_SetTransferParams(&conf, i);
 			}
 			ftStatus = FT_Create(0, FT_OPEN_BY_INDEX, &handle);
 #endif
-			if (ftStatus != FT_OK) {
+			if (ftStatus != FT_OK)
+			{
 				std::cerr << "Failed to open FPGA usb device handle: " << get_ft_status_message(ftStatus) << std::endl;
 				continue;
 			}
 
 			// Set pipe timeouts. Probably only necessary on Windows
-			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_WRITE_ID, 1000);  // Pipe to write to
-			if (ftStatus != FT_OK) {
+			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_WRITE_ID, 1000); // Pipe to write to
+			if (ftStatus != FT_OK)
+			{
 				std::cerr << "Failed to set write pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
 				FT_Close(handle);
 				handle = NULL;
 				continue;
 			}
-			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_READ_ID, 1000);  // Pipe to read from
-			if (ftStatus != FT_OK) {
+			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_READ_ID, 1000); // Pipe to read from
+			if (ftStatus != FT_OK)
+			{
 				std::cerr << "Failed to set read pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
 				FT_Close(handle);
 				handle = NULL;
@@ -469,16 +519,46 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 			activeNode = nodes[0];
 			std::cerr << "Connected to FPGA usb device" << std::endl;
 			bIsConnected = true;
+
+			// set the no slot clock time
+			time_t t = time(NULL);
+			struct tm time_val;
+			localtime_r(&t, &time_val);
+			uint32_t set_time_buf[4];
+			set_time_buf[0] = 0x80000002; // incr set, 2 data fields;
+			set_time_buf[1] = 0x00000014; // address of time set location
+			ULONG bytes_transferred;
+			uint8_t* p = (uint8_t*)(&set_time_buf[2]);
+			*p++ = 0;
+			*p++ = ((time_val.tm_sec / 10) << 4) + (time_val.tm_sec % 10);
+			*p++ = ((time_val.tm_min / 10) << 4) + (time_val.tm_min % 10);
+			*p++ = ((time_val.tm_hour / 10) << 4) + (time_val.tm_hour % 10);
+			*p++ = (((time_val.tm_wday+1) / 10) << 4) + ((time_val.tm_wday+1) % 10);
+			*p++ = ((time_val.tm_mday / 10) << 4) + (time_val.tm_mday % 10);
+			*p++ = (((time_val.tm_mon+1) / 10) << 4) + ((time_val.tm_mon+1) % 10);
+			*p++ = (((time_val.tm_year % 100) / 10) << 4) + ((time_val.tm_year % 100) % 10);
+			printf("setting time: %04x%04x\n",set_time_buf[3],set_time_buf[2]);
+			uint32_t set_time_msg_len = 16;
+			FT_WritePipeEx(handle, 0, (uint8_t *)set_time_buf, set_time_msg_len, &bytes_transferred, 0);
+		
+			// enable bus events
+			uint32_t enable_msg_buf[3];
+			enable_msg_buf[0] = 0x80000001; // incr set, 1 data field
+			enable_msg_buf[1] = 0x00001000; // address of bus_event_control
+			enable_msg_buf[2] = 0x00000001; // bit 0 indicates enable bus events
+			uint32_t enable_msg_buf_len = 12;
+			FT_WritePipeEx(handle, 0, (uint8_t *)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
 		}
 
 		auto packet = packetFreeQueue.pop();
 		// Synchronous Read
 #ifdef __NETWORKING_WINDOWS__
-		ftStatus = FT_ReadPipeEx(handle, FT_PIPE_READ_ID, packet->data, PKT_BUFSZ, (ULONG*)&(packet->size), NULL);
+		ftStatus = FT_ReadPipeEx(handle, FT_PIPE_READ_ID, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), NULL);
 #else
-		ftStatus = FT_ReadPipeEx(handle, 0, packet->data, PKT_BUFSZ, (ULONG*)&(packet->size), 1000);
+		ftStatus = FT_ReadPipeEx(handle, 0, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), 1000);
 #endif
-		if (ftStatus != FT_OK) {
+		if (ftStatus != FT_OK)
+		{
 			// FT_TIMEOUT means the Apple is off. No data is coming in
 			if (ftStatus != FT_TIMEOUT)
 			{
@@ -489,10 +569,12 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking) {
 			continue;
 		}
 
-		if (!eventRecorder->IsInReplayMode()) {
+		if (!eventRecorder->IsInReplayMode())
+		{
 			packetInQueue.push(std::move(packet));
 		}
-		else {
+		else
+		{
 			packetFreeQueue.push(std::move(packet));
 		}
 	}
