@@ -329,52 +329,30 @@ void process_single_event(SDHREvent& e)
 
 int process_usb_events_thread(std::atomic<bool>* shouldTerminateProcessing) {
 	std::cout << "starting usb processing thread" << std::endl;
+	//char buf[200];
 	while (!(*shouldTerminateProcessing)) {
 		auto packet = packetInQueue.pop();
 		uint32_t* p = (uint32_t*)packet->data;
+		if (packet->size % 4 != 0)
+			std::cerr << "Wrong Packet Size: " << packet->size << std::endl;
 		while ((uint8_t*)p < packet->data + packet->size) {
-			uint32_t hdr = *p;
-			uint32_t packet_len = hdr & 0x0000ffff;
-			uint32_t packet_version = (hdr & 0xff000000) >> 24;
-			uint32_t packet_type = (hdr & 0x00ff0000) >> 16;
-			if (packet_len == 0 || packet_len > 1024 || ((packet_len % 4) != 0)) {
-				printf("invalid packet len: %u\n", packet_len);
-				// this packet is garbage somehow, stop processing
-				break;
-			}
-			if ((uint8_t*)p + packet_len > packet->data + packet->size) {
-				// shouldn't happen, but also garbage condition
-				printf("packet len exceeds buffer\n");
-				break;
-			}
-			if (packet_version != 1) {
-				// shouldn't happen
-				printf("packet error, version must be 1\n");
-				p += (packet_len / 4);
+			uint32_t event = *p++;
+			if ((event & 0x0000F000) == 0)	// This would be a packet header, get rid of it
 				continue;
-			}
-			if (packet_type != 1) {
-				// when we start doing different messages we'd handle it here
-				p += (packet_len / 4);
-				continue;
-			}
-			else {
-				++p;
-				for (uint32_t i = 1; i < packet_len / 4; ++i) {
-					uint32_t event = *p++;
-					uint16_t addr = (event >> 16) & 0xffff;
-					uint8_t misc = (event) & 0x0f;
-					uint8_t data = (event >> 4) & 0xff;
-					bool rw = (misc & 0x01) == 0x01;
-					event_reset = ((misc & 0x02) == 0x02);
-					if ((event_reset == 0) && (event_reset_prev == 1)) {
-						A2VideoManager::GetInstance()->bShouldReboot = true;
-					}
-					event_reset_prev = event_reset;
-					SDHREvent ev(0, 0, 0, rw, addr, data);
-					process_single_event(ev);
-				}
-			}
+			uint16_t addr = (event >> 16) & 0xffff;
+			uint8_t misc = event & 0x0f;
+			uint8_t data = (event >> 4) & 0xff;
+			bool rw = (misc & 0x01) == 0x01;
+			event_reset = ((misc & 0x02) == 0x02);
+			//if ((event_reset == 0) && (event_reset_prev == 1)) {
+			//	A2VideoManager::GetInstance()->bShouldReboot = true;
+			//}
+			// if ((addr >> 8) != 0x08)
+			//	sprintf(buf, "A: 0x%04X  D: 0x%02X  M: 0x%01X", addr, data, misc);
+			//std::cerr << buf << std::endl;
+			event_reset_prev = event_reset;
+			SDHREvent ev(0, 0, 0, rw, addr, data);
+			process_single_event(ev);
 		}
 		packetFreeQueue.push(std::move(packet));
 	}
