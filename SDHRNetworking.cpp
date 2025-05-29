@@ -523,7 +523,11 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			// set the no slot clock time
 			time_t t = time(NULL);
 			struct tm time_val;
+#ifdef __NETWORKING_WINDOWS__
+			localtime_s(&time_val, &t);
+#else
 			localtime_r(&t, &time_val);
+#endif
 			uint32_t set_time_buf[4];
 			set_time_buf[0] = 0x80000002; // incr set, 2 data fields;
 			set_time_buf[1] = 0x00000014; // address of time set location
