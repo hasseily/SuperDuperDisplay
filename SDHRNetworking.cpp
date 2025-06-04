@@ -28,7 +28,7 @@ static bool bIsConnected = false;
 static uint64_t num_processed_packets = 0;
 static uint64_t duration_packet_processing_ns = 0;
 static uint64_t duration_network_processing_ns = 0;
-static FT_STATUS ftStatus;					// latest FT60x status
+static FT_STATUS ftStatus, ftStatusPrevious;// latest FT60x statuses
 static FT_DEVICE_LIST_INFO_NODE activeNode; // currently active USB device
 
 // Only do a single reset if a string of reset events arrive
@@ -403,7 +403,7 @@ int process_usb_events_thread(std::atomic<bool> *shouldTerminateProcessing)
 			}
 			b += data_count;
 		}
-		uint32_t data_removed = (b - s);
+		auto data_removed = (b - s);
 		if (data_removed > 0)
 		{
 			if (data_removed * 4 == rx_message_buffer.size())
@@ -425,6 +425,7 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 	eventRecorder = EventRecorder::GetInstance();
 	clear_queues();
 	std::cout << "Starting USB thread" << std::endl;
+	ftStatusPrevious = 0xFFFF;
 	FT_HANDLE handle = NULL;
 	bIsConnected = false;
 	std::chrono::steady_clock::time_point next_connect_timeout{};
@@ -451,20 +452,26 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			ftStatus = FT_CreateDeviceInfoList(&count);
 			if (ftStatus != FT_OK)
 			{
-				// std::cerr << "Failed to list FPGA usb devices: " << get_ft_status_message(ftStatus) << std::endl;
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "Failed to list FPGA usb devices: " << get_ft_status_message(ftStatus) << std::endl;
+				ftStatusPrevious = ftStatus;
 				continue;
 			}
 			if (count == 0)
 			{
 				ftStatus = FT_DEVICE_NOT_FOUND;
-				// std::cerr << "No FPGA usb devices found" << std::endl;
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "No FPGA usb devices found" << std::endl;
+				ftStatusPrevious = ftStatus;
 				continue;
 			}
 
 			ftStatus = FT_GetDeviceInfoList(nodes, &count);
 			if (ftStatus != FT_OK)
 			{
-				// std::cerr << "Failed to get FPGA usb device info list: " << get_ft_status_message(ftStatus) << std::endl;
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "Failed to get FPGA usb device info list: " << get_ft_status_message(ftStatus) << std::endl;
+				ftStatusPrevious = ftStatus;
 				continue;
 			}
 
@@ -485,7 +492,9 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 #endif
 			if (ftStatus != FT_OK)
 			{
-				std::cerr << "Failed to open FPGA usb device handle: " << get_ft_status_message(ftStatus) << std::endl;
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "Failed to open FPGA usb device handle: " << get_ft_status_message(ftStatus) << std::endl;
+				ftStatusPrevious = ftStatus;
 				continue;
 			}
 
@@ -493,7 +502,9 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_WRITE_ID, 1000); // Pipe to write to
 			if (ftStatus != FT_OK)
 			{
-				std::cerr << "Failed to set write pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "Failed to set write pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
+				ftStatusPrevious = ftStatus;
 				FT_Close(handle);
 				handle = NULL;
 				continue;
@@ -501,7 +512,9 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_READ_ID, 1000); // Pipe to read from
 			if (ftStatus != FT_OK)
 			{
-				std::cerr << "Failed to set read pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "Failed to set read pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
+				ftStatusPrevious = ftStatus;
 				FT_Close(handle);
 				handle = NULL;
 				continue;
@@ -509,7 +522,9 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			/*
 			ftStatus = FT_SetStreamPipe(handle, true, true, 0, PKT_BUFSZ);
 			if (ftStatus != FT_OK) {
-				std::cerr << "Failed to set Stream pipe size" << std::endl;
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "Failed to set Stream pipe size" << std::endl;
+				ftStatusPrevious = ftStatus;
 				FT_Close(handle);
 				handle = NULL;
 				continue;
@@ -566,7 +581,9 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			// FT_TIMEOUT means the Apple is off. No data is coming in
 			if (ftStatus != FT_TIMEOUT)
 			{
-				std::cerr << "Failed to read from FPGA usb packet pipe: " << get_ft_status_message(ftStatus) << std::endl;
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "Failed to read from FPGA usb packet pipe: " << get_ft_status_message(ftStatus) << std::endl;
+				ftStatusPrevious = ftStatus;
 			}
 			FT_AbortPipe(handle, FT_PIPE_READ_ID);
 			packetFreeQueue.push(std::move(packet));
