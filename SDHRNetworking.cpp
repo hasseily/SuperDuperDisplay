@@ -23,6 +23,9 @@
 // Read from Appletini
 #define FT_PIPE_READ_ID 0x82
 
+// The USB handle to the Appletini
+static FT_HANDLE g_ftHandle = NULL;
+
 static EventRecorder *eventRecorder;
 static bool bIsConnected = false;
 static uint64_t num_processed_packets = 0;
@@ -53,7 +56,7 @@ const std::string get_ft_status_message(FT_STATUS status)
 	case FT_OK:
 		return "OK";
 	case FT_INVALID_HANDLE:
-		return "Invalid handle";
+		return "Invalid g_ftHandle";
 	case FT_DEVICE_NOT_FOUND:
 		return "Device not found";
 	case FT_DEVICE_NOT_OPENED:
@@ -103,7 +106,7 @@ const std::string get_ft_status_message(FT_STATUS status)
 	case FT_IO_INCOMPLETE:
 		return "Input/output operation is incomplete";
 	case FT_HANDLE_EOF:
-		return "End of file handle reached";
+		return "End of file g_ftHandle reached";
 	case FT_BUSY:
 		return "Device is busy";
 	case FT_NO_SYSTEM_RESOURCES:
@@ -425,7 +428,6 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 	eventRecorder = EventRecorder::GetInstance();
 	clear_queues();
 	std::cout << "Starting USB thread" << std::endl;
-	FT_HANDLE handle = NULL;
 	bIsConnected = false;
 	std::chrono::steady_clock::time_point next_connect_timeout{};
 	while (!(*shouldTerminateNetworking))
@@ -470,7 +472,7 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 
 			// Open the first available device
 #ifdef __NETWORKING_WINDOWS__
-			ftStatus = FT_Create((PVOID)nodes[0].SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, &handle);
+			ftStatus = FT_Create((PVOID)nodes[0].SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, &g_ftHandle);
 #else
 			FT_TRANSFER_CONF conf;
 			memset(&conf, 0, sizeof(conf));
@@ -481,37 +483,37 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			{
 				FT_SetTransferParams(&conf, i);
 			}
-			ftStatus = FT_Create(0, FT_OPEN_BY_INDEX, &handle);
+			ftStatus = FT_Create(0, FT_OPEN_BY_INDEX, &g_ftHandle);
 #endif
 			if (ftStatus != FT_OK)
 			{
-				std::cerr << "Failed to open FPGA usb device handle: " << get_ft_status_message(ftStatus) << std::endl;
+				std::cerr << "Failed to open FPGA usb device g_ftHandle: " << get_ft_status_message(ftStatus) << std::endl;
 				continue;
 			}
 
 			// Set pipe timeouts. Probably only necessary on Windows
-			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_WRITE_ID, 1000); // Pipe to write to
+			ftStatus = FT_SetPipeTimeout(g_ftHandle, FT_PIPE_WRITE_ID, 1000); // Pipe to write to
 			if (ftStatus != FT_OK)
 			{
 				std::cerr << "Failed to set write pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
-				FT_Close(handle);
-				handle = NULL;
+				FT_Close(g_ftHandle);
+				g_ftHandle = NULL;
 				continue;
 			}
-			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_READ_ID, 1000); // Pipe to read from
+			ftStatus = FT_SetPipeTimeout(g_ftHandle, FT_PIPE_READ_ID, 1000); // Pipe to read from
 			if (ftStatus != FT_OK)
 			{
 				std::cerr << "Failed to set read pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
-				FT_Close(handle);
-				handle = NULL;
+				FT_Close(g_ftHandle);
+				g_ftHandle = NULL;
 				continue;
 			}
 			/*
-			ftStatus = FT_SetStreamPipe(handle, true, true, 0, PKT_BUFSZ);
+			ftStatus = FT_SetStreamPipe(g_ftHandle, true, true, 0, PKT_BUFSZ);
 			if (ftStatus != FT_OK) {
 				std::cerr << "Failed to set Stream pipe size" << std::endl;
-				FT_Close(handle);
-				handle = NULL;
+				FT_Close(g_ftHandle);
+				g_ftHandle = NULL;
 				continue;
 			}
 			*/
@@ -543,23 +545,31 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			*p++ = (((time_val.tm_year % 100) / 10) << 4) + ((time_val.tm_year % 100) % 10);
 			printf("setting time: %04x%04x\n",set_time_buf[3],set_time_buf[2]);
 			uint32_t set_time_msg_len = 16;
-			FT_WritePipeEx(handle, 0, (uint8_t *)set_time_buf, set_time_msg_len, &bytes_transferred, 0);
-		
+			ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t *)set_time_buf, set_time_msg_len, &bytes_transferred, 0);
+			if (ftStatus != FT_OK)
+			{
+				std::cerr << "Failed to set time to FPGA: " << get_ft_status_message(ftStatus) << std::endl;
+			}
+
 			// enable bus events
 			uint32_t enable_msg_buf[3];
 			enable_msg_buf[0] = 0x80000001; // incr set, 1 data field
 			enable_msg_buf[1] = 0x00001000; // address of bus_event_control
 			enable_msg_buf[2] = 0x00000001; // bit 0 indicates enable bus events
 			uint32_t enable_msg_buf_len = 12;
-			FT_WritePipeEx(handle, 0, (uint8_t *)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
+			ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t *)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
+			if (ftStatus != FT_OK)
+			{
+				std::cerr << "Failed to enable FPGA bus events: " << get_ft_status_message(ftStatus) << std::endl;
+			}
 		}
 
 		auto packet = packetFreeQueue.pop();
 		// Synchronous Read
 #ifdef __NETWORKING_WINDOWS__
-		ftStatus = FT_ReadPipeEx(handle, FT_PIPE_READ_ID, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), NULL);
+		ftStatus = FT_ReadPipeEx(g_ftHandle, FT_PIPE_READ_ID, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), NULL);
 #else
-		ftStatus = FT_ReadPipeEx(handle, 0, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), 1000);
+		ftStatus = FT_ReadPipeEx(g_ftHandle, 0, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), 1000);
 #endif
 		if (ftStatus != FT_OK)
 		{
@@ -568,7 +578,7 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			{
 				std::cerr << "Failed to read from FPGA usb packet pipe: " << get_ft_status_message(ftStatus) << std::endl;
 			}
-			FT_AbortPipe(handle, FT_PIPE_READ_ID);
+			FT_AbortPipe(g_ftHandle, FT_PIPE_READ_ID);
 			packetFreeQueue.push(std::move(packet));
 			continue;
 		}
