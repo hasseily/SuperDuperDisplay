@@ -595,3 +595,32 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 	std::cout << "ending usb read loop" << std::endl;
 	return 0;
 }
+
+uint32_t usb_write_register(bool setIncrement, uint32_t addressStart, std::vector<uint32_t>* vData)
+{
+	if (g_ftHandle == NULL)
+		return 0;
+	uint32_t enable_msg_buf[256];	// max 256 entries, 254 data fields
+	auto vDataSize = vData->size();
+	if (vDataSize > ((sizeof(enable_msg_buf) / sizeof(enable_msg_buf[0])) - 2))
+	{
+		std::cerr << "ERROR: Too much data sent to usb_write_register!" << std::endl;
+		return 0;
+	}
+	enable_msg_buf[0] = 0x0;
+	if (setIncrement)
+		enable_msg_buf[0] = 0x80000000;
+	enable_msg_buf[0] += vDataSize;
+	enable_msg_buf[1] = addressStart;
+	for (auto i = 0; i < vDataSize; ++i)
+	{
+		enable_msg_buf[2 + i] = vData->at(i);
+	}
+	uint32_t enable_msg_buf_len = (2 + vDataSize) * sizeof(enable_msg_buf[0]);
+	ULONG bytes_transferred;
+	ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
+	if (ftStatus != FT_OK)
+	{
+		std::cerr << "Failed to enable FPGA bus events: " << get_ft_status_message(ftStatus) << std::endl;
+	}
+}
