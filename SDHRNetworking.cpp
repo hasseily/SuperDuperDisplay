@@ -54,6 +54,7 @@ static bool bUSBImGUiWindowIsOpen = false;
 static bool bUSBImGUiIsIncrement = false;
 static int iUSBImGUIAddressStart = 0;
 static char cUSBImGUIData[1020 + 254];
+static char cUSBImGUIDataError[1024];
 
 const std::string get_ft_status_message(FT_STATUS status)
 {
@@ -627,8 +628,10 @@ uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* 
 	ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
 	if (ftStatus != FT_OK)
 	{
-		std::cerr << "Failed to enable FPGA bus events: " << get_ft_status_message(ftStatus) << std::endl;
+		std::cerr << "Failed to write pipe ex: " << get_ft_status_message(ftStatus) << std::endl;
+		return 0;
 	}
+	return 1;
 }
 
 void usb_display_imgui_window(bool* p_open)
@@ -649,12 +652,12 @@ void usb_display_imgui_window(bool* p_open)
 				constexpr size_t TOKEN_LEN = 8;  // 8 hex chars == 4 bytes
 				std::string_view sv(cUSBImGUIData);
 				std::vector<uint32_t> result;
-				size_t i = 0, n = sv.size();
+				int i = 0, n = sv.size();
 
 				while (i < n) {
 					// Ensure enough characters remain
 					if (i + TOKEN_LEN > n) {
-						ImGui::TextColored(ImVec4(0.9f,0.f,0.f,1.f),"Unexpected end of data at position %d",i);
+						sprintf(cUSBImGUIDataError, "Unexpected end of data at position %d", i);
 						goto ENDWRITE;
 					}
 
@@ -664,7 +667,7 @@ void usb_display_imgui_window(bool* p_open)
 					// Validate each is a hex digit
 					for (char c : token) {
 						if (!std::isxdigit(static_cast<unsigned char>(c))) {
-							ImGui::TextColored(ImVec4(0.9f, 0.f, 0.f, 1.f), "Invalid hex digit %s in token at pos %d", c, i);
+							sprintf(cUSBImGUIDataError, "Invalid hex digit %c in token at pos %d", c, i);
 							goto ENDWRITE;
 						}
 					}
@@ -673,7 +676,7 @@ void usb_display_imgui_window(bool* p_open)
 					uint32_t value = 0;
 					auto [ptr, ec] = std::from_chars(token.data(), token.data() + token.size(), value, 16);
 					if (ec != std::errc()) {
-						ImGui::TextColored(ImVec4(0.9f, 0.f, 0.f, 1.f), "Failed to parse token %s as hex at pos %d", std::string(token).c_str(), i);
+						sprintf(cUSBImGUIDataError, "Failed to parse token %s as hex at pos %d", std::string(token).c_str(), i);
 						goto ENDWRITE;
 					}
 					result.push_back(value);
@@ -685,16 +688,22 @@ void usb_display_imgui_window(bool* p_open)
 
 					// Next character must be a space
 					if (sv[i] != ' ') {
-						ImGui::TextColored(ImVec4(0.9f, 0.f, 0.f, 1.f), "Expected space at position %d, found %s", i, sv[i]);
+						sprintf(cUSBImGUIDataError, "Expected space at position %d, found %c", i, sv[i]);
 						goto ENDWRITE;
 					}
 					++i;  // skip the space
 				}
 				// now send to appletini
-				usb_write_register(iUSBImGUIAddressStart, &result, bUSBImGUiIsIncrement);
+				auto _res = usb_write_register(iUSBImGUIAddressStart, &result, bUSBImGUiIsIncrement);
+				if (_res == 0)
+					sprintf(cUSBImGUIDataError, "FT Write Pipe Ex failed: %s", get_ft_status_message(ftStatus).c_str());
+				else
+					cUSBImGUIDataError[0] = '\0';
 			}
+		ENDWRITE:
+			if (cUSBImGUIDataError[0] != '\0')
+				ImGui::TextColored(ImVec4(0.9f, 0.f, 0.f, 1.f), cUSBImGUIDataError);
 		}
-	ENDWRITE:
 		ImGui::End();
 	}
 }
