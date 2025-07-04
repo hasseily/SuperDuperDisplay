@@ -63,6 +63,7 @@ public:
 	bool bShowLoadFileWindow = false;
 	bool bShowImGuiMetricsWindow = false;
 	bool bShowMemoryHeatMap = false;
+	bool bShowUSBImGuiWindow = false;
 	
 	bool bSampleRunKarateka = false;
 
@@ -526,6 +527,9 @@ void MainMenu::Render() {
 		
 		if (pGui->bShowImGuiMetricsWindow)
 			ImGui::ShowMetricsWindow(&pGui->bShowImGuiMetricsWindow);
+
+		if (pGui->bShowUSBImGuiWindow)
+			usb_display_imgui_window(&pGui->bShowUSBImGuiWindow);
 	}
 	
 	ImGui::Render();
@@ -965,6 +969,8 @@ void MainMenu::ShowDeveloperMenu() {
 		ImGui::MenuItem("Upload Region Memory Window", "", &pGui->mem_edit_sdhr_upload.Open);
 		ImGui::EndMenu();
 	}
+	ImGui::Separator();
+	ImGui::MenuItem("Appletini Communications", "", &pGui->bShowUSBImGuiWindow);
 	ImGui::Separator();
 	ImGui::MenuItem("ImGui Metrics Window", "", &pGui->bShowImGuiMetricsWindow);
 }

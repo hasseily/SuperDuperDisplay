@@ -17,6 +17,7 @@
 #else
 #include "ftd3xx.h"
 #endif
+#include <charconv>
 
 // Write to Appletini
 #define FT_PIPE_WRITE_ID 0x02
@@ -48,6 +49,11 @@ const size_t get_packet_pool_count() { return packetFreeQueue.max_size(); };
 const size_t get_max_incoming_packets() { return packetInQueue.max_size(); };
 
 std::vector<uint8_t> rx_message_buffer;
+
+static bool bUSBImGUiWindowIsOpen = false;
+static bool bUSBImGUiIsIncrement = false;
+static int iUSBImGUIAddressStart = 0;
+static char cUSBImGUIData[1020 + 254];
 
 const std::string get_ft_status_message(FT_STATUS status)
 {
@@ -596,7 +602,7 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 	return 0;
 }
 
-uint32_t usb_write_register(bool setIncrement, uint32_t addressStart, std::vector<uint32_t>* vData)
+uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* vData, bool setIncrement)
 {
 	if (g_ftHandle == NULL)
 		return 0;
@@ -622,5 +628,73 @@ uint32_t usb_write_register(bool setIncrement, uint32_t addressStart, std::vecto
 	if (ftStatus != FT_OK)
 	{
 		std::cerr << "Failed to enable FPGA bus events: " << get_ft_status_message(ftStatus) << std::endl;
+	}
+}
+
+void usb_display_imgui_window(bool* p_open)
+{
+	bUSBImGUiWindowIsOpen = p_open;
+	if (p_open)
+	{
+		ImGui::SetNextWindowSizeConstraints(ImVec2(420, 400), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::Begin("Appletini Communications", p_open);
+		if (!ImGui::IsWindowCollapsed())
+		{
+			ImGui::Checkbox("Increment", &bUSBImGUiIsIncrement);
+			ImGui::SliderInt("Start Address", &iUSBImGUIAddressStart, 0, 0x4000, "%04X", 1);
+			ImGui::InputText("Data", cUSBImGUIData, sizeof(cUSBImGUIData));
+			ImGui::SetItemTooltip("Data is space-delimited 4 bytes in hex, e.g.: 4ce20001 0000ffa2. Max of 254 4-byte values.");
+			if (ImGui::Button("Write to Appletini"))
+			{
+				constexpr size_t TOKEN_LEN = 8;  // 8 hex chars == 4 bytes
+				std::string_view sv(cUSBImGUIData);
+				std::vector<uint32_t> result;
+				size_t i = 0, n = sv.size();
+
+				while (i < n) {
+					// Ensure enough characters remain
+					if (i + TOKEN_LEN > n) {
+						ImGui::TextColored(ImVec4(0.9f,0.f,0.f,1.f),"Unexpected end of data at position %d",i);
+						goto ENDWRITE;
+					}
+
+					// Extract the 8-char token
+					auto token = sv.substr(i, TOKEN_LEN);
+
+					// Validate each is a hex digit
+					for (char c : token) {
+						if (!std::isxdigit(static_cast<unsigned char>(c))) {
+							ImGui::TextColored(ImVec4(0.9f, 0.f, 0.f, 1.f), "Invalid hex digit %s in token at pos %d", c, i);
+							goto ENDWRITE;
+						}
+					}
+
+					// Parse hex to uint32_t
+					uint32_t value = 0;
+					auto [ptr, ec] = std::from_chars(token.data(), token.data() + token.size(), value, 16);
+					if (ec != std::errc()) {
+						ImGui::TextColored(ImVec4(0.9f, 0.f, 0.f, 1.f), "Failed to parse token %s as hex at pos %d", std::string(token).c_str(), i);
+						goto ENDWRITE;
+					}
+					result.push_back(value);
+
+					i += TOKEN_LEN;
+					if (i == n) {
+						break;  // reached end exactly
+					}
+
+					// Next character must be a space
+					if (sv[i] != ' ') {
+						ImGui::TextColored(ImVec4(0.9f, 0.f, 0.f, 1.f), "Expected space at position %d, found %s", i, sv[i]);
+						goto ENDWRITE;
+					}
+					++i;  // skip the space
+				}
+				// now send to appletini
+				usb_write_register(iUSBImGUIAddressStart, &result, bUSBImGUiIsIncrement);
+			}
+		}
+	ENDWRITE:
+		ImGui::End();
 	}
 }

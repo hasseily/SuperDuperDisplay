@@ -21,6 +21,7 @@
 #include <iostream>
 #include <cstring>
 #include <atomic>
+#include <vector>
 
 #define PKT_BUFSZ 2048
 
@@ -88,3 +89,8 @@ const bool client_is_connected();
 const std::string get_tini_name_string();
 const uint32_t get_tini_last_error();
 const std::string get_tini_last_error_string();
+
+// Sends data to the tini via the register API
+uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* vData, bool setIncrement);
+
+void usb_display_imgui_window(bool* p_open);
