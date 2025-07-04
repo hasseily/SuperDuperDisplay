@@ -619,7 +619,7 @@ uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* 
 		enable_msg_buf[0] = 0x80000000;
 	enable_msg_buf[0] += vDataSize;
 	enable_msg_buf[1] = addressStart;
-	for (auto i = 0; i < vDataSize; ++i)
+	for (size_t i = 0; i < vDataSize; ++i)
 	{
 		enable_msg_buf[2 + i] = vData->at(i);
 	}

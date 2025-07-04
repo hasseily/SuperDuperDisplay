@@ -306,7 +306,7 @@ void MainMenu::Render() {
 				for (auto j=0; j < 2; ++j) {
 					for (auto i=0; i < _A2_MEMORY_SHADOW_END; ++i) {
 						auto tdiff = currT - memMgr->GetMemWriteTimestamp(i + j*_A2_MEMORY_SHADOW_END);
-						if (tdiff < (pGui->mem_edit_a2e.OptHighlightFnSeconds * 1'000'000)) {
+						if (tdiff < ((size_t)pGui->mem_edit_a2e.OptHighlightFnSeconds * 1'000'000)) {
 							auto writeColor = ImColor(1.f - ((float)tdiff / (pGui->mem_edit_a2e.OptHighlightFnSeconds * 1'000'000)), 0.f, 0.f, 1.f);
 							auto rectMin = (j == 0 ? mainRectMin : auxRectMin);
 							auto pMin = ImVec2(rectMin.x + 1 + (i % 0x100) * mmultw, rectMin.y + 1 + (i / 0x100) * mmulth);
