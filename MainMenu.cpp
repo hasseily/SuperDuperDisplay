@@ -320,7 +320,7 @@ void MainMenu::Render() {
 				const int labelsHex[] = { 0x0, 0x400, 0x800, 0xC00, 0x2000, 0x4000, 0x6000, 0x8000, 0xA000, 0xC000, 0xD000, 0xE000 };
 				const size_t ctLabels = sizeof(labelsHex) / sizeof(labelsHex[0]);
 				char bufLabels[ctLabels];
-				for (int i = 0; i < ctLabels; ++i)
+				for (size_t i = 0; i < ctLabels; ++i)
 				{
 					snprintf(bufLabels, sizeof(bufLabels), "%04X", labelsHex[i]);
 					float yDelta = (float)labelsHex[i] * mmulth / 0x100;
@@ -587,7 +587,7 @@ void MainMenu::ShowSDDMenu() {
 			bool foundCurrentMode = false;
 			bool isCurrentMode = false;
 			char modeDescription[200];
-			for (int i = 0; i < pGui->v_displayModes.size(); ++i)
+			for (size_t i = 0; i < pGui->v_displayModes.size(); ++i)
 			{
 				auto mode = pGui->v_displayModes[i];
 				snprintf(modeDescription, 199, "%dx%d @ %dHz", mode.w, mode.h, mode.refresh_rate);

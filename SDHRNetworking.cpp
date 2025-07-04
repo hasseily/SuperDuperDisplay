@@ -639,7 +639,7 @@ void usb_display_imgui_window(bool* p_open)
 	bUSBImGUiWindowIsOpen = p_open;
 	if (p_open)
 	{
-		ImGui::SetNextWindowSizeConstraints(ImVec2(420, 400), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(420, 180), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("Appletini Communications", p_open);
 		if (!ImGui::IsWindowCollapsed())
 		{
@@ -652,12 +652,12 @@ void usb_display_imgui_window(bool* p_open)
 				constexpr size_t TOKEN_LEN = 8;  // 8 hex chars == 4 bytes
 				std::string_view sv(cUSBImGUIData);
 				std::vector<uint32_t> result;
-				int i = 0, n = sv.size();
+				size_t i = 0, n = sv.size();
 
 				while (i < n) {
 					// Ensure enough characters remain
 					if (i + TOKEN_LEN > n) {
-						sprintf(cUSBImGUIDataError, "Unexpected end of data at position %d", i);
+						sprintf(cUSBImGUIDataError, "Unexpected end of data at position %zu", i);
 						goto ENDWRITE;
 					}
 
@@ -667,7 +667,7 @@ void usb_display_imgui_window(bool* p_open)
 					// Validate each is a hex digit
 					for (char c : token) {
 						if (!std::isxdigit(static_cast<unsigned char>(c))) {
-							sprintf(cUSBImGUIDataError, "Invalid hex digit %c in token at pos %d", c, i);
+							sprintf(cUSBImGUIDataError, "Invalid hex digit %c in token at pos %zu", c, i);
 							goto ENDWRITE;
 						}
 					}
@@ -676,7 +676,7 @@ void usb_display_imgui_window(bool* p_open)
 					uint32_t value = 0;
 					auto [ptr, ec] = std::from_chars(token.data(), token.data() + token.size(), value, 16);
 					if (ec != std::errc()) {
-						sprintf(cUSBImGUIDataError, "Failed to parse token %s as hex at pos %d", std::string(token).c_str(), i);
+						sprintf(cUSBImGUIDataError, "Failed to parse token %s as hex at pos %zu", std::string(token).c_str(), i);
 						goto ENDWRITE;
 					}
 					result.push_back(value);
@@ -688,7 +688,7 @@ void usb_display_imgui_window(bool* p_open)
 
 					// Next character must be a space
 					if (sv[i] != ' ') {
-						sprintf(cUSBImGUIDataError, "Expected space at position %d, found %c", i, sv[i]);
+						sprintf(cUSBImGUIDataError, "Expected space at position %zu, found %c", i, sv[i]);
 						goto ENDWRITE;
 					}
 					++i;  // skip the space
