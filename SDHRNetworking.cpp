@@ -644,7 +644,7 @@ void usb_display_imgui_window(bool* p_open)
 		if (!ImGui::IsWindowCollapsed())
 		{
 			ImGui::Checkbox("Increment", &bUSBImGUiIsIncrement);
-			ImGui::SliderInt("Start Address", &iUSBImGUIAddressStart, 0, 0x4000, "%04X", 1);
+			ImGui::DragInt("Start Address", &iUSBImGUIAddressStart, 1.f, 0, 0x4000, "%04X");
 			ImGui::InputText("Data", cUSBImGUIData, sizeof(cUSBImGUIData));
 			ImGui::SetItemTooltip("Data is space-delimited 4 bytes in hex, e.g.: 4ce20001 0000ffa2. Max of 254 4-byte values.");
 			if (ImGui::Button("Write to Appletini"))
