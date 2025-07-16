@@ -515,9 +515,10 @@ void MainMenu::Render() {
 			}
 			ImGui::End();
 		}
-		
+
 		A2VideoManager::GetInstance()->DisplayImGuiExtraWindows();
-		
+		A2VideoManager::GetInstance()->DisplayImGUIRGBDebugWindows();
+
 		if (pGui->mem_edit_sdhr_upload.Open)
 		{
 			auto memManager = MemoryManager::GetInstance();
@@ -526,6 +527,8 @@ void MainMenu::Render() {
 		
 		if (pGui->bShowImGuiMetricsWindow)
 			ImGui::ShowMetricsWindow(&pGui->bShowImGuiMetricsWindow);
+
+
 	}
 	
 	ImGui::Render();
@@ -902,6 +905,8 @@ void MainMenu::ShowDeveloperMenu() {
 		ImGui::MenuItem("HGR2", "", &a2VideoManager->bRenderHGR2);
 		ImGui::EndMenu();
 	}
+	if (ImGui::MenuItem("RAM RGB Visualizer", ""))
+		a2VideoManager->CreateNewA2WindowRGB();
 	if (ImGui::BeginMenu("Save Memory to File")) {
 		std::string _sfpath = GetMemorySaveFilePath();
 		if (ImGui::MenuItem("LGR", ""))

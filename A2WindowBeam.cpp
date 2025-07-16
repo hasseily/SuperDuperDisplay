@@ -69,12 +69,12 @@ void A2WindowBeam::UpdateVertexArray()
 	// The first 2 values are the relative XY, bound from -1 to 1.
 	// The second pair of values is the actual pixel value on screen
 	vertices.clear();
-	vertices.push_back(A2BeamVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, screen_count.y) }));	// top left
-	vertices.push_back(A2BeamVertex({ glm::vec2(quad.x + quad.w, quad.y + quad.h), glm::ivec2(screen_count.x, 0) }));	// bottom right
-	vertices.push_back(A2BeamVertex({ glm::vec2(quad.x + quad.w, quad.y), glm::ivec2(screen_count.x, screen_count.y) }));	// top right
-	vertices.push_back(A2BeamVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, screen_count.y) }));	// top left
-	vertices.push_back(A2BeamVertex({ glm::vec2(quad.x, quad.y + quad.h), glm::ivec2(0, 0) }));	// bottom left
-	vertices.push_back(A2BeamVertex({ glm::vec2(quad.x + quad.w, quad.y + quad.h), glm::ivec2(screen_count.x, 0) }));	// bottom right
+	vertices.push_back(A2RenderVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, screen_count.y) }));	// top left
+	vertices.push_back(A2RenderVertex({ glm::vec2(quad.x + quad.w, quad.y + quad.h), glm::ivec2(screen_count.x, 0) }));	// bottom right
+	vertices.push_back(A2RenderVertex({ glm::vec2(quad.x + quad.w, quad.y), glm::ivec2(screen_count.x, screen_count.y) }));	// top right
+	vertices.push_back(A2RenderVertex({ glm::vec2(quad.x, quad.y), glm::ivec2(0, screen_count.y) }));	// top left
+	vertices.push_back(A2RenderVertex({ glm::vec2(quad.x, quad.y + quad.h), glm::ivec2(0, 0) }));	// bottom left
+	vertices.push_back(A2RenderVertex({ glm::vec2(quad.x + quad.w, quad.y + quad.h), glm::ivec2(screen_count.x, 0) }));	// bottom right
 }
 
 void A2WindowBeam::Render(uint64_t frame_idx)
@@ -135,17 +135,17 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 	{
 		// load data into vertex buffers
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(A2BeamVertex), &vertices[0], GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(A2RenderVertex), &vertices[0], GL_STATIC_DRAW);
 
 		// set the vertex attribute pointers
 		// vertex relative Positions: position 0, size 2
 		// (vec4 values x and y)
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(A2BeamVertex), (void*)0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(A2RenderVertex), (void*)0);
 		// vertex pixel Positions: position 1, size 2
 		// (vec4 values z and w)
 		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(A2BeamVertex), (void*)offsetof(A2BeamVertex, PixelPos));
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(A2RenderVertex), (void*)offsetof(A2RenderVertex, PixelPos));
 		
 		// And set the borders
 		shader.setInt("hborder", (int)border_width_cycles);

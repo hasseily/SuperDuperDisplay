@@ -35,6 +35,7 @@
 		BBB525262B6648A200A65C62 /* PostProcessor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB5251A2B6648A200A65C62 /* PostProcessor.cpp */; };
 		BBB525292B664A7D00A65C62 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BBB525282B664A7D00A65C62 /* OpenGL.framework */; };
 		BBB5252B2B664A8F00A65C62 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BBB5252A2B664A8F00A65C62 /* CoreVideo.framework */; };
+		BBBB65192E07022C00762387 /* A2WindowRGB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBBB65182E07022C00762387 /* A2WindowRGB.cpp */; };
 		BBC172EE2B6657470044B194 /* imgui_draw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBC172EC2B6657460044B194 /* imgui_draw.cpp */; };
 		BBC172EF2B6657470044B194 /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBC172ED2B6657470044B194 /* imgui_tables.cpp */; };
 		BBC172F32B6657640044B194 /* imgui_impl_opengl3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBC172F12B6657640044B194 /* imgui_impl_opengl3.cpp */; };
@@ -142,6 +143,8 @@
 		BBB5251A2B6648A200A65C62 /* PostProcessor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PostProcessor.cpp; sourceTree = "<group>"; };
 		BBB525282B664A7D00A65C62 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		BBB5252A2B664A8F00A65C62 /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
+		BBBB65172E07022C00762387 /* A2WindowRGB.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = A2WindowRGB.h; sourceTree = "<group>"; };
+		BBBB65182E07022C00762387 /* A2WindowRGB.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = A2WindowRGB.cpp; sourceTree = "<group>"; };
 		BBC172EC2B6657460044B194 /* imgui_draw.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_draw.cpp; path = imgui/imgui_draw.cpp; sourceTree = "<group>"; };
 		BBC172ED2B6657470044B194 /* imgui_tables.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_tables.cpp; path = imgui/imgui_tables.cpp; sourceTree = "<group>"; };
 		BBC172F02B6657640044B194 /* imgui_impl_sdlrenderer2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_impl_sdlrenderer2.cpp; path = imgui/backends/imgui_impl_sdlrenderer2.cpp; sourceTree = "<group>"; };
@@ -234,6 +237,8 @@
 				BBB525022B6648A200A65C62 /* A2VideoManager.cpp */,
 				BBB4E5C02B83ECCE00764C50 /* A2WindowBeam.h */,
 				BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */,
+				BBBB65172E07022C00762387 /* A2WindowRGB.h */,
+				BBBB65182E07022C00762387 /* A2WindowRGB.cpp */,
 				BBD102132B829BAE00360B33 /* assets */,
 				BB006F512C3C2E49008BFFAF /* Ayumi.h */,
 				BB006F4F2C3C2E49008BFFAF /* Ayumi.cpp */,
@@ -388,6 +393,7 @@
 				BBC43F6B2B98CDE50035071D /* MemoryManager.cpp in Sources */,
 				BBB525202B6648A200A65C62 /* MosaicMesh.cpp in Sources */,
 				BBB525232B6648A200A65C62 /* main.cpp in Sources */,
+				BBBB65192E07022C00762387 /* A2WindowRGB.cpp in Sources */,
 				BBB5251D2B6648A200A65C62 /* A2VideoManager.cpp in Sources */,
 				BBB5251F2B6648A200A65C62 /* SDHRManager.cpp in Sources */,
 				BBB525242B6648A200A65C62 /* SDHRNetworking.cpp in Sources */,

@@ -62,7 +62,7 @@ void BasicQuad::Render(uint64_t frame_idx, const ShaderDictionary& shaderDict)
 
 	shader.use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
+		std::cerr << "OpenGL BasicQuad glUseProgram error: " << glerr << std::endl;
 		return;
 	}
 	

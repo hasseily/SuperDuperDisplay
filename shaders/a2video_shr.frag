@@ -24,9 +24,8 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 uniform int ticks;               // ms since start
 
 // Mesh-level uniforms assigned in MosaicMesh
-uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform uvec2 tileSize;
-uniform usampler2D DBTEX;        // Apple 2e's memory, starting at 0x2000 in AUX for SHR
+uniform usampler2D APPLE2MEMORYTEX; // Apple 2e's memory, starting at 0x2000 in AUX for SHR
 								 // Unsigned int sampler!
 
 in vec2 vFragPos;       // The fragment position in pixels
@@ -63,7 +62,7 @@ vec4 ConvertIIgs2RGB(uint gscolor)
 void main()
 {
 	// Grab Scanline Control Byte information
-	uint scb = texelFetch(DBTEX, ivec2(0x100u + ((uint(vFragPos.y))/tileSize.y), 0x1Fu), 0).r;
+	uint scb = texelFetch(APPLE2MEMORYTEX, ivec2(0x100u + ((uint(vFragPos.y))/tileSize.y), 0x1Fu), 0).r;
 	is640Mode = bool(scb & 0x80u);
 	isColorFill = bool(scb & 0x20u);
 
@@ -81,7 +80,7 @@ void main()
 	
 	// Each line is 160 (0xA0) bytes
 	int byteOffset = byteColRow.y * 0xA0 + byteColRow.x;
-	uint byteVal = texelFetch(DBTEX, ivec2(byteOffset % 1024, byteOffset / 1024), 0).r;
+	uint byteVal = texelFetch(APPLE2MEMORYTEX, ivec2(byteOffset % 1024, byteOffset / 1024), 0).r;
 	uint colorIdx = 0u;
 	
 	
@@ -105,7 +104,7 @@ void main()
                 for (int i = byteColRow.x; i > 0; i--)
                 {
                     byteOffset--;
-				    byteVal = texelFetch(DBTEX, ivec2(byteOffset % 1024, byteOffset / 1024), 0).r;
+				    byteVal = texelFetch(APPLE2MEMORYTEX, ivec2(byteOffset % 1024, byteOffset / 1024), 0).r;
                     if (byteVal == 0u)
                         continue;
                     colorIdx = byteVal & 0xFu;
@@ -122,7 +121,7 @@ void main()
 				fragOffset.x = 3u - uint(i % 4);
 				byteColRow.x = i / 4;
 				byteOffset = byteColRow.y * 0xA0 + byteColRow.x;
-				byteVal = texelFetch(DBTEX, ivec2(byteOffset % 1024, byteOffset / 1024), 0).r;
+				byteVal = texelFetch(APPLE2MEMORYTEX, ivec2(byteOffset % 1024, byteOffset / 1024), 0).r;
 				
 				uint prevColorIdx = (byteVal >> (4u * (fragOffset.x/2u))) & 0xFu;
 				if (prevColorIdx != 0u)
@@ -140,7 +139,7 @@ void main()
 	// So each palette is 32 bytes, and we jump 32 bytes at a time (<< 5) to get the requested palette
 	// Palettes are on line 0x1F, starting at 0x200
 	uint paletteOffsetX = 0x200u + ((scb & 0xFu) << 5);
-	paletteColorB1 = texelFetch(DBTEX, ivec2(paletteOffsetX + (colorIdx*2u), 0x1Fu), 0).r;
-	paletteColorB2 = texelFetch(DBTEX, ivec2(paletteOffsetX + (colorIdx*2u) + 1u, 0x1Fu), 0).r;
+	paletteColorB1 = texelFetch(APPLE2MEMORYTEX, ivec2(paletteOffsetX + (colorIdx*2u), 0x1Fu), 0).r;
+	paletteColorB2 = texelFetch(APPLE2MEMORYTEX, ivec2(paletteOffsetX + (colorIdx*2u) + 1u, 0x1Fu), 0).r;
 	fragColor = ConvertIIgs2RGB((paletteColorB2 << 8) + paletteColorB1);
 }

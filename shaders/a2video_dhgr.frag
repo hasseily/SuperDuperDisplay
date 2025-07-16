@@ -57,10 +57,10 @@ uniform int ticks;                  // ms since start
 uniform COMPAT_PRECISION float isMixed;		// Are we in mixed mode?
 
 // Mesh-level uniforms assigned in MosaicMesh
-uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform uvec2 tileSize;
-uniform usampler2D DBTEX;        // Apple 2e's memory, starting at 0x2000 in MAIN for DHGR
+uniform usampler2D APPLE2MEMORYTEX; // Apple 2e's memory, starting at 0x2000 in MAIN for DHGR
 								 // Unsigned int sampler!
+uniform int memstart = 0;		// where to start in memory
 
 in vec2 vFragPos;       // The fragment position in pixels
 // in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
@@ -93,18 +93,19 @@ void main()
 	uint byteVal1 = 0u;
 	uint byteVal4 = 0u;
 	// The bytes from main: 1 and 3
-	offset = hgrRow[tileColRow.y] + tileColRow.x;
-	uint byteVal3 = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
+	offset = memstart + hgrRow[tileColRow.y] + tileColRow.x;
+	uint byteVal3 = texelFetch(APPLE2MEMORYTEX, ivec2(offset % 1024, offset / 1024), 0).r;
 	if (tileColRow.x > 0)	// Not at start of row, byteVal1 is valid
 	{
-		byteVal1 = texelFetch(DBTEX, ivec2((offset % 1024) - 1, offset / 1024), 0).r;
+		byteVal1 = texelFetch(APPLE2MEMORYTEX, ivec2((offset % 1024) - 1, offset / 1024), 0).r;
 	}
 	// The bytes from aux: 2 and 4
+	// _A2_MEMORY_SHADOW_END 0xC000
 	offset = offset + 0xC000;
-	uint byteVal2 = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
+	uint byteVal2 = texelFetch(APPLE2MEMORYTEX, ivec2(offset % 1024, offset / 1024), 0).r;
 	if (tileColRow.x < 39)	// Not at end of row, byteVal4 is valid
 	{
-		byteVal4 = texelFetch(DBTEX, ivec2((offset % 1024) + 1, offset / 1024), 0).r;
+		byteVal4 = texelFetch(APPLE2MEMORYTEX, ivec2((offset % 1024) + 1, offset / 1024), 0).r;
 	}
 	
 	ivec2 textureSize2d = textureSize(a2ModeTexture,0);

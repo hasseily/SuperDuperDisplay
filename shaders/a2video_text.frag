@@ -45,10 +45,11 @@ uniform COMPAT_PRECISION float isMixed;		// Are we in mixed mode?
 uniform COMPAT_PRECISION float isDouble;	// Are we in double res?
 
 // Mesh-level uniforms assigned in MosaicMesh
-uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform uvec2 tileSize;
-uniform usampler2D DBTEX;        // Apple 2e's memory, starting at 0x400 for TEXT1 and 0x800 for TEXT2
+uniform usampler2D APPLE2MEMORYTEX; // R8UI Apple 2e's memory, 1024 bytes wide
                                  // Unsigned int sampler!
+uniform int memstart = 0;		 // where to start in memory
+
 uniform vec4 colorTint;
 
 in vec2 vFragPos;       // The fragment position in pixels
@@ -72,21 +73,20 @@ void main()
     vec2 fTileColRow = vFragPos / vec2(tileSize);
         // Row and column number of the tile containing this fragment
     ivec2 tileColRow = ivec2(floor(fTileColRow));
-        // Fragment offset to tile origin, in pixels
-    vec2 fragOffset = ((fTileColRow - vec2(tileColRow)) * vec2(tileSize));
 
     // Next grab the data for that tile from the tilesBuffer
     // No need to rescale values because we're using GL_R8UI
     // The "texture" is split by 1kB-sized rows
 	// In 80-col mode, the even bytes are pulled from aux mem,
 	// and the odd bytes from main mem
+	// Using _A2_MEMORY_SHADOW_END 0xC000
 	int offset;
-	if (isDouble > 0.0)
-		offset = (textRow[tileColRow.y] + tileColRow.x / 2) + (0xC000 * (1 - (tileColRow.x & 1)));
+	if (isDouble > 0.0001)
+		offset = memstart + (textRow[tileColRow.y] + tileColRow.x / 2) + (0xC000 * (1 - ((tileColRow.x) & 1)));
 	else
-		offset = textRow[tileColRow.y] + tileColRow.x;
+		offset = memstart + textRow[tileColRow.y] + tileColRow.x;
     // the char byte value is just the r component
-    uint charVal = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
+    uint charVal = texelFetch(APPLE2MEMORYTEX, ivec2(offset % 1024, offset / 1024), 0).r;
     float vCharVal = float(charVal);
 
     // Determine from char which font glyph to use
@@ -98,7 +98,17 @@ void main()
 
     ivec2 textureSize2d = textureSize(a2ModeTexture,0);
     // what's our character's starting origin in the character map?
+	// We need to double the charOrigin and fragOffset when in DTEXT because we're
+	// using the same texture for both TEXT and DTEXT. This moves the
+	// charOrigin from the 7x16 tile to the correct 14x16 for the TEXT texture
     uvec2 charOrigin = uvec2(charVal & 0xFu, charVal >> 4) * tileSize;
+	// Fragment offset to tile origin, in pixels
+	vec2 fragOffset = ((fTileColRow - vec2(tileColRow)) * vec2(tileSize));
+	if (isDouble > 0.0001)
+	{
+		charOrigin.x *= 2;
+		fragOffset.x *= 2;
+	}
 
     // Now get the texture color, using the tile uv origin and this fragment's offset
     vec4 tex = texture(a2ModeTexture, (vec2(charOrigin) + fragOffset) / vec2(textureSize2d)) * colorTint;
@@ -106,6 +116,5 @@ void main()
     float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
     // get the color of flashing or the one above
     fragColor = ((1.f - tex) * isFlashing) + (tex * (1.f - isFlashing));
-
 	// fragColor = vec4(vColor, 1.f);   // for debugging
 }

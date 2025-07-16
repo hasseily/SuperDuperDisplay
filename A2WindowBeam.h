@@ -3,6 +3,7 @@
 #define A2WINDOWBEAM_H
 
 #include <vector>
+#include "common.h"
 #include "shader.h"
 
 #define _A2_TEXT80_CHAR_WIDTH 7
@@ -58,11 +59,6 @@ enum A2VideoMonitorType_e
 	A2_MON_TOTAL_COUNT
 };
 
-struct A2BeamVertex {
-	glm::vec2 RelPos;		// Relative position of the vertex
-	glm::vec2 PixelPos;		// Pixel position of the vertex in the Apple 2 screen
-};
-
 class A2WindowBeam
 {
 public:
@@ -80,7 +76,7 @@ public:
 	void SetShaderPrograms(const char* shaderVertexPath, const char* shaderFragmentPath);
 	A2VideoModeBeam_e Get_video_mode() const { return video_mode; }
 
-	std::vector<A2BeamVertex> vertices;		// Vertices with XYRelative and XYPixels
+	std::vector<A2RenderVertex> vertices;		// Vertices with XYRelative and XYPixels
 	unsigned int VAO = UINT_MAX;			// Vertex Array Object (holds buffers that are vertex related)
 	unsigned int VBO = UINT_MAX;			// Vertex Buffer Object (holds vertices)
 

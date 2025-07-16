@@ -208,6 +208,9 @@ A2VideoManager::~A2VideoManager()
 	delete[] vrams_array;
 
 	ResetGLData();
+
+	if (APPLE2MEMORYTEX != UINT_MAX)
+		glDeleteTextures(1, &APPLE2MEMORYTEX);
 }
 
 void A2VideoManager::Initialize()
@@ -215,6 +218,8 @@ void A2VideoManager::Initialize()
 	// Here do not reinitialize bBeamIsActive. It could still be active from earlier.
 	// The initialization process can be triggered from a ctrl-reset on the Apple 2.
 	bIsReady = false;
+
+	v_debug_rgb_windows.reserve(_MAX_DEBUG_RGB_WINDOWS);
 
 	border_w_slider_val = (int)this->GetBordersWidthCycles();
 	border_h_slider_val = (int)this->GetBordersHeightScanlines() / 8;
@@ -1301,6 +1306,35 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
+	// Generate the Apple 2 memory texture which will hold the Apple 2 memory
+	// for the shaders to use
+	if (APPLE2MEMORYTEX == UINT_MAX)
+	{
+		GLint glerr;
+		glGenTextures(1, &APPLE2MEMORYTEX);
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL glGenTextures APPLE2MEMORYTEX error: " << glerr << std::endl;
+		}
+		glActiveTexture(_TEXUNIT_APPLE2MEMORY_R8UI);
+		glBindTexture(GL_TEXTURE_2D, APPLE2MEMORYTEX);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL APPLE2MEMORYTEX error: " << glerr << std::endl;
+		}
+
+		// Apple 2 memory texture: R8UI, 128k of RAM max, 1024 bytes per line
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, 1024, 128,
+					 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE,
+					 MemoryManager::GetInstance()->GetApple2MemPtr());
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "A2VideoManager APPLE2MEMORYTEX glTexImage2D error: " << glerr << std::endl;
+		}
+
+	}
+
 	// for when NTSC is requested for legacy,
 	// there's a pre-render pass into _TEXUNIT_PRE_NTSC
 	glActiveTexture(_TEXUNIT_PRE_NTSC);
@@ -1416,7 +1450,6 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 		}
 
 		glActiveTexture(GL_TEXTURE0);
-
 		rendered_frame_idx = UINT64_MAX;
 	}
 
@@ -1633,6 +1666,46 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 		std::cerr << "A2VideoManager debugging textures render error: " << glerr << std::endl;
 	}
 
+	// Update _TEXUNIT_APPLE2MEMORY_R8UI
+	// This is the apple 2's memory which is mapped to a "texture"
+
+	if (!v_debug_rgb_windows.empty())
+	{
+		// Update _TEXUNIT_APPLE2MEMORY_R8UI
+		// This is the apple 2's memory which is mapped to a "texture"
+
+		glActiveTexture(_TEXUNIT_APPLE2MEMORY_R8UI);
+		glBindTexture(GL_TEXTURE_2D, APPLE2MEMORYTEX);
+		// Adjust the unpack alignment for textures with arbitrary widths
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		// Always send through the whole memory, which is
+		// 2x(_A2_MEMORY_SHADOW_END-_A2_MEMORY_SHADOW_BEGIN)
+		// for both main and aux. Optimizing for different legacy modes
+		// is unnecessary added code for 128k (at most) of memory
+		glTexSubImage2D(
+						GL_TEXTURE_2D, 0,
+						/* xoffset */ 0, /* yoffset */ 0,
+						1024, (_A2_MEMORY_SHADOW_END-_A2_MEMORY_SHADOW_BEGIN)*2/1024,
+						GL_RED_INTEGER, GL_UNSIGNED_BYTE,
+						MemoryManager::GetInstance()->GetApple2MemPtr()
+						);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+		/*
+		// to check if the texture was properly upladed:
+		std::vector<uint8_t> back(1024 * (_A2_MEMORY_SHADOW_END-_A2_MEMORY_SHADOW_BEGIN)*2/1024);
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, back.data());
+		*/
+		glActiveTexture(GL_TEXTURE0);
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "A2VideoManager APPLE2MEMORYTEX glTexImage2D error: " << glerr << std::endl;
+		}
+
+		// Render all debug RGB textures
+		for (auto& debugWin : v_debug_rgb_windows) {
+			debugWin.Render();
+		}
+	}
+
 	// all done, the texture for this Apple 2 beam cycle frame is rendered
 	rendered_frame_idx = vrams_read->frame_idx;
 	vrams_read->bWasRendered = true;
@@ -1694,7 +1767,7 @@ void A2VideoManager::DisplayImGuiLoadFileWindow(bool* p_open)
 			ImGui::InputInt("##mem_load", &iImguiMemLoadPosition, 1, 1024, ImGuiInputTextFlags_CharsHexadecimal);
 			ImGui::PopItemWidth();
 			iImguiMemLoadPosition = std::clamp(iImguiMemLoadPosition, 0, 0xFFFF);
-			ImGui::Checkbox("Aux Bank", &bImguiMemLoadAuxBank);
+			ImGui::Checkbox("AUX Bank", &bImguiMemLoadAuxBank);
 			ImGui::SameLine(); ImGui::Text("   "); ImGui::SameLine();
 			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank, sImguiLoadPath))
 			{
@@ -1957,6 +2030,40 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			// vidhdWindowBeam->DisplayImGuiWindow(p_open);
 		}
 		ImGui::End();
+	}
+}
+
+void A2VideoManager::DisplayImGUIRGBDebugWindows()
+{
+	if (!v_debug_rgb_windows.empty())
+	{
+		// delete closed debug windows
+		for (auto it = v_debug_rgb_windows.begin(); it != v_debug_rgb_windows.end(); ) {
+			if (!it->bImguiWindowIsOpen) {
+				// erase returns the next valid iterator
+				it = v_debug_rgb_windows.erase(it);
+			} else {
+				++it;
+			}
+		}
+
+		// Display all debug RGB windows
+		for (auto& debugWin : v_debug_rgb_windows) {
+			debugWin.DisplayImGuiWindow();
+		}
+		GLuint glerr;
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "A2VideoManager DisplayImGUIRGBDebugWindows error: " << glerr << std::endl;
+		}
+	}
+
+}
+
+void A2VideoManager::CreateNewA2WindowRGB()
+{
+	if (v_debug_rgb_windows.size() < (_MAX_DEBUG_RGB_WINDOWS - 1))
+	{
+		v_debug_rgb_windows.emplace_back();
 	}
 }
 

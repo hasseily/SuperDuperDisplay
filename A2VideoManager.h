@@ -12,6 +12,7 @@
 #include "A2WindowBeam.h"
 #include "VidHdWindowBeam.h"
 #include "CycleCounter.h"
+#include "A2WindowRGB.h"
 #include "imgui.h"
 #include "imgui_memory_editor.h"
 
@@ -50,6 +51,10 @@ enum class BeamState_e
 		default: return "INVALID_STATE";
 	}
 }
+
+// Maximum number of debug windows that you can have. These windows
+// allow for visualization of any memory chunk as a video mode
+constexpr uint32_t _MAX_DEBUG_RGB_WINDOWS = 30;
 
 // There could be anywhere up to 6 or 7 cycles for horizontal borders
 // and a lot more for vertical borders.
@@ -186,6 +191,8 @@ public:
 	void DisplayImGuiLoadFileWindow(bool* p_open);
 	void DisplayImGuiExtraWindows();
 	void DisplayImGuiWindow(bool* p_open);
+	void DisplayImGUIRGBDebugWindows();
+	void CreateNewA2WindowRGB();
 	void ToggleA2Video(bool value);
 
 	// Overlay String drawing
@@ -336,9 +343,13 @@ private:
 	// and use the NTSC shader, into the FBO_A2Video
 	std::unique_ptr<BasicQuad> legacyNTSCQuad;
 
-	// for debugging, displaying textures TEXT1/2, HGR1/2
+	// for debugging, displaying cycle accurate textures TEXT1/2, HGR1/2
 	GLuint FBO_debug[4] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
 	GLuint debug_texture_id[4] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
+
+	// for debugging, displaying any memory chunk in any legacy mode (simple RGB only)
+	unsigned int APPLE2MEMORYTEX = UINT_MAX; // GL_R8UI tex holding Apple 2 memory
+	std::vector<A2WindowRGB>v_debug_rgb_windows;
 
 	// OFFSET buffer texture. Holds one signed int for each scanline to tell the shader
 	// how much to offset by x a line for the sine wobble of the merge

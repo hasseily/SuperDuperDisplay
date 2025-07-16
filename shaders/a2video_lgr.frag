@@ -9,7 +9,7 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 #endif
 
 /*
- LGR shader
+ D/LGR shader
  For each pixel, determine which memory byte it is part of,
  and save the x and y offsets from the origin of the byte.
  Then based on the value of that byte, determine the origin
@@ -20,6 +20,13 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  But when in b/w, we can use dithering for LGR so each pixel may
  be different within a "color".
 */
+
+// Perform left rotation on a 4-bit nibble (for DLGR AUX memory)
+// Because AUX is one cycle before MAIN (for DHGR, it's embedded in the texture)
+uint ROL_NIB(uint x)
+{
+	return ((x << 1) & 0xFu) | ((x >> 3) & 0x1u);
+}
 
 // Apple 2 text row offsets in memory. The rows aren't contiguous in Apple 2 RAM.
 // They're interlaced because WOZ chip optimization.
@@ -37,10 +44,10 @@ uniform COMPAT_PRECISION float isMixed;		// Are we in mixed mode?
 uniform COMPAT_PRECISION float isDouble;	// Are we in double res?
 
 // Mesh-level uniforms assigned in MosaicMesh
-uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform uvec2 tileSize;
-uniform usampler2D DBTEX;        // Apple 2e's memory, starting at 0x400 for TEXT1 and 0x800 for TEXT2
+uniform usampler2D APPLE2MEMORYTEX; // Apple 2e's memory, starting at 0x400 for TEXT1 and 0x800 for TEXT2
                                  // Unsigned int sampler!
+uniform int memstart = 0;		// where to start in memory
 
 in vec2 vFragPos;       // The fragment position in pixels
 // in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
@@ -61,36 +68,56 @@ void main()
     vec2 fTileColRow = vFragPos / vec2(tileSize);
         // Row and column number of the tile containing this fragment
     ivec2 tileColRow = ivec2(floor(fTileColRow));
-        // Fragment offset to tile origin, in pixels
-    vec2 fragOffset = ((fTileColRow - vec2(tileColRow)) * vec2(tileSize));
 
     // Next grab the data for that tile from the tilesBuffer
     // No need to rescale values because we're using GL_R8UI
     // The "texture" is split by 1kB-sized rows
 	// In 80-col mode, the even bytes are pulled from aux mem,
 	// and the odd bytes from main mem
+	// Using _A2_MEMORY_SHADOW_END 0xC000
 	int offset;
-	if (isDouble > 0.0)
-		offset = (textRow[tileColRow.y] + tileColRow.x / 2) + (0xC000 * (1 - (tileColRow.x & 1)));
+	if (isDouble > 0.0001)
+		offset = memstart + (textRow[tileColRow.y] + tileColRow.x / 2) + (0xC000 * (1 - (tileColRow.x & 1)));
 	else
-		offset = textRow[tileColRow.y] + tileColRow.x;
+		offset = memstart + textRow[tileColRow.y] + tileColRow.x;
     // the byte value is just the r component
-    uint byteVal = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
+    uint byteVal = texelFetch(APPLE2MEMORYTEX, ivec2(offset % 1024, offset / 1024), 0).r;
 
     ivec2 textureSize2d = textureSize(a2ModeTexture,0);
 
 	// What's our byte's starting origin in the character map?
 	// An LGR byte is split in 2. There's a 4-bit color in the low bits
 	// at the top of the 14x16 dot square, and another 4-bit color in
-	// the high bits at the bottom of the 14x16 dot square
+	// the high bits at the bottom of the 14x16 dot square.
+	// In DLGR mode, the AUX bytes (even bytes) need to be left-rolled by 1
+	// because of the timing difference.
 	uvec2 byteOrigin;
+	uint nibbleTopVal = (byteVal & 0xFu);
+	uint nibbleBottomVal = (byteVal >> 4);
+	if (isDouble > 0.0001)
+	{
+		if ((tileColRow.x % 2) == 0)
+		{
+			nibbleTopVal = ROL_NIB(nibbleTopVal);
+			nibbleBottomVal = ROL_NIB(nibbleBottomVal);
+		}
+	}
+	// Fragment offset to tile origin, in pixels
+	vec2 fragOffset = ((fTileColRow - vec2(tileColRow)) * vec2(tileSize));
 	if ((fragOffset.y * 2.0) < float(tileSize.y))
 	{
 		// This is a top pixel, it uses the color of the 4 low bits
-		byteOrigin = uvec2(0u, (byteVal & 0xFu) * 16u);
+		byteOrigin = uvec2(0u, nibbleTopVal * 16u);
 	} else {
 		// It's a bottom pixel, it uses the color of the 4 high bits
-		byteOrigin = uvec2(0u, (byteVal >> 4) * 16u);
+		byteOrigin = uvec2(0u, nibbleBottomVal * 16u);
+	}
+	// We need to double the fragOffset.x when in DLGR because we're
+	// using the same texture for both LGR and DLGR. This moves the
+	// fragOffset from the 7x16 tile to the correct 14x16 for the TEXT texture
+	if (isDouble > 0.0001)
+	{
+		fragOffset.x *= 2;
 	}
 
     // Now get the texture color, using the tile uv origin and this fragment's offset

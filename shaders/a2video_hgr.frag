@@ -78,10 +78,10 @@ uniform COMPAT_PRECISION float isMixed;		// Are we in mixed mode?
 uniform COMPAT_PRECISION float isDouble;	// Are we in double res?
 
 // Mesh-level uniforms assigned in MosaicMesh
-uniform uvec2 tileCount;         // Count of tiles (cols, rows)
 uniform uvec2 tileSize;
-uniform usampler2D DBTEX;        // Apple 2e's memory, starting at 0x2000 in MAIN for HGR1 and 0x4000 for HGR2
+uniform usampler2D APPLE2MEMORYTEX; // Apple 2e's memory, starting at 0x2000 in MAIN for HGR1 and 0x4000 for HGR2
 								 // Unsigned int sampler!
+uniform int memstart = 0;		// where to start in memory
 
 in vec2 vFragPos;       // The fragment position in pixels
 // in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
@@ -108,20 +108,20 @@ void main()
 	// Next grab the data for that tile from the tilesBuffer
 	// No need to rescale values because we're using GL_R8UI
 	// The "texture" is split by 1kB-sized rows
-	int offset = hgrRow[tileColRow.y] + tileColRow.x;
+	int offset = memstart + hgrRow[tileColRow.y] + tileColRow.x;
 	
 	// the byte value is just the r component
-	uint byteVal = texelFetch(DBTEX, ivec2(offset % 1024, offset / 1024), 0).r;
+	uint byteVal = texelFetch(APPLE2MEMORYTEX, ivec2(offset % 1024, offset / 1024), 0).r;
 	// Grab the other bytes that matter
 	uint byteValPrev = 0u;
 	uint byteValNext = 0u;
 	if (tileColRow.x > 0)	// Not at start of row, byteValPrev is valid
 	{
-		byteValPrev = texelFetch(DBTEX, ivec2((offset % 1024) - 1, offset / 1024), 0).r;
+		byteValPrev = texelFetch(APPLE2MEMORYTEX, ivec2((offset % 1024) - 1, offset / 1024), 0).r;
 	}
 	if (tileColRow.x < 39)	// Not at end of row, byteValNext is valid
 	{
-		byteValNext = texelFetch(DBTEX, ivec2((offset % 1024) + 1, offset / 1024), 0).r;
+		byteValNext = texelFetch(APPLE2MEMORYTEX, ivec2((offset % 1024) + 1, offset / 1024), 0).r;
 	}
 	
 	ivec2 textureSize2d = textureSize(a2ModeTexture,0);

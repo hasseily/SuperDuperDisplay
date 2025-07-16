@@ -56,6 +56,11 @@ enum SwapInterval_e
 	SWAPINTERVAL_TOTAL_COUNT
 };
 
+struct A2RenderVertex {
+	glm::vec2 RelPos;		// Relative position of the vertex
+	glm::vec2 PixelPos;		// Pixel position of the vertex in the Apple 2 screen
+};
+
 // Apple 2 frequency
 #define _A2_CPU_FREQUENCY_NTSC 1'020'484
 #define _A2_CPU_FREQUENCY_PAL 1'015'625
@@ -78,6 +83,7 @@ enum SwapInterval_e
 #define _TEXUNIT_DATABUFFER_RGBA8UI GL_TEXTURE2	// Texunit of the data buffer (RGBA8UI VRAM)
 #define _TEXUNIT_PAL256BUFFER GL_TEXTURE3		// Texunit of the SHR4 PAL256 vram
 #define _TEXUNIT_IMAGE_ASSETS_START GL_TEXTURE4	// Start of the image assets
+#define _TEXUNIT_APPLE2MEMORY_R8UI GL_TEXTURE12 // Memory texture for use in shaders
 #define _TEXUNIT_MERGE_OFFSET GL_TEXTURE13		// Merge Offset buffer (for sine wobble)
 #define _TEXUNIT_PRE_NTSC GL_TEXTURE14			// If NTSC legacy output requested, this is the non-NTSC tex
 #define _TEXUNIT_PP_PREVIOUS GL_TEXTURE15		// The previous frame as a texture
@@ -98,17 +104,19 @@ enum SwapInterval_e
 // DEFINITIONS OF SDHR SPECS
 #define _SDHR_UPLOAD_REGION_SIZE 256*256*256	// Upload data region size (should be 16MB)
 #define _SDHR_MAX_WINDOWS 256
-#define _SDHR_MAX_TEXTURES (_TEXUNIT_MERGE_OFFSET - _TEXUNIT_IMAGE_ASSETS_START)	// Max # of image assets available
+#define _SDHR_MAX_TEXTURES (_TEXUNIT_APPLE2MEMORY_R8UI - _TEXUNIT_IMAGE_ASSETS_START)	// Max # of image assets available
 #define _SDHR_MAX_UV_SCALE 100.f				// Maximum scale of Mosaic Tile UV
 
 // ORIGINAL APPLE 2 VIDEO MODES
-#define _A2VIDEO_LEGACY_WIDTH 40*7*2
-#define _A2VIDEO_LEGACY_HEIGHT 24*8*2
-#define _A2VIDEO_MIN_MIXED_HEIGHT 20*8*2
-#define _A2VIDEO_SHR_WIDTH 640
-#define _A2VIDEO_SHR_HEIGHT 200*2
+#define _A2VIDEO_LEGACY_BYTES_PER_LINE 40
+#define _A2VIDEO_LEGACY_SCANLINES 24
+#define _A2VIDEO_LEGACY_WIDTH _A2VIDEO_LEGACY_BYTES_PER_LINE*7*2
+#define _A2VIDEO_LEGACY_HEIGHT _A2VIDEO_LEGACY_SCANLINES*8*2
+#define _A2VIDEO_MIN_MIXED_HEIGHT (_A2VIDEO_LEGACY_SCANLINES-4)*8*2
 #define _A2VIDEO_SHR_BYTES_PER_LINE 160
 #define _A2VIDEO_SHR_SCANLINES 200
+#define _A2VIDEO_SHR_WIDTH _A2VIDEO_SHR_BYTES_PER_LINE*4
+#define _A2VIDEO_SHR_HEIGHT _A2VIDEO_SHR_SCANLINES7*2
 
 #define _A2VIDEO_LEGACY_ASPECT_RATIO 280.f/192.f
 #define _A2VIDEO_SHR_ASPECT_RATIO 320.f/200.f
@@ -133,11 +141,11 @@ enum SwapInterval_e
 #define _SHADER_FRAGMENT_BASIC "shaders/basic.frag"
 
 #define _SHADER_A2_VERTEX_DEFAULT "shaders/a2video.vert"
-//#define _SHADER_TEXT_FRAGMENT "shaders/a2video_text.frag"
-//#define _SHADER_LGR_FRAGMENT "shaders/a2video_lgr.frag"
-//#define _SHADER_HGR_FRAGMENT "shaders/a2video_hgr.frag"
-//#define _SHADER_DHGR_FRAGMENT "shaders/a2video_dhgr.frag"
-//#define _SHADER_SHR_FRAGMENT "shaders/a2video_shr.frag"
+#define _SHADER_RGB_TEXT_FRAGMENT "shaders/a2video_text.frag"
+#define _SHADER_RGB_LGR_FRAGMENT "shaders/a2video_lgr.frag"
+#define _SHADER_RGB_HGR_FRAGMENT "shaders/a2video_hgr.frag"
+#define _SHADER_RGB_DHGR_FRAGMENT "shaders/a2video_dhgr.frag"
+#define _SHADER_RGB_SHR_FRAGMENT "shaders/a2video_shr.frag"
 #define _SHADER_BEAM_LEGACY_FRAGMENT "shaders/a2video_beam_legacy.frag"
 #define _SHADER_BEAM_SHR_FRAGMENT "shaders/a2video_beam_shr_raw.frag"
 #define _SHADER_BEAM_MERGE_FRAGMENT "shaders/a2video_beam_merge.frag"
