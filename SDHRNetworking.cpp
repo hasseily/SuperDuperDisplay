@@ -709,7 +709,7 @@ void usb_display_imgui_window(bool* p_open)
 			}
 		ENDWRITE:
 			if (cUSBImGUIDataError[0] != '\0')
-				ImGui::TextColored(ImVec4(0.9f, 0.f, 0.f, 1.f), cUSBImGUIDataError);
+				ImGui::TextColored(ImVec4(0.9f, 0.f, 0.f, 1.f), "%s", cUSBImGUIDataError);
 		}
 		ImGui::End();
 	}
