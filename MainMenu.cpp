@@ -63,6 +63,7 @@ public:
 	bool bShowLoadFileWindow = false;
 	bool bShowImGuiMetricsWindow = false;
 	bool bShowMemoryHeatMap = false;
+	bool bShowUSBImGuiWindow = false;
 	
 	bool bSampleRunKarateka = false;
 
@@ -305,7 +306,7 @@ void MainMenu::Render() {
 				for (auto j=0; j < 2; ++j) {
 					for (auto i=0; i < _A2_MEMORY_SHADOW_END; ++i) {
 						auto tdiff = currT - memMgr->GetMemWriteTimestamp(i + j*_A2_MEMORY_SHADOW_END);
-						if (tdiff < (pGui->mem_edit_a2e.OptHighlightFnSeconds * 1'000'000)) {
+						if (tdiff < ((size_t)pGui->mem_edit_a2e.OptHighlightFnSeconds * 1'000'000)) {
 							auto writeColor = ImColor(1.f - ((float)tdiff / (pGui->mem_edit_a2e.OptHighlightFnSeconds * 1'000'000)), 0.f, 0.f, 1.f);
 							auto rectMin = (j == 0 ? mainRectMin : auxRectMin);
 							auto pMin = ImVec2(rectMin.x + 1 + (i % 0x100) * mmultw, rectMin.y + 1 + (i / 0x100) * mmulth);
@@ -319,7 +320,7 @@ void MainMenu::Render() {
 				const int labelsHex[] = { 0x0, 0x400, 0x800, 0xC00, 0x2000, 0x4000, 0x6000, 0x8000, 0xA000, 0xC000, 0xD000, 0xE000 };
 				const size_t ctLabels = sizeof(labelsHex) / sizeof(labelsHex[0]);
 				char bufLabels[ctLabels];
-				for (int i = 0; i < ctLabels; ++i)
+				for (size_t i = 0; i < ctLabels; ++i)
 				{
 					snprintf(bufLabels, sizeof(bufLabels), "%04X", labelsHex[i]);
 					float yDelta = (float)labelsHex[i] * mmulth / 0x100;
@@ -528,7 +529,8 @@ void MainMenu::Render() {
 		if (pGui->bShowImGuiMetricsWindow)
 			ImGui::ShowMetricsWindow(&pGui->bShowImGuiMetricsWindow);
 
-
+		if (pGui->bShowUSBImGuiWindow)
+			usb_display_imgui_window(&pGui->bShowUSBImGuiWindow);
 	}
 	
 	ImGui::Render();
@@ -586,7 +588,7 @@ void MainMenu::ShowSDDMenu() {
 			bool foundCurrentMode = false;
 			bool isCurrentMode = false;
 			char modeDescription[200];
-			for (int i = 0; i < pGui->v_displayModes.size(); ++i)
+			for (size_t i = 0; i < pGui->v_displayModes.size(); ++i)
 			{
 				auto mode = pGui->v_displayModes[i];
 				snprintf(modeDescription, 199, "%dx%d @ %dHz", mode.w, mode.h, mode.refresh_rate);
@@ -970,6 +972,8 @@ void MainMenu::ShowDeveloperMenu() {
 		ImGui::MenuItem("Upload Region Memory Window", "", &pGui->mem_edit_sdhr_upload.Open);
 		ImGui::EndMenu();
 	}
+	ImGui::Separator();
+	ImGui::MenuItem("Appletini Communications", "", &pGui->bShowUSBImGuiWindow);
 	ImGui::Separator();
 	ImGui::MenuItem("ImGui Metrics Window", "", &pGui->bShowImGuiMetricsWindow);
 }

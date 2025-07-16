@@ -17,11 +17,15 @@
 #else
 #include "ftd3xx.h"
 #endif
+#include <charconv>
 
 // Write to Appletini
 #define FT_PIPE_WRITE_ID 0x02
 // Read from Appletini
 #define FT_PIPE_READ_ID 0x82
+
+// The USB handle to the Appletini
+static FT_HANDLE g_ftHandle = NULL;
 
 static EventRecorder *eventRecorder;
 static bool bIsConnected = false;
@@ -46,6 +50,12 @@ const size_t get_max_incoming_packets() { return packetInQueue.max_size(); };
 
 std::vector<uint8_t> rx_message_buffer;
 
+static bool bUSBImGUiWindowIsOpen = false;
+static bool bUSBImGUiIsIncrement = false;
+static int iUSBImGUIAddressStart = 0;
+static char cUSBImGUIData[1020 + 254];
+static char cUSBImGUIDataError[1024];
+
 const std::string get_ft_status_message(FT_STATUS status)
 {
 	switch (status)
@@ -53,7 +63,7 @@ const std::string get_ft_status_message(FT_STATUS status)
 	case FT_OK:
 		return "OK";
 	case FT_INVALID_HANDLE:
-		return "Invalid handle";
+		return "Invalid g_ftHandle";
 	case FT_DEVICE_NOT_FOUND:
 		return "Device not found";
 	case FT_DEVICE_NOT_OPENED:
@@ -103,7 +113,7 @@ const std::string get_ft_status_message(FT_STATUS status)
 	case FT_IO_INCOMPLETE:
 		return "Input/output operation is incomplete";
 	case FT_HANDLE_EOF:
-		return "End of file handle reached";
+		return "End of file g_ftHandle reached";
 	case FT_BUSY:
 		return "Device is busy";
 	case FT_NO_SYSTEM_RESOURCES:
@@ -426,7 +436,6 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 	clear_queues();
 	std::cout << "Starting USB thread" << std::endl;
 	ftStatusPrevious = 0xFFFF;
-	FT_HANDLE handle = NULL;
 	bIsConnected = false;
 	std::chrono::steady_clock::time_point next_connect_timeout{};
 	while (!(*shouldTerminateNetworking))
@@ -477,7 +486,7 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 
 			// Open the first available device
 #ifdef __NETWORKING_WINDOWS__
-			ftStatus = FT_Create((PVOID)nodes[0].SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, &handle);
+			ftStatus = FT_Create((PVOID)nodes[0].SerialNumber, FT_OPEN_BY_SERIAL_NUMBER, &g_ftHandle);
 #else
 			FT_TRANSFER_CONF conf;
 			memset(&conf, 0, sizeof(conf));
@@ -488,45 +497,37 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			{
 				FT_SetTransferParams(&conf, i);
 			}
-			ftStatus = FT_Create(0, FT_OPEN_BY_INDEX, &handle);
+			ftStatus = FT_Create(0, FT_OPEN_BY_INDEX, &g_ftHandle);
 #endif
 			if (ftStatus != FT_OK)
 			{
-				if (ftStatus != ftStatusPrevious)
-					std::cerr << "Failed to open FPGA usb device handle: " << get_ft_status_message(ftStatus) << std::endl;
-				ftStatusPrevious = ftStatus;
+				std::cerr << "Failed to open FPGA usb device g_ftHandle: " << get_ft_status_message(ftStatus) << std::endl;
 				continue;
 			}
 
 			// Set pipe timeouts. Probably only necessary on Windows
-			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_WRITE_ID, 1000); // Pipe to write to
+			ftStatus = FT_SetPipeTimeout(g_ftHandle, FT_PIPE_WRITE_ID, 1000); // Pipe to write to
 			if (ftStatus != FT_OK)
 			{
-				if (ftStatus != ftStatusPrevious)
-					std::cerr << "Failed to set write pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
-				ftStatusPrevious = ftStatus;
-				FT_Close(handle);
-				handle = NULL;
+				std::cerr << "Failed to set write pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
+				FT_Close(g_ftHandle);
+				g_ftHandle = NULL;
 				continue;
 			}
-			ftStatus = FT_SetPipeTimeout(handle, FT_PIPE_READ_ID, 1000); // Pipe to read from
+			ftStatus = FT_SetPipeTimeout(g_ftHandle, FT_PIPE_READ_ID, 1000); // Pipe to read from
 			if (ftStatus != FT_OK)
 			{
-				if (ftStatus != ftStatusPrevious)
-					std::cerr << "Failed to set read pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
-				ftStatusPrevious = ftStatus;
-				FT_Close(handle);
-				handle = NULL;
+				std::cerr << "Failed to set read pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
+				FT_Close(g_ftHandle);
+				g_ftHandle = NULL;
 				continue;
 			}
 			/*
-			ftStatus = FT_SetStreamPipe(handle, true, true, 0, PKT_BUFSZ);
+			ftStatus = FT_SetStreamPipe(g_ftHandle, true, true, 0, PKT_BUFSZ);
 			if (ftStatus != FT_OK) {
-				if (ftStatus != ftStatusPrevious)
-					std::cerr << "Failed to set Stream pipe size" << std::endl;
-				ftStatusPrevious = ftStatus;
-				FT_Close(handle);
-				handle = NULL;
+				std::cerr << "Failed to set Stream pipe size" << std::endl;
+				FT_Close(g_ftHandle);
+				g_ftHandle = NULL;
 				continue;
 			}
 			*/
@@ -558,34 +559,40 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			*p++ = (((time_val.tm_year % 100) / 10) << 4) + ((time_val.tm_year % 100) % 10);
 			printf("setting time: %04x%04x\n",set_time_buf[3],set_time_buf[2]);
 			uint32_t set_time_msg_len = 16;
-			FT_WritePipeEx(handle, 0, (uint8_t *)set_time_buf, set_time_msg_len, &bytes_transferred, 0);
-		
+			ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t *)set_time_buf, set_time_msg_len, &bytes_transferred, 0);
+			if (ftStatus != FT_OK)
+			{
+				std::cerr << "Failed to set time to FPGA: " << get_ft_status_message(ftStatus) << std::endl;
+			}
+
 			// enable bus events
 			uint32_t enable_msg_buf[3];
 			enable_msg_buf[0] = 0x80000001; // incr set, 1 data field
 			enable_msg_buf[1] = 0x00001000; // address of bus_event_control
 			enable_msg_buf[2] = 0x00000001; // bit 0 indicates enable bus events
 			uint32_t enable_msg_buf_len = 12;
-			FT_WritePipeEx(handle, 0, (uint8_t *)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
+			ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t *)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
+			if (ftStatus != FT_OK)
+			{
+				std::cerr << "Failed to enable FPGA bus events: " << get_ft_status_message(ftStatus) << std::endl;
+			}
 		}
 
 		auto packet = packetFreeQueue.pop();
 		// Synchronous Read
 #ifdef __NETWORKING_WINDOWS__
-		ftStatus = FT_ReadPipeEx(handle, FT_PIPE_READ_ID, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), NULL);
+		ftStatus = FT_ReadPipeEx(g_ftHandle, FT_PIPE_READ_ID, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), NULL);
 #else
-		ftStatus = FT_ReadPipeEx(handle, 0, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), 1000);
+		ftStatus = FT_ReadPipeEx(g_ftHandle, 0, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), 1000);
 #endif
 		if (ftStatus != FT_OK)
 		{
 			// FT_TIMEOUT means the Apple is off. No data is coming in
 			if (ftStatus != FT_TIMEOUT)
 			{
-				if (ftStatus != ftStatusPrevious)
-					std::cerr << "Failed to read from FPGA usb packet pipe: " << get_ft_status_message(ftStatus) << std::endl;
-				ftStatusPrevious = ftStatus;
+				std::cerr << "Failed to read from FPGA usb packet pipe: " << get_ft_status_message(ftStatus) << std::endl;
 			}
-			FT_AbortPipe(handle, FT_PIPE_READ_ID);
+			FT_AbortPipe(g_ftHandle, FT_PIPE_READ_ID);
 			packetFreeQueue.push(std::move(packet));
 			continue;
 		}
@@ -601,4 +608,109 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 	}
 	std::cout << "ending usb read loop" << std::endl;
 	return 0;
+}
+
+uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* vData, bool setIncrement)
+{
+	if (g_ftHandle == NULL)
+		return 0;
+	uint32_t enable_msg_buf[256];	// max 256 entries, 254 data fields
+	auto vDataSize = vData->size();
+	if (vDataSize > ((sizeof(enable_msg_buf) / sizeof(enable_msg_buf[0])) - 2))
+	{
+		std::cerr << "ERROR: Too much data sent to usb_write_register!" << std::endl;
+		return 0;
+	}
+	enable_msg_buf[0] = 0x0;
+	if (setIncrement)
+		enable_msg_buf[0] = 0x80000000;
+	enable_msg_buf[0] += vDataSize;
+	enable_msg_buf[1] = addressStart;
+	for (size_t i = 0; i < vDataSize; ++i)
+	{
+		enable_msg_buf[2 + i] = vData->at(i);
+	}
+	uint32_t enable_msg_buf_len = (2 + vDataSize) * sizeof(enable_msg_buf[0]);
+	ULONG bytes_transferred;
+	ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
+	if (ftStatus != FT_OK)
+	{
+		std::cerr << "Failed to write pipe ex: " << get_ft_status_message(ftStatus) << std::endl;
+		return 0;
+	}
+	return 1;
+}
+
+void usb_display_imgui_window(bool* p_open)
+{
+	bUSBImGUiWindowIsOpen = p_open;
+	if (p_open)
+	{
+		ImGui::SetNextWindowSizeConstraints(ImVec2(420, 180), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::Begin("Appletini Communications", p_open);
+		if (!ImGui::IsWindowCollapsed())
+		{
+			ImGui::Checkbox("Increment", &bUSBImGUiIsIncrement);
+			ImGui::DragInt("Start Address", &iUSBImGUIAddressStart, 1.f, 0, 0x4000, "%04X");
+			ImGui::InputText("Data", cUSBImGUIData, sizeof(cUSBImGUIData));
+			ImGui::SetItemTooltip("Data is space-delimited 4 bytes in hex, e.g.: 4ce20001 0000ffa2. Max of 254 4-byte values.");
+			if (ImGui::Button("Write to Appletini"))
+			{
+				constexpr size_t TOKEN_LEN = 8;  // 8 hex chars == 4 bytes
+				std::string_view sv(cUSBImGUIData);
+				std::vector<uint32_t> result;
+				size_t i = 0, n = sv.size();
+
+				while (i < n) {
+					// Ensure enough characters remain
+					if (i + TOKEN_LEN > n) {
+						sprintf(cUSBImGUIDataError, "Unexpected end of data at position %zu", i);
+						goto ENDWRITE;
+					}
+
+					// Extract the 8-char token
+					auto token = sv.substr(i, TOKEN_LEN);
+
+					// Validate each is a hex digit
+					for (char c : token) {
+						if (!std::isxdigit(static_cast<unsigned char>(c))) {
+							sprintf(cUSBImGUIDataError, "Invalid hex digit %c in token at pos %zu", c, i);
+							goto ENDWRITE;
+						}
+					}
+
+					// Parse hex to uint32_t
+					uint32_t value = 0;
+					auto [ptr, ec] = std::from_chars(token.data(), token.data() + token.size(), value, 16);
+					if (ec != std::errc()) {
+						sprintf(cUSBImGUIDataError, "Failed to parse token %s as hex at pos %zu", std::string(token).c_str(), i);
+						goto ENDWRITE;
+					}
+					result.push_back(value);
+
+					i += TOKEN_LEN;
+					if (i == n) {
+						break;  // reached end exactly
+					}
+
+					// Next character must be a space
+					if (sv[i] != ' ') {
+						sprintf(cUSBImGUIDataError, "Expected space at position %zu, found %c", i, sv[i]);
+						goto ENDWRITE;
+					}
+					++i;  // skip the space
+				}
+				// now send to appletini
+				auto _res = usb_write_register(iUSBImGUIAddressStart, &result, bUSBImGUiIsIncrement);
+				if (_res == 0)
+					sprintf(cUSBImGUIDataError, "FT Write Pipe Ex failed: %s", get_ft_status_message(ftStatus).c_str());
+				else
+					cUSBImGUIDataError[0] = '\0';
+			}
+		ENDWRITE:
+			if (cUSBImGUIDataError[0] != '\0')
+				ImGui::TextColored(ImVec4(0.9f, 0.f, 0.f, 1.f), cUSBImGUIDataError);
+		}
+		ImGui::End();
+	}
 }
