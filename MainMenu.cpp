@@ -41,6 +41,10 @@ extern void Main_SetFPSOverlay(bool isFPSOverlay);
 extern SDL_Window* Main_GetSDLWindow();
 extern void Main_RequestAppQuit();
 
+#define IM_MIN(A, B)            (((A) < (B)) ? (A) : (B))
+#define IM_MAX(A, B)            (((A) >= (B)) ? (A) : (B))
+#define IM_CLAMP(V, MN, MX)     ((V) < (MN) ? (MN) : (V) > (MX) ? (MX) : (V))
+
 class MainMenu::Gui {
 public:
 	ImFont* fontDefault = nullptr;
@@ -64,7 +68,7 @@ public:
 	bool bShowImGuiMetricsWindow = false;
 	bool bShowMemoryHeatMap = false;
 	bool bShowUSBImGuiWindow = false;
-	
+	bool bShowSHRPaletteWindow = false;
 	bool bSampleRunKarateka = false;
 
 	MemoryEditor mem_edit_a2e;
@@ -517,6 +521,61 @@ void MainMenu::Render() {
 			ImGui::End();
 		}
 
+		if (pGui->bShowSHRPaletteWindow) {
+			const int rows = 16;
+			const int cols = 16;
+			float cellSize = 20.0f;	// will change based on window size
+
+			ImGui::SetNextWindowSizeConstraints(
+												ImVec2(rows * cellSize + 20, cols * cellSize + 35),
+												ImVec2(FLT_MAX, FLT_MAX)
+												);
+			ImGui::Begin("SHR Palette Viewer", &pGui->bShowSHRPaletteWindow);
+
+			cellSize = IM_MIN(
+								(ImGui::GetContentRegionAvail().x) / rows,
+								(ImGui::GetContentRegionAvail().y) / cols
+								);
+
+			uint8_t* paletteData = MemoryManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_SHR_PALETTE_START;
+
+			// Remove spacing between items so squares touch
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, 0 });
+
+			for (int row = 0; row < rows; ++row)
+			{
+				for (int col = 0; col < cols; ++col)
+				{
+					int idx = row * cols + col;
+					// Read 16-bit value (low byte first, then high byte)
+					uint16_t value = static_cast<uint16_t>(paletteData[2 * idx]) |
+					(static_cast<uint16_t>(paletteData[2 * idx + 1]) << 8);
+
+					// Extract 4-bit channels: R = bits 11-8, G = bits 7-4, B = bits 3-0
+					float r = static_cast<float>((value >> 8) & 0xF) / 15.0f;
+					float g = static_cast<float>((value >> 4) & 0xF) / 15.0f;
+					float b = static_cast<float>( value        & 0xF) / 15.0f;
+
+					// Unique ID per cell to avoid label collisions
+					ImGui::PushID(idx);
+					ImGui::ColorButton(
+									   "##cell",
+									   ImVec4{ r, g, b, 1.0f },
+									   ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop,
+									   ImVec2{ cellSize, cellSize }
+									   );
+					ImGui::PopID();
+					ImGui::SetItemTooltip("%04X - %03.0f,%03.0f,%03.0f", value, r * 256, g * 256, b * 256);
+
+					if (col < cols - 1)
+						ImGui::SameLine();
+				}
+			}
+
+			ImGui::PopStyleVar();
+			ImGui::End();
+		}
+
 		A2VideoManager::GetInstance()->DisplayImGuiExtraWindows();
 		A2VideoManager::GetInstance()->DisplayImGUIRGBDebugWindows();
 
@@ -907,7 +966,9 @@ void MainMenu::ShowDeveloperMenu() {
 		ImGui::MenuItem("HGR2", "", &a2VideoManager->bRenderHGR2);
 		ImGui::EndMenu();
 	}
-	if (ImGui::MenuItem("RAM RGB Visualizer", ""))
+	if (ImGui::MenuItem("SHR Palette Viewer", ""))
+		pGui->bShowSHRPaletteWindow = true;
+	if (ImGui::MenuItem("RAM RGB Renderer", ""))
 		a2VideoManager->CreateNewA2WindowRGB();
 	if (ImGui::BeginMenu("Save Memory to File")) {
 		std::string _sfpath = GetMemorySaveFilePath();

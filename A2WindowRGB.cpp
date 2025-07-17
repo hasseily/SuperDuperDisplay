@@ -218,7 +218,9 @@ void A2WindowRGB::DisplayImGuiWindow() {
 		return;
 
 	ImGui::SetNextWindowSizeConstraints(ImVec2(_A2VIDEO_LEGACY_WIDTH/2, _A2VIDEO_LEGACY_HEIGHT/2 + 50), ImVec2(FLT_MAX, FLT_MAX));
-	std::string _title = "Memory RGB Viewer - texId ";
+	// Make each window title unique with the texture_id
+	// ImGui::PushID() doesn't work on ImGui::Begin()
+	std::string _title = "RAM RGB Renderer - texId ";
 	char tex_str[12];
 	SDL_itoa(texture_id, tex_str, 10);
 	_title += tex_str;
