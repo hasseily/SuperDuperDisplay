@@ -45,6 +45,7 @@ A2WindowRGB::A2WindowRGB() {
 	doubleMode = false;
 	this->UpdateVertexArray();
 	this->SetVideoMode(A2VIDEORGB_TEXT);
+	A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 }
 
 A2WindowRGB::~A2WindowRGB()
@@ -229,9 +230,14 @@ void A2WindowRGB::DisplayImGuiWindow() {
 	const char* videoType[] = { "TEXT", "LGR", "HGR", "DTEXT", "DLGR", "DHGR" };
 	int _currMode = static_cast<int>(videoMode);
 	if (ImGui::Combo("Renderer", &_currMode, videoType, IM_ARRAYSIZE(videoType)))
+	{
 		this->SetVideoMode(static_cast<A2VideoModeRGB_e>(_currMode));
+		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	}
 	ImGui::SameLine(); ImGui::Spacing(); ImGui::SameLine();
-	ImGui::InputInt("Memory Start", &memStart, 0, 0xFFFF, ImGuiInputTextFlags_CharsHexadecimal);
+	int dragSpeed = (ImGui::GetIO().KeyCtrl ? 16 : 1 );
+	if (ImGui::DragInt("Memory Start", &memStart, dragSpeed, 0, 0xFFFF, "%04X"))
+		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	if (memStart > 0xFFFF)
 		memStart = 0xFFFF;
 	if (memStart < 0)
@@ -242,7 +248,8 @@ void A2WindowRGB::DisplayImGuiWindow() {
 		memAux = false;
 	} else {
 		ImGui::SameLine();
-		ImGui::Checkbox("AUX Bank", &memAux);
+		if (ImGui::Checkbox("AUX Bank", &memAux))
+			A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
 	ImGui::Image(reinterpret_cast<void*>(texture_id),
 //				 ImVec2(_A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT),
