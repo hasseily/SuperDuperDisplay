@@ -6,6 +6,11 @@
 #include "common.h"
 #include "shader.h"
 
+// Objects of this class render memory using legacy RGB shaders
+// Included is an ImGui interface for visualizing the render and setting parameters
+// Call the Render() method from the main rendering loop
+// Call DisplayImGuiWindow() from the ImGui area of the main loop
+
 enum A2VideoModeRGB_e
 {
 	A2VIDEORGB_TEXT,
@@ -29,10 +34,10 @@ public:
 
 	int memStart;							// Where to start in memory
 	bool memAux;							// Use AUX mem instead of MAIN (disabled when doubleMode == true)
-	Shader shader;							// Shader used
 	bool bImguiWindowIsOpen;				// for ImGUI, window is open
 private:
 	A2VideoModeRGB_e videoMode;				// Video mode to use
+	Shader shader;							// Shader used
 	bool doubleMode;		 				// DTEXT, DLGR, DHGR
 	uXY screen_count;						// width,height in pixels of visible screen area of window
 
