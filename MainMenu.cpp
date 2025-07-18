@@ -242,7 +242,7 @@ void MainMenu::Render() {
 			ImGui::Begin("About", &pGui->bShowAboutWindow, ImGuiWindowFlags_AlwaysAutoResize);
 			ImGui::Text("Super Duper Display");
 			ImGui::Separator();
-			ImGui::Text(SDD_VERSION);
+			ImGui::Text("Version: %s", SDD_VERSION);
 			ImGui::Text("Software: Henri \"Rikkles\" Asseily");
 			ImGui::Text("Design & Firmware: John \"Elltwo\" Flanagan");
 			ImGui::Text("Appletini logo by Rikkles+Fatdog");
