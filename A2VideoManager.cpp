@@ -27,6 +27,9 @@
 #include "SDL_rect.h"
 #include "BasicQuad.h"
 
+// In main.cpp
+extern uint32_t Main_GetFPSLimit();
+
 // Aspect constraint callback to enforce a fixed aspect ratio for ImGui windows.
 // The aspect ratio is provided via the UserData pointer
 static inline void AspectConstraintCallback(ImGuiSizeCallbackData* data)
@@ -378,6 +381,18 @@ void A2VideoManager::Initialize()
 	MemoryManager::GetInstance()->switch_c034 = 13;
 
 	bIsReady = true;
+	// Create the overlay manager, which initializes SDL_ttf and loads the font
+	//timedTextManager.Initialize("./assets/ProggyTiny.ttf", 24);
+	timedTextManager.Initialize();
+	timedTextManager.use80ColDefaultFont = false;
+	// auto _fps = Main_GetFPSLimit(); if (_fps == UINT32_MAX) _fps = 240;
+	// Display version number at the bottom right for a single frame only
+	// i.e. the "splash screen" that is in SHR
+	int _xv = windowsbeam[A2VIDEOBEAM_SHR]->GetWidth() - sizeof(SDD_VERSION)*14;
+	int _yv = windowsbeam[A2VIDEOBEAM_SHR]->GetHeight() - 20;
+	timedTextManager.AddText(SDD_VERSION, _xv, _yv, 1, .9,.3,.85,1);
+	timedTextManager.AddText(SDD_VERSION, _xv-1, _yv-1, 1, 1,1,1,1);
+	timedTextManager.AddText(SDD_VERSION, _xv+1, _yv+1, 1, .1,.1,.1,1);
 }
 
 void A2VideoManager::ResetGLData() {
@@ -1620,6 +1635,8 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 			std::cerr << "VidHD draw error: " << glerr << std::endl;
 		}
 	}
+
+	timedTextManager.UpdateAndRender(fb_width, fb_height);
 
 	glActiveTexture(_TEXUNIT_POSTPROCESS);
 	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);

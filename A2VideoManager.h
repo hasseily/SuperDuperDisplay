@@ -15,6 +15,7 @@
 #include "A2WindowRGB.h"
 #include "imgui.h"
 #include "imgui_memory_editor.h"
+#include "TimedTextManager.h"
 
 enum class A2Mode_e
 {
@@ -390,6 +391,8 @@ private:
 	uint8_t overlay_lines[24];
 	bool bWasSHRBeforeOverlay = false;
 	void UpdateOverlayLine(uint32_t y);
+
+	TimedTextManager timedTextManager;
 };
 #endif // A2VIDEOMANAGER_H
 

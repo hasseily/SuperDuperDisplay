@@ -3,6 +3,7 @@
 #define GL_SILENCE_DEPRECATION // Silence deprecation warnings on macOS for OpenGL
 
 #define IMGUI_USER_CONFIG "../my_imgui_config.h"
+#define _USE_STB_TRUETYPE
 
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
@@ -500,6 +501,11 @@ int main(int argc, char* argv[])
 	std::cout << "Loaded SoundManager " << soundManager << std::endl;
 	[[maybe_unused]] auto mockingboardManager = MockingboardManager::GetInstance();
 	std::cout << "Loaded MockingboardManager " << mockingboardManager << std::endl;
+
+	// Create the overlay manager, which initializes SDL_ttf and loads the font
+//	TimedTextManager timedTextManager("./assets/BerkeliumIIHGR.ttf", 18, 800, 600);
+	// Example: display "Hello, world!" at (50,50) for 120 frames (~2s at 60fps)
+//	timedTextManager.AddText("Hello, world!", 50, 50, 9999999);
 
 	std::cout << "Renderer Initializing..." << std::endl;
 	while (!a2VideoManager->IsReady())

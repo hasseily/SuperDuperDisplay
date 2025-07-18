@@ -13,6 +13,7 @@
 		BB044AC12CF37F900002F6FA /* libftd3xx-static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC02CF37F8F0002F6FA /* libftd3xx-static.a */; };
 		BB044AC52CF381F80002F6FA /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC42CF381F80002F6FA /* CoreFoundation.framework */; };
 		BB044AC72CF382620002F6FA /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC62CF382620002F6FA /* IOKit.framework */; };
+		BB58F41D2E293B8E004D62FC /* TimedTextManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB58F41C2E293B8E004D62FC /* TimedTextManager.cpp */; };
 		BB6B2FDD2CD17D03008BC3F2 /* samples in CopyFiles */ = {isa = PBXBuildFile; fileRef = BB6B2FDC2CD17CD4008BC3F2 /* samples */; };
 		BB6BE3152CC3963B00901A03 /* libopencv_core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BB6BE3142CC395F000901A03 /* libopencv_core.a */; };
 		BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = BB96E3EA2B6650BA00A3077C /* libz.tbd */; };
@@ -97,6 +98,9 @@
 		BB044AC62CF382620002F6FA /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		BB0E58192C7B2E8600B44B58 /* SSI263Phonemes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSI263Phonemes.h; sourceTree = "<group>"; };
 		BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MemoryLoader.h; path = extras/MemoryLoader.h; sourceTree = "<group>"; };
+		BB58F41A2E291388004D62FC /* TimedTextManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TimedTextManager.h; sourceTree = "<group>"; };
+		BB58F41B2E29173C004D62FC /* stb_truetype.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = stb_truetype.h; sourceTree = "<group>"; };
+		BB58F41C2E293B8E004D62FC /* TimedTextManager.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TimedTextManager.cpp; sourceTree = "<group>"; };
 		BB64A7D02C391D580044E05B /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		BB68B4C72C4248C400F96269 /* beeper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = beeper.h; sourceTree = "<group>"; };
 		BB6B2FDC2CD17CD4008BC3F2 /* samples */ = {isa = PBXFileReference; lastKnownFileType = folder; path = samples; sourceTree = "<group>"; };
@@ -295,6 +299,9 @@
 				BBE17D842C81CDCB008EF443 /* SSI263.cpp */,
 				BB0E58192C7B2E8600B44B58 /* SSI263Phonemes.h */,
 				BBB525052B6648A200A65C62 /* stb_image.h */,
+				BB58F41B2E29173C004D62FC /* stb_truetype.h */,
+				BB58F41A2E291388004D62FC /* TimedTextManager.h */,
+				BB58F41C2E293B8E004D62FC /* TimedTextManager.cpp */,
 			);
 			name = SuperDuperDisplay;
 			sourceTree = "<group>";
@@ -373,6 +380,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BBC172F52B6657710044B194 /* glad.cpp in Sources */,
+				BB58F41D2E293B8E004D62FC /* TimedTextManager.cpp in Sources */,
 				BBC172F32B6657640044B194 /* imgui_impl_opengl3.cpp in Sources */,
 				BBC172FD2B6658AD0044B194 /* imgui_impl_sdl2.cpp in Sources */,
 				BBC172FB2B6658700044B194 /* imgui.cpp in Sources */,
