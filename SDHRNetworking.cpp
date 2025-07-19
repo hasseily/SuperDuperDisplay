@@ -615,7 +615,7 @@ uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* 
 	if (g_ftHandle == NULL)
 		return 0;
 	uint32_t enable_msg_buf[256];	// max 256 entries, 254 data fields
-	auto vDataSize = vData->size();
+	uint32_t vDataSize = (uint32_t)vData->size();
 	if (vDataSize > ((sizeof(enable_msg_buf) / sizeof(enable_msg_buf[0])) - 2))
 	{
 		std::cerr << "ERROR: Too much data sent to usb_write_register!" << std::endl;
@@ -664,7 +664,7 @@ void usb_display_imgui_window(bool* p_open)
 				while (i < n) {
 					// Ensure enough characters remain
 					if (i + TOKEN_LEN > n) {
-						sprintf(cUSBImGUIDataError, "Unexpected end of data at position %zu", i);
+						snprintf(cUSBImGUIDataError, sizeof(cUSBImGUIDataError), "Unexpected end of data at position %zu", i);
 						goto ENDWRITE;
 					}
 
@@ -674,7 +674,7 @@ void usb_display_imgui_window(bool* p_open)
 					// Validate each is a hex digit
 					for (char c : token) {
 						if (!std::isxdigit(static_cast<unsigned char>(c))) {
-							sprintf(cUSBImGUIDataError, "Invalid hex digit %c in token at pos %zu", c, i);
+							snprintf(cUSBImGUIDataError, sizeof(cUSBImGUIDataError), "Invalid hex digit %c in token at pos %zu", c, i);
 							goto ENDWRITE;
 						}
 					}
@@ -683,7 +683,7 @@ void usb_display_imgui_window(bool* p_open)
 					uint32_t value = 0;
 					auto [ptr, ec] = std::from_chars(token.data(), token.data() + token.size(), value, 16);
 					if (ec != std::errc()) {
-						sprintf(cUSBImGUIDataError, "Failed to parse token %s as hex at pos %zu", std::string(token).c_str(), i);
+						snprintf(cUSBImGUIDataError, sizeof(cUSBImGUIDataError), "Failed to parse token %s as hex at pos %zu", std::string(token).c_str(), i);
 						goto ENDWRITE;
 					}
 					result.push_back(value);
@@ -695,7 +695,7 @@ void usb_display_imgui_window(bool* p_open)
 
 					// Next character must be a space
 					if (sv[i] != ' ') {
-						sprintf(cUSBImGUIDataError, "Expected space at position %zu, found %c", i, sv[i]);
+						snprintf(cUSBImGUIDataError, sizeof(cUSBImGUIDataError), "Expected space at position %zu, found %c", i, sv[i]);
 						goto ENDWRITE;
 					}
 					++i;  // skip the space
@@ -703,7 +703,7 @@ void usb_display_imgui_window(bool* p_open)
 				// now send to appletini
 				auto _res = usb_write_register(iUSBImGUIAddressStart, &result, bUSBImGUiIsIncrement);
 				if (_res == 0)
-					sprintf(cUSBImGUIDataError, "FT Write Pipe Ex failed: %s", get_ft_status_message(ftStatus).c_str());
+					snprintf(cUSBImGUIDataError, sizeof(cUSBImGUIDataError), "FT Write Pipe Ex failed: %s", get_ft_status_message(ftStatus).c_str());
 				else
 					cUSBImGUIDataError[0] = '\0';
 			}

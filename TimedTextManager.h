@@ -26,7 +26,10 @@
 
 #pragma once
 #include "common.h"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcomma"
 #include "stb_truetype.h"
+#pragma clang diagnostic pop
 
 struct TimedText {
 	std::string text;
