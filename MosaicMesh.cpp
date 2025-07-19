@@ -173,9 +173,9 @@ void MosaicMesh::SetupDraw()
 
 	GLenum glerr;
 	shaderProgram->use();
-	shaderProgram->setInt("ticks", SDL_GetTicks() - ticks_since_first_render);
-	shaderProgram->setFloat("pixelSize", pixelSize);
-	shaderProgram->setBool("iDebugNoTextures", SDHRManager::GetInstance()->bDebugNoTextures);
+	shaderProgram->setUniform("ticks", SDL_GetTicks() - ticks_since_first_render);
+	shaderProgram->setUniform("pixelSize", pixelSize);
+	shaderProgram->setUniform("iDebugNoTextures", SDHRManager::GetInstance()->bDebugNoTextures);
 
 	// Assign the list of all the textures to the shader's "tilesTexture" uniform
 	auto texUniformId = glGetUniformLocation(shaderProgram->ID, "tilesTexture");
@@ -198,18 +198,18 @@ void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 	glBindVertexArray(VAO);
 	// Assign the scales so that we can get the proper original
 	// values for each mosaic tile
-	shaderProgram->setFloat("maxTextures", _SDHR_MAX_TEXTURES);
-	shaderProgram->setFloat("maxUVScale", _SDHR_MAX_UV_SCALE);
-	shaderProgram->setVec2u("tileCount", this->cols, this->rows);
-	shaderProgram->setVec2u("meshSize", this->width, this->height);
+	shaderProgram->setUniform("maxTextures", _SDHR_MAX_TEXTURES);
+	shaderProgram->setUniform("maxUVScale", _SDHR_MAX_UV_SCALE);
+	shaderProgram->setUniform("tileCount", glm::vec2(this->cols, this->rows));
+	shaderProgram->setUniform("meshSize", glm::vec2(this->width, this->height));
 
 	glm::mat4 mat_final = mat_proj * mat_camera * this->mat_trans;
-	shaderProgram->setMat4("transform", mat_final);
+	shaderProgram->setUniform("transform", mat_final);
 
 	// point the uniform at the tiles data texture (_TEXUNIT_DATABUFFER)
 	glActiveTexture(_TEXUNIT_DATABUFFER_RGBA8UI);
 	glBindTexture(GL_TEXTURE_2D, TBTEX);
-	shaderProgram->setInt("TBTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
+	shaderProgram->setUniform("TBTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
 	// back to the output buffer to draw our scene
 	glActiveTexture(GL_TEXTURE0);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());

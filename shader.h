@@ -10,57 +10,62 @@
 #include "OpenGLHelper.h"
 #include <string>
 
+/*
+	@brief:
+	Utility class to create, build and run a shader.
+		- After creating the shader, call build()
+		- You can set static uniforms that don't change every frame by calling shader.use()
+		  and then setUniform(), and optionally shader.release()
+		- Frame-dynamic uniforms are called the same way, but inside the render loop
+
+	All uniform locations are cached for better performance. They're generally cached upon
+	first use, but you can force pre-caching by calling cacheUniform() for each uniform
+	after building and activating the shader.
+
+	If you want even more control over the uniforms, you can always do something like:
+	Cache the uniform yourself:
+		u_ticks = glGetUniformLocation(shader.ID, "ticks");
+	Assign the uniform in the render loop:
+		glUniform1i(u_ticks, SDL_GetTicks());
+
+ */
+
+using UniformValue = std::variant<
+									bool,int,uint32_t,float,
+									glm::vec2,glm::ivec2,glm::uvec2,
+									glm::vec3,glm::vec4,
+									glm::mat2,glm::mat3,glm::mat4
+								>;
+
 class Shader
 {
 public:
     unsigned int ID = 0;
-    bool isReady = false;
-    // Useless until you call build()
+	bool isReady = false;    // Shader is useless until you call build()
+	bool isInUse = false;
 
     // Build from vertex and fragment shaders (could be combined using VERTEX and FRAGMENT #define)
     void build(const char* vertexPath, const char* fragmentPath);
     void _compile(const std::string* pvertexCode, const std::string* pfragmentCode);
-    // activate the shader
-    // ------------------------------------------------------------------------
-    void use() const;
-    // utility uniform functions    (Not all are created. Add as necessary)
-    // ------------------------------------------------------------------------
-    void setBool(const std::string &name, bool value) const;
-    // ------------------------------------------------------------------------
-    void setInt(const std::string &name, int value) const;
-	void setUInt(const std::string &name, uint32_t value) const;
-    // ------------------------------------------------------------------------
-    void setFloat(const std::string &name, float value) const;
-    // ------------------------------------------------------------------------
-    void setVec2(const std::string &name, const glm::vec2 &value) const;
-    void setVec2(const std::string &name, float x, float y) const;
-	// ------------------------------------------------------------------------
-	void setVec2i(const std::string& name, const glm::ivec2& value) const;
-    void setVec2i(const std::string& name, int x, int y) const;
-    // ------------------------------------------------------------------------
-	void setVec2u(const std::string& name, const glm::uvec2& value) const;
-    void setVec2u(const std::string& name, unsigned int x, unsigned int y) const;
-    // ------------------------------------------------------------------------
-    void setVec3(const std::string &name, const glm::vec3 &value) const;
-    void setVec3(const std::string &name, float x, float y, float z) const;
-    // ------------------------------------------------------------------------
-    void setVec4(const std::string &name, const glm::vec4 &value) const;
-    void setVec4(const std::string &name, float x, float y, float z, float w) const;
-    // ------------------------------------------------------------------------
-    void setMat2(const std::string &name, const glm::mat2 &mat) const;
-    // ------------------------------------------------------------------------
-    void setMat3(const std::string &name, const glm::mat3 &mat) const;
-    // ------------------------------------------------------------------------
-    void setMat4(const std::string &name, const glm::mat4 &mat) const;
-	
+
+	// de/activate the shader
+	void use() { glUseProgram(ID); glGetError() == GL_NO_ERROR ? isInUse = true : isInUse = false; };
+	void release() { glUseProgram(0); isInUse = false; };
+
 	const std::string GetVertexPath() { return s_vertexPath; }
 	const std::string GetFragmentPath() { return s_fragmentPath; }
+
+	void cacheUniform(std::string const& name);
+	void setUniform(std::string const& name, UniformValue const& v);
 
 private:
 	std::string s_vertexPath;
 	std::string s_fragmentPath;
+	std::unordered_map<std::string,GLint> uniformCache;
+	std::vector<std::string> _uniformNames;
+	std::vector<GLint>       _uniformLocs;
+
     // utility function for checking shader compilation/linking errors.
-    // ------------------------------------------------------------------------
     void checkCompileErrors(GLuint shader, std::string type);
 };
 #endif

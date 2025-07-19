@@ -39,7 +39,7 @@ const int textRow[24]= int[24](
 
 // Global uniforms assigned in A2VideoManager
 uniform sampler2D a2ModeTexture;
-uniform int ticks;                  // ms since start
+uniform uint ticks;                  // ms since start
 uniform COMPAT_PRECISION float hasFlashing;
 uniform COMPAT_PRECISION float isMixed;		// Are we in mixed mode?
 uniform COMPAT_PRECISION float isDouble;	// Are we in double res?
@@ -113,7 +113,7 @@ void main()
     // Now get the texture color, using the tile uv origin and this fragment's offset
     vec4 tex = texture(a2ModeTexture, (vec2(charOrigin) + fragOffset) / vec2(textureSize2d)) * colorTint;
 
-    float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
+    float isFlashing =  a_flash * float((ticks / 310u) % 2u);    // Flash every 310ms
     // get the color of flashing or the one above
     fragColor = ((1.f - tex) * isFlashing) + (tex * (1.f - isFlashing));
 	// fragColor = vec4(vColor, 1.f);   // for debugging

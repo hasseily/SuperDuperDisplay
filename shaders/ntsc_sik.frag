@@ -52,6 +52,11 @@ float yiq2raw(vec3 yiq, float phase)
 
 void main()
 {
+	// dummy use to keep unused uniforms
+	if (ticks < 0.0) {			// Never true
+		uint keep = ticks;
+	}
+	
 	fragColor = texture(TEXIN, vTexCoords);
 	if (bNOFILTERMONO && fragColor.a < 0.91)	// it's a monochrome pixel or transparent
 	{
@@ -95,7 +100,8 @@ void main()
 		0.375 * raw_iq[4] * cos(phase[4]) +
 		0.25  * raw_iq[5] * cos(phase[5]) +
 		0.125 * raw_iq[6] * cos(phase[6]);
-	fragColor.rgb = pow(YIQ2RGB * vec3(y_mix, i_mix, q_mix),
+	// increase the brightness by 80% to align with the other A2 shaders
+	fragColor.rgb = pow(YIQ2RGB * vec3(y_mix, i_mix, q_mix) * 1.8,
 					vec3(gamma, gamma, gamma));
 	fragColor.a = 1.0;
 }

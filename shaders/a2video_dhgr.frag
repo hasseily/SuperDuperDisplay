@@ -53,7 +53,7 @@ const int hgrRow[192] = int[192](
 
 // Global uniforms assigned in A2VideoManager
 uniform sampler2D a2ModeTexture;
-uniform int ticks;                  // ms since start
+uniform uint ticks;                  // ms since start
 uniform COMPAT_PRECISION float isMixed;		// Are we in mixed mode?
 
 // Mesh-level uniforms assigned in MosaicMesh
@@ -69,6 +69,11 @@ out vec4 fragColor;
 
 void main()
 {
+	// dummy use to keep unused uniforms
+	if (ticks < 0.0) {			// Never true
+		uint keep = ticks;
+	}
+	
 	if ((isMixed * vFragPos.y) >= float(tileSize.y * 160u))
 	{
 		// we're in mixed mode, the bottom 4 rows of text (4*8=32 pixels) are transparent

@@ -234,7 +234,7 @@ void A2VideoManager::Initialize()
 	event_newframe.user.data2 = nullptr;
 
 	ResetGLData();
-	
+
 	auto oglHelper = OpenGLHelper::GetInstance();
 	for (int i = 0; i < 2; i++)
 	{
@@ -270,7 +270,7 @@ void A2VideoManager::Initialize()
 		memset(vrams_array[i].vram_shr, 0, GetVramSizeSHR());
 		memset(vrams_array[i].vram_pal256, 0, _A2VIDEO_SHR_BYTES_PER_LINE*2*_A2VIDEO_SHR_SCANLINES*_INTERLACE_MULTIPLIER);
 		memset(vrams_array[i].offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
-		
+
 		// the debugging special vrams
 		if (vrams_array[i].vram_forced_text1 != nullptr)
 		{
@@ -323,22 +323,22 @@ void A2VideoManager::Initialize()
 		}
 		if (font_roms_array.empty()) {
 			throw std::filesystem::filesystem_error(
-				"No Font ROM textures found!",
-				std::make_error_code(std::errc::no_such_file_or_directory)
-			);
+													"No Font ROM textures found!",
+													std::make_error_code(std::errc::no_such_file_or_directory)
+													);
 		}
 		std::sort(font_roms_array.begin(), font_roms_array.end());
 	} catch (const std::filesystem::filesystem_error& e) {
 		std::cerr << "Error accessing directory: " << e.what() << std::endl;
 		exit(1);
 	}
-	
+
 	// Initialize windows
 	windowsbeam[A2VIDEOBEAM_LEGACY] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_LEGACY, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
 	windowsbeam[A2VIDEOBEAM_SHR] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_SHR, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_SHR_FRAGMENT);
 	windowsbeam[A2VIDEOBEAM_LEGACY]->SetBorder(borders_w_cycles, borders_h_scanlines);
 	windowsbeam[A2VIDEOBEAM_SHR]->SetBorder(borders_w_cycles, borders_h_scanlines);
-	
+
 	windowsbeam[A2VIDEOBEAM_FORCED_TEXT1] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_FORCED_TEXT1, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
 	windowsbeam[A2VIDEOBEAM_FORCED_TEXT2] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_FORCED_TEXT2, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
 	windowsbeam[A2VIDEOBEAM_FORCED_HGR1] = std::make_unique<A2WindowBeam>(A2VIDEOBEAM_FORCED_HGR1, _SHADER_A2_VERTEX_DEFAULT, _SHADER_BEAM_LEGACY_FRAGMENT);
@@ -349,7 +349,7 @@ void A2VideoManager::Initialize()
 	windowsbeam[A2VIDEOBEAM_FORCED_HGR2]->SetBorder(0, 0);
 
 	vidhdWindowBeam = std::make_unique<VidHdWindowBeam>(VIDHDMODE_NONE);
-	
+
 	legacyNTSCQuad = std::make_unique<BasicQuad>(_SHADER_VERTEX_BASIC, "shaders/ntsc_sik.frag");
 
 	// The framebuffer width. That will change depending on the layers that are rendered:
@@ -363,7 +363,6 @@ void A2VideoManager::Initialize()
 	merge_last_change_mode = A2Mode_e::NONE;
 	merge_last_change_y = UINT_MAX;
 	
-	shader_merge.build(_SHADER_VERTEX_BASIC, _SHADER_BEAM_MERGE_FRAGMENT);
 	offsetTextureExists = false;
 
 	mem_edit_vram_legacy.Open = false;
@@ -1375,7 +1374,7 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 	// Setup framebuffer objects
 	// -------------------------
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
-	glActiveTexture(GL_TEXTURE0);
+	//glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -1388,7 +1387,7 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO_NTSC);
-	glActiveTexture(GL_TEXTURE0);
+	//glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, ntsc_texture_id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -1600,12 +1599,12 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 					windowsbeam[A2VIDEOBEAM_LEGACY]->GetHeight()
 				);
 			}
-			ShaderDictionary _ntscDict;
-			// never apply NTSC to monochrome monitors
-			_ntscDict["bNOFILTERMONO"] = (eA2MonitorType == A2_MON_COLOR ? p_b_ntscNoFilterMono : true);
-			_ntscDict["NTSC_COMB_STR"] = p_f_ntscCombStrength;
-			_ntscDict["NTSC_GAMMA_CORRECTION"] = p_f_ntscGammaCorrection;
-			legacyNTSCQuad->Render(current_frame_idx, _ntscDict);
+			auto _s = legacyNTSCQuad->shader;
+			_s.use();
+			_s.setUniform("bNOFILTERMONO", eA2MonitorType == A2_MON_COLOR ? p_b_ntscNoFilterMono : true);
+			_s.setUniform("NTSC_COMB_STR", p_f_ntscCombStrength);
+			_s.setUniform("NTSC_GAMMA_CORRECTION", p_f_ntscGammaCorrection);
+			legacyNTSCQuad->Render(current_frame_idx);
 		}
 		// std::cerr << "Rendered legacy to viewport " << fb_width << "x" << fb_height << " - " << current_frame_idx << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {

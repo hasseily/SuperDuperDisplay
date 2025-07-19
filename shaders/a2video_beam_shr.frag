@@ -44,7 +44,7 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 
 // Global uniforms assigned in A2VideoManager
-uniform int ticks;              // ms since start
+uniform uint ticks;              // ms since start
 uniform int hborder;			// horizontal border in cycles
 uniform int vborder;			// vertical border in scanlines
 uniform usampler2D VRAMTEX;		// Video RAM texture
@@ -133,6 +133,11 @@ vec4 GetMonochromeValue(vec4 aColor, vec4 monchromeColor)
 
 void main()
 {
+	// dummy use to keep unused uniforms
+	if (ticks < 0.0) {			// Never true
+		uint keep = ticks;
+	}
+
 	// First check if we're in merged mode. If so, determine if the line is a SHR line.
 	// If not, exit early. If it is SHR, then shift accordingly
 	float xOffsetMerge = 0.0;

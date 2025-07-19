@@ -52,10 +52,9 @@ NOTES: 1. The special BORDER graphics mode is set only on border bytes. It only 
 */
 
 // Global uniforms
-uniform int ticks;						// ms since start
+uniform uint ticks;						// ms since start
 uniform int frameIsOdd;					// 0 if even frame, 1 if odd frame
 uniform int hborder;					// horizontal border in cycles
-uniform int vborder;					// vertical border in scanlines
 uniform usampler2D VRAMTEX;				// Video RAM texture
 uniform sampler2D a2ModesTex0;			// font 14x16 normal
 uniform sampler2D a2ModesTex1;			// font 14x16 alternate
@@ -263,7 +262,7 @@ void main()
 				tex = texture(a2ModesTex0, (vec2(charOrigin + fragOffset) + vec2(0.5,0.5)) / vec2(textureSize2d));
 			}
 
-			float isFlashing =  a_flash * float((ticks / 310) % 2);    // Flash every 310ms
+			float isFlashing =  a_flash * float((ticks / 310u) % 2u);    // Flash every 310ms
 																	   // get the color of flashing or the one above
 			tex = ((1.f - tex) * isFlashing) + (tex * (1.f - isFlashing));
 			

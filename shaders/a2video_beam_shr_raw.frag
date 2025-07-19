@@ -69,7 +69,7 @@ uniform usampler2D VRAMTEX;		// Video RAM texture
 uniform usampler2D PAL256TEX;	// Video RAM texture of all colors when in PAL256 mode
 
 // Uniforms assigned in A2WindowBeam
-uniform int ticks;              // ms since start
+uniform uint ticks;              // ms since start
 uniform int frameIsOdd;			// 0 if even frame, 1 if odd frame
 uniform int specialModesMask;	// type of SHR format
 uniform int overrideSHR4Mode;	// SHR4 mode override
@@ -671,7 +671,7 @@ void main()
 				if (isInterlaceSHR4 == 1u)	// the offset is used for odd lines
 					yPal256OffsetLines = uint(doublePal256YOffset) * (ypos_noborder & 1u);
 				if (isPageFlipSHR4 == 1u)		// the offset is used for odd frames
-					yPal256OffsetLines = uint(doublePal256YOffset) * (uint(ticks) & 1u);
+					yPal256OffsetLines = uint(doublePal256YOffset) * (ticks & 1u);
 				uint pal256Word = texelFetch(PAL256TEX,ivec2(xpos_noborder >> 2, (ypos_noborder >> 1) + yPal256OffsetLines),0).r;
 				fragColor = ConvertIIgs2RGB(pal256Word);
                 break;

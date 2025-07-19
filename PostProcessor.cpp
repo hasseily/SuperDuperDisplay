@@ -330,49 +330,48 @@ void PostProcessor::SelectShader()
 		shaderProgram = v_ppshaders.at(1);
 		shaderProgram.use();
 		// size info
-		shaderProgram.setVec2("ViewportSize", glm::vec2(viewportWidth, viewportHeight));
-		shaderProgram.setVec2("InputSize", glm::vec2(texWidth, texHeight));
-		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
+		shaderProgram.setUniform("InputSize", glm::vec2(texWidth, texHeight));
+		shaderProgram.setUniform("OutputSize", glm::vec2(quadWidth, quadHeight));
 
 		// shader specific
-		shaderProgram.setFloat("GhostingPercent", p_f_ghostingPercent);
-		shaderProgram.setFloat("BlurSize", p_f_phosphorBlur);
-		shaderProgram.setFloat("bBlurGlow", p_b_phosphorGlow);
-		shaderProgram.setBool("bCORNER_SMOOTH", p_b_smoothCorner);
-		shaderProgram.setBool("bEXT_GAMMA", p_b_extGamma);
-		shaderProgram.setBool("bSLOT", p_b_slot);
-		shaderProgram.setFloat("BARRELDISTORTION", p_f_barrelDistortion);
-		shaderProgram.setFloat("BGR", p_f_bgr);
-		shaderProgram.setFloat("BLACK", p_f_black);
-		shaderProgram.setFloat("BR_DEP", p_f_brDep);
-		shaderProgram.setFloat("BRIGHTNESS", p_f_brightness);
-		shaderProgram.setFloat("C_STR", p_f_cStr);
-		shaderProgram.setFloat("CONV_B", p_f_convB);
-		shaderProgram.setFloat("CONV_G", p_f_convG);
-		shaderProgram.setFloat("CONV_R", p_f_convR);
-		shaderProgram.setFloat("CORNER", p_f_corner / 10000);
-		shaderProgram.setFloat("GB", p_f_hueGB);
-		shaderProgram.setFloat("MASKH", p_f_maskHigh);
-		shaderProgram.setFloat("MASKL", p_f_maskLow);
-		shaderProgram.setFloat("MSIZE", p_f_maskSize);
-		shaderProgram.setFloat("RB", p_f_hueRB);
-		shaderProgram.setFloat("RG", p_f_hueRG);
-		shaderProgram.setFloat("SATURATION", p_f_saturation);
-		shaderProgram.setFloat("SCANLINE_WEIGHT", p_f_scanlineWeight);
-		shaderProgram.setFloat("SCAN_SPEED", p_f_scanSpeed);
-		shaderProgram.setFloat("FILM_GRAIN", p_f_filmGrain);
-		shaderProgram.setFloat("SLOTW", p_f_slotW);
-		shaderProgram.setFloat("VIGNETTE_WEIGHT", p_f_vignetteWeight);
-		shaderProgram.setFloat("INTERLACE_WEIGHT", p_f_interlace);
-		shaderProgram.setInt("iCOLOR_SPACE", p_i_cSpace);
-		shaderProgram.setInt("iM_TYPE", p_i_maskType);
-		shaderProgram.setInt("iSCANLINE_TYPE", p_i_scanlineType);
-		shaderProgram.setVec2("vWARP", p_v_warp);
+		shaderProgram.setUniform("GhostingPercent", p_f_ghostingPercent);
+		shaderProgram.setUniform("BlurSize", p_f_phosphorBlur);
+		shaderProgram.setUniform("bBlurGlow", p_b_phosphorGlow);
+		shaderProgram.setUniform("bCORNER_SMOOTH", p_b_smoothCorner);
+		shaderProgram.setUniform("bEXT_GAMMA", p_b_extGamma);
+		shaderProgram.setUniform("bSLOT", p_b_slot);
+		shaderProgram.setUniform("BARRELDISTORTION", p_f_barrelDistortion);
+		shaderProgram.setUniform("BGR", p_f_bgr);
+		shaderProgram.setUniform("BLACK", p_f_black);
+		shaderProgram.setUniform("BR_DEP", p_f_brDep);
+		shaderProgram.setUniform("BRIGHTNESS", p_f_brightness);
+		shaderProgram.setUniform("C_STR", p_f_cStr);
+		shaderProgram.setUniform("CONV_B", p_f_convB);
+		shaderProgram.setUniform("CONV_G", p_f_convG);
+		shaderProgram.setUniform("CONV_R", p_f_convR);
+		shaderProgram.setUniform("CORNER", p_f_corner / 10000);
+		shaderProgram.setUniform("GB", p_f_hueGB);
+		shaderProgram.setUniform("MASKH", p_f_maskHigh);
+		shaderProgram.setUniform("MASKL", p_f_maskLow);
+		shaderProgram.setUniform("MSIZE", p_f_maskSize);
+		shaderProgram.setUniform("RB", p_f_hueRB);
+		shaderProgram.setUniform("RG", p_f_hueRG);
+		shaderProgram.setUniform("SATURATION", p_f_saturation);
+		shaderProgram.setUniform("SCANLINE_WEIGHT", p_f_scanlineWeight);
+		shaderProgram.setUniform("SCAN_SPEED", p_f_scanSpeed);
+		shaderProgram.setUniform("FILM_GRAIN", p_f_filmGrain);
+		shaderProgram.setUniform("SLOTW", p_f_slotW);
+		shaderProgram.setUniform("VIGNETTE_WEIGHT", p_f_vignetteWeight);
+		shaderProgram.setUniform("INTERLACE_WEIGHT", p_f_interlace);
+		shaderProgram.setUniform("iCOLOR_SPACE", p_i_cSpace);
+		shaderProgram.setUniform("iM_TYPE", p_i_maskType);
+		shaderProgram.setUniform("iSCANLINE_TYPE", p_i_scanlineType);
+		shaderProgram.setUniform("vWARP", p_v_warp);
 		break;
 	}
 	// common
-	shaderProgram.setInt("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
-	shaderProgram.setVec2("TextureSize", glm::vec2(texWidth, texHeight));
+	shaderProgram.setUniform("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
+	shaderProgram.setUniform("TextureSize", glm::vec2(texWidth, texHeight));
 }
 
 void PostProcessor::RegeneratePreviousTexture()
@@ -534,15 +533,15 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	}
 
 	// Used for all PP shaders
-	shaderProgram.setMat4("uTransform", mTransform);		// in the vertex shader
-	shaderProgram.setInt("A2TextureCurrent", texUnitCurrent - GL_TEXTURE0);
-	shaderProgram.setInt("PreviousFrame", _TEXUNIT_PP_PREVIOUS - GL_TEXTURE0);
-	shaderProgram.setInt("iFrameCount", frame_count);
-	shaderProgram.setBool("bHalveFrameRate", bHalveFramerate);
+	shaderProgram.setUniform("uTransform", mTransform);		// in the vertex shader
+	shaderProgram.setUniform("A2TextureCurrent", texUnitCurrent - GL_TEXTURE0);
+	shaderProgram.setUniform("PreviousFrame", _TEXUNIT_PP_PREVIOUS - GL_TEXTURE0);
+	shaderProgram.setUniform("iFrameCount", frame_count);
+	shaderProgram.setUniform("bHalveFrameRate", bHalveFramerate);
 	// Only used for the full PP shader
 	if (p_i_postprocessingLevel > 1) {
-		shaderProgram.setVec2("OutputSize", glm::vec2(quadWidth, quadHeight));
-		shaderProgram.setUInt("ScanlineCount", scanlineCount);
+		shaderProgram.setUniform("OutputSize", glm::vec2(quadWidth, quadHeight));
+		shaderProgram.setUniform("ScanlineCount", scanlineCount);
 	}
 
 	// Bind the quad VAO and draw the quad (static VBO already set up)
@@ -560,21 +559,21 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		glm::mat4 transformBezel = glm::mat4(1.0f);
 		//transformBezel = glm::translate(transformBezel, glm::vec3(static_cast<float>(viewportWidth)*bezelSize.x, static_cast<float>(viewportHeight) * bezelSize.y, 0.0f));
 		transformBezel = glm::scale(transformBezel, glm::vec3(bezelSize.x, bezelSize.y, 1.0f));
-		shaderProgramBezel.setMat4("uTransform", transformBezel);		// in the vertex shader
-		shaderProgramBezel.setInt("uMainTex", _TEXUNIT_PP_BEZEL - GL_TEXTURE0);
-		shaderProgramBezel.setInt("uA2Tex", _TEXUNIT_POSTPROCESS - GL_TEXTURE0);
-		shaderProgramBezel.setFloat("uReflectionAmount", p_f_bezelReflection);
-		shaderProgramBezel.setFloat("uReflectionBlur", p_f_reflectionBlur);
-		shaderProgramBezel.setVec2("uReflectionScale", p_v_reflectionScale);
-		shaderProgramBezel.setVec2("uReflectionTranslation", p_v_reflectionTranslation);
-		shaderProgramBezel.setBool("uOutlineQuad", p_b_outlineQuad);
+		shaderProgramBezel.setUniform("uTransform", transformBezel);		// in the vertex shader
+		shaderProgramBezel.setUniform("uMainTex", _TEXUNIT_PP_BEZEL - GL_TEXTURE0);
+		shaderProgramBezel.setUniform("uA2Tex", _TEXUNIT_POSTPROCESS - GL_TEXTURE0);
+		shaderProgramBezel.setUniform("uReflectionAmount", p_f_bezelReflection);
+		shaderProgramBezel.setUniform("uReflectionBlur", p_f_reflectionBlur);
+		shaderProgramBezel.setUniform("uReflectionScale", p_v_reflectionScale);
+		shaderProgramBezel.setUniform("uReflectionTranslation", p_v_reflectionTranslation);
+		shaderProgramBezel.setUniform("uOutlineQuad", p_b_outlineQuad);
 		if (bezelGlassImageAsset.image_xcount > 0) {
-			shaderProgramBezel.setInt("uGlassTex", _TEXUNIT_PP_BEZEL_GLASS - GL_TEXTURE0);
-			shaderProgramBezel.setFloat("uGlassThickness", p_f_glassThickness);
+			shaderProgramBezel.setUniform("uGlassTex", _TEXUNIT_PP_BEZEL_GLASS - GL_TEXTURE0);
+			shaderProgramBezel.setUniform("uGlassThickness", p_f_glassThickness);
 		}
 		else {
-			shaderProgramBezel.setInt("uGlassTex", 0);
-			shaderProgramBezel.setFloat("uGlassThickness", 0.f);
+			shaderProgramBezel.setUniform("uGlassTex", 0);
+			shaderProgramBezel.setUniform("uGlassThickness", 0.f);
 		}
 
 		glActiveTexture(_TEXUNIT_POSTPROCESS);
@@ -960,7 +959,7 @@ with page flipping images");
 			ImGui::SliderFloat("Scan/Mask Brightness Dependence", &p_f_brDep, 0.0f, 0.5f, "%.3f");
 			ImGui::SliderInt("Color Space: sRGB,PAL,NTSC-U,NTSC-J", &p_i_cSpace, 0, 3, "%1d");
 			ImGui::SliderFloat("Saturation", &p_f_saturation, 0.0f, 3.0f, "%.2f");
-			ImGui::DragFloat("Brightness", &p_f_brightness, 0.01f, 0.0f, 20.0f, "%.2f");
+			ImGui::DragFloat("Brightness", &p_f_brightness, 0.01f, 0.0f, 100.0f, "%.2f");
 			ImGui::SliderFloat("Black Level", &p_f_black, -0.50f, 0.50f, "%.2f");
 			ImGui::SliderFloat("Green <-to-> Red Hue", &p_f_hueRG, -2.50f, 2.50f, "%.2f");
 			ImGui::SliderFloat("Blue <-to-> Red Hue", &p_f_hueRB, -2.50f, 2.50f, "%.2f");

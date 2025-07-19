@@ -137,7 +137,7 @@ private:
 	int p_i_maskType = 0;
 	int p_i_postprocessingLevel = 0;
 	int p_i_scanlineType = 2;
-	int p_f_ghostingPercent = 0;	// Percentage of ghosting of previous frame. 0 means no ghosting
+	float p_f_ghostingPercent = 0;	// Percentage of ghosting of previous frame. 0 means no ghosting
 	float p_f_phosphorBlur = 0.0f;	// blur modifier
 	glm::vec2 p_v_warp = glm::vec2(0.0f, 0.0f);	// curvature
 	glm::vec2 p_v_center = glm::vec2(0.0f, 0.0f);

@@ -148,8 +148,9 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(A2RenderVertex), (void*)offsetof(A2RenderVertex, PixelPos));
 		
 		// And set the borders
-		shader.setInt("hborder", (int)border_width_cycles);
-		shader.setInt("vborder", (int)border_height_scanlines);
+		shader.setUniform("hborder", (int)border_width_cycles);
+		if (video_mode == A2VIDEOBEAM_SHR)
+			shader.setUniform("vborder", (int)border_height_scanlines);
 	}
 
 	// Associate the texture VRAMTEX in TEXUNIT_DATABUFFER with the buffer
@@ -253,20 +254,20 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 		std::cerr << "A2WindowBeam::Render error: " << glerr << std::endl;
 	}
 
-	shader.setInt("ticks", SDL_GetTicks());
-	shader.setInt("frameIsOdd", (int)(frame_idx & 1));
-	shader.setBool("bIsMergedMode", bIsMergedMode);
-	shader.setInt("specialModesMask", specialModesMask);
-	shader.setInt("monitorColorType", monitorColorType);
+	shader.setUniform("ticks", SDL_GetTicks());
+	shader.setUniform("frameIsOdd", (int)(frame_idx & 1));
+	shader.setUniform("bIsMergedMode", bIsMergedMode);
+	shader.setUniform("specialModesMask", specialModesMask);
+	shader.setUniform("monitorColorType", monitorColorType);
 	// The OFFSETTEX will only be used in case of merged SHR+legacy in the same frame
-	shader.setInt("OFFSETTEX", _TEXUNIT_MERGE_OFFSET - GL_TEXTURE0);
+	shader.setUniform("OFFSETTEX", _TEXUNIT_MERGE_OFFSET - GL_TEXTURE0);
 
 	// point the uniform at the VRAM texture
 	if (video_mode == A2VIDEOBEAM_SHR)
-		shader.setInt("VRAMTEX", _TEXUNIT_DATABUFFER_R8UI - GL_TEXTURE0);
+		shader.setUniform("VRAMTEX", _TEXUNIT_DATABUFFER_R8UI - GL_TEXTURE0);
 	else {
-		shader.setInt("VRAMTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
-		shader.setBool("bForceSHRWidth", bForceSHRWidth);
+		shader.setUniform("VRAMTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
+		shader.setUniform("bForceSHRWidth", bForceSHRWidth);
 	}
 
 	// And set all the modes textures that the shader will use
@@ -274,25 +275,28 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 	// as well as any other unique mode data
 	if (video_mode == A2VIDEOBEAM_SHR)
 	{
-		shader.setInt("PAL256TEX", _TEXUNIT_PAL256BUFFER - GL_TEXTURE0);
-		shader.setInt("overrideSHR4Mode", overrideSHR4Mode);
-		shader.setInt("doubleSHR4Mode", doubleSHR4);
+		shader.setUniform("PAL256TEX", _TEXUNIT_PAL256BUFFER - GL_TEXTURE0);
+		shader.setUniform("overrideSHR4Mode", overrideSHR4Mode);
+		shader.setUniform("doubleSHR4Mode", doubleSHR4);
 		int _hasDSHR4 = (doubleSHR4 == DOUBLE_NONE ? 0 : 1);
-		shader.setInt("doubleSHR4YOffset", _hasDSHR4 * (_A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines)));
-		shader.setInt("doublePal256YOffset", _hasDSHR4 * (_A2VIDEO_SHR_SCANLINES));
+		int _dblshr4off = _hasDSHR4 * (_A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines));
+		shader.setUniform("doubleSHR4YOffset", _dblshr4off);
+		int _dblpaloff = _hasDSHR4 * _A2VIDEO_SHR_SCANLINES;
+		shader.setUniform("doublePal256YOffset", _dblpaloff);
 	}
 	else 
 	{
-		shader.setInt("pagingMode", pagingMode);
+		shader.setUniform("pagingMode", pagingMode);
 		int _hasPaging = (pagingMode == DOUBLE_NONE ? 0 : 1);
-		shader.setInt("pagingOffset", _hasPaging * (192 + (2 * border_height_scanlines)));
-		shader.setInt("a2ModesTex0", _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0);
-		shader.setInt("a2ModesTex1", _TEXUNIT_IMAGE_FONT_ROM_ALTERNATE - GL_TEXTURE0);
-		shader.setInt("a2ModesTex2", _TEXUNIT_IMAGE_COMPOSITE_LGR - GL_TEXTURE0);
-		shader.setInt("a2ModesTex3", _TEXUNIT_IMAGE_COMPOSITE_HGR - GL_TEXTURE0);
-		shader.setInt("a2ModesTex4", _TEXUNIT_IMAGE_COMPOSITE_DHGR - GL_TEXTURE0);
+		shader.setUniform("pagingOffset", _hasPaging * (192 + (2 * (int)border_height_scanlines)));
+		shader.setUniform("a2ModesTex0", _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0);
+		shader.setUniform("a2ModesTex1", _TEXUNIT_IMAGE_FONT_ROM_ALTERNATE - GL_TEXTURE0);
+		shader.setUniform("a2ModesTex2", _TEXUNIT_IMAGE_COMPOSITE_LGR - GL_TEXTURE0);
+		shader.setUniform("a2ModesTex3", _TEXUNIT_IMAGE_COMPOSITE_HGR - GL_TEXTURE0);
+		shader.setUniform("a2ModesTex4", _TEXUNIT_IMAGE_COMPOSITE_DHGR - GL_TEXTURE0);
 	}
-	
+
+
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glActiveTexture(GL_TEXTURE0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {

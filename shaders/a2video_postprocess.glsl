@@ -57,7 +57,6 @@ uniform COMPAT_PRECISION int iFrameCount;
 uniform COMPAT_PRECISION vec2 OutputSize;
 uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
-uniform COMPAT_PRECISION vec2 ViewportSize;
 uniform COMPAT_PRECISION uint ScanlineCount;
 uniform sampler2D A2TextureCurrent;
 uniform sampler2D PreviousFrame;

@@ -83,9 +83,9 @@ void SDHRWindow::Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 			glm::vec2 window_bottomright = window_topleft + glm::vec2(screen_count.x, screen_count.y);
 
 			mesh->SetupDraw();
-			mesh->shaderProgram->setVec2("windowTopLeft", window_topleft);
-			mesh->shaderProgram->setVec2("windowBottomRight", window_bottomright);
-			mesh->shaderProgram->setInt("anim_ms_frame", anim_ms_frame);
+			mesh->shaderProgram->setUniform("windowTopLeft", window_topleft);
+			mesh->shaderProgram->setUniform("windowBottomRight", window_bottomright);
+			mesh->shaderProgram->setUniform("anim_ms_frame", anim_ms_frame);
 
 			GLenum glerr;
 			if ((glerr = glGetError()) != GL_NO_ERROR) {

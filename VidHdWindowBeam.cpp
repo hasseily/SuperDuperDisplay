@@ -246,16 +246,16 @@ void VidHdWindowBeam::Render()
 		std::cerr << "VidHdWindowBeam::Render error: " << glerr << std::endl;
 	}
 
-	shader.setInt("ticks", SDL_GetTicks());
+	shader.setUniform("ticks", SDL_GetTicks());
 	if (bModeDidChange)
 	{
 		bModeDidChange = false;
-		shader.setInt("VRAMTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
-		shader.setInt("vidhdMode", video_mode);
-		shader.setVec2i("modeSize", modeSize);
-		shader.setInt("fontTex", fontTex);
-		shader.setVec2u("glyphSize", glyphSize);
-		shader.setVec2u("fontScale", fontScale);
+		shader.setUniform("VRAMTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
+		shader.setUniform("vidhdMode", video_mode);
+		shader.setUniform("modeSize", modeSize);
+		shader.setUniform("fontTex", fontTex);
+		shader.setUniform("glyphSize", glyphSize);
+		shader.setUniform("fontScale", fontScale);
 	}
 
 

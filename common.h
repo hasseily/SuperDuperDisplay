@@ -150,7 +150,7 @@ struct A2RenderVertex {
 #define _SHADER_RGB_SHR_FRAGMENT "shaders/a2video_shr.frag"
 #define _SHADER_BEAM_LEGACY_FRAGMENT "shaders/a2video_beam_legacy.frag"
 #define _SHADER_BEAM_SHR_FRAGMENT "shaders/a2video_beam_shr_raw.frag"
-#define _SHADER_BEAM_MERGE_FRAGMENT "shaders/a2video_beam_merge.frag"
+//#define _SHADER_BEAM_MERGE_FRAGMENT "shaders/a2video_beam_merge.frag"
 #define _SHADER_VIDHD_TEXT_FRAGMENT "shaders/vidhd_beam_text.frag"
 
 #define _SHADER_SDHR_VERTEX_DEFAULT "shaders/sdhr_default_330.vert"

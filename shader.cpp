@@ -1,5 +1,7 @@
 #include "shader.h"
 
+// compile‑time dispatch for glUniform*
+template<typename T> inline constexpr bool always_false_v = false;
 
 void Shader::build(const char* vertexPath, const char* fragmentPath)
 {
@@ -67,105 +69,81 @@ void Shader::_compile(const std::string* pvertexCode, const std::string* pfragme
 	isReady = true;
 }
 
-void Shader::use() const
-{
-
-	glUseProgram(ID);
+void Shader::cacheUniform(std::string const& name) {
+	uniformCache[name] = glGetUniformLocation(ID, name.c_str());
 }
 
-void Shader::setBool(const std::string& name, bool value) const
-{
+void Shader::setUniform(std::string const& name, UniformValue const& v) {
+	if (!isInUse) {
+		this->use();
+		if (!isInUse)
+			{
+				std::cerr << "Shader error: Calling glUseProgram() returns an error" << std::endl;
+				return;
+			}
+	}
 
-	glUniform1i(glGetUniformLocation(ID, name.c_str()), (int)value);
-}
+	GLint loc = -1;
+	auto it = uniformCache.find(name);
+	if (it == uniformCache.end()) {
+		loc = glGetUniformLocation(ID, name.c_str());
+		uniformCache[name] = loc;
+		if (loc < 0)		// uniform not available in shader
+		{
+			std::cout << "Uniform " << name << " not available in shader" << std::endl;
+			return;
+		}
+	} else {
+		loc = it->second;
+	}
 
-void Shader::setInt(const std::string& name, int value) const
-{
-
-	glUniform1i(glGetUniformLocation(ID, name.c_str()), value);
-}
-
-void Shader::setUInt(const std::string& name, uint32_t value) const
-{
-	
-	glUniform1ui(glGetUniformLocation(ID, name.c_str()), value);
-}
-
-void Shader::setFloat(const std::string& name, float value) const
-{
-
-	glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
-}
-
-void Shader::setVec2(const std::string& name, float x, float y) const
-{
-
-	glUniform2f(glGetUniformLocation(ID, name.c_str()), x, y);
-}
-
-void Shader::setVec2(const std::string& name, const glm::vec2& value) const
-{
-
-	glUniform2fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
-}
-
-void Shader::setVec2i(const std::string& name, int x, int y) const
-{
-	glUniform2i(glGetUniformLocation(ID, name.c_str()), x, y);
-}
-
-void Shader::setVec2i(const std::string& name, const glm::ivec2& value) const
-{
-	glUniform2iv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
-}
-
-void Shader::setVec2u(const std::string& name, unsigned int x, unsigned int y) const
-{
-	glUniform2ui(glGetUniformLocation(ID, name.c_str()), x, y);
-}
-
-void Shader::setVec2u(const std::string& name, const glm::uvec2& value) const
-{
-	glUniform2uiv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
-}
-
-void Shader::setVec3(const std::string& name, float x, float y, float z) const
-{
-
-	glUniform3f(glGetUniformLocation(ID, name.c_str()), x, y, z);
-}
-
-void Shader::setVec3(const std::string& name, const glm::vec3& value) const
-{
-
-	glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
-}
-
-void Shader::setVec4(const std::string& name, float x, float y, float z, float w) const
-{
-
-	glUniform4f(glGetUniformLocation(ID, name.c_str()), x, y, z, w);
-}
-
-void Shader::setVec4(const std::string& name, const glm::vec4& value) const
-{
-
-	glUniform4fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
-}
-
-void Shader::setMat2(const std::string& name, const glm::mat2& mat) const
-{
-	glUniformMatrix2fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
-}
-
-void Shader::setMat3(const std::string& name, const glm::mat3& mat) const
-{
-	glUniformMatrix3fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
-}
-
-void Shader::setMat4(const std::string& name, const glm::mat4& mat) const
-{
-	glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
+	std::visit([&](auto const& arg){
+		using T = std::decay_t<decltype(arg)>;
+		if constexpr (std::is_same_v<T,bool>) {
+			glUniform1i(loc, arg ? 1 : 0);
+		}
+		else if constexpr (std::is_same_v<T,int>) {
+			glUniform1i(loc, arg);
+		}
+		else if constexpr (std::is_same_v<T,uint32_t>) {
+			glUniform1ui(loc, arg);
+		}
+		else if constexpr (std::is_same_v<T,float>) {
+			glUniform1f(loc, arg);
+		}
+		else if constexpr (std::is_same_v<T,glm::vec2>) {
+			glUniform2fv(loc, 1, &arg.x);
+		}
+		else if constexpr (std::is_same_v<T,glm::ivec2>) {
+			glUniform2iv(loc, 1, &arg.x);
+		}
+		else if constexpr (std::is_same_v<T,glm::uvec2>) {
+			glUniform2uiv(loc, 1, &arg.x);
+		}
+		else if constexpr (std::is_same_v<T,glm::vec3>) {
+			glUniform3fv(loc, 1, &arg.x);
+		}
+		else if constexpr (std::is_same_v<T,glm::vec4>) {
+			glUniform4fv(loc, 1, &arg.x);
+		}
+		else if constexpr (std::is_same_v<T,glm::mat2>) {
+			glUniformMatrix2fv(loc, 1, GL_FALSE, &arg[0][0]);
+		}
+		else if constexpr (std::is_same_v<T,glm::mat3>) {
+			glUniformMatrix3fv(loc, 1, GL_FALSE, &arg[0][0]);
+		}
+		else if constexpr (std::is_same_v<T,glm::mat4>) {
+			glUniformMatrix4fv(loc, 1, GL_FALSE, &arg[0][0]);
+		}
+		else {
+			static_assert(always_false_v<T>, "Unsupported uniform type");
+		}
+#ifdef DEBUG
+		if ((glGetError()) != GL_NO_ERROR) {
+			std::cerr << "Set Uniform error for: "<< name << std::endl;
+		}
+#endif
+	}, v);
 }
 
 void Shader::checkCompileErrors(GLuint shader, std::string type)

@@ -7,7 +7,7 @@ precision highp sampler2D;
 layout(pixel_center_integer) in vec4 gl_FragCoord;
 #endif
 
-/*
+/*	DEPRECATED
  Apple 2 video beam shader for merging Legacy and SHR
  in the case that both modes exist in the same frame.
 
@@ -19,9 +19,6 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  	but needs to remove 10.f to get the actual offset. A negative offset is a legacy line
  	and a positive offset is a shr line
 */
-
-// Global uniforms
-uniform COMPAT_PRECISION int ticks;				// ms since start
 
 // merge layers are the following bits:
 // 0: legacy

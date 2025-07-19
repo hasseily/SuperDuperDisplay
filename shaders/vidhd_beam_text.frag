@@ -30,7 +30,7 @@ The colors (Color G) and transparency (Color A) are:
 */
 
 // Global uniforms
-uniform int ticks;			// ms since start
+uniform uint ticks;			// ms since start
 uniform usampler2D VRAMTEX;	// Video RAM texture
 uniform int vidhdMode;		// VidHdMode_e 1:TEXT_40X24, 2:TEXT_80X24, ...
 uniform ivec2 modeSize;		// How many characters in width and height?
@@ -97,7 +97,7 @@ void main()
 	textureSize2d = textureSize(fontTex,0);
 	tex = texture(fontTex, (vec2(charOrigin + (fragOffset / fontScale)) + vec2(0.5,0.5)) / vec2(textureSize2d));
 
-	float isFlashing =  a_flash * float((ticks / 310) & 1);    // Flash every 310ms
+	float isFlashing =  a_flash * float((ticks / 310u) & 1u);    // Flash every 310ms
 																// get the color of flashing or the one above
 	tex = ((1.f - tex) * isFlashing) + (tex * (1.f - isFlashing));
 

@@ -324,8 +324,6 @@ private:
 	int font_rom_regular_idx = 0;
 	int font_rom_alternate_idx = 1;
 
-	Shader shader_merge = Shader();
-
 	VideoRegion_e current_region = VideoRegion_e::NTSC;
 	uint32_t region_scanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
 

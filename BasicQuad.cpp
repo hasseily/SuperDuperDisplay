@@ -8,7 +8,7 @@ BasicQuad::BasicQuad(const char* shaderVertexPath, const char* shaderFragmentPat
 {
 	UpdateVertexArray();
 	shader = Shader();
-	shader.build(shaderVertexPath, shaderFragmentPath);
+	this->SetShaderPrograms(shaderVertexPath, shaderFragmentPath);
 }
 
 BasicQuad::~BasicQuad()
@@ -23,6 +23,10 @@ BasicQuad::~BasicQuad()
 void BasicQuad::SetShaderPrograms(const char* shaderVertexPath, const char* shaderFragmentPath)
 {
 	this->shader.build(shaderVertexPath, shaderFragmentPath);
+	// Required uniforms for any shader used by BasicQuad
+	u_ticks = glGetUniformLocation(shader.ID, "ticks");
+	u_frameIsOdd = glGetUniformLocation(shader.ID, "frameIsOdd");
+	u_TEXIN = glGetUniformLocation(shader.ID, "TEXIN");
 }
 
 void BasicQuad::SetQuadRelativeBounds(SDL_FRect bounds)
@@ -45,7 +49,7 @@ void BasicQuad::UpdateVertexArray()
 	vertices.push_back(BasicQuadVertex({ glm::vec2(quad.x + quad.w, quad.y + quad.h), glm::ivec2(1, 0) }));	// bottom right
 }
 
-void BasicQuad::Render(uint64_t frame_idx, const ShaderDictionary& shaderDict)
+void BasicQuad::Render(uint64_t frame_idx)
 {
 	if (!shader.isReady)
 		return;
@@ -63,6 +67,7 @@ void BasicQuad::Render(uint64_t frame_idx, const ShaderDictionary& shaderDict)
 	shader.use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL BasicQuad glUseProgram error: " << glerr << std::endl;
+		std::cerr << "Did you set custom uniforms without first calling shader.use()?" << std::endl;
 		return;
 	}
 	
@@ -90,32 +95,11 @@ void BasicQuad::Render(uint64_t frame_idx, const ShaderDictionary& shaderDict)
 		std::cerr << "BasicQuad::Render 1 error: " << glerr << std::endl;
 	}
 
-	shader.setInt("ticks", SDL_GetTicks());
-	shader.setInt("frameIsOdd", (int)(frame_idx & 1));
-	shader.setInt("TEXIN", inputTextureUnit - GL_TEXTURE0);
+	// Required uniforms for any shader used by BasicQuad
+	glUniform1i(u_ticks, SDL_GetTicks());
+	glUniform1i(u_frameIsOdd, (int)(frame_idx & 1));
+	glUniform1i(u_TEXIN, inputTextureUnit - GL_TEXTURE0);
 
-	// And set the shader parameters that were passed in
-	for (const auto& [key, value] : shaderDict) {
-		std::visit([&](auto&& arg) {
-			using T = std::decay_t<decltype(arg)>;
-			if constexpr (std::is_same_v<T, bool>) {
-				shader.setBool(key, arg);
-			}
-			else if constexpr (std::is_same_v<T, int>) {
-				shader.setInt(key, arg);
-			}
-			else if constexpr (std::is_same_v<T, float>) {
-				shader.setFloat(key, arg);
-			}
-			else if constexpr (std::is_same_v<T, glm::vec2*>) {
-				if (arg)
-					shader.setVec2(key, *arg);
-				else
-					std::cerr << "Warning: Basic Quad shaderDict nullptr for key " << key << "\n";
-			}
-		}, value);
-	}
-	
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glActiveTexture(GL_TEXTURE0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {

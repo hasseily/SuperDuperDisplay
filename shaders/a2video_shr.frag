@@ -21,7 +21,7 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 
 
 // Global uniforms assigned in A2VideoManager
-uniform int ticks;               // ms since start
+uniform uint ticks;               // ms since start
 
 // Mesh-level uniforms assigned in MosaicMesh
 uniform uvec2 tileSize;
@@ -61,6 +61,11 @@ vec4 ConvertIIgs2RGB(uint gscolor)
 
 void main()
 {
+	// dummy use to keep unused uniforms
+	if (ticks < 0.0) {			// Never true
+		uint keep = ticks;
+	}
+	
 	// Grab Scanline Control Byte information
 	uint scb = texelFetch(APPLE2MEMORYTEX, ivec2(0x100u + ((uint(vFragPos.y))/tileSize.y), 0x1Fu), 0).r;
 	is640Mode = bool(scb & 0x80u);
