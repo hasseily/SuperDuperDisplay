@@ -32,8 +32,6 @@ The colors (Color G) and transparency (Color A) are:
 // Global uniforms
 uniform uint ticks;			// ms since start
 uniform usampler2D VRAMTEX;	// Video RAM texture
-uniform int vidhdMode;		// VidHdMode_e 1:TEXT_40X24, 2:TEXT_80X24, ...
-uniform ivec2 modeSize;		// How many characters in width and height?
 uniform sampler2D fontTex;	// font texture to use for the given mode
 uniform uvec2 glyphSize;	// Size of each glyph in the font texture
 uniform uvec2 fontScale;	// How much to increase the size of the font

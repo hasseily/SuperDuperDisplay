@@ -2043,7 +2043,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			ImGui::PopItemWidth();
 			ImGui::Columns(1);
 
-			// vidhdWindowBeam->DisplayImGuiWindow(p_open);
+			vidhdWindowBeam->DisplayImGuiWindow(p_open);
 		}
 		ImGui::End();
 	}

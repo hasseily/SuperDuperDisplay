@@ -251,8 +251,6 @@ void VidHdWindowBeam::Render()
 	{
 		bModeDidChange = false;
 		shader.SetUniform("VRAMTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
-		shader.SetUniform("vidhdMode", video_mode);
-		shader.SetUniform("modeSize", modeSize);
 		shader.SetUniform("fontTex", fontTex);
 		shader.SetUniform("glyphSize", glyphSize);
 		shader.SetUniform("fontScale", fontScale);
