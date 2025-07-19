@@ -260,7 +260,10 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 	shader.SetUniform("specialModesMask", specialModesMask);
 	shader.SetUniform("monitorColorType", monitorColorType);
 	// The OFFSETTEX will only be used in case of merged SHR+legacy in the same frame
-	shader.SetUniform("OFFSETTEX", _TEXUNIT_MERGE_OFFSET - GL_TEXTURE0);
+	if (bIsMergedMode)	// point to the actual texture which is valid
+		shader.SetUniform("OFFSETTEX", _TEXUNIT_MERGE_OFFSET - GL_TEXTURE0);
+	else				// unused, point to an existing texture to avoid MacOS warning
+		shader.SetUniform("OFFSETTEX", _TEXUNIT_POSTPROCESS - GL_TEXTURE0);
 
 	// point the uniform at the VRAM texture
 	if (video_mode == A2VIDEOBEAM_SHR)
@@ -296,7 +299,6 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 		shader.SetUniform("a2ModesTex4", _TEXUNIT_IMAGE_COMPOSITE_DHGR - GL_TEXTURE0);
 	}
 
-
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glActiveTexture(GL_TEXTURE0);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -304,3 +306,54 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 	}
 	return;
 }
+
+#ifdef DEBUG
+// Debug function to determine correct texture bindings
+// To use right before glDrawArrays() or other drawing code
+void A2WindowBeam::DebugTextureBindings(GLuint program)
+{
+	GLint nActive = 0;
+	glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &nActive);
+
+	std::cout << "--- Texture‑Sampler Bindings ---\n";
+	for (GLint i = 0; i < nActive; ++i) {
+		constexpr GLsizei bufSize = 256;
+		GLchar name[bufSize];
+		GLsizei length = 0;
+		GLint  size   = 0;
+		GLenum type   = 0;
+
+		glGetActiveUniform(program, i, bufSize, &length, &size, &type, name);
+		if (type != GL_SAMPLER_2D) continue;
+
+		// Query the integer value you stored in that uniform:
+		GLint unit = -1;
+		GLint loc  = glGetUniformLocation(program, name);
+		glGetUniformiv(program, loc, &unit);
+
+		// Now ask GL what texture object is bound to that unit:
+		glActiveTexture(GL_TEXTURE0 + unit);
+		GLint texID = 0;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, &texID);
+
+		// Inspect its parameters / completeness:
+		GLint w=0, h=0, internalFmt=0, minFilter=0, magFilter=0;
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,  &w);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &internalFmt);
+		glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, &minFilter);
+		glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, &magFilter);
+
+		std::cout
+		<< "uniform `" << name << "` → unit " << unit
+		<< " → texID " << texID
+		<< "  [" << w << "×" << h << "]  fmt=0x" << std::hex << internalFmt << std::dec
+		<< "  minF=" << minFilter << "  magF=" << magFilter
+		<< "\n";
+	}
+	std::cout << "--------------------------------\n";
+
+	// Restore your usual active texture if needed:
+	glActiveTexture(GL_TEXTURE0);
+}
+#endif

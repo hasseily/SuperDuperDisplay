@@ -105,6 +105,9 @@ private:
 	SDL_FRect quad = { -1.f, 1.f, 2.f, -2.f };	// x, y, width, height
 
 	void UpdateVertexArray();
+#ifdef DEBUG
+	void DebugTextureBindings(GLuint program);
+#endif
 };
 
 #endif // A2WINDOWBEAM_H
