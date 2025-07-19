@@ -22,7 +22,7 @@ BasicQuad::~BasicQuad()
 
 void BasicQuad::SetShaderPrograms(const char* shaderVertexPath, const char* shaderFragmentPath)
 {
-	this->shader.build(shaderVertexPath, shaderFragmentPath);
+	this->shader.Build(shaderVertexPath, shaderFragmentPath);
 	// Required uniforms for any shader used by BasicQuad
 	u_ticks = glGetUniformLocation(shader.ID, "ticks");
 	u_frameIsOdd = glGetUniformLocation(shader.ID, "frameIsOdd");
@@ -64,10 +64,10 @@ void BasicQuad::Render(uint64_t frame_idx)
 		glGenBuffers(1, &VBO);
 	}
 
-	shader.use();
+	shader.Use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL BasicQuad glUseProgram error: " << glerr << std::endl;
-		std::cerr << "Did you set custom uniforms without first calling shader.use()?" << std::endl;
+		std::cerr << "Did you set custom uniforms without first calling shader.Use()?" << std::endl;
 		return;
 	}
 	

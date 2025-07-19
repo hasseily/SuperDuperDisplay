@@ -19,8 +19,8 @@
  * The older OpenGL (before 4.1) require it:
  *    auto _s = myBasicQuad->shader;
  *    _s.use();
- *    _s.setUniform("NTSC_COMB_STR", p_f_ntscCombStrength);
- *    _s.setUniform("TEST", p_i_test);
+ *    _s.SetUniform("NTSC_COMB_STR", p_f_ntscCombStrength);
+ *    _s.SetUniform("TEST", p_i_test);
  *       ...
  *    myBasicQuad->Render(current_frame_idx);
  */

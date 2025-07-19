@@ -3,7 +3,7 @@
 // compile‑time dispatch for glUniform*
 template<typename T> inline constexpr bool always_false_v = false;
 
-void Shader::build(const char* vertexPath, const char* fragmentPath)
+void Shader::Build(const char* vertexPath, const char* fragmentPath)
 {
 	s_vertexPath = std::string(vertexPath);
 	s_fragmentPath = std::string(fragmentPath);
@@ -38,10 +38,10 @@ void Shader::build(const char* vertexPath, const char* fragmentPath)
 		std::cout << "ERROR::SHADER::FILE_NOT_SUCCESSFULLY_READ: " << e.what() << std::endl;
 		exit(1);
 	}
-	_compile(&vertexCode, &fragmentCode);
+	_Compile(&vertexCode, &fragmentCode);
 }
 
-void Shader::_compile(const std::string* pvertexCode, const std::string* pfragmentCode)
+void Shader::_Compile(const std::string* pvertexCode, const std::string* pfragmentCode)
 {
 	const char* vShaderCode = pvertexCode->c_str();
 	const char* fShaderCode = pfragmentCode->c_str();
@@ -51,31 +51,31 @@ void Shader::_compile(const std::string* pvertexCode, const std::string* pfragme
 	vertex = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertex, 1, &vShaderCode, NULL);
 	glCompileShader(vertex);
-	checkCompileErrors(vertex, "VERTEX");
+	CheckCompileErrors(vertex, "VERTEX");
 	// fragment Shader
 	fragment = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragment, 1, &fShaderCode, NULL);
 	glCompileShader(fragment);
-	checkCompileErrors(fragment, "FRAGMENT");
+	CheckCompileErrors(fragment, "FRAGMENT");
 	// shader Program
 	ID = glCreateProgram();
 	glAttachShader(ID, vertex);
 	glAttachShader(ID, fragment);
 	glLinkProgram(ID);
-	checkCompileErrors(ID, "PROGRAM");
+	CheckCompileErrors(ID, "PROGRAM");
 	// delete the shaders as they're linked into our program now and no longer necessary
 	glDeleteShader(vertex);
 	glDeleteShader(fragment);
 	isReady = true;
 }
 
-void Shader::cacheUniform(std::string const& name) {
+void Shader::CacheUniform(std::string const& name) {
 	uniformCache[name] = glGetUniformLocation(ID, name.c_str());
 }
 
-void Shader::setUniform(std::string const& name, UniformValue const& v) {
+void Shader::SetUniform(std::string const& name, UniformValue const& v) {
 	if (!isInUse) {
-		this->use();
+		this->Use();
 		if (!isInUse)
 			{
 				std::cerr << "Shader error: Calling glUseProgram() returns an error" << std::endl;
@@ -146,7 +146,7 @@ void Shader::setUniform(std::string const& name, UniformValue const& v) {
 	}, v);
 }
 
-void Shader::checkCompileErrors(GLuint shader, std::string type)
+void Shader::CheckCompileErrors(GLuint shader, std::string type)
 {
 	GLint success;
 	GLchar infoLog[1024];

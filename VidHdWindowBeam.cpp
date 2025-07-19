@@ -16,7 +16,7 @@ VidHdWindowBeam::VidHdWindowBeam(VidHdMode_e _mode)
 {
 	vram_text = new uint32_t[_VIDHDMODES_TEXT_WIDTH*_VIDHDMODES_TEXT_HEIGHT];
 	shader = Shader();
-	shader.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_VIDHD_TEXT_FRAGMENT);
+	shader.Build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_VIDHD_TEXT_FRAGMENT);
 	this->SetVideoMode(_mode);
 	this->UpdateVertexArray();
 }
@@ -201,7 +201,7 @@ void VidHdWindowBeam::Render()
 		glGenBuffers(1, &VBO);
 	}
 
-	shader.use();
+	shader.Use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL VidHdWindowBeam glUseProgram error: " << glerr << std::endl;
 		return;
@@ -246,16 +246,16 @@ void VidHdWindowBeam::Render()
 		std::cerr << "VidHdWindowBeam::Render error: " << glerr << std::endl;
 	}
 
-	shader.setUniform("ticks", SDL_GetTicks());
+	shader.SetUniform("ticks", SDL_GetTicks());
 	if (bModeDidChange)
 	{
 		bModeDidChange = false;
-		shader.setUniform("VRAMTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
-		shader.setUniform("vidhdMode", video_mode);
-		shader.setUniform("modeSize", modeSize);
-		shader.setUniform("fontTex", fontTex);
-		shader.setUniform("glyphSize", glyphSize);
-		shader.setUniform("fontScale", fontScale);
+		shader.SetUniform("VRAMTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
+		shader.SetUniform("vidhdMode", video_mode);
+		shader.SetUniform("modeSize", modeSize);
+		shader.SetUniform("fontTex", fontTex);
+		shader.SetUniform("glyphSize", glyphSize);
+		shader.SetUniform("fontScale", fontScale);
 	}
 
 
@@ -281,7 +281,7 @@ void VidHdWindowBeam::DisplayImGuiWindow(bool* p_open)
 		// shader.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_VIDHD_TEXT_FRAGMENT);
 		std::string _ps = "/Users/henri/Documents/Repos/SuperDuperDisplay/";
 		_ps.append(_SHADER_VIDHD_TEXT_FRAGMENT);
-		shader.build(_SHADER_A2_VERTEX_DEFAULT, _ps.c_str());
+		shader.Build(_SHADER_A2_VERTEX_DEFAULT, _ps.c_str());
 		auto _vm = this->GetVideoMode();
 		this->SetVideoMode(VidHdMode_e::VIDHDMODE_NONE);
 		this->SetVideoMode(_vm);

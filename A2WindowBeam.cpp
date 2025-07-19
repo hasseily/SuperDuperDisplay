@@ -8,7 +8,7 @@ A2WindowBeam::A2WindowBeam(A2VideoModeBeam_e _video_mode, const char* shaderVert
 {
 	video_mode = _video_mode;
 	shader = Shader();
-	shader.build(shaderVertexPath, shaderFragmentPath);
+	shader.Build(shaderVertexPath, shaderFragmentPath);
 }
 
 A2WindowBeam::~A2WindowBeam()
@@ -25,7 +25,7 @@ A2WindowBeam::~A2WindowBeam()
 
 void A2WindowBeam::SetShaderPrograms(const char* shaderVertexPath, const char* shaderFragmentPath)
 {
-	this->shader.build(shaderVertexPath, shaderFragmentPath);
+	this->shader.Build(shaderVertexPath, shaderFragmentPath);
 }
 
 
@@ -122,7 +122,7 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 		glGenBuffers(1, &VBO);
 	}
 
-	shader.use();
+	shader.Use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL A2Video glUseProgram error: " << glerr << std::endl;
 		return;
@@ -148,9 +148,9 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(A2RenderVertex), (void*)offsetof(A2RenderVertex, PixelPos));
 		
 		// And set the borders
-		shader.setUniform("hborder", (int)border_width_cycles);
+		shader.SetUniform("hborder", (int)border_width_cycles);
 		if (video_mode == A2VIDEOBEAM_SHR)
-			shader.setUniform("vborder", (int)border_height_scanlines);
+			shader.SetUniform("vborder", (int)border_height_scanlines);
 	}
 
 	// Associate the texture VRAMTEX in TEXUNIT_DATABUFFER with the buffer
@@ -254,20 +254,20 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 		std::cerr << "A2WindowBeam::Render error: " << glerr << std::endl;
 	}
 
-	shader.setUniform("ticks", SDL_GetTicks());
-	shader.setUniform("frameIsOdd", (int)(frame_idx & 1));
-	shader.setUniform("bIsMergedMode", bIsMergedMode);
-	shader.setUniform("specialModesMask", specialModesMask);
-	shader.setUniform("monitorColorType", monitorColorType);
+	shader.SetUniform("ticks", SDL_GetTicks());
+	shader.SetUniform("frameIsOdd", (int)(frame_idx & 1));
+	shader.SetUniform("bIsMergedMode", bIsMergedMode);
+	shader.SetUniform("specialModesMask", specialModesMask);
+	shader.SetUniform("monitorColorType", monitorColorType);
 	// The OFFSETTEX will only be used in case of merged SHR+legacy in the same frame
-	shader.setUniform("OFFSETTEX", _TEXUNIT_MERGE_OFFSET - GL_TEXTURE0);
+	shader.SetUniform("OFFSETTEX", _TEXUNIT_MERGE_OFFSET - GL_TEXTURE0);
 
 	// point the uniform at the VRAM texture
 	if (video_mode == A2VIDEOBEAM_SHR)
-		shader.setUniform("VRAMTEX", _TEXUNIT_DATABUFFER_R8UI - GL_TEXTURE0);
+		shader.SetUniform("VRAMTEX", _TEXUNIT_DATABUFFER_R8UI - GL_TEXTURE0);
 	else {
-		shader.setUniform("VRAMTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
-		shader.setUniform("bForceSHRWidth", bForceSHRWidth);
+		shader.SetUniform("VRAMTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
+		shader.SetUniform("bForceSHRWidth", bForceSHRWidth);
 	}
 
 	// And set all the modes textures that the shader will use
@@ -275,25 +275,25 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 	// as well as any other unique mode data
 	if (video_mode == A2VIDEOBEAM_SHR)
 	{
-		shader.setUniform("PAL256TEX", _TEXUNIT_PAL256BUFFER - GL_TEXTURE0);
-		shader.setUniform("overrideSHR4Mode", overrideSHR4Mode);
-		shader.setUniform("doubleSHR4Mode", doubleSHR4);
+		shader.SetUniform("PAL256TEX", _TEXUNIT_PAL256BUFFER - GL_TEXTURE0);
+		shader.SetUniform("overrideSHR4Mode", overrideSHR4Mode);
+		shader.SetUniform("doubleSHR4Mode", doubleSHR4);
 		int _hasDSHR4 = (doubleSHR4 == DOUBLE_NONE ? 0 : 1);
 		int _dblshr4off = _hasDSHR4 * (_A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines));
-		shader.setUniform("doubleSHR4YOffset", _dblshr4off);
+		shader.SetUniform("doubleSHR4YOffset", _dblshr4off);
 		int _dblpaloff = _hasDSHR4 * _A2VIDEO_SHR_SCANLINES;
-		shader.setUniform("doublePal256YOffset", _dblpaloff);
+		shader.SetUniform("doublePal256YOffset", _dblpaloff);
 	}
 	else 
 	{
-		shader.setUniform("pagingMode", pagingMode);
+		shader.SetUniform("pagingMode", pagingMode);
 		int _hasPaging = (pagingMode == DOUBLE_NONE ? 0 : 1);
-		shader.setUniform("pagingOffset", _hasPaging * (192 + (2 * (int)border_height_scanlines)));
-		shader.setUniform("a2ModesTex0", _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0);
-		shader.setUniform("a2ModesTex1", _TEXUNIT_IMAGE_FONT_ROM_ALTERNATE - GL_TEXTURE0);
-		shader.setUniform("a2ModesTex2", _TEXUNIT_IMAGE_COMPOSITE_LGR - GL_TEXTURE0);
-		shader.setUniform("a2ModesTex3", _TEXUNIT_IMAGE_COMPOSITE_HGR - GL_TEXTURE0);
-		shader.setUniform("a2ModesTex4", _TEXUNIT_IMAGE_COMPOSITE_DHGR - GL_TEXTURE0);
+		shader.SetUniform("pagingOffset", _hasPaging * (192 + (2 * (int)border_height_scanlines)));
+		shader.SetUniform("a2ModesTex0", _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0);
+		shader.SetUniform("a2ModesTex1", _TEXUNIT_IMAGE_FONT_ROM_ALTERNATE - GL_TEXTURE0);
+		shader.SetUniform("a2ModesTex2", _TEXUNIT_IMAGE_COMPOSITE_LGR - GL_TEXTURE0);
+		shader.SetUniform("a2ModesTex3", _TEXUNIT_IMAGE_COMPOSITE_HGR - GL_TEXTURE0);
+		shader.SetUniform("a2ModesTex4", _TEXUNIT_IMAGE_COMPOSITE_DHGR - GL_TEXTURE0);
 	}
 
 

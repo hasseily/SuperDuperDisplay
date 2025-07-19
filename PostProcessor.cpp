@@ -77,16 +77,16 @@ void PostProcessor::Initialize()
 	// PP shader list
 	v_ppshaders.clear();
 	Shader shader_basic = Shader();
-	shader_basic.build(_SHADER_VERTEX_BASIC_TRANSFORM, _SHADER_FRAGMENT_BASIC);
+	shader_basic.Build(_SHADER_VERTEX_BASIC_TRANSFORM, _SHADER_FRAGMENT_BASIC);
 	v_ppshaders.push_back(shader_basic);
 	Shader shader_pp = Shader();
-	shader_pp.build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");
+	shader_pp.Build("shaders/a2video_postprocess.glsl", "shaders/a2video_postprocess.glsl");
 	v_ppshaders.push_back(shader_pp);
 	memset(preset_name_buffer, 0, sizeof(preset_name_buffer));
 
 	//Bezel shader
 	shaderProgramBezel = Shader();
-	shaderProgramBezel.build("shaders/overlay_bezel.glsl", "shaders/overlay_bezel.glsl");
+	shaderProgramBezel.Build("shaders/overlay_bezel.glsl", "shaders/overlay_bezel.glsl");
 }
 
 PostProcessor::~PostProcessor()
@@ -324,54 +324,54 @@ void PostProcessor::SelectShader()
 	case 0:	// basic passthrough shader with optional scanlines
 	case 1:
 		shaderProgram = v_ppshaders.at(0);
-		shaderProgram.use();
+		shaderProgram.Use();
 		break;
 	case 2:	// CRT shader
 		shaderProgram = v_ppshaders.at(1);
-		shaderProgram.use();
+		shaderProgram.Use();
 		// size info
-		shaderProgram.setUniform("InputSize", glm::vec2(texWidth, texHeight));
-		shaderProgram.setUniform("OutputSize", glm::vec2(quadWidth, quadHeight));
+		shaderProgram.SetUniform("InputSize", glm::vec2(texWidth, texHeight));
+		shaderProgram.SetUniform("OutputSize", glm::vec2(quadWidth, quadHeight));
 
 		// shader specific
-		shaderProgram.setUniform("GhostingPercent", p_f_ghostingPercent);
-		shaderProgram.setUniform("BlurSize", p_f_phosphorBlur);
-		shaderProgram.setUniform("bBlurGlow", p_b_phosphorGlow);
-		shaderProgram.setUniform("bCORNER_SMOOTH", p_b_smoothCorner);
-		shaderProgram.setUniform("bEXT_GAMMA", p_b_extGamma);
-		shaderProgram.setUniform("bSLOT", p_b_slot);
-		shaderProgram.setUniform("BARRELDISTORTION", p_f_barrelDistortion);
-		shaderProgram.setUniform("BGR", p_f_bgr);
-		shaderProgram.setUniform("BLACK", p_f_black);
-		shaderProgram.setUniform("BR_DEP", p_f_brDep);
-		shaderProgram.setUniform("BRIGHTNESS", p_f_brightness);
-		shaderProgram.setUniform("C_STR", p_f_cStr);
-		shaderProgram.setUniform("CONV_B", p_f_convB);
-		shaderProgram.setUniform("CONV_G", p_f_convG);
-		shaderProgram.setUniform("CONV_R", p_f_convR);
-		shaderProgram.setUniform("CORNER", p_f_corner / 10000);
-		shaderProgram.setUniform("GB", p_f_hueGB);
-		shaderProgram.setUniform("MASKH", p_f_maskHigh);
-		shaderProgram.setUniform("MASKL", p_f_maskLow);
-		shaderProgram.setUniform("MSIZE", p_f_maskSize);
-		shaderProgram.setUniform("RB", p_f_hueRB);
-		shaderProgram.setUniform("RG", p_f_hueRG);
-		shaderProgram.setUniform("SATURATION", p_f_saturation);
-		shaderProgram.setUniform("SCANLINE_WEIGHT", p_f_scanlineWeight);
-		shaderProgram.setUniform("SCAN_SPEED", p_f_scanSpeed);
-		shaderProgram.setUniform("FILM_GRAIN", p_f_filmGrain);
-		shaderProgram.setUniform("SLOTW", p_f_slotW);
-		shaderProgram.setUniform("VIGNETTE_WEIGHT", p_f_vignetteWeight);
-		shaderProgram.setUniform("INTERLACE_WEIGHT", p_f_interlace);
-		shaderProgram.setUniform("iCOLOR_SPACE", p_i_cSpace);
-		shaderProgram.setUniform("iM_TYPE", p_i_maskType);
-		shaderProgram.setUniform("iSCANLINE_TYPE", p_i_scanlineType);
-		shaderProgram.setUniform("vWARP", p_v_warp);
+		shaderProgram.SetUniform("GhostingPercent", p_f_ghostingPercent);
+		shaderProgram.SetUniform("BlurSize", p_f_phosphorBlur);
+		shaderProgram.SetUniform("bBlurGlow", p_b_phosphorGlow);
+		shaderProgram.SetUniform("bCORNER_SMOOTH", p_b_smoothCorner);
+		shaderProgram.SetUniform("bEXT_GAMMA", p_b_extGamma);
+		shaderProgram.SetUniform("bSLOT", p_b_slot);
+		shaderProgram.SetUniform("BARRELDISTORTION", p_f_barrelDistortion);
+		shaderProgram.SetUniform("BGR", p_f_bgr);
+		shaderProgram.SetUniform("BLACK", p_f_black);
+		shaderProgram.SetUniform("BR_DEP", p_f_brDep);
+		shaderProgram.SetUniform("BRIGHTNESS", p_f_brightness);
+		shaderProgram.SetUniform("C_STR", p_f_cStr);
+		shaderProgram.SetUniform("CONV_B", p_f_convB);
+		shaderProgram.SetUniform("CONV_G", p_f_convG);
+		shaderProgram.SetUniform("CONV_R", p_f_convR);
+		shaderProgram.SetUniform("CORNER", p_f_corner / 10000);
+		shaderProgram.SetUniform("GB", p_f_hueGB);
+		shaderProgram.SetUniform("MASKH", p_f_maskHigh);
+		shaderProgram.SetUniform("MASKL", p_f_maskLow);
+		shaderProgram.SetUniform("MSIZE", p_f_maskSize);
+		shaderProgram.SetUniform("RB", p_f_hueRB);
+		shaderProgram.SetUniform("RG", p_f_hueRG);
+		shaderProgram.SetUniform("SATURATION", p_f_saturation);
+		shaderProgram.SetUniform("SCANLINE_WEIGHT", p_f_scanlineWeight);
+		shaderProgram.SetUniform("SCAN_SPEED", p_f_scanSpeed);
+		shaderProgram.SetUniform("FILM_GRAIN", p_f_filmGrain);
+		shaderProgram.SetUniform("SLOTW", p_f_slotW);
+		shaderProgram.SetUniform("VIGNETTE_WEIGHT", p_f_vignetteWeight);
+		shaderProgram.SetUniform("INTERLACE_WEIGHT", p_f_interlace);
+		shaderProgram.SetUniform("iCOLOR_SPACE", p_i_cSpace);
+		shaderProgram.SetUniform("iM_TYPE", p_i_maskType);
+		shaderProgram.SetUniform("iSCANLINE_TYPE", p_i_scanlineType);
+		shaderProgram.SetUniform("vWARP", p_v_warp);
 		break;
 	}
 	// common
-	shaderProgram.setUniform("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
-	shaderProgram.setUniform("TextureSize", glm::vec2(texWidth, texHeight));
+	shaderProgram.SetUniform("POSTPROCESSING_LEVEL", p_i_postprocessingLevel);
+	shaderProgram.SetUniform("TextureSize", glm::vec2(texWidth, texHeight));
 }
 
 void PostProcessor::RegeneratePreviousTexture()
@@ -526,22 +526,22 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	}
 	else
 	{
-		shaderProgram.use();
+		shaderProgram.Use();
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL error PP shaderProgram use: " << glerr << std::endl;
 		}
 	}
 
 	// Used for all PP shaders
-	shaderProgram.setUniform("uTransform", mTransform);		// in the vertex shader
-	shaderProgram.setUniform("A2TextureCurrent", texUnitCurrent - GL_TEXTURE0);
-	shaderProgram.setUniform("PreviousFrame", _TEXUNIT_PP_PREVIOUS - GL_TEXTURE0);
-	shaderProgram.setUniform("iFrameCount", frame_count);
-	shaderProgram.setUniform("bHalveFrameRate", bHalveFramerate);
+	shaderProgram.SetUniform("uTransform", mTransform);		// in the vertex shader
+	shaderProgram.SetUniform("A2TextureCurrent", texUnitCurrent - GL_TEXTURE0);
+	shaderProgram.SetUniform("PreviousFrame", _TEXUNIT_PP_PREVIOUS - GL_TEXTURE0);
+	shaderProgram.SetUniform("iFrameCount", frame_count);
+	shaderProgram.SetUniform("bHalveFrameRate", bHalveFramerate);
 	// Only used for the full PP shader
 	if (p_i_postprocessingLevel > 1) {
-		shaderProgram.setUniform("OutputSize", glm::vec2(quadWidth, quadHeight));
-		shaderProgram.setUniform("ScanlineCount", scanlineCount);
+		shaderProgram.SetUniform("OutputSize", glm::vec2(quadWidth, quadHeight));
+		shaderProgram.SetUniform("ScanlineCount", scanlineCount);
 	}
 
 	// Bind the quad VAO and draw the quad (static VBO already set up)
@@ -555,25 +555,25 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	// Now Build and Draw the Bezel if necessary
 	if (selectedBezelFile != _PP_NO_BEZEL_FILENAME)
 	{
-		shaderProgramBezel.use();
+		shaderProgramBezel.Use();
 		glm::mat4 transformBezel = glm::mat4(1.0f);
 		//transformBezel = glm::translate(transformBezel, glm::vec3(static_cast<float>(viewportWidth)*bezelSize.x, static_cast<float>(viewportHeight) * bezelSize.y, 0.0f));
 		transformBezel = glm::scale(transformBezel, glm::vec3(bezelSize.x, bezelSize.y, 1.0f));
-		shaderProgramBezel.setUniform("uTransform", transformBezel);		// in the vertex shader
-		shaderProgramBezel.setUniform("uMainTex", _TEXUNIT_PP_BEZEL - GL_TEXTURE0);
-		shaderProgramBezel.setUniform("uA2Tex", _TEXUNIT_POSTPROCESS - GL_TEXTURE0);
-		shaderProgramBezel.setUniform("uReflectionAmount", p_f_bezelReflection);
-		shaderProgramBezel.setUniform("uReflectionBlur", p_f_reflectionBlur);
-		shaderProgramBezel.setUniform("uReflectionScale", p_v_reflectionScale);
-		shaderProgramBezel.setUniform("uReflectionTranslation", p_v_reflectionTranslation);
-		shaderProgramBezel.setUniform("uOutlineQuad", p_b_outlineQuad);
+		shaderProgramBezel.SetUniform("uTransform", transformBezel);		// in the vertex shader
+		shaderProgramBezel.SetUniform("uMainTex", _TEXUNIT_PP_BEZEL - GL_TEXTURE0);
+		shaderProgramBezel.SetUniform("uA2Tex", _TEXUNIT_POSTPROCESS - GL_TEXTURE0);
+		shaderProgramBezel.SetUniform("uReflectionAmount", p_f_bezelReflection);
+		shaderProgramBezel.SetUniform("uReflectionBlur", p_f_reflectionBlur);
+		shaderProgramBezel.SetUniform("uReflectionScale", p_v_reflectionScale);
+		shaderProgramBezel.SetUniform("uReflectionTranslation", p_v_reflectionTranslation);
+		shaderProgramBezel.SetUniform("uOutlineQuad", p_b_outlineQuad);
 		if (bezelGlassImageAsset.image_xcount > 0) {
-			shaderProgramBezel.setUniform("uGlassTex", _TEXUNIT_PP_BEZEL_GLASS - GL_TEXTURE0);
-			shaderProgramBezel.setUniform("uGlassThickness", p_f_glassThickness);
+			shaderProgramBezel.SetUniform("uGlassTex", _TEXUNIT_PP_BEZEL_GLASS - GL_TEXTURE0);
+			shaderProgramBezel.SetUniform("uGlassThickness", p_f_glassThickness);
 		}
 		else {
-			shaderProgramBezel.setUniform("uGlassTex", 0);
-			shaderProgramBezel.setUniform("uGlassThickness", 0.f);
+			shaderProgramBezel.SetUniform("uGlassTex", 0);
+			shaderProgramBezel.SetUniform("uGlassThickness", 0.f);
 		}
 
 		glActiveTexture(_TEXUNIT_POSTPROCESS);
@@ -778,7 +778,7 @@ void PostProcessor::DisplayImGuiWindow(bool* p_open)
 			if (ImGuiFileDialog::Instance()->Display("ChooseShader1DlgKey")) {
 				// Check if a file was selected
 				if (ImGuiFileDialog::Instance()->IsOk()) {
-					v_ppshaders.at(1).build(
+					v_ppshaders.at(1).Build(
 						ImGuiFileDialog::Instance()->GetFilePathName().c_str(),
 						ImGuiFileDialog::Instance()->GetFilePathName().c_str()
 					);

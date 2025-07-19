@@ -1600,10 +1600,10 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 				);
 			}
 			auto _s = legacyNTSCQuad->shader;
-			_s.use();
-			_s.setUniform("bNOFILTERMONO", eA2MonitorType == A2_MON_COLOR ? p_b_ntscNoFilterMono : true);
-			_s.setUniform("NTSC_COMB_STR", p_f_ntscCombStrength);
-			_s.setUniform("NTSC_GAMMA_CORRECTION", p_f_ntscGammaCorrection);
+			_s.Use();
+			_s.SetUniform("bNOFILTERMONO", eA2MonitorType == A2_MON_COLOR ? p_b_ntscNoFilterMono : true);
+			_s.SetUniform("NTSC_COMB_STR", p_f_ntscCombStrength);
+			_s.SetUniform("NTSC_GAMMA_CORRECTION", p_f_ntscGammaCorrection);
 			legacyNTSCQuad->Render(current_frame_idx);
 		}
 		// std::cerr << "Rendered legacy to viewport " << fb_width << "x" << fb_height << " - " << current_frame_idx << std::endl;

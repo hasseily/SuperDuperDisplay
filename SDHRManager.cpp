@@ -280,9 +280,9 @@ void SDHRManager::Initialize()
 		image_assets[i].tex_id = oglHelper->get_texture_id_at_slot(i);
 	}
 	if (!defaultWindowShaderProgram.isReady)
-		defaultWindowShaderProgram.build(_SHADER_SDHR_VERTEX_DEFAULT, _SHADER_SDHR_FRAGMENT_DEFAULT);
+		defaultWindowShaderProgram.Build(_SHADER_SDHR_VERTEX_DEFAULT, _SHADER_SDHR_FRAGMENT_DEFAULT);
 	if (!pixelizationShaderProgram.isReady)
-		pixelizationShaderProgram.build(_SHADER_SDHR_VERTEX_DEPIXELIZE, _SHADER_SDHR_FRAGMENT_DEPIXELIZE);
+		pixelizationShaderProgram.Build(_SHADER_SDHR_VERTEX_DEPIXELIZE, _SHADER_SDHR_FRAGMENT_DEPIXELIZE);
 	bShouldInitializeRender = true;
 	dataState = DATASTATE_e::DATA_IDLE;
 }
@@ -884,7 +884,7 @@ GLuint SDHRManager::Render()
 	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
 	glViewport(0, 0, fb_width, fb_height);
 
-	defaultWindowShaderProgram.use();
+	defaultWindowShaderProgram.Use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL SDHR glUseProgram error: " << glerr << std::endl;
 		return UINT32_MAX;

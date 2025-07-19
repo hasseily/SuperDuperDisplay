@@ -65,28 +65,28 @@ void A2WindowRGB::SetVideoMode(A2VideoModeRGB_e _videoMode)
 	doubleMode = false;
 	switch (videoMode) {
 		case A2VIDEORGB_TEXT:
-			shader.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_TEXT_FRAGMENT);
+			shader.Build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_TEXT_FRAGMENT);
 			break;
 		case A2VIDEORGB_DTEXT:
-			shader.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_TEXT_FRAGMENT);
+			shader.Build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_TEXT_FRAGMENT);
 			doubleMode = true;
 			break;
 		case A2VIDEORGB_LGR:
-			shader.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_LGR_FRAGMENT);
+			shader.Build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_LGR_FRAGMENT);
 			break;
 		case A2VIDEORGB_DLGR:
-			shader.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_LGR_FRAGMENT);
+			shader.Build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_LGR_FRAGMENT);
 			doubleMode = true;
 			break;
 		case A2VIDEORGB_HGR:
-			shader.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_HGR_FRAGMENT);
+			shader.Build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_HGR_FRAGMENT);
 			break;
 		case A2VIDEORGB_DHGR:
-			shader.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_DHGR_FRAGMENT);
+			shader.Build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_DHGR_FRAGMENT);
 			doubleMode = true;
 			break;
 		default:
-			shader.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_TEXT_FRAGMENT);
+			shader.Build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_TEXT_FRAGMENT);
 			break;
 	}
 }
@@ -125,7 +125,7 @@ void A2WindowRGB::Render()
 	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	shader.use();
+	shader.Use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL A2WindowRGB glUseProgram error: " << glerr << std::endl;
 		return;
@@ -157,44 +157,44 @@ void A2WindowRGB::Render()
 		std::cerr << "A2WindowRGB::Render error: " << glerr << std::endl;
 	}
 
-	shader.setUniform("hasFlashing", 0.f);
-	shader.setUniform("isMixed", 0.f);			// don't use
-	shader.setUniform("ticks", SDL_GetTicks());
-	shader.setUniform("memstart", memAux ? (int)(memStart + _A2_MEMORY_SHADOW_END) : (int)memStart);
+	shader.SetUniform("hasFlashing", 0.f);
+	shader.SetUniform("isMixed", 0.f);			// don't use
+	shader.SetUniform("ticks", SDL_GetTicks());
+	shader.SetUniform("memstart", memAux ? (int)(memStart + _A2_MEMORY_SHADOW_END) : (int)memStart);
 	// point the uniform at the Apple 2 memory texture
-	shader.setUniform("APPLE2MEMORYTEX", _TEXUNIT_APPLE2MEMORY_R8UI - GL_TEXTURE0);
+	shader.SetUniform("APPLE2MEMORYTEX", _TEXUNIT_APPLE2MEMORY_R8UI - GL_TEXTURE0);
 	switch (videoMode) {
 		case A2VIDEORGB_TEXT:
-			shader.setUniform("a2ModeTexture", _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0);
-			shader.setUniform("isDouble", 0.f);
-			shader.setUniform("tileSize", glm::uvec2(14,16));
-			shader.setUniform("colorTint", glm::vec4(1,1,1,1));
+			shader.SetUniform("a2ModeTexture", _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0);
+			shader.SetUniform("isDouble", 0.f);
+			shader.SetUniform("tileSize", glm::uvec2(14,16));
+			shader.SetUniform("colorTint", glm::vec4(1,1,1,1));
 			break;
 		case A2VIDEORGB_LGR:
-			shader.setUniform("a2ModeTexture", _TEXUNIT_IMAGE_COMPOSITE_LGR - GL_TEXTURE0);
-			shader.setUniform("isDouble", 0.f);
-			shader.setUniform("tileSize", glm::uvec2(14,16));
+			shader.SetUniform("a2ModeTexture", _TEXUNIT_IMAGE_COMPOSITE_LGR - GL_TEXTURE0);
+			shader.SetUniform("isDouble", 0.f);
+			shader.SetUniform("tileSize", glm::uvec2(14,16));
 			break;
 		case A2VIDEORGB_HGR:
-			shader.setUniform("a2ModeTexture", _TEXUNIT_IMAGE_COMPOSITE_HGR - GL_TEXTURE0);
-			shader.setUniform("isDouble", 0.f);
-			shader.setUniform("tileSize", glm::uvec2(14,2));
+			shader.SetUniform("a2ModeTexture", _TEXUNIT_IMAGE_COMPOSITE_HGR - GL_TEXTURE0);
+			shader.SetUniform("isDouble", 0.f);
+			shader.SetUniform("tileSize", glm::uvec2(14,2));
 			break;
 		case A2VIDEORGB_DTEXT:
-			shader.setUniform("a2ModeTexture", _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0);
-			shader.setUniform("isDouble", 1.f);
-			shader.setUniform("tileSize", glm::uvec2(7,16));
-			shader.setUniform("colorTint", glm::vec4(1,1,1,1));
+			shader.SetUniform("a2ModeTexture", _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0);
+			shader.SetUniform("isDouble", 1.f);
+			shader.SetUniform("tileSize", glm::uvec2(7,16));
+			shader.SetUniform("colorTint", glm::vec4(1,1,1,1));
 			break;
 		case A2VIDEORGB_DLGR:
-			shader.setUniform("a2ModeTexture", _TEXUNIT_IMAGE_COMPOSITE_LGR - GL_TEXTURE0);
-			shader.setUniform("isDouble", 1.f);
-			shader.setUniform("tileSize", glm::uvec2(7,16));
+			shader.SetUniform("a2ModeTexture", _TEXUNIT_IMAGE_COMPOSITE_LGR - GL_TEXTURE0);
+			shader.SetUniform("isDouble", 1.f);
+			shader.SetUniform("tileSize", glm::uvec2(7,16));
 			break;
 		case A2VIDEORGB_DHGR:
-			shader.setUniform("a2ModeTexture", _TEXUNIT_IMAGE_COMPOSITE_DHGR - GL_TEXTURE0);
-			shader.setUniform("isDouble", 1.f);
-			shader.setUniform("tileSize", glm::uvec2(14,2));
+			shader.SetUniform("a2ModeTexture", _TEXUNIT_IMAGE_COMPOSITE_DHGR - GL_TEXTURE0);
+			shader.SetUniform("isDouble", 1.f);
+			shader.SetUniform("tileSize", glm::uvec2(14,2));
 			break;
 		default:
 			break;

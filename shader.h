@@ -13,13 +13,13 @@
 /*
 	@brief:
 	Utility class to create, build and run a shader.
-		- After creating the shader, call build()
-		- You can set static uniforms that don't change every frame by calling shader.use()
-		  and then setUniform(), and optionally shader.release()
+		- After creating the shader, call Build()
+		- You can set static uniforms that don't change every frame by calling shader.Use()
+		  and then SetUniform(), and optionally shader.Release()
 		- Frame-dynamic uniforms are called the same way, but inside the render loop
 
 	All uniform locations are cached for better performance. They're generally cached upon
-	first use, but you can force pre-caching by calling cacheUniform() for each uniform
+	first use, but you can force pre-caching by calling CacheUniform() for each uniform
 	after building and activating the shader.
 
 	If you want even more control over the uniforms, you can always do something like:
@@ -45,18 +45,18 @@ public:
 	bool isInUse = false;
 
     // Build from vertex and fragment shaders (could be combined using VERTEX and FRAGMENT #define)
-    void build(const char* vertexPath, const char* fragmentPath);
-    void _compile(const std::string* pvertexCode, const std::string* pfragmentCode);
+    void Build(const char* vertexPath, const char* fragmentPath);
+    void _Compile(const std::string* pvertexCode, const std::string* pfragmentCode);
 
 	// de/activate the shader
-	void use() { glUseProgram(ID); glGetError() == GL_NO_ERROR ? isInUse = true : isInUse = false; };
-	void release() { glUseProgram(0); isInUse = false; };
+	void Use() { glUseProgram(ID); glGetError() == GL_NO_ERROR ? isInUse = true : isInUse = false; };
+	void Release() { glUseProgram(0); isInUse = false; };
 
 	const std::string GetVertexPath() { return s_vertexPath; }
 	const std::string GetFragmentPath() { return s_fragmentPath; }
 
-	void cacheUniform(std::string const& name);
-	void setUniform(std::string const& name, UniformValue const& v);
+	void CacheUniform(std::string const& name);
+	void SetUniform(std::string const& name, UniformValue const& v);
 
 private:
 	std::string s_vertexPath;
@@ -66,6 +66,6 @@ private:
 	std::vector<GLint>       _uniformLocs;
 
     // utility function for checking shader compilation/linking errors.
-    void checkCompileErrors(GLuint shader, std::string type);
+    void CheckCompileErrors(GLuint shader, std::string type);
 };
 #endif

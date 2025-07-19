@@ -172,10 +172,10 @@ void MosaicMesh::SetupDraw()
 	}
 
 	GLenum glerr;
-	shaderProgram->use();
-	shaderProgram->setUniform("ticks", SDL_GetTicks() - ticks_since_first_render);
-	shaderProgram->setUniform("pixelSize", pixelSize);
-	shaderProgram->setUniform("iDebugNoTextures", SDHRManager::GetInstance()->bDebugNoTextures);
+	shaderProgram->Use();
+	shaderProgram->SetUniform("ticks", SDL_GetTicks() - ticks_since_first_render);
+	shaderProgram->SetUniform("pixelSize", pixelSize);
+	shaderProgram->SetUniform("iDebugNoTextures", SDHRManager::GetInstance()->bDebugNoTextures);
 
 	// Assign the list of all the textures to the shader's "tilesTexture" uniform
 	auto texUniformId = glGetUniformLocation(shaderProgram->ID, "tilesTexture");
@@ -198,18 +198,18 @@ void MosaicMesh::Draw(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 	glBindVertexArray(VAO);
 	// Assign the scales so that we can get the proper original
 	// values for each mosaic tile
-	shaderProgram->setUniform("maxTextures", _SDHR_MAX_TEXTURES);
-	shaderProgram->setUniform("maxUVScale", _SDHR_MAX_UV_SCALE);
-	shaderProgram->setUniform("tileCount", glm::vec2(this->cols, this->rows));
-	shaderProgram->setUniform("meshSize", glm::vec2(this->width, this->height));
+	shaderProgram->SetUniform("maxTextures", _SDHR_MAX_TEXTURES);
+	shaderProgram->SetUniform("maxUVScale", _SDHR_MAX_UV_SCALE);
+	shaderProgram->SetUniform("tileCount", glm::vec2(this->cols, this->rows));
+	shaderProgram->SetUniform("meshSize", glm::vec2(this->width, this->height));
 
 	glm::mat4 mat_final = mat_proj * mat_camera * this->mat_trans;
-	shaderProgram->setUniform("transform", mat_final);
+	shaderProgram->SetUniform("transform", mat_final);
 
 	// point the uniform at the tiles data texture (_TEXUNIT_DATABUFFER)
 	glActiveTexture(_TEXUNIT_DATABUFFER_RGBA8UI);
 	glBindTexture(GL_TEXTURE_2D, TBTEX);
-	shaderProgram->setUniform("TBTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
+	shaderProgram->SetUniform("TBTEX", _TEXUNIT_DATABUFFER_RGBA8UI - GL_TEXTURE0);
 	// back to the output buffer to draw our scene
 	glActiveTexture(GL_TEXTURE0);
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
