@@ -22,6 +22,7 @@
 #include <cstring>
 #include <atomic>
 #include <vector>
+#include <SDL.h>
 
 #define PKT_BUFSZ 2048
 
@@ -92,5 +93,8 @@ const std::string get_tini_last_error_string();
 
 // Sends data to the tini via the register API
 uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* vData, bool setIncrement);
+
+// Mouse interface (temporary!)
+uint32_t usb_mouse_send_event(SDL_Event event);
 
 void usb_display_imgui_window(bool* p_open);

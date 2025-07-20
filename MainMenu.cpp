@@ -789,6 +789,13 @@ void MainMenu::ShowMotherboardMenu() {
 
 	ImGui::MenuItem("Apple //e Memory", "", &pGui->mem_edit_a2e.Open);
 	ImGui::MenuItem("Apple //e Memory Heat Map", "", &pGui->bShowMemoryHeatMap);
+
+	ImGui::Separator();
+	bool _bMouseIsLocked = (SDL_GetRelativeMouseMode() == SDL_TRUE);
+	if (ImGui::Checkbox("Apple Mouse (F5)", &_bMouseIsLocked))
+	{
+		SDL_SetRelativeMouseMode(_bMouseIsLocked ? SDL_TRUE : SDL_FALSE);
+	}
 }
 
 void MainMenu::ShowVideoMenu() {

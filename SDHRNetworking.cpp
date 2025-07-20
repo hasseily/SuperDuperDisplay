@@ -641,6 +641,43 @@ uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* 
 	return 1;
 }
 
+
+// For mouse events, only use 16 bits and clamp
+#define CLAMP_S32_TO_S16(x) ((x) > INT16_MAX ? INT16_MAX : (x) < INT16_MIN ? INT16_MIN : (x))
+
+uint32_t usb_mouse_send_event(SDL_Event event)
+{
+	uint32_t _res = 0;
+	std::vector<uint32_t> data;
+	int registerAddress;
+	switch (event.type) {
+		case SDL_MOUSEMOTION:
+		{
+			int16_t _xr = (int16_t)CLAMP_S32_TO_S16(event.motion.xrel);
+			int16_t _yr = (int16_t)CLAMP_S32_TO_S16(event.motion.yrel);
+			registerAddress = 0x2000;	// mouse movement register
+			// xrel in lower 16 bits, yrel in upper 16 bits
+			uint32_t _xyr = (_xr & 0xFFFF) + (_yr << 16);
+			data.push_back(_xyr);
+			_res = usb_write_register(registerAddress, &data, false);
+			break;
+		}
+		case SDL_MOUSEBUTTONDOWN:
+		{
+			registerAddress = 0x2004;	// mouse button register
+			// button 0 in bit 0, button 1 in bit 1
+			// NOTE: SDL buttons start at 1!
+			uint32_t _b = 1 << (event.button.button - 1);
+			data.push_back(_b);
+			_res = usb_write_register(registerAddress, &data, false);
+			break;
+		}
+		default:
+			break;
+	}
+	return _res;
+}
+
 void usb_display_imgui_window(bool* p_open)
 {
 	bUSBImGUiWindowIsOpen = p_open;

@@ -639,157 +639,175 @@ int main(int argc, char* argv[])
 					continue;
 			}
 			switch (event.type) {
-			case SDL_QUIT:
-				Main_RequestAppQuit();
-				break;
-			case SDL_WINDOWEVENT:
-			{
-				if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-					glViewport(0, 0, event.window.data1, event.window.data2);
-					if (!Main_IsFullScreen())
-					{
-						g_ww = event.window.data1;
-						g_wh = event.window.data2;
-					}
-				}
-				if (event.window.event == SDL_WINDOWEVENT_MOVED) {
-					if (!Main_IsFullScreen())
-					{
-						g_wx = event.window.data1;
-						g_wy = event.window.data2;
-					}
-				}
-				if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
+				case SDL_QUIT:
 					Main_RequestAppQuit();
-			}
-				break;
-			case SDL_MOUSEMOTION:
-				lastMouseMoveTime = SDL_GetTicks();
-				if (event.motion.state & SDL_BUTTON_RMASK) {
-					// Move the camera when the right mouse button is pressed while moving the mouse
-					if (sdhrManager->IsSdhrEnabled())
-						sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
-				}
-				break;
-			case SDL_MOUSEWHEEL:
-				if (sdhrManager->IsSdhrEnabled())
-					sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
-				break;
-			case SDL_KEYDOWN:
-			{
-				if (event.key.keysym.sym == SDLK_F4) {  // Quit on ALT-F4
-					if (SDL_GetModState() & KMOD_ALT) {
-						Main_RequestAppQuit();
-						break;
-					}
-				}
-				else if (event.key.keysym.sym == SDLK_F1) {  // Toggle ImGUI with F1
-					Main_ToggleImGui(gl_context);
-				}
-				else if (event.key.keysym.sym == SDLK_F8) {
-					if (SDL_GetModState() & KMOD_SHIFT) {
-						// Reset FPS on Shift-F8
-						Main_ResetFPSCalculations();
-					}
-					else {
-						Main_SetFPSOverlay(!Main_IsFPSOverlay());
-					}
-				}
-				else if (event.key.keysym.sym == SDLK_F10) {
-					if (SDL_GetModState() & KMOD_SHIFT) {
-						a2VideoManager->bAlwaysRenderBuffer = !a2VideoManager->bAlwaysRenderBuffer;
-					} else {
-						a2VideoManager->bAlwaysRenderBuffer = false;
-					}
-					a2VideoManager->ForceBeamFullScreenRender();
-				}
-				// Handle fullscreen toggle for Alt+Enter
-				else if (event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) {
-					Main_SetFullScreen(!Main_IsFullScreen());
-				}
-				// Make Alt-Tab in full screen revert to window mode
-				else if (event.key.keysym.sym == SDLK_TAB && (event.key.keysym.mod & KMOD_ALT)) {
-					if (Main_IsFullScreen())
-						Main_SetFullScreen(false);
-				}
-				if (sdhrManager->IsSdhrEnabled())
+					break;
+				case SDL_WINDOWEVENT:
 				{
-					// Camera movement!
-					switch (event.key.keysym.sym)
-					{
-					case SDLK_w:
-						sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
-						break;
-					case SDLK_s:
-						sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
-						break;
-					case SDLK_a:
-						sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
-						break;
-					case SDLK_d:
-						sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
-						break;
-					case SDLK_q:
-						sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
-						break;
-					case SDLK_z:
-						sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
-						break;
-					default:
-						break;
-					};
-				}
-			}
-				break;
-			case SDL_USEREVENT:
-				if (event.user.code == SDLUSEREVENT_A2NEWFRAME)
-				{
-					if (bIsSwapApple2Bus)
-					{
-						// This is a special case for handling the VSYNC with the Apple 2 bus:
-						// An A2NEWFRAME event is sent when the beam racing code has just finished a frame.
-						// We go through the A2->PP->frameSwap process unless the PP forbids the
-						// frame swapping for reasons of frame merging.
-						// NOTE: These events could be very close to each other, and multiple ones could
-						// be in the queue. We must absolutely process all of them fully to be VSYNC'ed to
-						// the bus itself. However, if we get 2+ events in one loop then we're just
-						// going to be reusing the last VRAM read buffer for all the frames. It's not ideal but
-						// there's no way to do better unless we triple or quadruple buffer the VRAM buffers,
-						// or use a variable queue. Still though, if the host is too slow the buffers will
-						// always overrun, so we max the # of frame events in the queue at MAX_USEREVENTS_IN_QUEUE
-						bA2VideoDidRender = a2VideoManager->Render(A2VIDEO_TEX_UNIT);
-						// if (bA2VideoDidRender == false)
-							// std::cerr << "Multiple A2 frames in one loop" << std::endl;
-						if (A2VIDEO_TEX_UNIT == A2VIDEORENDER_ERROR)
-							std::cerr << "ERROR: NO RENDERER OUTPUT!" << std::endl;
-						glBindFramebuffer(GL_FRAMEBUFFER, 0);
-						glClearColor(
-							window_bgcolor[0],
-							window_bgcolor[1],
-							window_bgcolor[2],
-							window_bgcolor[3]);
-						glClear(GL_COLOR_BUFFER_BIT);
-						postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
-						if (!postProcessor->ShouldFrameBeSkipped())
+					if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+						glViewport(0, 0, event.window.data1, event.window.data2);
+						if (!Main_IsFullScreen())
 						{
-							if (Main_IsImGuiOn())
-							{
-								menu->Render();
-							}
-							else {
-								if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
-									SDL_ShowCursor(SDL_DISABLE);
-								else
-									SDL_ShowCursor(SDL_ENABLE);
-							}
-							SDL_GL_SwapWindow(window);
-							fps_frame_count++;
+							g_ww = event.window.data1;
+							g_wh = event.window.data2;
 						}
 					}
+					if (event.window.event == SDL_WINDOWEVENT_MOVED) {
+						if (!Main_IsFullScreen())
+						{
+							g_wx = event.window.data1;
+							g_wy = event.window.data2;
+						}
+					}
+					if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
+						Main_RequestAppQuit();
+					}
+					break;
+				case SDL_MOUSEMOTION:
+					lastMouseMoveTime = SDL_GetTicks();
+					if (event.motion.state & SDL_BUTTON_RMASK) {
+						// Move the camera when the right mouse button is pressed while moving the mouse
+						if (sdhrManager->IsSdhrEnabled())
+							sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
+					}
+					if (SDL_GetRelativeMouseMode()) {
+						usb_mouse_send_event(event);
+					}
+					break;
+				case SDL_MOUSEBUTTONDOWN:
+					if (SDL_GetRelativeMouseMode()) {
+						usb_mouse_send_event(event);
+					}
+					break;
+				case SDL_MOUSEBUTTONUP:
+					if (event.button.button == SDL_BUTTON_MIDDLE)
+					{
+						SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() == SDL_TRUE ? SDL_FALSE : SDL_TRUE);
+					}
+				case SDL_MOUSEWHEEL:
+					if (sdhrManager->IsSdhrEnabled())
+						sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
+					break;
+				case SDL_KEYDOWN:
+				{
+					if (event.key.keysym.sym == SDLK_F4) {  // Quit on ALT-F4
+						if (SDL_GetModState() & KMOD_ALT) {
+							Main_RequestAppQuit();
+							break;
+						}
+					}
+					else if (event.key.keysym.sym == SDLK_F5) {
+						SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() == SDL_TRUE ? SDL_FALSE : SDL_TRUE);
+					}
+					else if (event.key.keysym.sym == SDLK_F1) {  // Toggle ImGUI with F1
+						Main_ToggleImGui(gl_context);
+					}
+					else if (event.key.keysym.sym == SDLK_F8) {
+						if (SDL_GetModState() & KMOD_SHIFT) {
+							// Reset FPS on Shift-F8
+							Main_ResetFPSCalculations();
+						}
+						else {
+							Main_SetFPSOverlay(!Main_IsFPSOverlay());
+						}
+					}
+					else if (event.key.keysym.sym == SDLK_F10) {
+						if (SDL_GetModState() & KMOD_SHIFT) {
+							a2VideoManager->bAlwaysRenderBuffer = !a2VideoManager->bAlwaysRenderBuffer;
+						} else {
+							a2VideoManager->bAlwaysRenderBuffer = false;
+						}
+						a2VideoManager->ForceBeamFullScreenRender();
+					}
+					// Handle fullscreen toggle for Alt+Enter
+					else if (event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)) {
+						Main_SetFullScreen(!Main_IsFullScreen());
+					}
+					// Make Alt-Tab in full screen revert to window mode
+					else if (event.key.keysym.sym == SDLK_TAB && (event.key.keysym.mod & KMOD_ALT)) {
+						if (Main_IsFullScreen())
+							Main_SetFullScreen(false);
+					}
+					if (sdhrManager->IsSdhrEnabled())
+					{
+						// Camera movement!
+						switch (event.key.keysym.sym)
+						{
+						case SDLK_w:
+							sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
+							break;
+						case SDLK_s:
+							sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
+							break;
+						case SDLK_a:
+							sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
+							break;
+						case SDLK_d:
+							sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
+							break;
+						case SDLK_q:
+							sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
+							break;
+						case SDLK_z:
+							sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
+							break;
+						default:
+							break;
+						};
+					}
 				}
-				break;
-			default:
-				break;
+					break;
+				case SDL_USEREVENT:
+					if (event.user.code == SDLUSEREVENT_A2NEWFRAME)
+					{
+						if (bIsSwapApple2Bus)
+						{
+							// This is a special case for handling the VSYNC with the Apple 2 bus:
+							// An A2NEWFRAME event is sent when the beam racing code has just finished a frame.
+							// We go through the A2->PP->frameSwap process unless the PP forbids the
+							// frame swapping for reasons of frame merging.
+							// NOTE: These events could be very close to each other, and multiple ones could
+							// be in the queue. We must absolutely process all of them fully to be VSYNC'ed to
+							// the bus itself. However, if we get 2+ events in one loop then we're just
+							// going to be reusing the last VRAM read buffer for all the frames. It's not ideal but
+							// there's no way to do better unless we triple or quadruple buffer the VRAM buffers,
+							// or use a variable queue. Still though, if the host is too slow the buffers will
+							// always overrun, so we max the # of frame events in the queue at MAX_USEREVENTS_IN_QUEUE
+							bA2VideoDidRender = a2VideoManager->Render(A2VIDEO_TEX_UNIT);
+							// if (bA2VideoDidRender == false)
+								// std::cerr << "Multiple A2 frames in one loop" << std::endl;
+							if (A2VIDEO_TEX_UNIT == A2VIDEORENDER_ERROR)
+								std::cerr << "ERROR: NO RENDERER OUTPUT!" << std::endl;
+							glBindFramebuffer(GL_FRAMEBUFFER, 0);
+							glClearColor(
+								window_bgcolor[0],
+								window_bgcolor[1],
+								window_bgcolor[2],
+								window_bgcolor[3]);
+							glClear(GL_COLOR_BUFFER_BIT);
+							postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
+							if (!postProcessor->ShouldFrameBeSkipped())
+							{
+								if (Main_IsImGuiOn())
+								{
+									menu->Render();
+								}
+								else {
+									/*	DISABLE HIDDEN MOUSE CURSOR NOW THAT WE HAVE MOUSE LOCKING
+									if ((SDL_GetTicks() - lastMouseMoveTime) > cursorHideDelay)
+										SDL_ShowCursor(SDL_DISABLE);
+									else
+										SDL_ShowCursor(SDL_ENABLE);
+									 */
+								}
+								SDL_GL_SwapWindow(window);
+								fps_frame_count++;
+							}
+						}
+					}
+					break;
+				default:
+					break;
 			}   // switch event.type
 		}   // while SDL_PollEvent
 
