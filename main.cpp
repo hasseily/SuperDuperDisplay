@@ -853,6 +853,8 @@ int main(int argc, char* argv[])
 					menu->Render();
 				}
 				else {
+					/*	DISABLE HIDDEN MOUSE CURSOR NOW THAT WE HAVE MOUSE LOCKING
+
 					// Disable mouse if unused after cursorHideDelay
 					// It's possible that the cursor won't get disabled when in windowed mode
 					// (MacOS doesn't allow this, for example)
@@ -860,6 +862,7 @@ int main(int argc, char* argv[])
 						SDL_ShowCursor(SDL_DISABLE);
 					else
 						SDL_ShowCursor(SDL_ENABLE);
+					 */
 				}
 				SDL_GL_SwapWindow(window);
 				fps_frame_count++;
