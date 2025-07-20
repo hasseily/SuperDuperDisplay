@@ -663,6 +663,7 @@ uint32_t usb_mouse_send_event(SDL_Event event)
 			break;
 		}
 		case SDL_MOUSEBUTTONDOWN:
+		case SDL_MOUSEBUTTONUP:
 		{
 			registerAddress = 0x2004;	// mouse button register
 			// send the state of all buttons

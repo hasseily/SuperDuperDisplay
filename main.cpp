@@ -684,6 +684,9 @@ int main(int argc, char* argv[])
 					{
 						SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() == SDL_TRUE ? SDL_FALSE : SDL_TRUE);
 					}
+					if (SDL_GetRelativeMouseMode()) {
+						usb_mouse_send_event(event);
+					}
 				case SDL_MOUSEWHEEL:
 					if (sdhrManager->IsSdhrEnabled())
 						sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
