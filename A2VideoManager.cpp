@@ -380,6 +380,7 @@ void A2VideoManager::Initialize()
 	MemoryManager::GetInstance()->switch_c034 = 13;
 
 	bIsReady = true;
+	/*
 	// Create the overlay manager, which initializes SDL_ttf and loads the font
 	//timedTextManager.Initialize("./assets/ProggyTiny.ttf", 24);
 	timedTextManager.Initialize();
@@ -392,6 +393,7 @@ void A2VideoManager::Initialize()
 	timedTextManager.AddText(SDD_VERSION, _xv, _yv, 1, .9,.3,.85,1);
 	timedTextManager.AddText(SDD_VERSION, _xv-1, _yv-1, 1, 1,1,1,1);
 	timedTextManager.AddText(SDD_VERSION, _xv+1, _yv+1, 1, .1,.1,.1,1);
+	 */
 }
 
 void A2VideoManager::ResetGLData() {
@@ -1635,7 +1637,7 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 		}
 	}
 
-	timedTextManager.UpdateAndRender(fb_width, fb_height);
+	//timedTextManager.UpdateAndRender(fb_width, fb_height);
 
 	glActiveTexture(_TEXUNIT_POSTPROCESS);
 	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
