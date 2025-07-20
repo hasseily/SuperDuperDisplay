@@ -96,5 +96,7 @@ uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* 
 
 // Mouse interface (temporary!)
 uint32_t usb_mouse_send_event(SDL_Event event);
+void usb_mouse_set_sensitivity(float s);
+float usb_mouse_get_sensitivity();
 
 void usb_display_imgui_window(bool* p_open);

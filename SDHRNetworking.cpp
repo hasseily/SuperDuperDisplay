@@ -56,6 +56,8 @@ static int iUSBImGUIAddressStart = 0;
 static char cUSBImGUIData[1020 + 254];
 static char cUSBImGUIDataError[1024];
 
+static float fUSBMouseSensitivity = 1.0f;
+
 const std::string get_ft_status_message(FT_STATUS status)
 {
 	switch (status)
@@ -643,7 +645,7 @@ uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* 
 
 
 // For mouse events, only use 16 bits and clamp
-#define CLAMP_S32_TO_S16(x) ((x) > INT16_MAX ? INT16_MAX : (x) < INT16_MIN ? INT16_MIN : (x))
+#define CLAMP_TO_S16(x) ((x) > INT16_MAX ? INT16_MAX : (x) < INT16_MIN ? INT16_MIN : (x))
 
 uint32_t usb_mouse_send_event(SDL_Event event)
 {
@@ -653,8 +655,8 @@ uint32_t usb_mouse_send_event(SDL_Event event)
 	switch (event.type) {
 		case SDL_MOUSEMOTION:
 		{
-			int16_t _xr = (int16_t)CLAMP_S32_TO_S16(event.motion.xrel);
-			int16_t _yr = (int16_t)CLAMP_S32_TO_S16(event.motion.yrel);
+			int16_t _xr = (int16_t)CLAMP_TO_S16(event.motion.xrel * fUSBMouseSensitivity);
+			int16_t _yr = (int16_t)CLAMP_TO_S16(event.motion.yrel * fUSBMouseSensitivity);
 			registerAddress = 0x2000;	// mouse movement register
 			// xrel in lower 16 bits, yrel in upper 16 bits
 			uint32_t _xyr = (_xr & 0xFFFF) + (_yr << 16);
@@ -681,6 +683,16 @@ uint32_t usb_mouse_send_event(SDL_Event event)
 			break;
 	}
 	return _res;
+}
+
+void usb_mouse_set_sensitivity(float s)
+{
+	fUSBMouseSensitivity = s;
+}
+
+float usb_mouse_get_sensitivity()
+{
+	return fUSBMouseSensitivity;
 }
 
 void usb_display_imgui_window(bool* p_open)

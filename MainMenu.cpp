@@ -54,6 +54,7 @@ public:
 	std::vector<SDL_DisplayMode> v_displayModes;
 	int iCurrentDisplayIndex = -1;
 
+	int fMouseSpeed = 1.0f;
 	int iFPSLimiter = 0;
 	int iWindowWidth=1200;
 	int iWindowHeight=1000;
@@ -101,6 +102,7 @@ MainMenu::MainMenu(SDL_GLContext gl_context, SDL_Window* window)
 	// Never draw the cursor. Let SDL draw the cursor. In windowed mode, the cursor
 	// may always be drawn anyway, and having ImGUI draw it will duplicate it.
 	// main.cpp will handle hiding the cursor after some inactivity in fullscreen mode.
+	// (disabled now that the mouse can be locked to the Apple)
 	io.MouseDrawCursor = false;
 	
 	pGui->mem_edit_a2e.Open = false;
@@ -796,6 +798,9 @@ void MainMenu::ShowMotherboardMenu() {
 	{
 		SDL_SetRelativeMouseMode(_bMouseIsLocked ? SDL_TRUE : SDL_FALSE);
 	}
+	float _ms = usb_mouse_get_sensitivity();
+	if (ImGui::SliderFloat("Apple Mouse Speed", &_ms, 0, 1.0))
+		usb_mouse_set_sensitivity(_ms);
 }
 
 void MainMenu::ShowVideoMenu() {
