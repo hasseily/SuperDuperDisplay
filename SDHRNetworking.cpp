@@ -665,9 +665,13 @@ uint32_t usb_mouse_send_event(SDL_Event event)
 		case SDL_MOUSEBUTTONDOWN:
 		{
 			registerAddress = 0x2004;	// mouse button register
-			// button 0 in bit 0, button 1 in bit 1
-			// NOTE: SDL buttons start at 1!
-			uint32_t _b = 1 << (event.button.button - 1);
+			// send the state of all buttons
+			uint32_t _b = 0;
+			auto held = SDL_GetMouseState(NULL, NULL);
+			if (held & SDL_BUTTON(SDL_BUTTON_LEFT))
+				_b += 0b01;
+			if (held & SDL_BUTTON(SDL_BUTTON_RIGHT))
+				_b += 0b10;
 			data.push_back(_b);
 			_res = usb_write_register(registerAddress, &data, false);
 			break;
