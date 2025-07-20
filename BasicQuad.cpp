@@ -96,7 +96,7 @@ void BasicQuad::Render(uint64_t frame_idx)
 	}
 
 	// Required uniforms for any shader used by BasicQuad
-	glUniform1i(u_ticks, SDL_GetTicks());
+	glUniform1ui(u_ticks, SDL_GetTicks());
 	glUniform1i(u_frameIsOdd, (int)(frame_idx & 1));
 	glUniform1i(u_TEXIN, inputTextureUnit - GL_TEXTURE0);
 

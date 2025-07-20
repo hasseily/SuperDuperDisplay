@@ -74,7 +74,6 @@ private:
 	float beeper_volume = 1.f;	// beeper sound volume
 	float mockingboard_volume = 1.f;	// mockingboard sound volume
 	float master_volume = 1.f;	// global sound volume
-	int ticks_drift_adjustment;	// change to ticks_per_sample to compensate for drift
 	int sm_imgui_queued_audio_size = 0;	// for ImGui
 
 	// DC adjustment filter

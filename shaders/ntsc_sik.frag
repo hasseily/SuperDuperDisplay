@@ -15,7 +15,7 @@ precision highp int;
 */
 
 // Global uniforms
-uniform int ticks;						// ms since start
+uniform uint ticks;						// ms since start
 uniform int frameIsOdd;					// 0 if even frame, 1 if odd frame
 
 // Incoming texture to turn into NTSC
@@ -53,7 +53,7 @@ float yiq2raw(vec3 yiq, float phase)
 void main()
 {
 	// dummy use to keep unused uniforms
-	if (ticks < 0.0) {			// Never true
+	if (ticks < 0u) {			// Never true
 		uint keep = ticks;
 	}
 	

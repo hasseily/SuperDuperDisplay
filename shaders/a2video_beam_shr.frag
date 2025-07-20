@@ -134,7 +134,7 @@ vec4 GetMonochromeValue(vec4 aColor, vec4 monchromeColor)
 void main()
 {
 	// dummy use to keep unused uniforms
-	if (ticks < 0.0) {			// Never true
+	if (ticks < 0u) {			// Never true
 		uint keep = ticks;
 	}
 

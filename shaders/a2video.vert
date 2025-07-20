@@ -11,7 +11,7 @@ layout (location = 1) in vec2 pixelPos;     // pixel absolute position
 out vec2 vFragPos;      // pixel position
 // out vec3 vColor;    // DEBUG for non-textured display
 
-uniform int ticks;      // ms since start
+uniform uint ticks;     // ms since start
 
 void main()
 {
