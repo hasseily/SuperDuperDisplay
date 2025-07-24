@@ -411,7 +411,7 @@ void main() {
 	res = res0.rgb;
 	// Convergence
 	if (C_STR > 0.0001) {
-		if ((CONV_R+CONV_G+CONV_B) > 0.001) {
+		if ((abs(CONV_R)+abs(CONV_G)+abs(CONV_B)) > 0.001) {
 			float resr = gamma_decode(texture(A2TextureCurrent,pos + dx*CONV_R)).r;
 			float resg = gamma_decode(texture(A2TextureCurrent,pos + dx*CONV_G)).g;
 			float resb = gamma_decode(texture(A2TextureCurrent,pos + dx*CONV_B)).b;
