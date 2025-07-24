@@ -22,6 +22,7 @@ uniform int frameIsOdd;					// 0 if even frame, 1 if odd frame
 uniform sampler2D TEXIN;			
 
 // for NTSC blending
+uniform COMPAT_PRECISION float NTSC_STR;
 uniform COMPAT_PRECISION float NTSC_COMB_STR;
 uniform COMPAT_PRECISION float NTSC_GAMMA_CORRECTION;
 uniform bool bNOFILTERMONO;	// Do not filter monochrome pixels
@@ -66,7 +67,7 @@ void main()
 		return;
 	}
 
-	float factorX = 0.5 / 170.667;
+	float factorX = NTSC_STR / 170.667;
 	float gamma = NTSC_GAMMA_CORRECTION / 2.2;
 	float x = vTexCoords.x;
 	float y = vTexCoords.y;

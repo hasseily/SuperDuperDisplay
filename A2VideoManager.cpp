@@ -1604,6 +1604,7 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 			auto _s = legacyNTSCQuad->shader;
 			_s.Use();
 			_s.SetUniform("bNOFILTERMONO", eA2MonitorType == A2_MON_COLOR ? p_b_ntscNoFilterMono : true);
+			_s.SetUniform("NTSC_STR", p_f_ntscStrength);
 			_s.SetUniform("NTSC_COMB_STR", p_f_ntscCombStrength);
 			_s.SetUniform("NTSC_GAMMA_CORRECTION", p_f_ntscGammaCorrection);
 			legacyNTSCQuad->Render(current_frame_idx);
@@ -1925,6 +1926,8 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 					ImGui::SameLine();
 					if (ImGui::Checkbox("Clean Text", &p_b_ntscNoFilterMono))
 						this->ForceBeamFullScreenRender();
+					if (ImGui::SliderFloat("NTSC Strength", &p_f_ntscStrength, 0.05f, 1.f, "%.2f"))
+						this->ForceBeamFullScreenRender();
 					if (ImGui::SliderFloat("NTSC Comb Strength", &p_f_ntscCombStrength, 0.f, 1.f, "%.2f"))
 						this->ForceBeamFullScreenRender();
 					ImGui::SetItemTooltip("0.8 for model 1, 0.9 for model 2");
@@ -2102,6 +2105,7 @@ nlohmann::json A2VideoManager::SerializeState()
 		{"font_rom_slternate_index", font_rom_alternate_idx},
 		{"p_b_ntsc", p_b_ntsc},
 		{"p_b_ntscNoFilterMono", p_b_ntscNoFilterMono},
+		{"p_f_ntscStrength", p_f_ntscStrength},
 		{"p_f_ntscCombStrength", p_f_ntscCombStrength},
 		{"p_f_ntscGammaCorrection", p_f_ntscGammaCorrection},
 	};
@@ -2122,6 +2126,7 @@ void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 	font_rom_alternate_idx = jsonState.value("font_rom_slternate_index", font_rom_alternate_idx);
 	p_b_ntsc = jsonState.value("p_b_ntsc", p_b_ntsc);
 	p_b_ntscNoFilterMono = jsonState.value("p_b_ntscNoFilterMono", p_b_ntscNoFilterMono);
+	p_f_ntscStrength = jsonState.value("p_f_ntscStrength", p_f_ntscStrength);
 	p_f_ntscCombStrength = jsonState.value("p_f_ntscCombStrength", p_f_ntscCombStrength);
 	p_f_ntscGammaCorrection = jsonState.value("p_f_ntscGammaCorrection", p_f_ntscGammaCorrection);
 
