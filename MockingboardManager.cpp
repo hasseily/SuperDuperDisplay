@@ -132,15 +132,15 @@ void MockingboardManager::EventReceived(uint16_t addr, uint8_t val, bool rw)
 	a_pins_in[2] |= (1ULL << M6522_PIN_CS2);
 	a_pins_in[3] |= (1ULL << M6522_PIN_CS2);
 
-	if (_addrhi == 0xC4)
+	if (_addrhi == 0xC5)
 	{
-		// FIRST MOCKINGBOARD, SLOT 4
+		// FIRST MOCKINGBOARD, SLOT 5
 		a_pins_in[0] &= (~M6522_CS2);
 		a_pins_in[1] &= (~M6522_CS2);
 	}
-	else if (_addrhi == 0xC5)
+	else if (_addrhi == 0xC4)
 	{
-		// SECOND MOCKINGBOARD, SLOT 5
+		// SECOND MOCKINGBOARD, SLOT 4
 		if (this->bIsDual)
 		{
 			a_pins_in[2] &= (~M6522_CS2);
@@ -478,12 +478,14 @@ void MockingboardManager::Util_SpeakDemoPhrase()
 
 void MockingboardManager::DisplayImGuiChunk()
 {
-	if (ImGui::Checkbox("Enable Mockingboard (Slot 4)", &bIsEnabled))
+	if (ImGui::Checkbox("Enable Mockingboard (Slot 5)", &bIsEnabled))
 		this->Initialize();
 	if (bIsEnabled)
 	{
+		/* Disable Dual mockingboards, slot 4 is for the mouse
 		if (ImGui::Checkbox("Dual Mockingboards (Slots 4 and 5)", &bIsDual))
 			this->Initialize();
+		 */
 		ImGui::Text("Mockingboard Events: %d", mb_event_count);
 	}
 	
@@ -558,6 +560,7 @@ void MockingboardManager::DeserializeState(const nlohmann::json &jsonState)
 {
 	bIsEnabled = jsonState.value("mockingboard_enabled", bIsEnabled);
 	bIsDual = jsonState.value("mockingboard_dual", bIsDual);
+	bIsDual = false;	// Override. Dual mockingboard disabled for now (mouse is in slot 4)
 	allpans[0][0] = jsonState.value("pan_ay_0_0", allpans[0][0]);
 	allpans[0][1] = jsonState.value("pan_ay_0_1", allpans[0][1]);
 	allpans[0][2] = jsonState.value("pan_ay_0_2", allpans[0][2]);

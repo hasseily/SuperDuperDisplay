@@ -129,7 +129,7 @@ private:
 	uint32_t sampleRate;
 	uint32_t bufferSize;
 	bool bIsEnabled = true;
-	bool bIsDual = true;
+	bool bIsDual = false;		// DUAL MB IS DISABLED FOR NOW (Mouse in slot 4)
 	bool bIsPlaying;
 	int mb_event_count = 0;
 	
