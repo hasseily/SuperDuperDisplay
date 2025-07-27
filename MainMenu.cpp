@@ -20,6 +20,7 @@
 
 #include <iostream>
 #include <vector>
+#include <unordered_map>
 
 // In main.cpp
 extern uint32_t Main_GetFPSLimit();
@@ -47,9 +48,16 @@ extern void Main_RequestAppQuit();
 
 class MainMenu::Gui {
 public:
+	// A single help topic
+	struct HelpTopic {
+		std::string subject;
+		std::string content;
+	};
+
 	ImFont* fontDefault = nullptr;
 	ImFont* fontMedium = nullptr;
 	ImFont* fontLarge = nullptr;
+	ImFont* fontHelp = nullptr;
 
 	std::vector<SDL_DisplayMode> v_displayModes;
 	int iCurrentDisplayIndex = -1;
@@ -59,6 +67,10 @@ public:
 	int iWindowWidth=1200;
 	int iWindowHeight=1000;
 	bool bShowAboutWindow = false;
+	bool bShowHelpWindow = false;
+	int iHelpCurrentSubject = 0;
+	std::vector<HelpTopic> vHelpTopics;
+	std::unordered_map<std::string, std::string> helpVariables;
 	int iTextureSlotIdx = 0;
 	bool bShowTextureWindow = false;
 	bool bShowA2VideoWindow = false;
@@ -74,8 +86,129 @@ public:
 
 	MemoryEditor mem_edit_a2e;
 	MemoryEditor mem_edit_sdhr_upload;
-	
+
 	Gui() {}
+
+	// Returns a glyph range that includes Latin, punctuation, bullets, arrows, etc.
+	const ImWchar* GetExtendedGlyphRanges()
+	{
+		static const ImWchar ranges[] = {
+			0x0020, 0x007F, // Basic Latin
+			0x0080, 0x00FF, // Latin-1 Supplement
+			0x0100, 0x017F, // Latin Extended-A
+			0x0180, 0x024F, // Latin Extended-B
+
+			0x2000, 0x206F, // General Punctuation (•, ‑, “ ”, etc.)
+			0x2190, 0x21FF, // Arrows
+			0x25A0, 0x25FF, // Geometric Shapes (■, ▲, ●, etc.)
+			0x2700, 0x27BF, // Dingbats (✂, ✉, ✔, etc.)
+
+			0   // terminator
+		};
+		return ranges;
+	}
+
+	// Simple placeholder replacer for things like ${var}
+	std::string ProcessContent(const std::string& in,
+							   const std::unordered_map<std::string,std::string>& vars)
+	{
+		std::string out;
+		size_t pos = 0;
+		while (true) {
+			auto start = in.find("${", pos);
+			if (start == std::string::npos) {
+				out += in.substr(pos);
+				break;
+			}
+			out += in.substr(pos, start - pos);
+			auto end = in.find('}', start + 2);
+			if (end == std::string::npos) {
+				// no closing }, emit rest verbatim
+				out += in.substr(start);
+				break;
+			}
+			std::string key = in.substr(start + 2, end - (start + 2));
+			auto it = vars.find(key);
+			if (it != vars.end())
+				out += it->second;
+			else
+				out += "${" + key + "}";  // leave unknown token intact
+
+			pos = end + 1;
+		}
+		return out;
+	}
+
+	// Load topics from an INI‑style file without any trimming:
+	// A line `[Foo]` starts a new topic named "Foo"
+	// All other lines (including blank ones) go into that topic verbatim.
+	void LoadHelpFromIni(const std::string& filename)
+	{
+		helpVariables.clear();
+		vHelpTopics.clear();
+
+		std::ifstream in(filename, std::ios::binary);
+		if (!in.is_open()) {
+			std::string _errstr = "Failed to open help file: " + filename + "\n";
+			vHelpTopics.push_back({"Error", _errstr.c_str()});
+			return;
+		}
+
+		std::string line;
+		HelpTopic* currentTopic = nullptr;
+		bool inVariables = false;
+		bool firstLine = true;
+
+		while (std::getline(in, line))
+		{
+			// Optional: strip UTF-8 BOM on very first line
+			if (firstLine) {
+				firstLine = false;
+				if (line.size() >= 3 &&
+					static_cast<unsigned char>(line[0]) == 0xEF &&
+					static_cast<unsigned char>(line[1]) == 0xBB &&
+					static_cast<unsigned char>(line[2]) == 0xBF)
+				{
+					line.erase(0, 3);
+				}
+			}
+
+			// Section header?
+			if (!line.empty() && line.front() == '[' && line.back() == ']') {
+				std::string section = line.substr(1, line.size() - 2);
+				if (section == "Variables") {
+					inVariables = true;
+					currentTopic = nullptr;
+				}
+				else {
+					inVariables = false;
+					vHelpTopics.push_back({});
+					currentTopic = &vHelpTopics.back();
+					currentTopic->subject = section;
+					currentTopic->content.clear();
+				}
+			}
+			else if (inVariables) {
+				// Expect "key = value"
+				auto eq = line.find('=');
+				if (eq != std::string::npos) {
+					std::string key = line.substr(0, eq);
+					std::string val = line.substr(eq + 1);
+					// no trimming
+					helpVariables[key] = val;
+				}
+			}
+			else if (currentTopic) {
+				// Append verbatim (including blank lines)
+				currentTopic->content += line;
+				currentTopic->content += '\n';
+			}
+			// else: ignore lines before first non‑Variables section
+		}
+		if (vHelpTopics.empty()) {
+			vHelpTopics.push_back({"Error","Could not load any help topics!\n"});
+		}
+	}
 };
 
 MainMenu::MainMenu(SDL_GLContext gl_context, SDL_Window* window)
@@ -98,7 +231,8 @@ MainMenu::MainMenu(SDL_GLContext gl_context, SDL_Window* window)
 	pGui->fontDefault = io.Fonts->AddFontDefault();
 	pGui->fontMedium = io.Fonts->AddFontFromFileTTF("./assets/ProggyTiny.ttf", 14.0f);
 	pGui->fontLarge = io.Fonts->AddFontFromFileTTF("./assets/BerkeliumIIHGR.ttf", 16.f);
-	
+	pGui->fontHelp= io.Fonts->AddFontFromFileTTF("./assets/Monaco.ttf", 18.0f, nullptr, pGui->GetExtendedGlyphRanges());
+
 	// Never draw the cursor. Let SDL draw the cursor. In windowed mode, the cursor
 	// may always be drawn anyway, and having ImGUI draw it will duplicate it.
 	// main.cpp will handle hiding the cursor after some inactivity in fullscreen mode.
@@ -108,6 +242,9 @@ MainMenu::MainMenu(SDL_GLContext gl_context, SDL_Window* window)
 	pGui->mem_edit_a2e.Open = false;
 	pGui->mem_edit_a2e.HighlightFn = Memory_HighlightWriteFunction;
 	pGui->mem_edit_sdhr_upload.Open = false;
+
+	// --- Load help topics from INI ---
+	pGui->LoadHelpFromIni("assets/help.ini");
 }
 
 MainMenu::~MainMenu() {
@@ -270,6 +407,41 @@ void MainMenu::Render() {
 			ImGui::PopFont();
 			ImGui::End();
 		}
+
+		// Show help window
+		if (pGui->bShowHelpWindow) {
+			pGui->helpVariables["app_version"]  = std::string(SDD_VERSION);
+			ImGui::SetNextWindowSizeConstraints(ImVec2(500, 350), ImVec2(FLT_MAX, FLT_MAX));
+			if (ImGui::Begin("Help", &pGui->bShowHelpWindow)) {
+				if (ImGui::GetWindowSize().x < 1000)
+					ImGui::PushFont(pGui->fontDefault);
+				else
+					ImGui::PushFont(pGui->fontHelp);
+				auto topics = pGui->vHelpTopics;
+				// Left pane: list of subjects
+				ImGui::BeginChild("##Subjects", ImVec2(250, 0), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeX);
+				for (int i = 0; i < (int)topics.size(); i++)
+				{
+					if (ImGui::Selectable(topics[i].subject.c_str(), i == pGui->iHelpCurrentSubject))
+						pGui->iHelpCurrentSubject = i;
+				}
+				ImGui::EndChild();
+				ImGui::SameLine();
+
+				// Right pane: content for selected subject
+				// Right pane: do substitution on-the-fly
+				ImGui::BeginChild("##Content", ImVec2(0,0), ImGuiChildFlags_None);
+				{
+					const auto& raw = pGui->vHelpTopics[pGui->iHelpCurrentSubject].content;
+					std::string filled = pGui->ProcessContent(raw, pGui->helpVariables);
+					ImGui::TextWrapped("%s", filled.c_str());
+				}
+				ImGui::EndChild();
+				ImGui::PopFont();
+			}
+			ImGui::End(); // Help window
+		}
+
 		// Show the Apple //e memory
 		if (pGui->mem_edit_a2e.Open)
 		{
@@ -756,6 +928,7 @@ void MainMenu::ShowSDDMenu() {
 	}
 	ImGui::Separator();
 	ImGui::MenuItem("About", "", &pGui->bShowAboutWindow);
+	ImGui::MenuItem("Help", "", &pGui->bShowHelpWindow);
 	ImGui::Separator();
 	if (ImGui::MenuItem("Quit", "Alt+F4")) {
 		Main_RequestAppQuit();
@@ -804,6 +977,7 @@ void MainMenu::ShowMotherboardMenu() {
 }
 
 void MainMenu::ShowVideoMenu() {
+	auto glhelper = OpenGLHelper::GetInstance();
 	ImGui::MenuItem("Apple 2 Video Settings", "F2", &pGui->bShowA2VideoWindow);
 	ImGui::MenuItem("Post Processor Settings", "F3", &pGui->bShowPPWindow);
 	ImGui::Separator();
@@ -815,6 +989,13 @@ void MainMenu::ShowVideoMenu() {
 	if (ImGui::MenuItem("Reset FPS", "Shift+F8")) {
 		Main_ResetFPSCalculations();
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	}
+	ImGui::Separator();
+	if (ImGui::MenuItem("Screenshot (After Post Processing)", "F6")) {
+		glhelper->SaveFramebufferBMP(glhelper->GetScreenshotSaveFilePath());
+	}
+	if (ImGui::MenuItem("Screenshot (No Post Processing)", "Shift+F6")) {
+		glhelper->SaveTextureInSlotBMP(_TEXUNIT_POSTPROCESS, glhelper->GetScreenshotSaveFilePath());
 	}
 }
 

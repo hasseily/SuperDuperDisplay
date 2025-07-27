@@ -276,7 +276,6 @@ void VidHdWindowBeam::DisplayImGuiWindow(bool* p_open)
 
 	if (ImGui::Button("Reload Shader"))
 	{
-		// shader.build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_VIDHD_TEXT_FRAGMENT);
 		std::string _ps = "/Users/henri/Documents/Repos/SuperDuperDisplay/";
 		_ps.append(_SHADER_VIDHD_TEXT_FRAGMENT);
 		shader.Build(_SHADER_A2_VERTEX_DEFAULT, _ps.c_str());

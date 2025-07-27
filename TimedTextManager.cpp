@@ -20,8 +20,9 @@ void TimedTextManager::Initialize()
 {
 	useDefaultFont = true;
 	CreateGLObjects();
-	CreateShader();
+	shader.Build(_SHADER_VERTEX_BASIC_TRANSFORM, "shaders/overlay_text.frag");
 	texts.resize(100);
+	idCounter = 0;
 }
 
 void TimedTextManager::Initialize(const std::string& ttfPath, float pixelHeight)
@@ -35,67 +36,95 @@ TimedTextManager::~TimedTextManager() {
 	glDeleteTextures(1, &atlasTex);
 	glDeleteBuffers(1, &vbo);
 	glDeleteVertexArrays(1, &vao);
-	glDeleteProgram(shader);
 }
 
-void TimedTextManager::AddText(const std::string& text, int x, int y, int durationFrames) {
-	// default white
-	texts.push_back({ text, x, y, durationFrames, 1,1,1,1 });
-}
-
-void TimedTextManager::AddText(const std::string& text, int x, int y, int durationFrames,
+const size_t TimedTextManager::AddText(const std::string& text, int x, int y, uint64_t durationTicks,
 							   float r, float g, float b, float a) {
-	texts.push_back({ text, x, y, durationFrames, r,g,b,a });
+	texts.push_back({ ++idCounter, text, x, y, SDL_GetTicks64() + durationTicks, r,g,b,a });
+	return idCounter;
 }
 
-void TimedTextManager::UpdateAndRender(int windowW, int windowH) {
-	// 1) Update size & viewport
-	winW = windowW;
-	winH = windowH;
-	glViewport(0, 0, winW, winH);
+bool TimedTextManager::DeleteText(const size_t id) {
+	auto it = std::find_if(texts.begin(), texts.end(),
+						   [id](const TimedText& t) { return t.id == id; });
+	if (it != texts.end()) {
+		texts.erase(it);
+		return true;
+	}
+	return false;
+}
 
-	// 2) disable depth, disable depth writes
-	glDepthMask(GL_FALSE);
-	glDisable(GL_DEPTH_TEST);
+void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
+	if (texts.empty())
+		return;
 
-	// 3) use text shader + VAO
-	glUseProgram(shader);
+	if (!shader.isReady)
+		return;
+
+	GLenum glerr;
+
+	// Check for High DPI scaling and adjust the font size accordingly
+	auto window = SDL_GL_GetCurrentWindow();
+	int winW, winH;
+	SDL_GetWindowSize(window, &winW, &winH);
+	int fbW, fbH;
+	SDL_GL_GetDrawableSize(window, &fbW, &fbH);
+	// DPI (pixel) multiplier in X and Y
+	float dpiScaleX = static_cast<float>(fbW) / winW;
+	float dpiScaleY = static_cast<float>(fbH) / winH;
+
+	// disable depth, disable depth writes
+	// necessary to have an overlay and not a black screen
+	GLboolean depthMaskState = GL_FALSE;
+	glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMaskState);
+	GLboolean depthTestState = GL_FALSE;
+	glGetBooleanv(GL_DEPTH_TEST, &depthTestState);
+
+	if (depthMaskState == GL_TRUE)
+		glDepthMask(GL_FALSE);
+	if (depthTestState == GL_TRUE)
+		glDisable(GL_DEPTH_TEST);
+
+	shader.Use();
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "TimedTextManager glUseProgram error: " << glerr << std::endl;
+		return;
+	}
+
 	glBindVertexArray(vao);
 
-	// 4) bind atlas into unit 0 if using custom font & tell shader
 	if (useDefaultFont) {
-		glUniform1i(locTex, _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0);
+		shader.SetUniform("uTex", _TEXUNIT_IMAGE_FONT_ROM_DEFAULT - GL_TEXTURE0);
 	} else {
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, atlasTex);
-		glUniform1i(locTex, 0);
+		shader.SetUniform("uTex", GL_TEXTURE0 - GL_TEXTURE0);
 	}
 
-	// 5) enable alpha blending
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	// 6) upload projection
-	float proj[16] = {
-		2.0f / winW, 0,            0, 0,
-		0,           2.0f / winH,  0, 0,
+	// upload projection
+	glm::mat4 proj = {
+		2.0f / fbW, 0,            0, 0,
+		0,           2.0f / fbH,  0, 0,
 		0,           0,           -1, 0,
-	   -1,          -1,            0, 1
+		-1,          -1,            0, 1
 	};
-	glUniformMatrix4fv(locProj, 1, GL_FALSE, proj);
-	//glUniformMatrix4fv(glGetUniformLocation(shader, "uProj"), 1, GL_FALSE, proj);
+	shader.SetUniform("uTransform", proj);
 
-	// 7) build & draw each string
+	// build & draw each string
 	for (int i = int(texts.size()) - 1; i >= 0; --i) {
 		auto &t = texts[i];
-		if (t.framesLeft-- <= 0) {
+		if (t.ticksFinish < SDL_GetTicks64()) {
 			texts.erase(texts.begin() + i);
 			continue;
 		}
 
 		// set this string’s color
-		glUniform4f(locColor, t.r, t.g, t.b, t.a);
+		shader.SetUniform("uColor", glm::vec4(t.r, t.g, t.b, t.a));
 
+		// penX and penY are before HIGH DPI scaling
 		float penX = float(t.x);
 		float penY = float(t.y);
 
@@ -108,22 +137,33 @@ void TimedTextManager::UpdateAndRender(int windowW, int windowH) {
 		if (useDefaultFont)
 		{
 			for (unsigned char c : t.text) {
-				if (c < 32 || c >= 128) continue;
-				c += 128;	// high ASCII
+				// Kind of map ascii to the apple charset
+				// Not perfect, but that's what you get for reusing a free texture
+				if (c < 0x20 || c > 0x7F) continue;
+				if (c < 0x40) 		// punctuation
+					c += 0x80;
+				else if (c < 0x60)	// caps
+					c += 0x40;
+				else 				// lowecase
+					c += 0x80;
+
 				// calculate origin of char in texture
 				// texture is 16x16 characters, each 14x16 pixels
 				int texS = (c % 16) * 14;	// x origin in pixels
 				int texT = (c / 16) * 16;	// y origin
 
-				x0 = penX;
-				y0 = penY;
-				x1 = x0 + (use80ColDefaultFont ? 7 : 14);
-				y1 = y0 + 16;
+				x0 = penX * dpiScaleX;
+				y0 = penY * dpiScaleY;
+				x1 = x0 + (use80ColDefaultFont ? 7 : 14) * dpiScaleX;
+				y1 = y0 + 16 * dpiScaleY;
 
 				s0 = texS / (float)(14 * 16);
 				t0 = texT / (float)(16 * 16);
 				s1 = s0 + 1.f/16.f;
 				t1 = t0 + 1.f/16.f;
+
+				if (shouldFlipY)
+					std::swap(t0, t1);
 
 				penX += (use80ColDefaultFont ? 7 : 14);
 
@@ -144,15 +184,20 @@ void TimedTextManager::UpdateAndRender(int windowW, int windowH) {
 				if (c < 32 || c >= 128) continue;
 				auto &bc = bakedChars[c - 32];
 
-				x0 = penX + bc.xoff;
-				y0 = penY + bc.yoff;
-				x1 = x0 + (bc.x1 - bc.x0);
-				y1 = y0 + (bc.y1 - bc.y0);
+				x0 = (penX + bc.xoff) * dpiScaleX;
+				y0 = penY * dpiScaleY;
+				if (!shouldFlipY)
+					y0 += bc.yoff * dpiScaleY;
+				x1 = x0 + (bc.x1 - bc.x0) * dpiScaleX;
+				y1 = y0 + (bc.y1 - bc.y0) * dpiScaleY;
 
 				s0 = bc.x0 / 512.0f;
 				t0 = bc.y0 / 512.0f;
 				s1 = bc.x1 / 512.0f;
 				t1 = bc.y1 / 512.0f;
+
+				if (shouldFlipY)
+					std::swap(t0, t1);
 
 				penX += bc.xadvance;
 
@@ -180,14 +225,20 @@ void TimedTextManager::UpdateAndRender(int windowW, int windowH) {
 		}
 	}
 
-	// 8) restore depth writes & test for next passes
-	glDepthMask(GL_TRUE);
-//	glEnable(GL_DEPTH_TEST);
+	// restore depth writes & test for next passes
+	if (depthMaskState == GL_TRUE)
+		glDepthMask(GL_TRUE);
+	if (depthTestState == GL_TRUE)
+		glEnable(GL_DEPTH_TEST);
 
 	// 9) cleanup
 	glBindVertexArray(0);
-	glUseProgram(0);}
+	shader.Release();
 
+	if ((glerr = glGetError()) != GL_NO_ERROR) {
+		std::cerr << "TimedTextManager UpdateAndRender error: " << glerr << std::endl;
+	}
+}
 
 /*
  PRIVATE METHODS
@@ -216,6 +267,7 @@ void TimedTextManager::LoadFont(const std::string& path, float pixelHeight) {
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, atlas);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 }
 
 void TimedTextManager::CreateGLObjects() {
@@ -228,68 +280,4 @@ void TimedTextManager::CreateGLObjects() {
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 	glBindVertexArray(0);
-}
-
-void TimedTextManager::CreateShader() {
-	const char* vsSrc = R"(#version 330 core
-		layout(location = 0) in vec2 aPos;
-		layout(location = 1) in vec2 aTex;
-		uniform mat4 uProj;
-		out vec2 vTex;
-		void main() {
-			gl_Position = uProj * vec4(aPos.xy, 0.0, 1.0);
-			vTex = aTex;
-		})";
-
-	const char* fsSrc = R"(#version 330 core
-		in vec2 vTex;
-		uniform sampler2D uTex;
-		uniform vec4 uColor;
-		out vec4 FragColor;
-		void main() {
-			float a = texture(uTex, vTex).r;
-			FragColor = vec4(uColor.rgb, uColor.a * a);
-		})";
-
-	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(vs, 1, &vsSrc, nullptr);
-	glShaderSource(fs, 1, &fsSrc, nullptr);
-	glCompileShader(vs); CheckShader(vs, "vertex");
-	glCompileShader(fs); CheckShader(fs, "fragment");
-
-	shader = glCreateProgram();
-	glAttachShader(shader, vs);
-	glAttachShader(shader, fs);
-	glLinkProgram(shader); CheckLink(shader);
-
-	// cache uniform locations
-	locProj  = glGetUniformLocation(shader, "uProj");
-	locTex   = glGetUniformLocation(shader, "uTex");
-	locColor = glGetUniformLocation(shader, "uColor");
-
-	glDeleteShader(vs);
-	glDeleteShader(fs);
-}
-
-void TimedTextManager::CheckShader(GLuint shader, const std::string& name) {
-	GLint status = 0;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-	if (!status) {
-		char log[512];
-		glGetShaderInfoLog(shader, 512, nullptr, log);
-		std::cerr << "Shader compile error (" << name << "): " << log << "\n";
-		throw std::runtime_error("Shader compile failed");
-	}
-}
-
-void TimedTextManager::CheckLink(GLuint prog) {
-	GLint status = 0;
-	glGetProgramiv(prog, GL_LINK_STATUS, &status);
-	if (!status) {
-		char log[512];
-		glGetProgramInfoLog(prog, 512, nullptr, log);
-		std::cerr << "Shader link error: " << log << "\n";
-		throw std::runtime_error("Shader link failed");
-	}
 }

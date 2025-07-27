@@ -32,6 +32,7 @@
 #include "CycleCounter.h"
 #include "SoundManager.h"
 #include "MockingboardManager.h"
+#include "TimedTextManager.h"
 #include "extras/MemoryLoader.h"
 #include "extras/ImGuiFileDialog.h"
 #include "PostProcessor.h"
@@ -453,7 +454,7 @@ int main(int argc, char* argv[])
 	}
 #endif
 	
-	// glEnable(GL_DEPTH_TEST); // TODO: Check if necessary
+	glDisable(GL_DEPTH_TEST); // We're drawing in order, not using depth
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -502,17 +503,18 @@ int main(int argc, char* argv[])
 	[[maybe_unused]] auto mockingboardManager = MockingboardManager::GetInstance();
 	std::cout << "Loaded MockingboardManager " << mockingboardManager << std::endl;
 
-	// Create the overlay manager, which initializes SDL_ttf and loads the font
-//	TimedTextManager timedTextManager("./assets/BerkeliumIIHGR.ttf", 18, 800, 600);
-	// Example: display "Hello, world!" at (50,50) for 120 frames (~2s at 60fps)
-//	timedTextManager.AddText("Hello, world!", 50, 50, 9999999);
-
 	std::cout << "Renderer Initializing..." << std::endl;
 	while (!a2VideoManager->IsReady())
 	{
 		// Wait for shaders to compile
 	}
 	std::cout << "Renderer Ready!" << std::endl;
+
+	// Create an overlay text instance for feedback
+	auto timedTextManager = TimedTextManager();
+	//timedTextManager.Initialize("assets/BerkeliumIIHGR.ttf", 28);
+	timedTextManager.Initialize();
+	timedTextManager.use80ColDefaultFont = false;
 
 	// Delta Time
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
@@ -522,7 +524,7 @@ int main(int argc, char* argv[])
 	Main_SetVsync(g_swapInterval);
 
 	uint32_t lastMouseMoveTime = SDL_GetTicks();
-	const uint32_t cursorHideDelay = 3000; // After this delay, the mouse cursor disappears
+	[[maybe_unused]] const uint32_t cursorHideDelay = 3000; // After this delay, the mouse cursor disappears
 	
 	// Get the saved states from previous runs
 	std::cout << "Loading previous state..." << std::endl;
@@ -607,6 +609,15 @@ int main(int argc, char* argv[])
 	// And run the processing thread
 	std::thread thread_processor(process_usb_events_thread, &bShouldTerminateProcessing);
 
+	// Display version number at the bottom left for 3 seconds
+	int _xv = 20;
+	int _yv = 20;
+	static size_t _version[3];
+	_version[0] = timedTextManager.AddText(SDD_VERSION, _xv, _yv, 3000, .9,.3,.85,1);
+	_version[1] = timedTextManager.AddText(SDD_VERSION, _xv-1, _yv+1, 3000, 1,1,1,1);
+	_version[2] = timedTextManager.AddText(SDD_VERSION, _xv+1, _yv-1, 3000, .1,.1,.1,1);
+	timedTextManager.UpdateAndRender(true);
+	
 	while (!g_quitIsRequested)
 	{
 		// Check if we should reboot
@@ -645,7 +656,6 @@ int main(int argc, char* argv[])
 				case SDL_WINDOWEVENT:
 				{
 					if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-						glViewport(0, 0, event.window.data1, event.window.data2);
 						if (!Main_IsFullScreen())
 						{
 							g_ww = event.window.data1;
@@ -704,6 +714,19 @@ int main(int argc, char* argv[])
 					}
 					else if (event.key.keysym.sym == SDLK_F1) {  // Toggle ImGUI with F1
 						Main_ToggleImGui(gl_context);
+					}
+					else if (event.key.keysym.sym == SDLK_F6) {	// Screenshot
+						const char* SCREENSHOT_TEXT = "SCREENSHOT SAVED";
+						if (SDL_GetModState() & KMOD_SHIFT) {	// before Post Processing
+							glhelper->SaveTextureInSlotBMP(_TEXUNIT_POSTPROCESS, glhelper->GetScreenshotSaveFilePath());
+						} else {								// after post processing
+							glhelper->SaveFramebufferBMP(glhelper->GetScreenshotSaveFilePath());
+						}
+						int _xv = 20;
+						int _yv = 20;
+						timedTextManager.AddText(SCREENSHOT_TEXT, _xv, _yv, 1000, .9,.3,.85,1);
+						timedTextManager.AddText(SCREENSHOT_TEXT, _xv-1, _yv+1, 1000, 1,1,1,1);
+						timedTextManager.AddText(SCREENSHOT_TEXT, _xv+1, _yv-1, 1000, .1,.1,.1,1);
 					}
 					else if (event.key.keysym.sym == SDLK_F8) {
 						if (SDL_GetModState() & KMOD_SHIFT) {
@@ -803,6 +826,7 @@ int main(int argc, char* argv[])
 										SDL_ShowCursor(SDL_ENABLE);
 									 */
 								}
+								timedTextManager.UpdateAndRender(true);
 								SDL_GL_SwapWindow(window);
 								fps_frame_count++;
 							}
@@ -864,6 +888,7 @@ int main(int argc, char* argv[])
 						SDL_ShowCursor(SDL_ENABLE);
 					 */
 				}
+				timedTextManager.UpdateAndRender(true);
 				SDL_GL_SwapWindow(window);
 				fps_frame_count++;
 			}

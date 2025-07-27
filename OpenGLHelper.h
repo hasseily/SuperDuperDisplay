@@ -34,6 +34,11 @@ public:
 	GLuint get_texture_id_at_slot(int slot);	// returns the opengl-generated texture id for this tex slot
 	glm::vec2 get_dpi_scaling_factors(SDL_Window* window);		// returns the scaling of width and height for high dpi screens
 	bool are_matrices_approx_equal(const glm::mat4& m1, const glm::mat4& m2, float epsilon = 1e-5f);
+	bool SaveFramebufferBMP(const std::string& filename);
+	bool SaveTextureInSlotBMP(GLuint slot, const std::string& filename);
+	bool SaveTextureBMP(GLuint tex, const std::string& filename);
+	std::string GetScreenshotSaveFilePath();
+
 	// The created texture ids (max is _SDHR_MAX_TEXTURES)
 	std::vector<GLuint>v_texture_ids;
 
