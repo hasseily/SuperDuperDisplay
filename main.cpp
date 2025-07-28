@@ -33,6 +33,7 @@
 #include "SoundManager.h"
 #include "MockingboardManager.h"
 #include "TimedTextManager.h"
+//#include "LogTextManager.h"
 #include "extras/MemoryLoader.h"
 #include "extras/ImGuiFileDialog.h"
 #include "PostProcessor.h"
@@ -486,6 +487,9 @@ int main(int argc, char* argv[])
 	// Get the instances of all singletons before creating threads
 	// This ensures thread safety
 	// The OpenGLHelper instance is already acquired
+	//[[maybe_unused]] auto logTextManager = LogTextManager::GetInstance();
+	//logTextManager->SetLogStartPosition(TTLogPosition_e::BOTTOM_LEFT);
+	//std::cout << "Loaded LogTextManager " << logTextManager << std::endl;
 	[[maybe_unused]] auto memManager = MemoryManager::GetInstance();
 	std::cout << "Loaded MemoryManager " << memManager << std::endl;
 	[[maybe_unused]] auto sdhrManager = SDHRManager::GetInstance();
@@ -512,7 +516,7 @@ int main(int argc, char* argv[])
 
 	// Create an overlay text instance for feedback
 	auto timedTextManager = TimedTextManager();
-	//timedTextManager.Initialize("assets/BerkeliumIIHGR.ttf", 28);
+	// timedTextManager.Initialize("assets/BerkeliumIIHGR.ttf", 20);
 	timedTextManager.Initialize();
 	timedTextManager.use80ColDefaultFont = false;
 
@@ -617,7 +621,7 @@ int main(int argc, char* argv[])
 	_version[1] = timedTextManager.AddText(SDD_VERSION, _xv-1, _yv+1, 3000, 1,1,1,1);
 	_version[2] = timedTextManager.AddText(SDD_VERSION, _xv+1, _yv-1, 3000, .1,.1,.1,1);
 	timedTextManager.UpdateAndRender(true);
-	
+
 	while (!g_quitIsRequested)
 	{
 		// Check if we should reboot
@@ -714,6 +718,14 @@ int main(int argc, char* argv[])
 					}
 					else if (event.key.keysym.sym == SDLK_F1) {  // Toggle ImGUI with F1
 						Main_ToggleImGui(gl_context);
+						/*
+						 // example of using the logTextManager
+						 // don't forget to call UpdateAndRender()
+						if (Main_IsImGuiOn())
+							logTextManager->AddLog("GUI Activated");
+						else
+							logTextManager->AddLog("GUI Deactivated. Press F1 to reenable the GUI");
+						 */
 					}
 					else if (event.key.keysym.sym == SDLK_F6) {	// Screenshot
 						const char* SCREENSHOT_TEXT = "SCREENSHOT SAVED";
@@ -723,10 +735,10 @@ int main(int argc, char* argv[])
 							glhelper->SaveFramebufferBMP(glhelper->GetScreenshotSaveFilePath());
 						}
 						int _xv = 20;
-						int _yv = 20;
-						timedTextManager.AddText(SCREENSHOT_TEXT, _xv, _yv, 1000, .9,.3,.85,1);
-						timedTextManager.AddText(SCREENSHOT_TEXT, _xv-1, _yv+1, 1000, 1,1,1,1);
-						timedTextManager.AddText(SCREENSHOT_TEXT, _xv+1, _yv-1, 1000, .1,.1,.1,1);
+						int _yv = g_wh - 40;
+						timedTextManager.AddText(SCREENSHOT_TEXT, _xv, _yv, 30000, .9,.3,.85,1);
+						timedTextManager.AddText(SCREENSHOT_TEXT, _xv-1, _yv+1, 30000, 1,1,1,1);
+						timedTextManager.AddText(SCREENSHOT_TEXT, _xv+1, _yv-1, 30000, .1,.1,.1,1);
 					}
 					else if (event.key.keysym.sym == SDLK_F8) {
 						if (SDL_GetModState() & KMOD_SHIFT) {
@@ -827,6 +839,7 @@ int main(int argc, char* argv[])
 									 */
 								}
 								timedTextManager.UpdateAndRender(true);
+								// logTextManager->UpdateAndRender(true);
 								SDL_GL_SwapWindow(window);
 								fps_frame_count++;
 							}
@@ -889,6 +902,7 @@ int main(int argc, char* argv[])
 					 */
 				}
 				timedTextManager.UpdateAndRender(true);
+				//logTextManager->UpdateAndRender(true);
 				SDL_GL_SwapWindow(window);
 				fps_frame_count++;
 			}

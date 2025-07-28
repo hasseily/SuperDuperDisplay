@@ -13,6 +13,7 @@
 		BB044AC12CF37F900002F6FA /* libftd3xx-static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC02CF37F8F0002F6FA /* libftd3xx-static.a */; };
 		BB044AC52CF381F80002F6FA /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC42CF381F80002F6FA /* CoreFoundation.framework */; };
 		BB044AC72CF382620002F6FA /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC62CF382620002F6FA /* IOKit.framework */; };
+		BB3B32792E3778D700610E82 /* LogTextManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB3B32782E3778D400610E82 /* LogTextManager.cpp */; };
 		BB58F41D2E293B8E004D62FC /* TimedTextManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB58F41C2E293B8E004D62FC /* TimedTextManager.cpp */; };
 		BB6B2FDD2CD17D03008BC3F2 /* samples in CopyFiles */ = {isa = PBXBuildFile; fileRef = BB6B2FDC2CD17CD4008BC3F2 /* samples */; };
 		BB6BE3152CC3963B00901A03 /* libopencv_core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BB6BE3142CC395F000901A03 /* libopencv_core.a */; };
@@ -97,6 +98,8 @@
 		BB044AC42CF381F80002F6FA /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		BB044AC62CF382620002F6FA /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		BB0E58192C7B2E8600B44B58 /* SSI263Phonemes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSI263Phonemes.h; sourceTree = "<group>"; };
+		BB3B32772E3778C800610E82 /* LogTextManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LogTextManager.h; sourceTree = "<group>"; };
+		BB3B32782E3778D400610E82 /* LogTextManager.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LogTextManager.cpp; sourceTree = "<group>"; };
 		BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MemoryLoader.h; path = extras/MemoryLoader.h; sourceTree = "<group>"; };
 		BB58F41A2E291388004D62FC /* TimedTextManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TimedTextManager.h; sourceTree = "<group>"; };
 		BB58F41B2E29173C004D62FC /* stb_truetype.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = stb_truetype.h; sourceTree = "<group>"; };
@@ -300,6 +303,8 @@
 				BB0E58192C7B2E8600B44B58 /* SSI263Phonemes.h */,
 				BBB525052B6648A200A65C62 /* stb_image.h */,
 				BB58F41B2E29173C004D62FC /* stb_truetype.h */,
+				BB3B32772E3778C800610E82 /* LogTextManager.h */,
+				BB3B32782E3778D400610E82 /* LogTextManager.cpp */,
 				BB58F41A2E291388004D62FC /* TimedTextManager.h */,
 				BB58F41C2E293B8E004D62FC /* TimedTextManager.cpp */,
 			);
@@ -407,6 +412,7 @@
 				BBB525242B6648A200A65C62 /* SDHRNetworking.cpp in Sources */,
 				BBE45C122D477211008D10A9 /* VidHdWindowBeam.cpp in Sources */,
 				BBB525212B6648A200A65C62 /* OpenGLHelper.cpp in Sources */,
+				BB3B32792E3778D700610E82 /* LogTextManager.cpp in Sources */,
 				BB006F542C3C2E49008BFFAF /* MockingboardManager.cpp in Sources */,
 				BBE17D862C81CDCB008EF443 /* SSI263.cpp in Sources */,
 				BBB5251E2B6648A200A65C62 /* shader.cpp in Sources */,

@@ -27,6 +27,7 @@
 //
 //  NOTES:
 //  - Set use80ColDefaultFont to true to use the 80 col version of the default Apple II font
+//  - It uses 1 draw call per string, very inefficently, because the color is a uniform. TODO: change this to pass the color in the VAO.
 
 #pragma once
 #include "common.h"
@@ -35,6 +36,13 @@
 #pragma clang diagnostic ignored "-Wcomma"
 #include "stb_truetype.h"
 #pragma clang diagnostic pop
+
+// Available characters and atlas
+constexpr int TT_FIRST_CHAR = 0;
+constexpr int TT_LAST_CHAR  = 1024;
+constexpr int TT_NUM_CHARS  = TT_LAST_CHAR - TT_FIRST_CHAR + 1;
+constexpr int TT_ATLAS_W = 2048;		// max font size is 64 for 1024 glyphs
+constexpr int TT_ATLAS_H = TT_ATLAS_W;	// square atlas
 
 struct TimedText {
 	size_t id;			// starts at 1, there is no 0
@@ -62,21 +70,29 @@ public:
 	// use80ColDefaultFont attribute to use the 80 col default font, otherwise 40 col
 	bool use80ColDefaultFont = false;
 	~TimedTextManager();
-private:
-	stbtt_bakedchar bakedChars[96];
+
+protected:
+	std::vector<TimedText> texts;
+	bool useDefaultFont = true;
+	size_t idCounter = 0;
+
 	stbtt_fontinfo fontInfo;
+	std::vector<unsigned char> atlas = std::vector<unsigned char>(TT_ATLAS_W * TT_ATLAS_H);
+	std::vector<stbtt_packedchar> packedChars = std::vector<stbtt_packedchar>(TT_NUM_CHARS);
 
 	std::vector<unsigned char> fontBuffer;
 	int ascent = 0;
 
-	std::vector<TimedText> texts;
-	bool useDefaultFont = true;
-	size_t idCounter = 0;
-	
+	std::vector<float> verts;
+
 	GLuint vao = 0, vbo = 0, atlasTex = 0;
 
 	Shader shader = Shader();
 
 	void LoadFont(const std::string& path, float pixelHeight);
 	void CreateGLObjects();
+
+	size_t DecodeUTF8(const std::string& s, size_t pos, uint32_t& cp);
+	float MeasureTextWidth(const std::string& utf8, const float fontSize);
+
 };

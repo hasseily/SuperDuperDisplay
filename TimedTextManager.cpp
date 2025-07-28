@@ -22,6 +22,7 @@ void TimedTextManager::Initialize()
 	CreateGLObjects();
 	shader.Build(_SHADER_VERTEX_BASIC_TRANSFORM, "shaders/overlay_text.frag");
 	texts.resize(100);
+	verts.reserve(240 * 6 * 4);	// 40 lines of 240 characters per line
 	idCounter = 0;
 }
 
@@ -113,7 +114,15 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 	};
 	shader.SetUniform("uTransform", proj);
 
+	float x0 = 0, y0 = 0, x1 = 0, y1 = 0;	// position
+	float s0 = 0, t0 = 0, s1 = 0, t1 = 0;	// tex uv
+
+	// precompute
+	constexpr float invAtlasW = 1.0f / float(TT_ATLAS_W);
+	constexpr float invAtlasH = 1.0f / float(TT_ATLAS_H);
+
 	// build & draw each string
+
 	for (int i = int(texts.size()) - 1; i >= 0; --i) {
 		auto &t = texts[i];
 		if (t.ticksFinish < SDL_GetTicks64()) {
@@ -128,11 +137,11 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 		float penX = float(t.x);
 		float penY = float(t.y);
 
-		std::vector<float> verts;
-		verts.reserve(t.text.size() * 6 * 4);
-
-		float x0, y0, x1, y1;	// position
-		float s0, t0, s1, t1;	// tex uv
+		// Don't draw if out of bounds
+		if (penY > winH || penY < 0) {
+			std::cerr << "didn't draw " << t.text <<std::endl;
+			continue;
+		}
 
 		if (useDefaultFont)
 		{
@@ -149,6 +158,7 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 
 				// calculate origin of char in texture
 				// texture is 16x16 characters, each 14x16 pixels
+				// There's no ascent
 				int texS = (c % 16) * 14;	// x origin in pixels
 				int texT = (c / 16) * 16;	// y origin
 
@@ -181,20 +191,29 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 		} else {	// custom font, using stb_truetype
 			penY += ascent;
 			for (unsigned char c : t.text) {
-				if (c < 32 || c >= 128) continue;
-				auto &bc = bakedChars[c - 32];
+				if (c < TT_FIRST_CHAR) continue;
+				auto &bc = packedChars[c - TT_FIRST_CHAR];
 
-				x0 = (penX + bc.xoff) * dpiScaleX;
-				y0 = penY * dpiScaleY;
-				if (!shouldFlipY)
-					y0 += bc.yoff * dpiScaleY;
-				x1 = x0 + (bc.x1 - bc.x0) * dpiScaleX;
-				y1 = y0 + (bc.y1 - bc.y0) * dpiScaleY;
+				x0 = (penX + bc.xoff);
+				y0 = (penY + bc.yoff);
+				x1 = x0 + (bc.x1 - bc.x0);
+				y1 = y0 + (bc.y1 - bc.y0);
 
-				s0 = bc.x0 / 512.0f;
-				t0 = bc.y0 / 512.0f;
-				s1 = bc.x1 / 512.0f;
-				t1 = bc.y1 / 512.0f;
+				// Convert to screen pixels
+				x0 *= dpiScaleX;   x1 *= dpiScaleX;
+				y0 *= dpiScaleY;   y1 *= dpiScaleY;
+
+				if (shouldFlipY) {
+					// flip around the top of the glyph
+					float glyphH = y1 - y0;
+					y0 = (2*penY)*dpiScaleY - y0 - glyphH;
+					y1 = y0 + glyphH;
+				}
+
+				s0 = bc.x0 * invAtlasW;
+				s1 = bc.x1 * invAtlasW;
+				t0 = bc.y0 * invAtlasH;
+				t1 = bc.y1 * invAtlasH;
 
 				if (shouldFlipY)
 					std::swap(t0, t1);
@@ -213,7 +232,7 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 				});
 			}
 		}
-
+		// Draw the string given the uniforms
 		if (!verts.empty()) {
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
 			glBufferData(GL_ARRAY_BUFFER,
@@ -223,6 +242,7 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 			GLsizei count = GLsizei(verts.size() / 4);
 			glDrawArrays(GL_TRIANGLES, 0, count);
 		}
+		verts.clear();
 	}
 
 	// restore depth writes & test for next passes
@@ -231,7 +251,7 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 	if (depthTestState == GL_TRUE)
 		glEnable(GL_DEPTH_TEST);
 
-	// 9) cleanup
+	// cleanup
 	glBindVertexArray(0);
 	shader.Release();
 
@@ -255,8 +275,23 @@ void TimedTextManager::LoadFont(const std::string& path, float pixelHeight) {
 	if (!stbtt_InitFont(&fontInfo, fontBuffer.data(), 0))
 		throw std::runtime_error("Font init failed");
 
-	unsigned char atlas[512 * 512] = {0};
-	stbtt_BakeFontBitmap(fontBuffer.data(), 0, pixelHeight, atlas, 512, 512, 32, 96, bakedChars);
+	// initialize packer
+	stbtt_pack_context pc;
+	if (!stbtt_PackBegin(&pc, atlas.data(), TT_ATLAS_W, TT_ATLAS_H, /*stride=*/0, /*padding=*/1, /*alloc_context=*/nullptr))
+		throw std::runtime_error("Failed to init packer");
+
+	// pack exactly FIRST_CHAR…FIRST_CHAR+NUM_CHARS‑1
+	stbtt_PackFontRange(&pc,
+						fontBuffer.data(),    // TTF
+						/*font_index=*/0,
+						pixelHeight,
+						TT_FIRST_CHAR,
+						TT_NUM_CHARS,
+						packedChars.data()
+						);
+
+	stbtt_PackEnd(&pc);
+
 	float scale = stbtt_ScaleForPixelHeight(&fontInfo, pixelHeight);
 	stbtt_GetFontVMetrics(&fontInfo, &ascent, nullptr, nullptr);
 	ascent = static_cast<int>(ascent * scale);
@@ -265,7 +300,7 @@ void TimedTextManager::LoadFont(const std::string& path, float pixelHeight) {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, atlasTex);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, atlas);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, TT_ATLAS_W, TT_ATLAS_H, 0, GL_RED, GL_UNSIGNED_BYTE, atlas.data());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 }
@@ -280,4 +315,60 @@ void TimedTextManager::CreateGLObjects() {
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 	glBindVertexArray(0);
+}
+
+// Decode the next UTF‑8 codepoint from `s` at byte index `pos`.
+// Returns the number of bytes consumed, and writes the Unicode codepoint to `cp`.
+size_t TimedTextManager::DecodeUTF8(const std::string& s, size_t pos, uint32_t& cp) {
+	unsigned char c = static_cast<unsigned char>(s[pos]);
+	if ((c & 0x80) == 0) {
+		// 1‑byte ASCII
+		cp = c;
+		return 1;
+	}
+	else if ((c & 0xE0) == 0xC0 && pos + 1 < s.size()) {
+		// 2‑byte sequence
+		cp  = (c & 0x1F) << 6;
+		cp |= (static_cast<unsigned char>(s[pos+1]) & 0x3F);
+		return 2;
+	}
+	else if ((c & 0xF0) == 0xE0 && pos + 2 < s.size()) {
+		// 3‑byte sequence
+		cp  = (c & 0x0F) << 12;
+		cp |= (static_cast<unsigned char>(s[pos+1]) & 0x3F) << 6;
+		cp |= (static_cast<unsigned char>(s[pos+2]) & 0x3F);
+		return 3;
+	}
+	else if ((c & 0xF8) == 0xF0 && pos + 3 < s.size()) {
+		// 4‑byte sequence
+		cp  = (c & 0x07) << 18;
+		cp |= (static_cast<unsigned char>(s[pos+1]) & 0x3F) << 12;
+		cp |= (static_cast<unsigned char>(s[pos+2]) & 0x3F) << 6;
+		cp |= (static_cast<unsigned char>(s[pos+3]) & 0x3F);
+		return 4;
+	}
+	// Invalid or truncated sequence: emit replacement char U+FFFD
+	cp = 0xFFFD;
+	return 1;
+}
+
+// Computes pixel width of a UTF-8 string at given pixel height, including kerning.
+float TimedTextManager::MeasureTextWidth(const std::string& utf8, const float fontSize) {
+	const float scale = stbtt_ScaleForPixelHeight(&fontInfo, fontSize);
+	float width = 0.0f;
+	int prev_cp = 0;
+
+	for (size_t i = 0; i < utf8.size(); ) {
+		uint32_t cp = 0;
+		i += DecodeUTF8(utf8, i, cp);
+
+		int advance, lsb;
+		stbtt_GetCodepointHMetrics(&fontInfo, cp, &advance, &lsb);
+		int kern = stbtt_GetCodepointKernAdvance(&fontInfo, prev_cp, cp);
+
+		width += (advance + kern) * scale;
+		prev_cp = cp;
+	}
+
+	return width;
 }
