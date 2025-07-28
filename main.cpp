@@ -736,9 +736,9 @@ int main(int argc, char* argv[])
 						}
 						int _xv = 20;
 						int _yv = g_wh - 40;
-						timedTextManager.AddText(SCREENSHOT_TEXT, _xv, _yv, 30000, .9,.3,.85,1);
-						timedTextManager.AddText(SCREENSHOT_TEXT, _xv-1, _yv+1, 30000, 1,1,1,1);
-						timedTextManager.AddText(SCREENSHOT_TEXT, _xv+1, _yv-1, 30000, .1,.1,.1,1);
+						timedTextManager.AddText(SCREENSHOT_TEXT, _xv, _yv, 1000, .9,.3,.85,1);
+						timedTextManager.AddText(SCREENSHOT_TEXT, _xv-1, _yv+1, 1000, 1,1,1,1);
+						timedTextManager.AddText(SCREENSHOT_TEXT, _xv+1, _yv-1, 1000, .1,.1,.1,1);
 					}
 					else if (event.key.keysym.sym == SDLK_F8) {
 						if (SDL_GetModState() & KMOD_SHIFT) {
