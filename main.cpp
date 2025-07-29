@@ -301,15 +301,20 @@ void Main_SetBGColor(const float newColor[4]) {
 	}
 }
 
-static void Main_ToggleImGui(SDL_GLContext gl_context)
+static void Main_SetImGui(SDL_GLContext gl_context, bool setState)
 {
-	if (menu == nullptr) {
-		menu = new MainMenu(gl_context, window);
-	} else if (menu != nullptr) {
-		delete menu;
-		menu = nullptr;
+	if (setState) {	// turn on if off
+		if (menu == nullptr) {
+			menu = new MainMenu(gl_context, window);
+			Main_ResetFPSCalculations();
+		}
+	} else {	// turn off if on
+		if (menu != nullptr) {
+			delete menu;
+			menu = nullptr;
+			Main_ResetFPSCalculations();
+		}
 	}
-	Main_ResetFPSCalculations();
 }
 
 void Main_ResetA2SS() {
@@ -529,7 +534,10 @@ int main(int argc, char* argv[])
 
 	uint32_t lastMouseMoveTime = SDL_GetTicks();
 	[[maybe_unused]] const uint32_t cursorHideDelay = 3000; // After this delay, the mouse cursor disappears
-	
+
+	// Default to activating ImGui
+	Main_SetImGui(gl_context, true);
+
 	// Get the saved states from previous runs
 	std::cout << "Loading previous state..." << std::endl;
 	nlohmann::json settingsState;
@@ -573,8 +581,7 @@ int main(int argc, char* argv[])
 				cycleCounter->SetVideoRegion(VideoRegion_e::NTSC);
 			else
 				cycleCounter->SetVideoRegion(vbl_region);
-			if (_sm.value("show F1 window", true))
-				Main_ToggleImGui(gl_context);
+			Main_SetImGui(gl_context, _sm.value("show F1 window", true));
 			show_a2video_window = _sm.value("show Apple 2 Video window", show_a2video_window);
 			show_postprocessing_window = _sm.value("show Post Processor window", show_postprocessing_window);
 			show_recorder_window = _sm.value("show Recorder window", show_recorder_window);
@@ -617,9 +624,11 @@ int main(int argc, char* argv[])
 	int _xv = 20;
 	int _yv = 20;
 	static size_t _version[3];
-	_version[0] = timedTextManager.AddText(SDD_VERSION, _xv, _yv, 3000, .9,.3,.85,1);
-	_version[1] = timedTextManager.AddText(SDD_VERSION, _xv-1, _yv+1, 3000, 1,1,1,1);
-	_version[2] = timedTextManager.AddText(SDD_VERSION, _xv+1, _yv-1, 3000, .1,.1,.1,1);
+	std::string _vstr(SDD_VERSION);
+	_vstr.append(" - F1 toggles Menu");
+	_version[0] = timedTextManager.AddText(_vstr, _xv, _yv, 3000, .9,.3,.85,1);
+	_version[1] = timedTextManager.AddText(_vstr, _xv-1, _yv+1, 3000, 1,1,1,1);
+	_version[2] = timedTextManager.AddText(_vstr, _xv+1, _yv-1, 3000, .1,.1,.1,1);
 	timedTextManager.UpdateAndRender(true);
 
 	while (!g_quitIsRequested)
@@ -717,7 +726,7 @@ int main(int argc, char* argv[])
 						SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() == SDL_TRUE ? SDL_FALSE : SDL_TRUE);
 					}
 					else if (event.key.keysym.sym == SDLK_F1) {  // Toggle ImGUI with F1
-						Main_ToggleImGui(gl_context);
+						Main_SetImGui(gl_context, !Main_IsImGuiOn());
 						/*
 						 // example of using the logTextManager
 						 // don't forget to call UpdateAndRender()
