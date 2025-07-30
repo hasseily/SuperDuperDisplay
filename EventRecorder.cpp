@@ -65,6 +65,10 @@ void EventRecorder::ApplyRAMSnapshot(size_t snapshot_index)
 
 void EventRecorder::WriteRecordingFile(std::ofstream& file)
 {
+	// TODO: 	Start with a version
+	//			Then write PAL/NTSC
+	//			Then write VBL state for event 0
+	
 	// First store the RAM snapshot interval
 	file.write(reinterpret_cast<const char*>(&m_current_snapshot_cycles), sizeof(m_current_snapshot_cycles));
 	// Next store the event vector size

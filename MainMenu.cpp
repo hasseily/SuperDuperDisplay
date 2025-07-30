@@ -342,13 +342,6 @@ void MainMenu::Render() {
 			ImGui::EndMenu();
 		}
 		ImGui::Spacing();
-		if (ImGui::BeginMenu("Samples")) {
-			ImGui::PushFont(_itemFont);
-			ShowSamplesMenu();
-			ImGui::PopFont();
-			ImGui::EndMenu();
-		}
-		ImGui::Spacing();
 		if (ImGui::BeginMenu("Developer")) {
 			ImGui::PushFont(_itemFont);
 			ShowDeveloperMenu();
@@ -919,12 +912,16 @@ void MainMenu::ShowSDDMenu() {
 		ImGui::EndMenu();
 	}
 	ImGui::Separator();
-	ImGui::Separator();
 	if (ImGui::MenuItem("Reset SDD")) {
 		auto switch_c034 = MemoryManager::GetInstance()->switch_c034;
 		A2VideoManager::GetInstance()->ResetComputer();
 		MemoryManager::GetInstance()->switch_c034 = switch_c034;
 		Main_DisplaySplashScreen();
+	}
+	ImGui::Separator();
+	if (ImGui::BeginMenu("Samples")) {
+		ShowSamplesMenu();
+		ImGui::EndMenu();
 	}
 	ImGui::Separator();
 	ImGui::MenuItem("About", "", &pGui->bShowAboutWindow);

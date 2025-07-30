@@ -236,10 +236,6 @@
 		BB8330D82B6645B300071F38 /* SuperDuperDisplay */ = {
 			isa = PBXGroup;
 			children = (
-				BBCF87062D935D72002E26CD /* BasicQuad.h */,
-				BBCF87072D935D72002E26CD /* BasicQuad.cpp */,
-				BBE45C102D477211008D10A9 /* VidHdWindowBeam.h */,
-				BBE45C112D477211008D10A9 /* VidHdWindowBeam.cpp */,
 				BBB524FC2B6648A100A65C62 /* A2VideoManager.h */,
 				BBB525022B6648A200A65C62 /* A2VideoManager.cpp */,
 				BBB4E5C02B83ECCE00764C50 /* A2WindowBeam.h */,
@@ -249,6 +245,8 @@
 				BBD102132B829BAE00360B33 /* assets */,
 				BB006F512C3C2E49008BFFAF /* Ayumi.h */,
 				BB006F4F2C3C2E49008BFFAF /* Ayumi.cpp */,
+				BBCF87062D935D72002E26CD /* BasicQuad.h */,
+				BBCF87072D935D72002E26CD /* BasicQuad.cpp */,
 				BB68B4C72C4248C400F96269 /* beeper.h */,
 				BBD102102B829B7C00360B33 /* ByteBuffer.h */,
 				BBB5250A2B6648A200A65C62 /* camera.h */,
@@ -266,6 +264,8 @@
 				BBB525032B6648A200A65C62 /* GRAddr2XY.h */,
 				BBB525062B6648A200A65C62 /* imgui.ini */,
 				BBB525112B6648A200A65C62 /* imgui_memory_editor.h */,
+				BB3B32772E3778C800610E82 /* LogTextManager.h */,
+				BB3B32782E3778D400610E82 /* LogTextManager.cpp */,
 				BB044ABF2CEA74690002F6FA /* m6522.h */,
 				BBB525142B6648A200A65C62 /* main.cpp */,
 				BB9F87272C4F09870091F5C6 /* MainMenu.h */,
@@ -303,10 +303,10 @@
 				BB0E58192C7B2E8600B44B58 /* SSI263Phonemes.h */,
 				BBB525052B6648A200A65C62 /* stb_image.h */,
 				BB58F41B2E29173C004D62FC /* stb_truetype.h */,
-				BB3B32772E3778C800610E82 /* LogTextManager.h */,
-				BB3B32782E3778D400610E82 /* LogTextManager.cpp */,
 				BB58F41A2E291388004D62FC /* TimedTextManager.h */,
 				BB58F41C2E293B8E004D62FC /* TimedTextManager.cpp */,
+				BBE45C102D477211008D10A9 /* VidHdWindowBeam.h */,
+				BBE45C112D477211008D10A9 /* VidHdWindowBeam.cpp */,
 			);
 			name = SuperDuperDisplay;
 			sourceTree = "<group>";
