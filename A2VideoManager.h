@@ -274,7 +274,6 @@ private:
 	void StartNextFrame();
 	void SwitchToMergedMode(uint32_t scanline);
 	void CreateOrResizeFramebuffer(int fb_width, int fb_height);
-	void InitializeFullQuad();
 	void PrepareOffsetTexture();
 	void ResetGLData();
 
