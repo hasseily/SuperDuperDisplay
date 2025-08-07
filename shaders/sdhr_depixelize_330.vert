@@ -48,6 +48,6 @@ void main()
 
     // Pixelize by choosing the color of a corner of a square
     float Pixels = 512.0;
-    float fpixelSize = mix(pixelSize, 0.000001f, float(min(ticks, 10000)) / 10000.0);
+    float fpixelSize = mix(pixelSize, 0.000001f, float(min(ticks, 10000u)) / 10000.0);
     pixelizationDelta = vec2(fpixelSize / Pixels, fpixelSize / Pixels);
 }

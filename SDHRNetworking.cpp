@@ -12,7 +12,6 @@
 #include <fcntl.h>
 #include <chrono>
 #ifdef __NETWORKING_WINDOWS__
-#define FTD3XX_STATIC
 #include "ftd3xx_win.h"
 #else
 #include "ftd3xx.h"
@@ -564,7 +563,11 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			*p++ = (((time_val.tm_year % 100) / 10) << 4) + ((time_val.tm_year % 100) % 10);
 			printf("Setting time: %04x%04x\n",set_time_buf[3],set_time_buf[2]);
 			uint32_t set_time_msg_len = 16;
+#ifdef __NETWORKING_WINDOWS__
 			ftStatus = FT_WritePipeEx(g_ftHandle, FT_PIPE_WRITE_ID, (uint8_t *)set_time_buf, set_time_msg_len, &bytes_transferred, 0);
+#else
+			ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t *)set_time_buf, set_time_msg_len, &bytes_transferred, 0);
+#endif
 			if (ftStatus != FT_OK)
 			{
 				std::cerr << "Failed to set time to FPGA: " << get_ft_status_message(ftStatus) << std::endl;
@@ -577,7 +580,11 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			enable_msg_buf[1] = 0x00001000; // address of bus_event_control
 			enable_msg_buf[2] = 0x00000001; // bit 0 indicates enable bus events
 			uint32_t enable_msg_buf_len = 12;
+#ifdef __NETWORKING_WINDOWS__
 			ftStatus = FT_WritePipeEx(g_ftHandle, FT_PIPE_WRITE_ID, (uint8_t *)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
+#else
+			ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t *)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
+#endif
 			if (ftStatus != FT_OK)
 			{
 				std::cerr << "Failed to enable FPGA bus events: " << get_ft_status_message(ftStatus) << std::endl;
@@ -638,7 +645,11 @@ uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* 
 	}
 	uint32_t enable_msg_buf_len = (2 + vDataSize) * sizeof(enable_msg_buf[0]);
 	ULONG bytes_transferred;
+#ifdef __NETWORKING_WINDOWS__
 	ftStatus = FT_WritePipeEx(g_ftHandle, FT_PIPE_WRITE_ID, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
+#else
+	ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
+#endif
 	if (ftStatus != FT_OK)
 	{
 		std::cerr << "Failed to write pipe ex: " << get_ft_status_message(ftStatus) << std::endl;

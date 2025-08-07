@@ -27,7 +27,7 @@
 EXE = SuperDuperDisplay
 IMGUI_DIR = imgui
 SOURCES = main.cpp OpenGLHelper.cpp MosaicMesh.cpp MemoryManager.cpp SDHRNetworking.cpp SDHRManager.cpp SDHRWindow.cpp TimedTextManager.cpp LogTextManager.cpp
-SOURCES += A2VideoManager.cpp A2WindowBeam.cpp shader.cpp PostProcessor.cpp CycleCounter.cpp EventRecorder.cpp SoundManager.cpp
+SOURCES += A2VideoManager.cpp A2WindowBeam.cpp A2WindowRGB.cpp shader.cpp PostProcessor.cpp CycleCounter.cpp EventRecorder.cpp SoundManager.cpp
 SOURCES += Ayumi.cpp MockingboardManager.cpp SSI263.cpp MainMenu.cpp VidHdWindowBeam.cpp BasicQuad.cpp
 SOURCES += extras/MemoryLoader.cpp extras/ImGuiFileDialog.cpp
 SOURCES += glad/glad.cpp
