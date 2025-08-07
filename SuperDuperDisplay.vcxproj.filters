@@ -114,6 +114,12 @@
     <ClCompile Include="BasicQuad.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="A2WindowRGB.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="TimedTextManager.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -239,6 +245,12 @@
     <ClInclude Include="BasicQuad.h">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="A2WindowRGB.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="TimedTextManager.h">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
@@ -313,6 +325,7 @@
     <None Include="shaders\ntsc_sik.frag">
       <Filter>shaders</Filter>
     </None>
+    <None Include="lib\Win_x64\FTD3XXWU.dll" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="assets\Apple2eFont7x16 - Alternate.png">
@@ -349,6 +362,6 @@
     </Font>
   </ItemGroup>
   <ItemGroup>
-    <Library Include="lib\Win_x64\FTD3XX.lib" />
+    <Library Include="lib\Win_x64\FTD3XXWU.lib" />
   </ItemGroup>
 </Project>

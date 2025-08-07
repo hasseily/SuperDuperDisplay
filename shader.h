@@ -8,7 +8,7 @@
 #include <sstream>
 #include <iostream>
 #include "OpenGLHelper.h"
-#include <string>
+#include <variant>
 
 /*
 	@brief:

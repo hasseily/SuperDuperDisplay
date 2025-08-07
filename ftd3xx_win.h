@@ -111,48 +111,38 @@ kernel & user mode
 //
 // Open/Create handle
 //
-typedef PVOID FT_HANDLE, *PFT_HANDLE;
+typedef PVOID FT_HANDLE, * PFT_HANDLE;
 
 //
 // FT Status Codes
 //
 enum _FT_STATUS
 {
-    FT_OK,
-    FT_INVALID_HANDLE,
-    FT_DEVICE_NOT_FOUND,
-    FT_DEVICE_NOT_OPENED,
-    FT_IO_ERROR,
-    FT_INSUFFICIENT_RESOURCES,
-    FT_INVALID_PARAMETER,
-    FT_INVALID_BAUD_RATE,
-    FT_DEVICE_NOT_OPENED_FOR_ERASE,
-    FT_DEVICE_NOT_OPENED_FOR_WRITE,
-    FT_FAILED_TO_WRITE_DEVICE,
-    FT_EEPROM_READ_FAILED,
-    FT_EEPROM_WRITE_FAILED,
-    FT_EEPROM_ERASE_FAILED,
-    FT_EEPROM_NOT_PRESENT,
-    FT_EEPROM_NOT_PROGRAMMED,
-    FT_INVALID_ARGS,
-    FT_NOT_SUPPORTED,
+	FT_OK = 0,
+	FT_INVALID_HANDLE = 1,
+	FT_DEVICE_NOT_FOUND = 2,
+	FT_DEVICE_NOT_OPENED = 3,
+	FT_IO_ERROR = 4,
+	FT_INSUFFICIENT_RESOURCES = 5,
+	FT_INVALID_PARAMETER = 6,
 
-    FT_NO_MORE_ITEMS,
-    FT_TIMEOUT,
-    FT_OPERATION_ABORTED,
-    FT_RESERVED_PIPE,
-    FT_INVALID_CONTROL_REQUEST_DIRECTION,
-    FT_INVALID_CONTROL_REQUEST_TYPE,
-    FT_IO_PENDING,
-    FT_IO_INCOMPLETE,
-    FT_HANDLE_EOF,
-    FT_BUSY,
-    FT_NO_SYSTEM_RESOURCES,
-    FT_DEVICE_LIST_NOT_READY,
-    FT_DEVICE_NOT_CONNECTED,
-	FT_INCORRECT_DEVICE_PATH,
-
-    FT_OTHER_ERROR,
+	FT_INVALID_ARGS = 16,
+	FT_NOT_SUPPORTED = 17,
+	FT_NO_MORE_ITEMS = 18,
+	FT_TIMEOUT = 19,
+	FT_OPERATION_ABORTED = 20,
+	FT_RESERVED_PIPE = 21,
+	FT_INVALID_CONTROL_REQUEST_DIRECTION = 22,
+	FT_INVALID_CONTROL_REQUEST_TYPE = 23,
+	FT_IO_PENDING = 24,
+	FT_IO_INCOMPLETE = 25,
+	FT_HANDLE_EOF = 26,
+	FT_BUSY = 27,
+	FT_NO_SYSTEM_RESOURCES = 28,
+	FT_DEVICE_LIST_NOT_READY = 29,
+	FT_DEVICE_NOT_CONNECTED = 30,
+	FT_INCORRECT_DEVICE_PATH = 31,
+	FT_OTHER_ERROR = 32,
 
 };
 
@@ -168,10 +158,10 @@ typedef ULONG FT_STATUS;
 //
 typedef enum _FT_PIPE_TYPE
 {
-    FTPipeTypeControl,
-    FTPipeTypeIsochronous,
-    FTPipeTypeBulk,
-    FTPipeTypeInterrupt
+	FTPipeTypeControl,
+	FTPipeTypeIsochronous,
+	FTPipeTypeBulk,
+	FTPipeTypeInterrupt
 
 } FT_PIPE_TYPE;
 
@@ -180,85 +170,85 @@ typedef enum _FT_PIPE_TYPE
 //
 typedef struct _FT_COMMON_DESCRIPTOR
 {
-    UCHAR   bLength;
-    UCHAR   bDescriptorType;
+	UCHAR   bLength;
+	UCHAR   bDescriptorType;
 
-} FT_COMMON_DESCRIPTOR, *PFT_COMMON_DESCRIPTOR;
+} FT_COMMON_DESCRIPTOR, * PFT_COMMON_DESCRIPTOR;
 
 //
 // Device descriptor
 //
 typedef struct _FT_DEVICE_DESCRIPTOR
 {
-    UCHAR   bLength;
-    UCHAR   bDescriptorType;
-    USHORT  bcdUSB;
-    UCHAR   bDeviceClass;
-    UCHAR   bDeviceSubClass;
-    UCHAR   bDeviceProtocol;
-    UCHAR   bMaxPacketSize0;
-    USHORT  idVendor;
-    USHORT  idProduct;
-    USHORT  bcdDevice;
-    UCHAR   iManufacturer;
-    UCHAR   iProduct;
-    UCHAR   iSerialNumber;
-    UCHAR   bNumConfigurations;
+	UCHAR   bLength;
+	UCHAR   bDescriptorType;
+	USHORT  bcdUSB;
+	UCHAR   bDeviceClass;
+	UCHAR   bDeviceSubClass;
+	UCHAR   bDeviceProtocol;
+	UCHAR   bMaxPacketSize0;
+	USHORT  idVendor;
+	USHORT  idProduct;
+	USHORT  bcdDevice;
+	UCHAR   iManufacturer;
+	UCHAR   iProduct;
+	UCHAR   iSerialNumber;
+	UCHAR   bNumConfigurations;
 
-} FT_DEVICE_DESCRIPTOR, *PFT_DEVICE_DESCRIPTOR;
+} FT_DEVICE_DESCRIPTOR, * PFT_DEVICE_DESCRIPTOR;
 
 //
 // Configuration descriptor
 //
 typedef struct _FT_CONFIGURATION_DESCRIPTOR
 {
-    UCHAR   bLength;
-    UCHAR   bDescriptorType;
-    USHORT  wTotalLength;
-    UCHAR   bNumInterfaces;
-    UCHAR   bConfigurationValue;
-    UCHAR   iConfiguration;
-    UCHAR   bmAttributes;
-    UCHAR   MaxPower;
+	UCHAR   bLength;
+	UCHAR   bDescriptorType;
+	USHORT  wTotalLength;
+	UCHAR   bNumInterfaces;
+	UCHAR   bConfigurationValue;
+	UCHAR   iConfiguration;
+	UCHAR   bmAttributes;
+	UCHAR   MaxPower;
 
-} FT_CONFIGURATION_DESCRIPTOR, *PFT_CONFIGURATION_DESCRIPTOR;
+} FT_CONFIGURATION_DESCRIPTOR, * PFT_CONFIGURATION_DESCRIPTOR;
 
 //
 // Interface descriptor
 //
 typedef struct _FT_INTERFACE_DESCRIPTOR
 {
-    UCHAR   bLength;
-    UCHAR   bDescriptorType;
-    UCHAR   bInterfaceNumber;
-    UCHAR   bAlternateSetting;
-    UCHAR   bNumEndpoints;
-    UCHAR   bInterfaceClass;
-    UCHAR   bInterfaceSubClass;
-    UCHAR   bInterfaceProtocol;
-    UCHAR   iInterface;
+	UCHAR   bLength;
+	UCHAR   bDescriptorType;
+	UCHAR   bInterfaceNumber;
+	UCHAR   bAlternateSetting;
+	UCHAR   bNumEndpoints;
+	UCHAR   bInterfaceClass;
+	UCHAR   bInterfaceSubClass;
+	UCHAR   bInterfaceProtocol;
+	UCHAR   iInterface;
 
-} FT_INTERFACE_DESCRIPTOR, *PFT_INTERFACE_DESCRIPTOR;
+} FT_INTERFACE_DESCRIPTOR, * PFT_INTERFACE_DESCRIPTOR;
 
 //
 // String descriptor
 //
 typedef struct _FT_STRING_DESCRIPTOR
 {
-    UCHAR   bLength;
-    UCHAR   bDescriptorType;
-    WCHAR   szString[256];
+	UCHAR   bLength;
+	UCHAR   bDescriptorType;
+	WCHAR   szString[256];
 
-} FT_STRING_DESCRIPTOR, *PFT_STRING_DESCRIPTOR;
+} FT_STRING_DESCRIPTOR, * PFT_STRING_DESCRIPTOR;
 
 typedef struct _FT_ENDPOINT_DESCRIPTOR
 {
-    UCHAR   bLength;
-    UCHAR   bDescriptorType;
-    UCHAR   bEndpointAddress;
-    UCHAR   bmAttributes;
-    USHORT  wMaxPacketSize;
-    UCHAR   bInterval;
+	UCHAR   bLength;
+	UCHAR   bDescriptorType;
+	UCHAR   bEndpointAddress;
+	UCHAR   bmAttributes;
+	USHORT  wMaxPacketSize;
+	UCHAR   bInterval;
 
 } FT_ENDPOINT_DESCRIPTOR, * PFT_ENDPOINT_DESCRIPTOR;
 
@@ -267,34 +257,33 @@ typedef struct _FT_ENDPOINT_DESCRIPTOR
 //
 typedef struct _FT_PIPE_INFORMATION
 {
-    FT_PIPE_TYPE    PipeType;
-    UCHAR           PipeId;
-    USHORT          MaximumPacketSize;
-    UCHAR           Interval;
+	FT_PIPE_TYPE    PipeType;
+	UCHAR           PipeId;
+	USHORT          MaximumPacketSize;
+	UCHAR           Interval;
 
-} FT_PIPE_INFORMATION, *PFT_PIPE_INFORMATION;
+} FT_PIPE_INFORMATION, * PFT_PIPE_INFORMATION;
 
 //
 // Control setup packet
 //
 typedef struct _FT_SETUP_PACKET
 {
-    UCHAR   RequestType;
-    UCHAR   Request;
-    USHORT  Value;
-    USHORT  Index;
-    USHORT  Length;
+	UCHAR   RequestType;
+	UCHAR   Request;
+	USHORT  Value;
+	USHORT  Index;
+	USHORT  Length;
 
-} FT_SETUP_PACKET, *PFT_SETUP_PACKET;
+} FT_SETUP_PACKET, * PFT_SETUP_PACKET;
 
 //
 // Notification callback type
 //
 typedef enum _E_FT_NOTIFICATION_CALLBACK_TYPE
 {
-    E_FT_NOTIFICATION_CALLBACK_TYPE_DATA,
-    E_FT_NOTIFICATION_CALLBACK_TYPE_GPIO,
-
+	E_FT_NOTIFICATION_CALLBACK_TYPE_DATA = 0,
+	E_FT_NOTIFICATION_CALLBACK_TYPE_STOPPED = 3,
 } E_FT_NOTIFICATION_CALLBACK_TYPE;
 
 //
@@ -302,20 +291,12 @@ typedef enum _E_FT_NOTIFICATION_CALLBACK_TYPE
 //
 typedef struct _FT_NOTIFICATION_CALLBACK_INFO_DATA
 {
-    ULONG ulRecvNotificationLength;
-    UCHAR ucEndpointNo;
+	ULONG ulRecvNotificationLength;
+	UCHAR ucEndpointNo;
 
 } FT_NOTIFICATION_CALLBACK_INFO_DATA;
 
-//
-// Notification callback information gpio
-//
-typedef struct _FT_NOTIFICATION_CALLBACK_INFO_GPIO
-{
-    BOOL bGPIO0;
-    BOOL bGPIO1;
 
-} FT_NOTIFICATION_CALLBACK_INFO_GPIO;
 
 //
 // Notification callback function
@@ -348,9 +329,9 @@ typedef VOID(*FT_NOTIFICATION_CALLBACK)(PVOID pvCallbackContext, E_FT_NOTIFICATI
 //
 typedef enum
 {
-    CONFIGURATION_FIFO_CLK_100,
-    CONFIGURATION_FIFO_CLK_66,
-    CONFIGURATION_FIFO_CLK_COUNT,
+	CONFIGURATION_FIFO_CLK_100,
+	CONFIGURATION_FIFO_CLK_66,
+	CONFIGURATION_FIFO_CLK_COUNT,
 
 } CONFIGURATION_FIFO_CLK;
 
@@ -359,9 +340,9 @@ typedef enum
 //
 typedef enum
 {
-    CONFIGURATION_FIFO_MODE_245,
-    CONFIGURATION_FIFO_MODE_600,
-    CONFIGURATION_FIFO_MODE_COUNT,
+	CONFIGURATION_FIFO_MODE_245,
+	CONFIGURATION_FIFO_MODE_600,
+	CONFIGURATION_FIFO_MODE_COUNT,
 
 } CONFIGURATION_FIFO_MODE;
 
@@ -370,12 +351,12 @@ typedef enum
 //
 typedef enum
 {
-    CONFIGURATION_CHANNEL_CONFIG_4,
-    CONFIGURATION_CHANNEL_CONFIG_2,
-    CONFIGURATION_CHANNEL_CONFIG_1,
-    CONFIGURATION_CHANNEL_CONFIG_1_OUTPIPE,
-    CONFIGURATION_CHANNEL_CONFIG_1_INPIPE,
-    CONFIGURATION_CHANNEL_CONFIG_COUNT,
+	CONFIGURATION_CHANNEL_CONFIG_4,
+	CONFIGURATION_CHANNEL_CONFIG_2,
+	CONFIGURATION_CHANNEL_CONFIG_1,
+	CONFIGURATION_CHANNEL_CONFIG_1_OUTPIPE,
+	CONFIGURATION_CHANNEL_CONFIG_1_INPIPE,
+	CONFIGURATION_CHANNEL_CONFIG_COUNT,
 
 } CONFIGURATION_CHANNEL_CONFIG;
 
@@ -384,20 +365,20 @@ typedef enum
 //
 typedef enum
 {
-    CONFIGURATION_OPTIONAL_FEATURE_DISABLEALL                           = 0,
-    CONFIGURATION_OPTIONAL_FEATURE_ENABLEBATTERYCHARGING                = (0x1 << 0),
-	CONFIGURATION_OPTIONAL_FEATURE_DISABLECANCELSESSIONUNDERRUN			= (0x1 << 1),	/* Setting this will Ignore session underrun */
-    CONFIGURATION_OPTIONAL_FEATURE_ENABLENOTIFICATIONMESSAGE_INCH1      = (0x1 << 2),
-    CONFIGURATION_OPTIONAL_FEATURE_ENABLENOTIFICATIONMESSAGE_INCH2      = (0x1 << 3),
-    CONFIGURATION_OPTIONAL_FEATURE_ENABLENOTIFICATIONMESSAGE_INCH3      = (0x1 << 4),
-    CONFIGURATION_OPTIONAL_FEATURE_ENABLENOTIFICATIONMESSAGE_INCH4      = (0x1 << 5),
-	CONFIGURATION_OPTIONAL_FEATURE_ENABLENOTIFICATIONMESSAGE_INCHALL    = (0xF << 2),
-	CONFIGURATION_OPTIONAL_FEATURE_DISABLEUNDERRUN_INCH1                = (0x1 << 6),	/* Setting this will Ignore underrun at FIFO Bus-Width for IN channel#1 */
-	CONFIGURATION_OPTIONAL_FEATURE_DISABLEUNDERRUN_INCH2                = (0x1 << 7),	/* Setting this will Ignore underrun at FIFO Bus-Width for IN channel#2 */
-	CONFIGURATION_OPTIONAL_FEATURE_DISABLEUNDERRUN_INCH3                = (0x1 << 8),	/* Setting this will Ignore underrun at FIFO Bus-Width for IN channel#3 */
-	CONFIGURATION_OPTIONAL_FEATURE_DISABLEUNDERRUN_INCH4                = (0x1 << 9),	/* Setting this will Ignore underrun at FIFO Bus-Width for IN channel#4 */
-	CONFIGURATION_OPTIONAL_FEATURE_DISABLEUNDERRUN_INCHALL				= (0xF << 6),	/* Setting this will Ignore underrun at FIFO Bus-Width for all IN channel */
-	CONFIGURATION_OPTIONAL_FEATURE_ENABLEALL                            = 0xFFFF,
+	CONFIGURATION_OPTIONAL_FEATURE_DISABLEALL = 0,
+	CONFIGURATION_OPTIONAL_FEATURE_ENABLEBATTERYCHARGING = (0x1 << 0),
+	CONFIGURATION_OPTIONAL_FEATURE_DISABLECANCELSESSIONUNDERRUN = (0x1 << 1),
+	CONFIGURATION_OPTIONAL_FEATURE_ENABLENOTIFICATIONMESSAGE_INCH1 = (0x1 << 2),
+	CONFIGURATION_OPTIONAL_FEATURE_ENABLENOTIFICATIONMESSAGE_INCH2 = (0x1 << 3),
+	CONFIGURATION_OPTIONAL_FEATURE_ENABLENOTIFICATIONMESSAGE_INCH3 = (0x1 << 4),
+	CONFIGURATION_OPTIONAL_FEATURE_ENABLENOTIFICATIONMESSAGE_INCH4 = (0x1 << 5),
+	CONFIGURATION_OPTIONAL_FEATURE_ENABLENOTIFICATIONMESSAGE_INCHALL = (0xF << 2),
+	CONFIGURATION_OPTIONAL_FEATURE_DISABLEUNDERRUN_INCH1 = (0x1 << 6),
+	CONFIGURATION_OPTIONAL_FEATURE_DISABLEUNDERRUN_INCH2 = (0x1 << 7),
+	CONFIGURATION_OPTIONAL_FEATURE_DISABLEUNDERRUN_INCH3 = (0x1 << 8),
+	CONFIGURATION_OPTIONAL_FEATURE_DISABLEUNDERRUN_INCH4 = (0x1 << 9),
+	CONFIGURATION_OPTIONAL_FEATURE_DISABLEUNDERRUN_INCHALL = (0xF << 6),
+	CONFIGURATION_OPTIONAL_FEATURE_ENABLEALL = 0xFFFF,
 
 } CONFIGURATION_OPTIONAL_FEATURE_SUPPORT;
 
@@ -428,34 +409,34 @@ typedef enum
 //
 typedef struct
 {
-    // Device Descriptor
-    USHORT       VendorID;
-    USHORT       ProductID;
+	// Device Descriptor
+	USHORT       VendorID;
+	USHORT       ProductID;
 
-    // String Descriptors
-    UCHAR        StringDescriptors[128];
+	// String Descriptors
+	UCHAR        StringDescriptors[128];
 
-    // Configuration Descriptor
+	// Configuration Descriptor
 	UCHAR		 bInterval;	//   Interrupt interval (Valid range: 1-16)
-    UCHAR        PowerAttributes;
-    USHORT       PowerConsumption;
+	UCHAR        PowerAttributes;
+	USHORT       PowerConsumption;
 
-    // Data Transfer Configuration
-    UCHAR        Reserved2;
-    UCHAR        FIFOClock;
-    UCHAR        FIFOMode;
-    UCHAR        ChannelConfig;
+	// Data Transfer Configuration
+	UCHAR        Reserved2;
+	UCHAR        FIFOClock;
+	UCHAR        FIFOMode;
+	UCHAR        ChannelConfig;
 
-    // Optional Feature Support
-    USHORT       OptionalFeatureSupport;
-    UCHAR        BatteryChargingGPIOConfig;
-    UCHAR        FlashEEPROMDetection;      // Read-only
+	// Optional Feature Support
+	USHORT       OptionalFeatureSupport;
+	UCHAR        BatteryChargingGPIOConfig;
+	UCHAR        FlashEEPROMDetection;      // Read-only
 
-    // MSIO and GPIO Configuration
-    ULONG        MSIO_Control;
-    ULONG        GPIO_Control;
+	// MSIO and GPIO Configuration
+	ULONG        MSIO_Control;
+	ULONG        GPIO_Control;
 
-} FT_60XCONFIGURATION, *PFT_60XCONFIGURATION;
+} FT_60XCONFIGURATION, * PFT_60XCONFIGURATION;
 
 
 //
@@ -496,6 +477,14 @@ typedef struct _FT_DEVICE_LIST_INFO_NODE
 } FT_DEVICE_LIST_INFO_NODE;
 
 
+typedef enum _FT_FILTER_TYPE
+{
+	FT_FILTER_NONE = 0,
+	FT_FILTER_VID = 1,
+	FT_FILTER_PID = 2,
+	FT_FILTER_DESCRIPTION = 4
+}FT_FILTER_TYPE;
+
 
 //
 // API Functions
@@ -518,241 +507,241 @@ typedef struct _FT_DEVICE_LIST_INFO_NODE
 extern "C" {
 #endif
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_Create(
-        PVOID pvArg,
-        DWORD dwFlags,
-        FT_HANDLE *pftHandle
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_Create(
+			PVOID pvArg,
+			DWORD dwFlags,
+			FT_HANDLE* pftHandle
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_Close(
-        FT_HANDLE ftHandle
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_Close(
+			FT_HANDLE ftHandle
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_GetVIDPID(
-        FT_HANDLE ftHandle,
-        PUSHORT puwVID,
-        PUSHORT puwPID
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_GetVIDPID(
+			FT_HANDLE ftHandle,
+			PUSHORT puwVID,
+			PUSHORT puwPID
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_WritePipe(
-        FT_HANDLE ftHandle,
-        UCHAR ucPipeID,
-        PUCHAR pucBuffer,
-        ULONG ulBufferLength,
-        PULONG pulBytesTransferred,
-        LPOVERLAPPED pOverlapped
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_WritePipe(
+			FT_HANDLE ftHandle,
+			UCHAR ucPipeID,
+			PUCHAR pucBuffer,
+			ULONG ulBufferLength,
+			PULONG pulBytesTransferred,
+			LPOVERLAPPED pOverlapped
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_ReadPipe(
-        FT_HANDLE ftHandle,
-        UCHAR ucPipeID,
-        PUCHAR pucBuffer,
-        ULONG ulBufferLength,
-        PULONG pulBytesTransferred,
-        LPOVERLAPPED pOverlapped
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_ReadPipe(
+			FT_HANDLE ftHandle,
+			UCHAR ucPipeID,
+			PUCHAR pucBuffer,
+			ULONG ulBufferLength,
+			PULONG pulBytesTransferred,
+			LPOVERLAPPED pOverlapped
+		);
 
 	FTD3XX_API
 		FT_STATUS WINAPI FT_WritePipeEx(
-		FT_HANDLE ftHandle,
-		UCHAR ucPipeID,
-		PUCHAR pucBuffer,
-		ULONG ulBufferLength,
-		PULONG pulBytesTransferred,
-		LPOVERLAPPED pOverlapped
+			FT_HANDLE ftHandle,
+			UCHAR ucPipeID,
+			PUCHAR pucBuffer,
+			ULONG ulBufferLength,
+			PULONG pulBytesTransferred,
+			LPOVERLAPPED pOverlapped
 		);
 
 	FTD3XX_API
 		FT_STATUS WINAPI FT_ReadPipeEx(
-		FT_HANDLE ftHandle,
-		UCHAR ucPipeID,
-		PUCHAR pucBuffer,
-		ULONG ulBufferLength,
-		PULONG pulBytesTransferred,
-		LPOVERLAPPED pOverlapped
+			FT_HANDLE ftHandle,
+			UCHAR ucPipeID,
+			PUCHAR pucBuffer,
+			ULONG ulBufferLength,
+			PULONG pulBytesTransferred,
+			LPOVERLAPPED pOverlapped
 		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_GetOverlappedResult(
-        FT_HANDLE ftHandle,
-        LPOVERLAPPED pOverlapped,
-        PULONG pulBytesTransferred,
-        BOOL bWait
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_GetOverlappedResult(
+			FT_HANDLE ftHandle,
+			LPOVERLAPPED pOverlapped,
+			PULONG pulBytesTransferred,
+			BOOL bWait
+		);
 
-    FTD3XX_API
-        FT_STATUS  WINAPI FT_InitializeOverlapped(
-        FT_HANDLE ftHandle,
-        LPOVERLAPPED pOverlapped
-        );
+	FTD3XX_API
+		FT_STATUS  WINAPI FT_InitializeOverlapped(
+			FT_HANDLE ftHandle,
+			LPOVERLAPPED pOverlapped
+		);
 
-    FTD3XX_API
-        FT_STATUS  WINAPI FT_ReleaseOverlapped(
-        FT_HANDLE ftHandle,
-        LPOVERLAPPED pOverlapped
-        );
+	FTD3XX_API
+		FT_STATUS  WINAPI FT_ReleaseOverlapped(
+			FT_HANDLE ftHandle,
+			LPOVERLAPPED pOverlapped
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_SetStreamPipe(
-        FT_HANDLE ftHandle,
-        BOOLEAN bAllWritePipes,
-        BOOLEAN bAllReadPipes,
-        UCHAR ucPipeID,
-        ULONG ulStreamSize
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_SetStreamPipe(
+			FT_HANDLE ftHandle,
+			BOOLEAN bAllWritePipes,
+			BOOLEAN bAllReadPipes,
+			UCHAR ucPipeID,
+			ULONG ulStreamSize
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_ClearStreamPipe(
-        FT_HANDLE ftHandle,
-        BOOLEAN bAllWritePipes,
-        BOOLEAN bAllReadPipes,
-        UCHAR ucPipeID
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_ClearStreamPipe(
+			FT_HANDLE ftHandle,
+			BOOLEAN bAllWritePipes,
+			BOOLEAN bAllReadPipes,
+			UCHAR ucPipeID
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_FlushPipe(
-        FT_HANDLE ftHandle,
-        UCHAR ucPipeID
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_FlushPipe(
+			FT_HANDLE ftHandle,
+			UCHAR ucPipeID
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_AbortPipe(
-        FT_HANDLE ftHandle,
-        UCHAR ucPipeID
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_AbortPipe(
+			FT_HANDLE ftHandle,
+			UCHAR ucPipeID
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_GetDeviceDescriptor(
-        FT_HANDLE ftHandle,
-        PFT_DEVICE_DESCRIPTOR ptDescriptor
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_GetDeviceDescriptor(
+			FT_HANDLE ftHandle,
+			PFT_DEVICE_DESCRIPTOR ptDescriptor
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_GetConfigurationDescriptor(
-        FT_HANDLE ftHandle,
-        PFT_CONFIGURATION_DESCRIPTOR ptDescriptor
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_GetConfigurationDescriptor(
+			FT_HANDLE ftHandle,
+			PFT_CONFIGURATION_DESCRIPTOR ptDescriptor
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_GetInterfaceDescriptor(
-        FT_HANDLE ftHandle,
-        UCHAR ucInterfaceIndex,
-        PFT_INTERFACE_DESCRIPTOR ptDescriptor
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_GetInterfaceDescriptor(
+			FT_HANDLE ftHandle,
+			UCHAR ucInterfaceIndex,
+			PFT_INTERFACE_DESCRIPTOR ptDescriptor
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_GetPipeInformation(
-        FT_HANDLE ftHandle,
-        UCHAR ucInterfaceIndex,
-        UCHAR ucPipeIndex,
-        PFT_PIPE_INFORMATION ptPipeInformation
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_GetPipeInformation(
+			FT_HANDLE ftHandle,
+			UCHAR ucInterfaceIndex,
+			UCHAR ucPipeIndex,
+			PFT_PIPE_INFORMATION ptPipeInformation
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_GetStringDescriptor(
-        FT_HANDLE ftHandle,
-        UCHAR ucStringIndex,
-        PFT_STRING_DESCRIPTOR ptDescriptor
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_GetStringDescriptor(
+			FT_HANDLE ftHandle,
+			UCHAR ucStringIndex,
+			PFT_STRING_DESCRIPTOR ptDescriptor
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_GetDescriptor(
-        FT_HANDLE ftHandle,
-        UCHAR ucDescriptorType,
-        UCHAR ucIndex,
-        PUCHAR pucBuffer,
-        ULONG ulBufferLength,
-        PULONG pulLengthTransferred
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_GetDescriptor(
+			FT_HANDLE ftHandle,
+			UCHAR ucDescriptorType,
+			UCHAR ucIndex,
+			PUCHAR pucBuffer,
+			ULONG ulBufferLength,
+			PULONG pulLengthTransferred
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_ControlTransfer(
-        FT_HANDLE ftHandle,
-        FT_SETUP_PACKET tSetupPacket,
-        PUCHAR pucBuffer,
-        ULONG ulBufferLength,
-        PULONG pulLengthTransferred
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_ControlTransfer(
+			FT_HANDLE ftHandle,
+			FT_SETUP_PACKET tSetupPacket,
+			PUCHAR pucBuffer,
+			ULONG ulBufferLength,
+			PULONG pulLengthTransferred
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_SetNotificationCallback(
-        FT_HANDLE ftHandle,
-        FT_NOTIFICATION_CALLBACK pCallback,
-        PVOID pvCallbackContext
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_SetNotificationCallback(
+			FT_HANDLE ftHandle,
+			FT_NOTIFICATION_CALLBACK pCallback,
+			PVOID pvCallbackContext
+		);
 
-    FTD3XX_API
-        VOID WINAPI FT_ClearNotificationCallback(
-        FT_HANDLE ftHandle
-        );
+	FTD3XX_API
+		VOID WINAPI FT_ClearNotificationCallback(
+			FT_HANDLE ftHandle
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_GetChipConfiguration(
-        FT_HANDLE ftHandle,
-        PVOID pvConfiguration
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_GetChipConfiguration(
+			FT_HANDLE ftHandle,
+			PVOID pvConfiguration
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_SetChipConfiguration(
-        FT_HANDLE ftHandle,
-        PVOID pvConfiguration
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_SetChipConfiguration(
+			FT_HANDLE ftHandle,
+			PVOID pvConfiguration
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_GetFirmwareVersion(
-        FT_HANDLE ftHandle,
-        PULONG pulFirmwareVersion
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_GetFirmwareVersion(
+			FT_HANDLE ftHandle,
+			PULONG pulFirmwareVersion
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_ResetDevicePort(
-        FT_HANDLE ftHandle
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_ResetDevicePort(
+			FT_HANDLE ftHandle
+		);
 
-    FTD3XX_API
-        FT_STATUS WINAPI FT_CycleDevicePort(
-        FT_HANDLE ftHandle
-        );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_CycleDevicePort(
+			FT_HANDLE ftHandle
+		);
 
 	FTD3XX_API
 		FT_STATUS WINAPI FT_CreateDeviceInfoList(
-		LPDWORD lpdwNumDevs
+			LPDWORD lpdwNumDevs
 		);
 
 	FTD3XX_API
 		FT_STATUS WINAPI FT_GetDeviceInfoList(
-		FT_DEVICE_LIST_INFO_NODE *ptDest,
-		LPDWORD lpdwNumDevs
+			FT_DEVICE_LIST_INFO_NODE* ptDest,
+			LPDWORD lpdwNumDevs
 		);
 
 	FTD3XX_API
 		FT_STATUS WINAPI FT_GetDeviceInfoDetail(
-		DWORD dwIndex,
-		LPDWORD lpdwFlags,
-		LPDWORD lpdwType,
-		LPDWORD lpdwID,
-		LPDWORD lpdwLocId,
-		LPVOID lpSerialNumber,
-		LPVOID lpDescription,
-		FT_HANDLE *pftHandle
+			DWORD dwIndex,
+			LPDWORD lpdwFlags,
+			LPDWORD lpdwType,
+			LPDWORD lpdwID,
+			LPDWORD lpdwLocId,
+			LPVOID lpSerialNumber,
+			LPVOID lpDescription,
+			FT_HANDLE* pftHandle
 		);
 
 	FTD3XX_API
 		FT_STATUS WINAPI FT_ListDevices(
-		PVOID pArg1,
-		PVOID pArg2,
-		DWORD Flags
+			PVOID pArg1,
+			PVOID pArg2,
+			DWORD Flags
 		);
 
 	FTD3XX_API
 		FT_STATUS WINAPI FT_IsDevicePath(
-		FT_HANDLE ftHandle,
-		CONST CHAR* pucDevicePath 
+			FT_HANDLE ftHandle,
+			CONST CHAR* pucDevicePath
 		);
 
 
@@ -762,75 +751,75 @@ extern "C" {
 
 	FTD3XX_API
 		FT_STATUS WINAPI FT_GetDriverVersion(
-		FT_HANDLE ftHandle,
-		LPDWORD lpdwVersion
+			FT_HANDLE ftHandle,
+			LPDWORD lpdwVersion
 		);
 
 	FTD3XX_API
 		FT_STATUS WINAPI FT_GetLibraryVersion(
-		LPDWORD lpdwVersion
+			LPDWORD lpdwVersion
 		);
 
-    FTD3XX_API
-    FT_STATUS WINAPI FT_SetPipeTimeout(
-    FT_HANDLE ftHandle,
-    UCHAR ucPipeID,
-    ULONG TimeoutInMs
-    );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_SetPipeTimeout(
+			FT_HANDLE ftHandle,
+			UCHAR ucPipeID,
+			ULONG TimeoutInMs
+		);
 
-    FTD3XX_API
-    FT_STATUS WINAPI FT_GetPipeTimeout(
-    FT_HANDLE ftHandle,
-    UCHAR ucPipeID,
-    PULONG pTimeoutInMs
-    );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_GetPipeTimeout(
+			FT_HANDLE ftHandle,
+			UCHAR ucPipeID,
+			PULONG pTimeoutInMs
+		);
 
-    FTD3XX_API
-    FT_STATUS WINAPI FT_SetSuspendTimeout(
-    FT_HANDLE ftHandle,
-    ULONG Timeout
-    );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_SetSuspendTimeout(
+			FT_HANDLE ftHandle,
+			ULONG Timeout
+		);
 
-    FTD3XX_API
-    FT_STATUS WINAPI FT_GetSuspendTimeout(
-    FT_HANDLE ftHandle,
-    PULONG pTimeout
-    );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_GetSuspendTimeout(
+			FT_HANDLE ftHandle,
+			PULONG pTimeout
+		);
 
-    FTD3XX_API
-    FT_STATUS WINAPI FT_EnableGPIO(
-    FT_HANDLE ftHandle,
-    UINT32 u32Mask,
-    UINT32 u32Dir
-    );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_EnableGPIO(
+			FT_HANDLE ftHandle,
+			UINT32 u32Mask,
+			UINT32 u32Dir
+		);
 
 
-    FTD3XX_API
-    FT_STATUS WINAPI FT_WriteGPIO(
-    FT_HANDLE ftHandle,
-    UINT32 u32Mask,
-    UINT32 u32Data
-    );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_WriteGPIO(
+			FT_HANDLE ftHandle,
+			UINT32 u32Mask,
+			UINT32 u32Data
+		);
 
-    FTD3XX_API
-    FT_STATUS WINAPI FT_ReadGPIO(
-    FT_HANDLE ftHandle,
-    UINT32 *pu32Data
-    );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_ReadGPIO(
+			FT_HANDLE ftHandle,
+			UINT32* pu32Data
+		);
 
-    FTD3XX_API
-    FT_STATUS WINAPI FT_SetGPIOPull(
-    FT_HANDLE ftHandle,
-    UINT32 u32Mask,
-    UINT32 u32Pull
-    );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_SetGPIOPull(
+			FT_HANDLE ftHandle,
+			UINT32 u32Mask,
+			UINT32 u32Pull
+		);
 
-    FTD3XX_API
-    FT_STATUS WINAPI FT_SetGPIOLevel(
-    FT_HANDLE ftHandle,
-    UINT32 u32Mask,
-    UINT32 u32Level
-    );
+	FTD3XX_API
+		FT_STATUS WINAPI FT_SetGPIOLevel(
+			FT_HANDLE ftHandle,
+			UINT32 u32Mask,
+			UINT32 u32Level
+		);
 
 #ifdef __cplusplus
 }

@@ -76,6 +76,7 @@ const std::string get_ft_status_message(FT_STATUS status)
 		return "Insufficient resources";
 	case FT_INVALID_PARAMETER:
 		return "Invalid parameter provided";
+		/*
 	case FT_INVALID_BAUD_RATE:
 		return "Invalid baud rate specified";
 	case FT_DEVICE_NOT_OPENED_FOR_ERASE:
@@ -94,6 +95,7 @@ const std::string get_ft_status_message(FT_STATUS status)
 		return "EEPROM not present on device";
 	case FT_EEPROM_NOT_PROGRAMMED:
 		return "EEPROM is not programmed";
+		*/
 	case FT_INVALID_ARGS:
 		return "Invalid arguments provided";
 	case FT_NOT_SUPPORTED:
@@ -401,6 +403,7 @@ int process_usb_events_thread(std::atomic<bool> *shouldTerminateProcessing)
 					// printf("A:%04x D:%02x RW:%u\n", addr, data, rw);
 					if ((event_reset == 0) && (event_reset_prev == 1))
 					{
+						printf("A:%04x D:%02x RW:%u\n", addr, data, rw);
 						A2VideoManager::GetInstance()->bShouldReboot = true;
 					}
 					event_reset_prev = event_reset;
@@ -559,21 +562,22 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			*p++ = ((time_val.tm_mday / 10) << 4) + (time_val.tm_mday % 10);
 			*p++ = (((time_val.tm_mon+1) / 10) << 4) + ((time_val.tm_mon+1) % 10);
 			*p++ = (((time_val.tm_year % 100) / 10) << 4) + ((time_val.tm_year % 100) % 10);
-			printf("setting time: %04x%04x\n",set_time_buf[3],set_time_buf[2]);
+			printf("Setting time: %04x%04x\n",set_time_buf[3],set_time_buf[2]);
 			uint32_t set_time_msg_len = 16;
-			ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t *)set_time_buf, set_time_msg_len, &bytes_transferred, 0);
+			ftStatus = FT_WritePipeEx(g_ftHandle, FT_PIPE_WRITE_ID, (uint8_t *)set_time_buf, set_time_msg_len, &bytes_transferred, 0);
 			if (ftStatus != FT_OK)
 			{
 				std::cerr << "Failed to set time to FPGA: " << get_ft_status_message(ftStatus) << std::endl;
 			}
 
 			// enable bus events
+			printf("Enabling FPGA bus events...");
 			uint32_t enable_msg_buf[3];
 			enable_msg_buf[0] = 0x80000001; // incr set, 1 data field
 			enable_msg_buf[1] = 0x00001000; // address of bus_event_control
 			enable_msg_buf[2] = 0x00000001; // bit 0 indicates enable bus events
 			uint32_t enable_msg_buf_len = 12;
-			ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t *)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
+			ftStatus = FT_WritePipeEx(g_ftHandle, FT_PIPE_WRITE_ID, (uint8_t *)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
 			if (ftStatus != FT_OK)
 			{
 				std::cerr << "Failed to enable FPGA bus events: " << get_ft_status_message(ftStatus) << std::endl;
@@ -634,7 +638,7 @@ uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* 
 	}
 	uint32_t enable_msg_buf_len = (2 + vDataSize) * sizeof(enable_msg_buf[0]);
 	ULONG bytes_transferred;
-	ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
+	ftStatus = FT_WritePipeEx(g_ftHandle, FT_PIPE_WRITE_ID, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
 	if (ftStatus != FT_OK)
 	{
 		std::cerr << "Failed to write pipe ex: " << get_ft_status_message(ftStatus) << std::endl;
