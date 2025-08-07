@@ -213,7 +213,7 @@ public:
 	const uint32_t GetVRAMReadId() { return vrams_read->id; };
 	const uint8_t* GetLegacyVRAMReadPtr() { return vrams_read->vram_legacy; };
 	const uint8_t* GetSHRVRAMReadPtr() { return vrams_read->vram_shr; };
-	const uint8_t* GetSHRVRAMInterlacedReadPtr() { return vrams_read->vram_shr + sizeof(vrams_read->vram_shr) / _INTERLACE_MULTIPLIER; };
+	const uint8_t* GetSHRVRAMInterlacedReadPtr() { return vrams_read->vram_shr + GetVramSizeSHR() / _INTERLACE_MULTIPLIER; };
 	const uint8_t* GetPAL256VRAMReadPtr() { return vrams_read->vram_pal256; };
 	const uint8_t* GetTEXT1VRAMReadPtr() { return vrams_read->vram_forced_text1; };
 	const uint8_t* GetTEXT2VRAMReadPtr() { return vrams_read->vram_forced_text2; };
@@ -222,7 +222,7 @@ public:
 	const GLfloat* GetOffsetBufferReadPtr() { return vrams_read->offset_buffer; };
 	uint8_t* GetLegacyVRAMWritePtr() { return vrams_write->vram_legacy; };
 	uint8_t* GetSHRVRAMWritePtr() { return vrams_write->vram_shr; };
-	uint8_t* GetSHRVRAMInterlacedWritePtr() { return vrams_write->vram_shr + sizeof(vrams_write->vram_shr) / _INTERLACE_MULTIPLIER; };
+	uint8_t* GetSHRVRAMInterlacedWritePtr() { return vrams_write->vram_shr + GetVramSizeSHR() / _INTERLACE_MULTIPLIER; };
 	GLfloat* GetOffsetBufferWritePtr() { return vrams_write->offset_buffer; };
 	GLuint GetOutputTextureId();		// merged output
 	bool Render(GLuint &texUnit);	// outputs the texture unit used, and returns if it rendered or not
