@@ -235,7 +235,7 @@ void A2WindowRGB::DisplayImGuiWindow() {
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
 	ImGui::SameLine(); ImGui::Spacing(); ImGui::SameLine();
-	int dragSpeed = (ImGui::GetIO().KeyCtrl ? 16 : 1 );
+	float dragSpeed = (ImGui::GetIO().KeyCtrl ? 16.f : 1.f );
 	if (ImGui::DragInt("Memory Start", &memStart, dragSpeed, 0, 0xFFFF, "%04X"))
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	if (memStart > 0xFFFF)

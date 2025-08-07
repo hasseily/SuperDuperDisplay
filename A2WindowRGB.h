@@ -38,16 +38,16 @@ public:
 private:
 	A2VideoModeRGB_e videoMode;				// Video mode to use
 	Shader shader;							// Shader used
-	bool doubleMode;		 				// DTEXT, DLGR, DHGR
-	uXY screen_count;						// width,height in pixels of visible screen area of window
+	bool doubleMode = false; 				// DTEXT, DLGR, DHGR
+	uXY screen_count = { 0,0 };				// width,height in pixels of visible screen area of window
 
 	SDL_FRect quad;							// x, y, width, height
 
 	std::vector<A2RenderVertex> vertices;	// Vertices with XYRelative and XYPixels
-	unsigned int VAO;	// Vertex Array Object (holds buffers that are vertex related)
-	unsigned int VBO;	// Vertex Buffer Object (holds vertices)
-	GLuint FBO;
-	GLuint texture_id;
+	unsigned int VAO = 0;	// Vertex Array Object (holds buffers that are vertex related)
+	unsigned int VBO = 0;	// Vertex Buffer Object (holds vertices)
+	GLuint FBO = 0;
+	GLuint texture_id = 0;
 
 	void UpdateVertexArray();
 };

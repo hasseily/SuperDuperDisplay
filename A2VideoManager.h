@@ -301,7 +301,7 @@ private:
 	int vidHdTextAlphaForeNibble = 0b1111;
 	int vidHdTextAlphaBackNibble = 0b1111;
 	std::string sImguiLoadPath = ".";
-	float bWobblePower = 0.200;
+	float bWobblePower = 0.200f;
 	bool p_b_ntsc = false;					// if true, there is a first render pass into FBO_NTSC
 	bool p_b_ntscNoFilterMono = true;		// if true, don't filter through NTSC monochrome pixels
 	float p_f_ntscStrength = 0.5f;
