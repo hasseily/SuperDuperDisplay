@@ -45,6 +45,7 @@
 #include <libgen.h>
 #include <pthread.h>
 #include <sched.h>
+#include <sys/resource.h>
 #else
 #include <windows.h>
 #endif
@@ -626,6 +627,9 @@ int main(int argc, char* argv[])
 
 	// Set priority on the threads
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
+    if (setpriority(PRIO_PROCESS, 0, -10) != 0) {
+        std::cerr << "Failed to set general app niceness" << std::endl;
+    }
 	sched_param schParams;
 	schParams.sched_priority = sched_get_priority_max(SCHED_FIFO);
 	pthread_t nativeHandle = thread_server.native_handle();
