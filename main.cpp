@@ -625,20 +625,25 @@ int main(int argc, char* argv[])
 	// And run the processing thread
 	std::thread thread_processor(process_usb_events_thread, &bShouldTerminateProcessing);
 
-	// Set priority on the threads
+	// Set priority on the app and the usb server thread
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
     if (setpriority(PRIO_PROCESS, 0, -10) != 0) {
-        std::cerr << "Failed to set general app niceness" << std::endl;
+        std::cerr << std::endl << "Failed to set general app niceness, needs SUDO" << std::endl;
     }
 	sched_param schParams;
 	schParams.sched_priority = sched_get_priority_max(SCHED_FIFO);
 	pthread_t nativeHandle = thread_server.native_handle();
 	if (pthread_setschedparam(nativeHandle, SCHED_FIFO, &schParams) != 0) {
-		std::cerr << "Failed to set thread priority for USB server thread!" << std::endl;
+		std::cerr << "Failed to set thread priority for USB server thread, needs SUDO" << std::endl;
 	}
 #else
+	HANDLE hProc = GetCurrentProcess();
+	// Choose a priority class. HIGH_PRIORITY_CLASS is generally safe. REALTIME_PRIORITY_CLASS is dangerous.
+	if (!SetPriorityClass(hProc, HIGH_PRIORITY_CLASS))
+		std::cerr << "SetPriorityClass failed: " << GetLastError() << "\n";
 	HANDLE threadHandle = thread_server.native_handle();
-	SetThreadPriority(threadHandle, THREAD_PRIORITY_TIME_CRITICAL);
+	if (!SetThreadPriority(threadHandle, THREAD_PRIORITY_TIME_CRITICAL))
+		std::cerr << "SetThreadPriority failed: " << GetLastError() << "\n";
 #endif
 
 	// Display version number at the bottom left for 3 seconds
