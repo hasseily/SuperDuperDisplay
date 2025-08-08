@@ -214,21 +214,23 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 	else {	// texture doesn't exist, create it with glTexImage2D()
 		switch (video_mode) {
 			case A2VIDEOBEAM_SHR:
+			{
 				// Adjust the unpack alignment for textures with arbitrary widths
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 				// the size of the SHR texture is Scanlines+2xBorderHeight, doubled for interlace
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, _COLORBYTESOFFSET + (cycles_w_with_border * 4),
-							 (_A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines)) * _INTERLACE_MULTIPLIER, 0,
-							 GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
+					(_A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines)) * _INTERLACE_MULTIPLIER, 0,
+					GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
 				// Create the PAL256TEX texture
 				glActiveTexture(_TEXUNIT_PAL256BUFFER);
 				glBindTexture(GL_TEXTURE_2D, PAL256TEX);
 				// The size of the PAL256 texture is 2 bytes per SHR byte. Add the interlacing and that's 4x scanlines
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, _A2VIDEO_SHR_BYTES_PER_LINE,
-							 2 * _A2VIDEO_SHR_SCANLINES * _INTERLACE_MULTIPLIER, 0,
-							 GL_RED_INTEGER, GL_UNSIGNED_SHORT, (uint16_t*)(A2VideoManager::GetInstance()->GetPAL256VRAMReadPtr()));
+					2 *_A2VIDEO_SHR_SCANLINES * _INTERLACE_MULTIPLIER, 0,
+					GL_RED_INTEGER, GL_UNSIGNED_SHORT, A2VideoManager::GetInstance()->GetPAL256VRAMReadPtr());
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				break;
+			}
 			case A2VIDEOBEAM_FORCED_TEXT1:
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetTEXT1VRAMReadPtr());
 				break;

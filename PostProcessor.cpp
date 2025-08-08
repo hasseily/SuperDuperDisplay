@@ -467,6 +467,10 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		std::cerr << "OpenGL error PP 1: " << glerr << std::endl;
 	}
 
+	if ((texWidth == 0) || (texHeight == 0)) {
+		return;
+	}
+
 	// How much can we scale the output quad?
 	// Always scale up in integers numbers, but auto scale down is float
 	float _scale = static_cast<float>(viewportWidth) / static_cast<float>(texWidth);

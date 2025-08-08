@@ -669,8 +669,6 @@ int main(int argc, char* argv[])
 				Main_DrawFPSOverlay();	// It is wiped by the reset
 		}
 		a2VideoManager->CheckSetBordersWithReinit();
-
-		bShouldRenderA2Video = true;
 		bA2VideoDidRender = false;
 		bShouldPostProcess = false;
 		bShouldSwapFrame = true;
@@ -847,6 +845,8 @@ int main(int argc, char* argv[])
 							// there's no way to do better unless we triple or quadruple buffer the VRAM buffers,
 							// or use a variable queue. Still though, if the host is too slow the buffers will
 							// always overrun, so we max the # of frame events in the queue at MAX_USEREVENTS_IN_QUEUE
+							if (!bShouldRenderA2Video)
+								break;
 							bA2VideoDidRender = a2VideoManager->Render(A2VIDEO_TEX_UNIT);
 							// if (bA2VideoDidRender == false)
 								// std::cerr << "Multiple A2 frames in one loop" << std::endl;
@@ -907,10 +907,7 @@ int main(int argc, char* argv[])
 			glClear(GL_COLOR_BUFFER_BIT);
 
 			// Now run the postprocessing (not for IsSwapApple2Bus)
-			if (!bIsSwapApple2Bus)
-			{
-				postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
-			}
+			postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
 
 			// Determine if frame should be swapped, or nothing done
 			// Do that after the postprocessing phase, because PP may
