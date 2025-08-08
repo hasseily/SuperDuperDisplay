@@ -404,7 +404,7 @@ int process_usb_events_thread(std::atomic<bool> *shouldTerminateProcessing)
 					// printf("A:%04x D:%02x RW:%u\n", addr, data, rw);
 					if ((event_reset == 0) && (event_reset_prev == 1))
 					{
-						printf("A:%04x D:%02x RW:%u\n", addr, data, rw);
+						//printf("A:%04x D:%02x RW:%u\n", addr, data, rw);
 						A2VideoManager::GetInstance()->bShouldReboot = true;
 					}
 					event_reset_prev = event_reset;
