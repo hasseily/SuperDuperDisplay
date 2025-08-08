@@ -43,6 +43,10 @@
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
 #include <unistd.h>
 #include <libgen.h>
+#include <pthread.h>
+#include <sched.h>
+#else
+#include <windows.h>
 #endif
 
 static SwapInterval_e g_swapInterval = SWAPINTERVAL_ADAPTIVE;
@@ -620,6 +624,19 @@ int main(int argc, char* argv[])
 	// And run the processing thread
 	std::thread thread_processor(process_usb_events_thread, &bShouldTerminateProcessing);
 
+	// Set priority on the threads
+#if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
+	sched_param schParams;
+	schParams.sched_priority = sched_get_priority_max(SCHED_FIFO);
+	pthread_t nativeHandle = thread_server.native_handle();
+	if (pthread_setschedparam(nativeHandle, SCHED_FIFO, &schParams) != 0) {
+		std::cerr << "Failed to set thread priority for USB server thread!" << std::endl;
+	}
+#else
+	HANDLE threadHandle = thread_server.native_handle();
+	SetThreadPriority(threadHandle, THREAD_PRIORITY_TIME_CRITICAL);
+#endif
+
 	// Display version number at the bottom left for 3 seconds
 	int _xv = 20;
 	int _yv = 20;
@@ -710,6 +727,7 @@ int main(int argc, char* argv[])
 					if (SDL_GetRelativeMouseMode()) {
 						usb_mouse_send_event(event);
 					}
+					break;
 				case SDL_MOUSEWHEEL:
 					if (sdhrManager->IsSdhrEnabled())
 						sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);

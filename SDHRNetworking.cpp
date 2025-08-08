@@ -40,6 +40,8 @@ static bool event_reset_prev = 1;
 
 static ConcurrentQueue<std::shared_ptr<Packet>> packetInQueue;
 static ConcurrentQueue<std::shared_ptr<Packet>> packetFreeQueue;
+static int maxInQueueSize = 0;
+static size_t lastInQueueSizePrint = 0;
 
 const uint64_t get_number_packets_processed() { return num_processed_packets; };
 const uint64_t get_duration_packet_processing_ns() { return duration_packet_processing_ns; };
@@ -613,10 +615,16 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 		if (!eventRecorder->IsInReplayMode())
 		{
 			packetInQueue.push(std::move(packet));
+			if (maxInQueueSize < packetInQueue.size())
+				maxInQueueSize = packetInQueue.size();
 		}
 		else
 		{
 			packetFreeQueue.push(std::move(packet));
+		}
+		if ((SDL_GetTicks64() - lastInQueueSizePrint) > 1000) {
+			std::cerr << "maxInQueueSize: " << maxInQueueSize << std::endl;
+			lastInQueueSizePrint = SDL_GetTicks64();
 		}
 	}
 	std::cout << "ending usb read loop" << std::endl;
