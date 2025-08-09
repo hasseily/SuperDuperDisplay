@@ -618,6 +618,7 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 
 		// enable bus events when necessary
 		if (bRequestEnableBusEvents.load(std::memory_order_acquire)) {
+			bRequestEnableBusEvents.store(false, std::memory_order_release); // reset asap
 			std::cerr << "Enabling FPGA bus events... ";
 			uint32_t enable_msg_buf[3];
 			enable_msg_buf[0] = 0x80000001; // incr set, 1 data field
@@ -637,7 +638,6 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			else {
 				std::cerr << "done!" << std::endl;
 			}
-			bRequestEnableBusEvents.store(false, std::memory_order_release); // reset after processing
 		}
 
 		auto packet = packetFreeQueue.pop();
