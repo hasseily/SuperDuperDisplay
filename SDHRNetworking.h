@@ -60,6 +60,14 @@ enum class ENET_RES
 	ERR = 1
 };
 
+enum class BusEventFlags : uint32_t {
+	EventEnable = 1u << 0,
+	Overflow = 1u << 1,
+};
+
+constexpr bool state_has_flag(uint32_t value, BusEventFlags flag);
+std::string bus_event_state_to_string(uint32_t state);
+
 #define CXSDHR_CTRL 0xC0A0	// SDHR command
 #define CXSDHR_DATA 0xC0A1	// SDHR data
 

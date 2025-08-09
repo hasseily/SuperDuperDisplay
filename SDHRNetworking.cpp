@@ -11,6 +11,8 @@
 #include <time.h>
 #include <fcntl.h>
 #include <chrono>
+#include <bitset>
+#include <sstream>
 #ifdef __NETWORKING_WINDOWS__
 #include "ftd3xx_win.h"
 #else
@@ -37,6 +39,9 @@ static FT_DEVICE_LIST_INFO_NODE activeNode; // currently active USB device
 // Only do a single reset if a string of reset events arrive
 static bool event_reset = 1;
 static bool event_reset_prev = 1;
+
+// Atomics to ask the server process to send messages to the tini
+std::atomic<bool> bRequestEnableBusEvents = true;
 
 static ConcurrentQueue<std::shared_ptr<Packet>> packetInQueue;
 static ConcurrentQueue<std::shared_ptr<Packet>> packetFreeQueue;
@@ -132,6 +137,20 @@ const std::string get_ft_status_message(FT_STATUS status)
 	default:
 		return "Unknown status code";
 	}
+}
+
+constexpr bool state_has_flag(uint32_t value, BusEventFlags flag) {
+	return (value & static_cast<uint32_t>(flag)) != 0;
+}
+
+std::string bus_event_state_to_string(uint32_t state) {
+	std::ostringstream oss;
+	oss << "0x" << std::hex << state
+		<< " [" << std::bitset<8>(state) << "] "; // only show low 8 bits here
+	if (state_has_flag(state, BusEventFlags::EventEnable)) oss << "EventEnable ";
+	if (state_has_flag(state, BusEventFlags::Overflow))    oss << "Overflow ";
+	if (!(state & ((1u << 2) - 1))) oss << "None";
+	return oss.str();
 }
 
 const std::string get_tini_name_string() { return std::string(activeNode.Description); };
@@ -388,7 +407,13 @@ int process_usb_events_thread(std::atomic<bool> *shouldTerminateProcessing)
 				case 0x1000:
 				{
 					uint32_t bus_event_state = b[i];
-					std::cerr << "received bus event state: " << bus_event_state << std::endl;
+					std::cerr << "Received state event: " << bus_event_state_to_string(bus_event_state) << std::endl;
+					if (state_has_flag(bus_event_state, BusEventFlags::Overflow))
+					{
+						// we're in overflow mode, re-enable bus events
+						std::cerr << "Lost synchronization, resynching now." << std::endl;
+						bRequestEnableBusEvents.store(true, std::memory_order_release);
+					}
 				}
 				break;
 				case 0x1004:
@@ -439,6 +464,7 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 	eventRecorder = EventRecorder::GetInstance();
 	clear_queues();
 	std::cout << "Starting USB thread" << std::endl;
+	OVERLAPPED vOverlapped = { 0 };
 	ftStatusPrevious = 0xFFFF;
 	bIsConnected = false;
 	std::chrono::steady_clock::time_point next_connect_timeout{};
@@ -505,7 +531,18 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 #endif
 			if (ftStatus != FT_OK)
 			{
-				std::cerr << "Failed to open FPGA usb device g_ftHandle: " << get_ft_status_message(ftStatus) << std::endl;
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "Failed to open FPGA usb device g_ftHandle: " << get_ft_status_message(ftStatus) << std::endl;
+				ftStatusPrevious = ftStatus;
+				continue;
+			}
+#ifdef __NETWORKING_WINDOWS__
+			ftStatus = FT_InitializeOverlapped(g_ftHandle, &vOverlapped);
+			if (ftStatus != FT_OK)
+			{
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "Failed FT_InitializeOverlapped g_ftHandle: " << get_ft_status_message(ftStatus) << std::endl;
+				ftStatusPrevious = ftStatus;
 				continue;
 			}
 
@@ -513,7 +550,9 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			ftStatus = FT_SetPipeTimeout(g_ftHandle, FT_PIPE_WRITE_ID, 1000); // Pipe to write to
 			if (ftStatus != FT_OK)
 			{
-				std::cerr << "Failed to set write pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "Failed to set write pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
+				ftStatusPrevious = ftStatus;
 				FT_Close(g_ftHandle);
 				g_ftHandle = NULL;
 				continue;
@@ -521,11 +560,14 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			ftStatus = FT_SetPipeTimeout(g_ftHandle, FT_PIPE_READ_ID, 1000); // Pipe to read from
 			if (ftStatus != FT_OK)
 			{
-				std::cerr << "Failed to set read pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "Failed to set read pipe timeout: " << get_ft_status_message(ftStatus) << std::endl;
+				ftStatusPrevious = ftStatus;
 				FT_Close(g_ftHandle);
 				g_ftHandle = NULL;
 				continue;
 			}
+#endif
 			/*
 			ftStatus = FT_SetStreamPipe(g_ftHandle, true, true, 0, PKT_BUFSZ);
 			if (ftStatus != FT_OK) {
@@ -572,29 +614,40 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			{
 				std::cerr << "Failed to set time to FPGA: " << get_ft_status_message(ftStatus) << std::endl;
 			}
+		}
 
-			// enable bus events
-			printf("Enabling FPGA bus events...");
+		// enable bus events when necessary
+		if (bRequestEnableBusEvents.load(std::memory_order_acquire)) {
+			std::cerr << "Enabling FPGA bus events... ";
 			uint32_t enable_msg_buf[3];
 			enable_msg_buf[0] = 0x80000001; // incr set, 1 data field
 			enable_msg_buf[1] = 0x00001000; // address of bus_event_control
 			enable_msg_buf[2] = 0x00000001; // bit 0 indicates enable bus events
 			uint32_t enable_msg_buf_len = 12;
+			ULONG bytes_transferred;
 #ifdef __NETWORKING_WINDOWS__
-			ftStatus = FT_WritePipeEx(g_ftHandle, FT_PIPE_WRITE_ID, (uint8_t *)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
+			ftStatus = FT_WritePipeEx(g_ftHandle, FT_PIPE_WRITE_ID, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
 #else
-			ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t *)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
+			ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
 #endif
 			if (ftStatus != FT_OK)
 			{
-				std::cerr << "Failed to enable FPGA bus events: " << get_ft_status_message(ftStatus) << std::endl;
+				std::cerr << "failed! " << get_ft_status_message(ftStatus) << std::endl;
 			}
+			else {
+				std::cerr << "done!" << std::endl;
+			}
+			bRequestEnableBusEvents.store(false, std::memory_order_release); // reset after processing
 		}
 
 		auto packet = packetFreeQueue.pop();
-		// Synchronous Read
+		// Asynchronous Read on Windows. Looks like it's more reliable.
 #ifdef __NETWORKING_WINDOWS__
-		ftStatus = FT_ReadPipeEx(g_ftHandle, FT_PIPE_READ_ID, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), NULL);
+		ftStatus = FT_ReadPipeEx(g_ftHandle, FT_PIPE_READ_ID, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), &vOverlapped);
+		if (ftStatus == FT_IO_PENDING)
+		{
+			ftStatus = FT_GetOverlappedResult(g_ftHandle, &vOverlapped, (ULONG*)&(packet->size), TRUE);
+		}
 #else
 		ftStatus = FT_ReadPipeEx(g_ftHandle, 0, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), 1000);
 #endif
@@ -603,9 +656,13 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			// FT_TIMEOUT means the Apple is off. No data is coming in
 			if (ftStatus != FT_TIMEOUT)
 			{
-				std::cerr << "Failed to read from FPGA usb packet pipe: " << get_ft_status_message(ftStatus) << std::endl;
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "Failed to read from FPGA usb packet pipe: " << get_ft_status_message(ftStatus) << std::endl;
+				ftStatusPrevious = ftStatus;
 			}
+#ifndef __NETWORKING_WINDOWS__
 			FT_AbortPipe(g_ftHandle, FT_PIPE_READ_ID);
+#endif
 			packetFreeQueue.push(std::move(packet));
 			continue;
 		}
@@ -620,6 +677,7 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 		}
 	}
 	std::cout << "ending usb read loop" << std::endl;
+	FT_ReleaseOverlapped(g_ftHandle, &vOverlapped);
 	return 0;
 }
 
@@ -652,7 +710,9 @@ uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* 
 #endif
 	if (ftStatus != FT_OK)
 	{
-		std::cerr << "Failed to write pipe ex: " << get_ft_status_message(ftStatus) << std::endl;
+		if (ftStatus != ftStatusPrevious)
+			std::cerr << "Failed to write pipe ex: " << get_ft_status_message(ftStatus) << std::endl;
+		ftStatusPrevious = ftStatus;
 		return 0;
 	}
 	return 1;
