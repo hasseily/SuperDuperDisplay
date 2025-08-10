@@ -20,10 +20,26 @@
 #endif
 #include <charconv>
 
-// Write to Appletini
+// The FIFO interface ID is different than the pipe ids.
+// On Windows, the Read/WritePipe functions use pipe ids.
+// On linux/mac, they use FIFO ids.
+// The APIs are just different enough to be stupidly different.
+
+#define FIFO_INTERFACE_ID 0
 #define FT_PIPE_WRITE_ID 0x02
-// Read from Appletini
 #define FT_PIPE_READ_ID 0x82
+
+#ifdef __NETWORKING_WINDOWS__
+#define FT_WRITE_ID	FT_PIPE_WRITE_ID
+#define FT_READ_ID FT_PIPE_READ_ID
+#define FT_READ_PIPE_ASYNC_FUNC FT_ReadPipeEx
+#define FT_WRITE_PIPE_ASYNC_FUNC FT_WritePipeEx
+#else
+#define FT_WRITE_ID	FIFO_INTERFACE_ID
+#define FT_READ_ID FIFO_INTERFACE_ID
+#define FT_READ_PIPE_ASYNC_FUNC FT_ReadPipeAsync
+#define FT_WRITE_PIPE_ASYNC_FUNC FT_WritePipeAsync
+#endif
 
 // The USB handle to the Appletini
 static FT_HANDLE g_ftHandle = NULL;
@@ -536,7 +552,8 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 				ftStatusPrevious = ftStatus;
 				continue;
 			}
-#ifdef __NETWORKING_WINDOWS__
+
+			// For async usage of the bus data stream
 			ftStatus = FT_InitializeOverlapped(g_ftHandle, &vOverlapped);
 			if (ftStatus != FT_OK)
 			{
@@ -546,8 +563,9 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 				continue;
 			}
 
-			// Set pipe timeouts. Probably only necessary on Windows
-			ftStatus = FT_SetPipeTimeout(g_ftHandle, FT_PIPE_WRITE_ID, 1000); // Pipe to write to
+#ifdef __NETWORKING_WINDOWS__
+			// Set pipe timeouts. Only exists on windows
+			ftStatus = FT_SetPipeTimeout(g_ftHandle, FT_WRITE_ID, 1000); // Pipe to write to
 			if (ftStatus != FT_OK)
 			{
 				if (ftStatus != ftStatusPrevious)
@@ -557,7 +575,7 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 				g_ftHandle = NULL;
 				continue;
 			}
-			ftStatus = FT_SetPipeTimeout(g_ftHandle, FT_PIPE_READ_ID, 1000); // Pipe to read from
+			ftStatus = FT_SetPipeTimeout(g_ftHandle, FT_READ_ID, 1000); // Pipe to read from
 			if (ftStatus != FT_OK)
 			{
 				if (ftStatus != ftStatusPrevious)
@@ -603,17 +621,13 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			*p++ = ((time_val.tm_mday / 10) << 4) + (time_val.tm_mday % 10);
 			*p++ = (((time_val.tm_mon+1) / 10) << 4) + ((time_val.tm_mon+1) % 10);
 			*p++ = (((time_val.tm_year % 100) / 10) << 4) + ((time_val.tm_year % 100) % 10);
-			printf("Setting time: %04x%04x\n",set_time_buf[3],set_time_buf[2]);
+			printf("Setting time: %04x%04x... ",set_time_buf[3],set_time_buf[2]);
 			uint32_t set_time_msg_len = 16;
-#ifdef __NETWORKING_WINDOWS__
-			ftStatus = FT_WritePipeEx(g_ftHandle, FT_PIPE_WRITE_ID, (uint8_t *)set_time_buf, set_time_msg_len, &bytes_transferred, 0);
-#else
-			ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t *)set_time_buf, set_time_msg_len, &bytes_transferred, 0);
-#endif
+			ftStatus = FT_WritePipeEx(g_ftHandle, FT_WRITE_ID, (uint8_t *)set_time_buf, set_time_msg_len, &bytes_transferred, 0);
 			if (ftStatus != FT_OK)
-			{
-				std::cerr << "Failed to set time to FPGA: " << get_ft_status_message(ftStatus) << std::endl;
-			}
+				std::cerr << "failed! " << get_ft_status_message(ftStatus) << std::endl;
+			else
+				std::cerr << "done!" << std::endl;
 		}
 
 		// enable bus events when necessary
@@ -625,32 +639,22 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			enable_msg_buf[2] = 0x00000001; // bit 0 indicates enable bus events
 			uint32_t enable_msg_buf_len = 12;
 			ULONG bytes_transferred;
-#ifdef __NETWORKING_WINDOWS__
-			ftStatus = FT_WritePipeEx(g_ftHandle, FT_PIPE_WRITE_ID, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
-#else
-			ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
-#endif
+			ftStatus = FT_WritePipeEx(g_ftHandle, FT_WRITE_ID, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
 			if (ftStatus != FT_OK)
-			{
 				std::cerr << "failed! " << get_ft_status_message(ftStatus) << std::endl;
-			}
-			else {
+			else
 				std::cerr << "done!" << std::endl;
-			}
 			bRequestEnableBusEvents.store(false, std::memory_order_release); // reset
 		}
 
 		auto packet = packetFreeQueue.pop();
-		// Asynchronous Read on Windows. Looks like it's more reliable.
-#ifdef __NETWORKING_WINDOWS__
-		ftStatus = FT_ReadPipeEx(g_ftHandle, FT_PIPE_READ_ID, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), &vOverlapped);
+		// Asynchronous Read
+		ftStatus = FT_READ_PIPE_ASYNC_FUNC(g_ftHandle, FT_READ_ID, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), &vOverlapped);
+
 		if (ftStatus == FT_IO_PENDING)
 		{
 			ftStatus = FT_GetOverlappedResult(g_ftHandle, &vOverlapped, (ULONG*)&(packet->size), TRUE);
 		}
-#else
-		ftStatus = FT_ReadPipeEx(g_ftHandle, 0, packet->data, PKT_BUFSZ, (ULONG *)&(packet->size), 1000);
-#endif
 		if (ftStatus != FT_OK)
 		{
 			// FT_TIMEOUT means the Apple is off. No data is coming in
@@ -660,9 +664,6 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 					std::cerr << "Failed to read from FPGA usb packet pipe: " << get_ft_status_message(ftStatus) << std::endl;
 				ftStatusPrevious = ftStatus;
 			}
-#ifndef __NETWORKING_WINDOWS__
-			FT_AbortPipe(g_ftHandle, FT_PIPE_READ_ID);
-#endif
 			packetFreeQueue.push(std::move(packet));
 			continue;
 		}
@@ -703,11 +704,7 @@ uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* 
 	}
 	uint32_t enable_msg_buf_len = (2 + vDataSize) * sizeof(enable_msg_buf[0]);
 	ULONG bytes_transferred;
-#ifdef __NETWORKING_WINDOWS__
-	ftStatus = FT_WritePipeEx(g_ftHandle, FT_PIPE_WRITE_ID, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
-#else
-	ftStatus = FT_WritePipeEx(g_ftHandle, 0, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
-#endif
+	ftStatus = FT_WritePipeEx(g_ftHandle, FT_WRITE_ID, (uint8_t*)enable_msg_buf, enable_msg_buf_len, &bytes_transferred, 0);
 	if (ftStatus != FT_OK)
 	{
 		if (ftStatus != ftStatusPrevious)
