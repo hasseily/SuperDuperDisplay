@@ -636,12 +636,13 @@ int main(int argc, char* argv[])
 	if (pthread_setschedparam(nativeHandle, SCHED_FIFO, &schParams) != 0) {
 		std::cerr << "Failed to set thread priority for USB server thread, needs SUDO" << std::endl;
 	}
-#elseif defined(__NETWORKING_APPLE__)
+#elif defined(__NETWORKING_APPLE__)
 	pthread_t nativeHandle = thread_server.native_handle();
 	qos_class_t qos = QOS_CLASS_USER_INTERACTIVE;
 	int rel_prio = -15; // 0..-15 optional tighter priority within class
-	if (pthread_set_qos_class_self_np(nativeHandle, qos, rel_prio) != 0) {
-		std::cerr << "pthread_set_qos_class_self_np failed\n";
+	auto server_pthread_qos_override = pthread_override_qos_class_start_np(nativeHandle, qos, rel_prio);
+	if (server_pthread_qos_override == NULL) {
+		std::cerr << "pthread_override_qos_class_start_np failed\n";
 		return false;
 	}
 #else
@@ -1030,6 +1031,10 @@ int main(int argc, char* argv[])
 	terminate_processing_thread();
 	thread_processor.join();
 	bShouldTerminateNetworking = true;
+#if defined(__NETWORKING_APPLE__)
+	if (server_pthread_qos_override != NULL)
+		pthread_override_qos_class_end_np(server_pthread_qos_override);
+#endif
 	thread_server.join();
 
 	// Serialize settings and save them
