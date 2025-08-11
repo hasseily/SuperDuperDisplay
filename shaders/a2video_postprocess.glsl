@@ -152,6 +152,7 @@ vec4 HalveFrameRate(vec2 coords, vec4 currentColor)
 // NOTE: currentColor must be in linear space already
 vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 {
+	float ghosting = GhostingPercent/100.0;
 	vec4 previousColor = gamma_decode(texture(PreviousFrame, coords));
 	// Calculate the intensity levels of both frames
 	float currentIntensity = dot(currentColor.rgb, vec3(0.299, 0.587, 0.114));
@@ -160,13 +161,13 @@ vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 	if (currentIntensity > previousIntensity)	// move at a fast fixed speed towards higher intensity
 		blended = mix(currentColor, previousColor, 0.01);
 	else {
-		if ((previousIntensity - currentIntensity) < (GhostingPercent*0.0025))
+		if ((previousIntensity - currentIntensity) < (ghosting*0.035))
 			// As we get closer to the color (the higher the ghosting, the higher the cutoff),
 			// at some point we need to accelerate the move. Otherwise at higher ghosting values
 			// the color will never be reached (especially visible when fading to black)
-			blended = mix(currentColor, previousColor, 0.4);
+			blended = mix(currentColor, previousColor, ghosting / 2.0);
 		else
-			blended = mix(currentColor, previousColor, GhostingPercent/100.0);
+			blended = mix(currentColor, previousColor, ghosting);
 	}
 	return blended;
 }
@@ -518,10 +519,10 @@ void main() {
 	FragColor = vec4(res, corn);
 
 	if (bHalveFrameRate)
-		FragColor = HalveFrameRate(TexCoords, FragColor);
-	
+		FragColor = HalveFrameRate(pos, FragColor);
+
 	if (GhostingPercent > 0.0001) {
-		FragColor = GenerateGhosting(TexCoords, FragColor);
+		FragColor = GenerateGhosting(pos, FragColor);
 	}
 	FragColor = gamma_encode(FragColor);
 }
