@@ -626,7 +626,7 @@ int main(int argc, char* argv[])
 	std::thread thread_processor(process_usb_events_thread, &bShouldTerminateProcessing);
 
 	// Set priority on the app and the usb server thread
-#if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
+#if defined (__NETWORKING_LINUX__)
     if (setpriority(PRIO_PROCESS, 0, -10) != 0) {
         std::cerr << std::endl << "Failed to set general app niceness, needs SUDO" << std::endl;
     }
@@ -635,6 +635,14 @@ int main(int argc, char* argv[])
 	pthread_t nativeHandle = thread_server.native_handle();
 	if (pthread_setschedparam(nativeHandle, SCHED_FIFO, &schParams) != 0) {
 		std::cerr << "Failed to set thread priority for USB server thread, needs SUDO" << std::endl;
+	}
+#elseif defined(__NETWORKING_APPLE__)
+	pthread_t nativeHandle = thread_server.native_handle();
+	qos_class_t qos = QOS_CLASS_USER_INTERACTIVE;
+	int rel_prio = -15; // 0..-15 optional tighter priority within class
+	if (pthread_set_qos_class_self_np(nativeHandle, qos, rel_prio) != 0) {
+		std::cerr << "pthread_set_qos_class_self_np failed\n";
+		return false;
 	}
 #else
 	HANDLE hProc = GetCurrentProcess();
