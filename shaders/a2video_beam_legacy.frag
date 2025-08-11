@@ -272,13 +272,13 @@ void main()
 					fragColor = monitorcolors[monitorColorType];
 				else					// black (dot is off)
 					fragColor = monitorcolors[0];
-				fragColor.a = 0.9; // To make the NTSC pass know it's mono
+				fragColor.a = 1.01; // To make the NTSC pass know it's mono
 			} else {
 				// Color monitor
 				// Also provide for tint coloring that the 2gs can do
 				fragColor = (tex * tintcolors[(targetTexel.a & 0xF0u) >> 4])		// foreground (dot is on)
 				+ ((1.f - tex) * tintcolors[targetTexel.a & 0x0Fu]);	// background (dot is off)
-				fragColor.a = 0.9;	// to make the NTSC pass know it's mono
+				fragColor.a = 1.01;	// to make the NTSC pass know it's mono
 			}
 			return;
 			break;
@@ -317,7 +317,7 @@ void main()
 					fragColor = monitorcolors[monitorColorType];
 				else							// black (dot is off)
 					fragColor = monitorcolors[0];
-				fragColor.a = 0.9; // To make the NTSC pass know it's mono
+				fragColor.a = 1.01; // To make the NTSC pass know it's mono
 			}
 			return;
 			break;
@@ -359,7 +359,7 @@ For each pixel, determine which memory byte it is part of,
 			{
 				uint xFragPos = uFragPos.x - uint(hborder * 14);
 				fragColor = monitorcolors[monitorColorType] * float(clamp(targetTexel.r & (1u << ((xFragPos % 14u)/2u)), 0u, 1u));
-				fragColor.a = 0.9; // To make the NTSC pass know it's mono
+				fragColor.a = 1.01; // To make the NTSC pass know it's mono
 				return;
 			}
 			
@@ -445,7 +445,7 @@ For each pixel, determine which memory byte it is part of,
 			{
 				uint xFragPos = uFragPos.x - uint(hborder * 14);
 				fragColor = monitorcolors[monitorColorType] * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
-				fragColor.a = 0.9; // To make the NTSC pass know it's mono
+				fragColor.a = 1.01; // To make the NTSC pass know it's mono
 				return;
 			}
 			
@@ -506,7 +506,7 @@ For each pixel, determine which memory byte it is part of,
 				{
 					// Same as DHGRMONO
 					fragColor = vec4(1.0f) * float(clamp(((byteVal3 << 7) | (byteVal2 & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
-					fragColor.a = 0.9; // To make the NTSC pass know it's mono
+					fragColor.a = 1.01; // To make the NTSC pass know it's mono
 					return;
 				}
 			}	// end bDHGRCOL140Mixed
@@ -532,7 +532,7 @@ For each pixel, determine which memory byte it is part of,
 			uint xFragPos = uFragPos.x - uint(hborder * 14);
 			int mColorType = max(monitorColorType, 1);	// Force color to be white
 			fragColor = monitorcolors[mColorType] * float(clamp(((targetTexel.r << 7) | (targetTexel.g & 0x7Fu)) & (1u << (xFragPos % 14u)), 0u, 1u));
-			fragColor.a = 0.9; // To make the NTSC pass know it's mono
+			fragColor.a = 1.01; // To make the NTSC pass know it's mono
 			return;
 			break;
 		}
@@ -559,7 +559,7 @@ For each pixel, determine which memory byte it is part of,
 					fragColor = monitorcolors[monitorColorType];
 				else							// black (dot is off)
 					fragColor = monitorcolors[0];
-				fragColor.a = 0.9; // To make the NTSC pass know it's mono
+				fragColor.a = 1.01; // To make the NTSC pass know it's mono
 			}
 			return;
 			break;

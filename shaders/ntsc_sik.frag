@@ -10,7 +10,7 @@ precision highp int;
 /*
 	NTSC shader by Sik
 	It has a special feature in that the TEXTURE_IN alpha channel determines color or mono.
-	If it is 0.9, then the pixel is monochrome and will be untouched (alpha will be 1)
+	If it is 1.01, then the pixel is monochrome and will be untouched (alpha will be 1)
 	If it is 1, then the pixel is filtered through NTSC color
 */
 
@@ -59,11 +59,13 @@ void main()
 	}
 	
 	fragColor = texture(TEXIN, vTexCoords);
-	if (bNOFILTERMONO && fragColor.a < 0.91)	// it's a monochrome pixel or transparent
+	if (bNOFILTERMONO && fragColor.a > 1.001)	// it's a monochrome pixel
 	{
-		// if not transparent, set to full opaque
-		if (fragColor.a > 0.001)
-			fragColor.a = 1.0;
+		fragColor.a = 1.0;
+		return;
+	}
+	else if (bNOFILTERMONO && fragColor.a < 0.001)	// it's transparent
+	{
 		return;
 	}
 

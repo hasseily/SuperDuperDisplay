@@ -1564,9 +1564,9 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 		windowsbeam[A2VIDEOBEAM_LEGACY]->bIsMergedMode = (vrams_read->mode == A2Mode_e::MERGED);
 		windowsbeam[A2VIDEOBEAM_LEGACY]->bForceSHRWidth = bForceSHRWidth;
 
-		// If NTSC output for legacy is requested, render first into this texture
+		// If NTSC output for legacy is requested (only for color monitors), render first into this texture
 		// and then apply the NTSC shader to this texture into the FBO_A2Video
-		if (p_b_ntsc)
+		if (p_b_ntsc && (eA2MonitorType == A2_MON_COLOR))
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, FBO_NTSC);
 			glViewport(0, 0, fb_width, fb_height);
@@ -1574,7 +1574,7 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 			glClear(GL_COLOR_BUFFER_BIT);
 		}
 		windowsbeam[A2VIDEOBEAM_LEGACY]->Render(current_frame_idx);
-		if (p_b_ntsc)
+		if (p_b_ntsc && (eA2MonitorType == A2_MON_COLOR))
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
 
@@ -2086,7 +2086,7 @@ nlohmann::json A2VideoManager::SerializeState()
 		{"force_shr_width_in_merge_mode", bForceSHRWidth},
 		{"no_merged_mode_wobble", bNoMergedModeWobble},
 		{"font_rom_regular_index", font_rom_regular_idx},
-		{"font_rom_slternate_index", font_rom_alternate_idx},
+		{"font_rom_alternate_index", font_rom_alternate_idx},
 		{"p_b_ntsc", p_b_ntsc},
 		{"p_b_ntscNoFilterMono", p_b_ntscNoFilterMono},
 		{"p_f_ntscStrength", p_f_ntscStrength},
@@ -2107,7 +2107,7 @@ void A2VideoManager::DeserializeState(const nlohmann::json &jsonState)
 	bForceSHRWidth = jsonState.value("align_quads_to_scanline", bForceSHRWidth);
 	bNoMergedModeWobble = jsonState.value("no_merged_mode_wobble", bNoMergedModeWobble);
 	font_rom_regular_idx = jsonState.value("font_rom_regular_index", font_rom_regular_idx);
-	font_rom_alternate_idx = jsonState.value("font_rom_slternate_index", font_rom_alternate_idx);
+	font_rom_alternate_idx = jsonState.value("font_rom_alternate_index", font_rom_alternate_idx);
 	p_b_ntsc = jsonState.value("p_b_ntsc", p_b_ntsc);
 	p_b_ntscNoFilterMono = jsonState.value("p_b_ntscNoFilterMono", p_b_ntscNoFilterMono);
 	p_f_ntscStrength = jsonState.value("p_f_ntscStrength", p_f_ntscStrength);
