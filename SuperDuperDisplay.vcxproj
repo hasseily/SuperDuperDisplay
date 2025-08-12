@@ -194,6 +194,7 @@ xcopy /y /d "$(ProjectDir)\lib\Win_x64\*.dll" "$(OutDir)"</Command>
     <ClCompile Include="imgui\imgui_draw.cpp" />
     <ClCompile Include="imgui\imgui_tables.cpp" />
     <ClCompile Include="imgui\imgui_widgets.cpp" />
+    <ClCompile Include="LogTextManager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainMenu.cpp" />
     <ClCompile Include="MemoryManager.cpp" />
@@ -238,6 +239,7 @@ xcopy /y /d "$(ProjectDir)\lib\Win_x64\*.dll" "$(OutDir)"</Command>
     <ClInclude Include="imgui\imgui.h" />
     <ClInclude Include="imgui\imgui_internal.h" />
     <ClInclude Include="imgui_memory_editor.h" />
+    <ClInclude Include="LogTextManager.h" />
     <ClInclude Include="m6522.h" />
     <ClInclude Include="MainMenu.h" />
     <ClInclude Include="MemoryManager.h" />

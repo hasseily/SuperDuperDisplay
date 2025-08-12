@@ -33,7 +33,7 @@
 #include "SoundManager.h"
 #include "MockingboardManager.h"
 #include "TimedTextManager.h"
-//#include "LogTextManager.h"
+#include "LogTextManager.h"
 #include "extras/MemoryLoader.h"
 #include "extras/ImGuiFileDialog.h"
 #include "PostProcessor.h"
@@ -497,9 +497,9 @@ int main(int argc, char* argv[])
 	// Get the instances of all singletons before creating threads
 	// This ensures thread safety
 	// The OpenGLHelper instance is already acquired
-	//[[maybe_unused]] auto logTextManager = LogTextManager::GetInstance();
-	//logTextManager->SetLogStartPosition(TTLogPosition_e::BOTTOM_LEFT);
-	//std::cout << "Loaded LogTextManager " << logTextManager << std::endl;
+	[[maybe_unused]] auto logTextManager = LogTextManager::GetInstance();
+	logTextManager->logPosition = TTLogPosition_e::BOTTOM_LEFT;
+	std::cout << "Loaded LogTextManager " << logTextManager << std::endl;
 	[[maybe_unused]] auto memManager = MemoryManager::GetInstance();
 	std::cout << "Loaded MemoryManager " << memManager << std::endl;
 	[[maybe_unused]] auto sdhrManager = SDHRManager::GetInstance();
@@ -523,12 +523,6 @@ int main(int argc, char* argv[])
 		// Wait for shaders to compile
 	}
 	std::cout << "Renderer Ready!" << std::endl;
-
-	// Create an overlay text instance for feedback
-	auto timedTextManager = TimedTextManager();
-	// timedTextManager.Initialize("assets/BerkeliumIIHGR.ttf", 20);
-	timedTextManager.Initialize();
-	timedTextManager.use80ColDefaultFont = false;
 
 	// Delta Time
 	uint64_t dt_NOW = SDL_GetPerformanceCounter();
@@ -561,6 +555,9 @@ int main(int argc, char* argv[])
 		}
 		if (settingsState.contains("Mockingboard")) {
 			mockingboardManager->DeserializeState(settingsState["Mockingboard"]);
+		}
+		if (settingsState.contains("Log")) {
+			logTextManager->DeserializeState(settingsState["Log"]);
 		}
 		if (settingsState.contains("Main")) {
 			SDL_GetWindowPosition(window, &g_wx, &g_wy);
@@ -655,16 +652,14 @@ int main(int argc, char* argv[])
 		std::cerr << "SetThreadPriority failed: " << GetLastError() << "\n";
 #endif
 
-	// Display version number at the bottom left for 3 seconds
+	// Display version number
 	int _xv = 20;
 	int _yv = 20;
 	static size_t _version[3];
-	std::string _vstr(SDD_VERSION);
+	std::string _vstr("Version ");
+	_vstr.append(SDD_VERSION);
 	_vstr.append(" - F1 toggles Menu");
-	_version[0] = timedTextManager.AddText(_vstr, _xv, _yv, 3000, .9,.3,.85,1);
-	_version[1] = timedTextManager.AddText(_vstr, _xv-1, _yv+1, 3000, 1,1,1,1);
-	_version[2] = timedTextManager.AddText(_vstr, _xv+1, _yv-1, 3000, .1,.1,.1,1);
-	timedTextManager.UpdateAndRender(true);
+	logTextManager->AddLog(_vstr, glm::vec4(.9f, .3f, .85f, 1.f));
 
 	while (!g_quitIsRequested)
 	{
@@ -761,17 +756,17 @@ int main(int argc, char* argv[])
 					}
 					else if (event.key.keysym.sym == SDLK_F1) {  // Toggle ImGUI with F1
 						Main_SetImGui(gl_context, !Main_IsImGuiOn());
-						/*
+						
 						 // example of using the logTextManager
 						 // don't forget to call UpdateAndRender()
 						if (Main_IsImGuiOn())
 							logTextManager->AddLog("GUI Activated");
 						else
 							logTextManager->AddLog("GUI Deactivated. Press F1 to reenable the GUI");
-						 */
+						 
 					}
 					else if (event.key.keysym.sym == SDLK_F6) {	// Screenshot
-						const char* SCREENSHOT_TEXT = "SCREENSHOT SAVED";
+						std::string _vstr = "SCREENSHOT SAVED - " + glhelper->GetScreenshotSaveFilePath();
 						if (SDL_GetModState() & KMOD_SHIFT) {	// before Post Processing
 							glhelper->SaveTextureInSlotBMP(_TEXUNIT_POSTPROCESS, glhelper->GetScreenshotSaveFilePath());
 						} else {								// after post processing
@@ -779,9 +774,7 @@ int main(int argc, char* argv[])
 						}
 						int _xv = 20;
 						int _yv = g_wh - 40;
-						timedTextManager.AddText(SCREENSHOT_TEXT, _xv, _yv, 1000, .9,.3,.85,1);
-						timedTextManager.AddText(SCREENSHOT_TEXT, _xv-1, _yv+1, 1000, 1,1,1,1);
-						timedTextManager.AddText(SCREENSHOT_TEXT, _xv+1, _yv-1, 1000, .1,.1,.1,1);
+						logTextManager->AddLog(_vstr);
 					}
 					else if (event.key.keysym.sym == SDLK_F8) {
 						if (SDL_GetModState() & KMOD_SHIFT) {
@@ -883,8 +876,7 @@ int main(int argc, char* argv[])
 										SDL_ShowCursor(SDL_ENABLE);
 									 */
 								}
-								timedTextManager.UpdateAndRender(true);
-								// logTextManager->UpdateAndRender(true);
+								logTextManager->UpdateAndRender(true);
 								SDL_GL_SwapWindow(window);
 								fps_frame_count++;
 							}
@@ -943,8 +935,7 @@ int main(int argc, char* argv[])
 						SDL_ShowCursor(SDL_ENABLE);
 					 */
 				}
-				timedTextManager.UpdateAndRender(true);
-				//logTextManager->UpdateAndRender(true);
+				logTextManager->UpdateAndRender(true);
 				SDL_GL_SwapWindow(window);
 				fps_frame_count++;
 			}
@@ -1050,6 +1041,7 @@ int main(int argc, char* argv[])
 		settingsState["Apple 2 Video"] = a2VideoManager->SerializeState();
 		settingsState["Sound"] = soundManager->SerializeState();
 		settingsState["Mockingboard"] = mockingboardManager->SerializeState();
+		settingsState["Log"] = logTextManager->SerializeState();
 		settingsState["Main"] = {
 			{"display index", SDL_GetWindowDisplayIndex(window)},
 			{"window x", _wx},

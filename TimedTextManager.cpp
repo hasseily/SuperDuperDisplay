@@ -19,6 +19,7 @@
 void TimedTextManager::Initialize()
 {
 	useDefaultFont = true;
+	glGenTextures(1, &atlasTex);
 	CreateGLObjects();
 	shader.Build(_SHADER_VERTEX_BASIC_TRANSFORM, "shaders/overlay_text.frag");
 	texts.resize(100);
@@ -70,6 +71,8 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 	SDL_GetWindowSize(window, &winW, &winH);
 	int fbW, fbH;
 	SDL_GL_GetDrawableSize(window, &fbW, &fbH);
+	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
+	glViewport(0, 0, fbW, fbH);
 	// DPI (pixel) multiplier in X and Y
 	float dpiScaleX = static_cast<float>(fbW) / winW;
 	float dpiScaleY = static_cast<float>(fbH) / winH;
@@ -107,10 +110,10 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 
 	// upload projection
 	glm::mat4 proj = {
-		2.0f / fbW, 0,            0, 0,
-		0,           2.0f / fbH,  0, 0,
-		0,           0,           -1, 0,
-		-1,          -1,            0, 1
+		2.0f / fbW,		0,			0, 0,
+		0,				2.0f / fbH,	0, 0,
+		0,				0,		   -1, 0,
+	   -1,			   -1,			0, 1
 	};
 	shader.SetUniform("uTransform", proj);
 
@@ -145,6 +148,9 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 
 		if (useDefaultFont)
 		{
+			int fontXW = (use80ColDefaultFont ? 7 : 14);
+			int fontYH = 16;
+
 			for (unsigned char c : t.text) {
 				// Kind of map ascii to the apple charset
 				// Not perfect, but that's what you get for reusing a free texture
@@ -164,8 +170,8 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 
 				x0 = penX * dpiScaleX;
 				y0 = penY * dpiScaleY;
-				x1 = x0 + (use80ColDefaultFont ? 7 : 14) * dpiScaleX;
-				y1 = y0 + 16 * dpiScaleY;
+				x1 = x0 + fontXW * dpiScaleX;
+				y1 = y0 + fontYH * dpiScaleY;
 
 				s0 = texS / (float)(14 * 16);
 				t0 = texT / (float)(16 * 16);
@@ -175,7 +181,7 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 				if (shouldFlipY)
 					std::swap(t0, t1);
 
-				penX += (use80ColDefaultFont ? 7 : 14);
+				penX += fontXW;
 
 				// 2 tris (one quad) per character
 				verts.insert(verts.end(), {
@@ -254,6 +260,7 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 	// cleanup
 	glBindVertexArray(0);
 	shader.Release();
+	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "TimedTextManager UpdateAndRender error: " << glerr << std::endl;
@@ -296,12 +303,12 @@ void TimedTextManager::LoadFont(const std::string& path, float pixelHeight) {
 	stbtt_GetFontVMetrics(&fontInfo, &ascent, nullptr, nullptr);
 	ascent = static_cast<int>(ascent * scale);
 
-	glGenTextures(1, &atlasTex);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, atlasTex);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, TT_ATLAS_W, TT_ATLAS_H, 0, GL_RED, GL_UNSIGNED_BYTE, atlas.data());
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 }
 

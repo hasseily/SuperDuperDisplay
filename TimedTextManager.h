@@ -86,6 +86,7 @@ protected:
 	std::vector<float> verts;
 
 	GLuint vao = 0, vbo = 0, atlasTex = 0;
+	GLint last_viewport[4];		// Previous viewport used, so we don't clobber it
 
 	Shader shader = Shader();
 

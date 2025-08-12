@@ -120,6 +120,9 @@
     <ClCompile Include="TimedTextManager.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="LogTextManager.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -249,6 +252,9 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="TimedTextManager.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="LogTextManager.h">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

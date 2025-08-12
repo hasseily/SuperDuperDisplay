@@ -11,6 +11,7 @@
 #include "CycleCounter.h"
 #include "SoundManager.h"
 #include "MockingboardManager.h"
+#include "LogTextManager.h"
 #include "PostProcessor.h"
 #include "EventRecorder.h"
 #include "SDHRManager.h"
@@ -897,7 +898,7 @@ void MainMenu::ShowSDDMenu() {
 	if (ImGui::BeginMenu("Background Color")) {
 		float windowBGColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 		Main_GetBGColor(windowBGColor);
-		if (ImGui::ColorEdit4("", windowBGColor)) {
+		if (ImGui::ColorEdit4("##windowBGColor", windowBGColor)) {
 			Main_SetBGColor(windowBGColor);
 		}
 		ImGui::EndMenu();
@@ -908,7 +909,7 @@ void MainMenu::ShowSDDMenu() {
 		if (get_tini_last_error() == 19)	// FT_TIMEOUT
 			ImGui::Text("%s", "No data (Apple 2 is off?)");
 		else
-			ImGui::Text("%s", get_tini_last_error_string().c_str());
+			ImGui::Text("%s", get_tini_last_error_string_async().c_str());
 		ImGui::EndMenu();
 	}
 	ImGui::Separator();
@@ -924,6 +925,19 @@ void MainMenu::ShowSDDMenu() {
 		ImGui::EndMenu();
 	}
 	ImGui::Separator();
+	if (ImGui::BeginMenu("HUD Log")) {
+		ImGui::PushItemWidth(100);
+		auto _ltm = LogTextManager::GetInstance();
+		if (ImGui::RadioButton("Top Left##LogPosition", _ltm->logPosition == TTLogPosition_e::TOP_LEFT))
+			_ltm->logPosition = TTLogPosition_e::TOP_LEFT;
+		if (ImGui::RadioButton("Bottom Left##LogPosition", _ltm->logPosition == TTLogPosition_e::BOTTOM_LEFT))
+			_ltm->logPosition = TTLogPosition_e::BOTTOM_LEFT;
+		float logDurationSec = _ltm->logDurationMS / 1000.f;
+		if (ImGui::DragFloat("Log Display Speed", &logDurationSec, .1f, 0.1f, 100.f, "%.1f"))
+			_ltm->logDurationMS = (uint32_t)(logDurationSec * 1000);
+		ImGui::PopItemWidth();
+		ImGui::EndMenu();
+	}
 	ImGui::MenuItem("About", "", &pGui->bShowAboutWindow);
 	ImGui::MenuItem("Help", "", &pGui->bShowHelpWindow);
 	ImGui::Separator();

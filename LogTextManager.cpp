@@ -77,6 +77,8 @@ void LogTextManager::UpdateAndRender(bool shouldFlipY) {
 	SDL_GetWindowSize(window, &winW, &winH);
 	int fbW, fbH;
 	SDL_GL_GetDrawableSize(window, &fbW, &fbH);
+	glGetIntegerv(GL_VIEWPORT, last_viewport);	// remember existing viewport to restore it later
+	glViewport(0, 0, fbW, fbH);
 	// DPI (pixel) multiplier in X and Y
 	float dpiScaleX = static_cast<float>(fbW) / winW;
 	float dpiScaleY = static_cast<float>(fbH) / winH;
@@ -95,7 +97,7 @@ void LogTextManager::UpdateAndRender(bool shouldFlipY) {
 
 	shader.Use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "TimedTextManager glUseProgram error: " << glerr << std::endl;
+		std::cerr << "LogTextManager glUseProgram error: " << glerr << std::endl;
 		return;
 	}
 
@@ -140,12 +142,16 @@ void LogTextManager::UpdateAndRender(bool shouldFlipY) {
 	constexpr float invAtlasH = 1.0f / float(TT_ATLAS_H);
 
 	// build & draw each string
+	auto _ticks = SDL_GetTicks64();
 	for (int i = int(texts.size()) - 1; i >= 0; --i) {
 		auto &t = texts[i];
-		if (t.ticksFinish < SDL_GetTicks64()) {
+		if (t.ticksFinish < _ticks) {
 			texts.erase(texts.begin() + i);
 			continue;
 		}
+		// if the log duration changed, make sure nothing lasts longer than the new value
+		if ((t.ticksFinish - _ticks) > logDurationMS)
+			t.ticksFinish = _ticks + logDurationMS;
 
 		// set this string’s color
 		shader.SetUniform("uColor", glm::vec4(t.r, t.g, t.b, t.a));
@@ -266,9 +272,25 @@ void LogTextManager::UpdateAndRender(bool shouldFlipY) {
 	glBindVertexArray(0);
 	shader.Release();
 	verts.clear();
+	glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "LogTextManager UpdateAndRender error: " << glerr << std::endl;
 	}
 
+}
+
+nlohmann::json LogTextManager::SerializeState()
+{
+	nlohmann::json jsonState = {
+		{"log_duration_ms", logDurationMS},
+		{"log_position", (int)logPosition},
+	};
+	return jsonState;
+}
+
+void LogTextManager::DeserializeState(const nlohmann::json& jsonState)
+{
+	logDurationMS = jsonState.value("log_duration_ms", logDurationMS);
+	logPosition = (TTLogPosition_e)jsonState.value("log_position", (int)logPosition);
 }

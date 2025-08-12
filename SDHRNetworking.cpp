@@ -172,6 +172,13 @@ std::string bus_event_state_to_string(uint32_t state) {
 const std::string get_tini_name_string() { return std::string(activeNode.Description); };
 const uint32_t get_tini_last_error() { return (uint32_t)ftStatus; };
 const std::string get_tini_last_error_string() { return get_ft_status_message(ftStatus); };
+const std::string get_tini_last_error_string_async()
+{
+	// In async mode, don't display FT_IO_PENDING message as this is correct behavior
+	if (ftStatus == FT_IO_PENDING)
+		return get_ft_status_message(FT_OK);
+	return get_ft_status_message(ftStatus);
+}
 
 const bool tini_is_ok()
 {

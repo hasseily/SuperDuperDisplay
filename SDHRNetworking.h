@@ -98,6 +98,7 @@ const bool client_is_connected();
 const std::string get_tini_name_string();
 const uint32_t get_tini_last_error();
 const std::string get_tini_last_error_string();
+const std::string get_tini_last_error_string_async();	// Replaces async IO Pending "error" as OK
 
 // Sends data to the tini via the register API
 uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* vData, bool setIncrement);
