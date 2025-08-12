@@ -259,6 +259,13 @@ xcopy /y /d "$(ProjectDir)\lib\Win_x64\*.dll" "$(OutDir)"</Command>
     <ClInclude Include="VidHdWindowBeam.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="assets\bezels\Apple_IIGS_logo_2.xcf" />
+    <None Include="assets\bezels\Apple_IIGS_logo_vibrant.svg" />
+    <None Include="assets\bezels\Apple_IIgs_Woz_2.xcf" />
+    <None Include="assets\bezels\Apple_Monitor_Only_Fun.xcf" />
+    <None Include="assets\bezels\Apple_Monitor_Only_Fun2.xcf" />
+    <None Include="assets\help.ini" />
+    <None Include="assets\logo.shr" />
     <None Include="imgui\imgui\misc\debuggers\imgui.natstepfilter" />
     <None Include="imgui\imgui\misc\debuggers\imgui.natvis" />
     <None Include="lib\Win_x64\FTD3XXWU.dll" />
@@ -298,17 +305,57 @@ xcopy /y /d "$(ProjectDir)\lib\Win_x64\*.dll" "$(OutDir)"</Command>
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="assets\Apple2eFont14x16 - Alternate.png" />
-    <Image Include="assets\Apple2eFont14x16 - Regular.png" />
-    <Image Include="assets\Apple2eFont7x16 - Alternate.png" />
-    <Image Include="assets\Apple2eFont7x16 - Regular.png" />
+    <Image Include="assets\Apple2eFont14x16\00_US-Regular.png" />
+    <Image Include="assets\Apple2eFont14x16\01_US-Alternate.png" />
+    <Image Include="assets\Apple2eFont14x16\02_UK-Enhanced.png" />
+    <Image Include="assets\Apple2eFont14x16\03_FR-Unenhanced.png" />
+    <Image Include="assets\Apple2eFont14x16\04_DE-Improved.png" />
+    <Image Include="assets\Apple2eFont14x16\05_ReactiveMicro.png" />
+    <Image Include="assets\Apple2eFont14x16\06_Everex.png" />
+    <Image Include="assets\Apple2eFont14x16\07_HP100LX.png" />
+    <Image Include="assets\bezels\Apple_II.png" />
+    <Image Include="assets\bezels\Apple_IIe.png" />
+    <Image Include="assets\bezels\Apple_IIe_Monitor.png" />
+    <Image Include="assets\bezels\Apple_IIe_Monitor_Night.png" />
+    <Image Include="assets\bezels\Apple_IIe_Night.png" />
+    <Image Include="assets\bezels\Apple_IIe_P2_NIght.png" />
+    <Image Include="assets\bezels\Apple_IIgs_Woz.png" />
+    <Image Include="assets\bezels\Apple_IIgs_Woz_2.png" />
+    <Image Include="assets\bezels\Apple_IIgs_Woz_Night.png" />
+    <Image Include="assets\bezels\Apple_II_Night.png" />
+    <Image Include="assets\bezels\Apple_Monitor_default_size_1920x1080.png" />
+    <Image Include="assets\bezels\Apple_Monitor_default_size_2560x1080.png" />
+    <Image Include="assets\bezels\Apple_Monitor_Only 1080.png" />
+    <Image Include="assets\bezels\Apple_Monitor_Only.png" />
+    <Image Include="assets\bezels\Apple_Monitor_Only_16-10.png" />
+    <Image Include="assets\bezels\Apple_Monitor_Only_16-9.png" />
+    <Image Include="assets\bezels\Apple_Monitor_Only_2560x1080.png" />
+    <Image Include="assets\bezels\Apple_Monitor_Only_Fun.png" />
+    <Image Include="assets\bezels\Apple_Monitor_Only_Reflections.png" />
+    <Image Include="assets\bezels\c1702office.png" />
+    <Image Include="assets\bezels\c1702office_Reflections.glass.png" />
+    <Image Include="assets\bezels\c1702office_Reflections.png" />
+    <Image Include="assets\bezels\c1902bedroom.png" />
+    <Image Include="assets\bezels\c1902bedroom_Reflections.glass.png" />
+    <Image Include="assets\bezels\c1902bedroom_Reflections.png" />
+    <Image Include="assets\bezels\Carbon_Fiber.png" />
+    <Image Include="assets\bezels\Carbon_Fiber2.png" />
+    <Image Include="assets\bezels\CRT-Integer-4K-320-Grey-lfan.png" />
+    <Image Include="assets\bezels\generic_monitor.png" />
+    <Image Include="assets\bezels\p169crtlivingroom.png" />
+    <Image Include="assets\bezels\procrtbedroom.png" />
+    <Image Include="assets\bezels\sony_crt_420.png" />
+    <Image Include="assets\bezels\sony_pvm_office.png" />
     <Image Include="assets\Texture_composite_complete.png" />
     <Image Include="assets\Texture_composite_dhgr.png" />
     <Image Include="assets\Texture_composite_hgr.png" />
     <Image Include="assets\Texture_composite_lgr.png" />
     <Image Include="assets\Texture_Default.png" />
+    <Image Include="assets\VidHDFont8x8\00_US-Default.png" />
   </ItemGroup>
   <ItemGroup>
+    <Font Include="assets\BerkeliumIIHGR.ttf" />
+    <Font Include="assets\Monaco.ttf" />
     <Font Include="assets\ProggyTiny.ttf" />
   </ItemGroup>
   <ItemGroup>

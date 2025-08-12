@@ -22,6 +22,15 @@
     <Filter Include="glad">
       <UniqueIdentifier>{c076ead4-8be1-43cd-b5cd-5b6d1e4e6d81}</UniqueIdentifier>
     </Filter>
+    <Filter Include="assets\Apple2eFont14x16">
+      <UniqueIdentifier>{db035d24-f75c-4b7e-85bc-5ed0665c5946}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="assets\bezels">
+      <UniqueIdentifier>{fbc59106-1607-4a9b-b002-e214ca564267}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="assets\VidHDFont8x8">
+      <UniqueIdentifier>{c74821ce-3484-44cf-a956-99047d37580c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -332,20 +341,29 @@
       <Filter>shaders</Filter>
     </None>
     <None Include="lib\Win_x64\FTD3XXWU.dll" />
+    <None Include="assets\help.ini">
+      <Filter>assets</Filter>
+    </None>
+    <None Include="assets\logo.shr">
+      <Filter>assets</Filter>
+    </None>
+    <None Include="assets\bezels\Apple_IIGS_logo_2.xcf">
+      <Filter>assets\bezels</Filter>
+    </None>
+    <None Include="assets\bezels\Apple_IIGS_logo_vibrant.svg">
+      <Filter>assets\bezels</Filter>
+    </None>
+    <None Include="assets\bezels\Apple_IIgs_Woz_2.xcf">
+      <Filter>assets\bezels</Filter>
+    </None>
+    <None Include="assets\bezels\Apple_Monitor_Only_Fun.xcf">
+      <Filter>assets\bezels</Filter>
+    </None>
+    <None Include="assets\bezels\Apple_Monitor_Only_Fun2.xcf">
+      <Filter>assets\bezels</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="assets\Apple2eFont7x16 - Alternate.png">
-      <Filter>assets</Filter>
-    </Image>
-    <Image Include="assets\Apple2eFont7x16 - Regular.png">
-      <Filter>assets</Filter>
-    </Image>
-    <Image Include="assets\Apple2eFont14x16 - Alternate.png">
-      <Filter>assets</Filter>
-    </Image>
-    <Image Include="assets\Apple2eFont14x16 - Regular.png">
-      <Filter>assets</Filter>
-    </Image>
     <Image Include="assets\Texture_composite_complete.png">
       <Filter>assets</Filter>
     </Image>
@@ -361,9 +379,141 @@
     <Image Include="assets\Texture_Default.png">
       <Filter>assets</Filter>
     </Image>
+    <Image Include="assets\VidHDFont8x8\00_US-Default.png">
+      <Filter>assets\VidHDFont8x8</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_II_Night.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_IIe.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_IIe_Monitor.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_IIe_Monitor_Night.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_IIe_Night.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_IIe_P2_NIght.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_IIgs_Woz.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_IIgs_Woz_2.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_IIgs_Woz_Night.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_Monitor_default_size_1920x1080.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_Monitor_default_size_2560x1080.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_Monitor_Only 1080.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_Monitor_Only.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_Monitor_Only_16-9.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_Monitor_Only_16-10.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_Monitor_Only_2560x1080.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_Monitor_Only_Fun.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_Monitor_Only_Reflections.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\c1702office.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\c1702office_Reflections.glass.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\c1702office_Reflections.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\c1902bedroom.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\c1902bedroom_Reflections.glass.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\c1902bedroom_Reflections.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Carbon_Fiber.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Carbon_Fiber2.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\CRT-Integer-4K-320-Grey-lfan.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\generic_monitor.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\p169crtlivingroom.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\procrtbedroom.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\sony_crt_420.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\sony_pvm_office.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\bezels\Apple_II.png">
+      <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\Apple2eFont14x16\00_US-Regular.png">
+      <Filter>assets\Apple2eFont14x16</Filter>
+    </Image>
+    <Image Include="assets\Apple2eFont14x16\01_US-Alternate.png">
+      <Filter>assets\Apple2eFont14x16</Filter>
+    </Image>
+    <Image Include="assets\Apple2eFont14x16\02_UK-Enhanced.png">
+      <Filter>assets\Apple2eFont14x16</Filter>
+    </Image>
+    <Image Include="assets\Apple2eFont14x16\03_FR-Unenhanced.png">
+      <Filter>assets\Apple2eFont14x16</Filter>
+    </Image>
+    <Image Include="assets\Apple2eFont14x16\04_DE-Improved.png">
+      <Filter>assets\Apple2eFont14x16</Filter>
+    </Image>
+    <Image Include="assets\Apple2eFont14x16\05_ReactiveMicro.png">
+      <Filter>assets\Apple2eFont14x16</Filter>
+    </Image>
+    <Image Include="assets\Apple2eFont14x16\06_Everex.png">
+      <Filter>assets\Apple2eFont14x16</Filter>
+    </Image>
+    <Image Include="assets\Apple2eFont14x16\07_HP100LX.png">
+      <Filter>assets\Apple2eFont14x16</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Font Include="assets\ProggyTiny.ttf">
+      <Filter>assets</Filter>
+    </Font>
+    <Font Include="assets\Monaco.ttf">
+      <Filter>assets</Filter>
+    </Font>
+    <Font Include="assets\BerkeliumIIHGR.ttf">
       <Filter>assets</Filter>
     </Font>
   </ItemGroup>
