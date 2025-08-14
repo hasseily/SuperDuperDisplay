@@ -705,7 +705,7 @@ void MainMenu::Render() {
 								(ImGui::GetContentRegionAvail().y) / cols
 								);
 
-			uint8_t* paletteData = MemoryManager::GetInstance()->GetApple2MemPtr() + _A2VIDEO_SHR_PALETTE_START;
+			uint8_t* paletteData = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + _A2VIDEO_SHR_PALETTE_START;
 
 			// Remove spacing between items so squares touch
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, 0 });
