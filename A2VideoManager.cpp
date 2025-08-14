@@ -21,6 +21,7 @@
 #include "extras/MemoryLoader.h"
 #include "SoundManager.h"
 #include "MockingboardManager.h"
+#include "LogTextManager.h"
 #include "EventRecorder.h"
 #include "GRAddr2XY.h"
 #include "imgui.h"
@@ -808,7 +809,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 				vrams_write->frameSHR4Modes |= scanlineSHR4Modes;	// Add to the frame's SHR4 modes the new modes found on this line
 				vrams_write->pagedMode = (memPtr + _A2VIDEO_SHR_MAGIC_BYTES - 1)[0];	// the previous byte has the Double SHR4 information
 			} else {
-				vrams_write->pagedMode = 0;	// double mode can only be enabled in SHR4 mode
+				vrams_write->frameSHR4Modes = 0;	// disable SHR4 always if the magic bytes are not there
+				vrams_write->pagedMode = 0;			// double mode can only be enabled in SHR4 mode
 			}
 
 			// Do the SCB and palettes for interlacing if requested
