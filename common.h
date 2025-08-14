@@ -133,7 +133,8 @@ struct A2RenderVertex {
 #define _A2VIDEO_SHR_SIZE 0x8000
 #define _A2VIDEO_SHR_SCB_START 0x9D00			// scanline control bytes: 1 per line, 200 total
 #define _A2VIDEO_SHR_MAGIC_BYTES 0x9DFC			// start of the 4 magic bytes determining the SHR mode
-#define _A2VIDEO_SHR_MAGIC_STRING 0xB4D2C8D3	// 'SHR4' (in reverse order in memory) activates SHR4 mode
+#define _A2VIDEO_SHR4_MAGIC_STRING 0xB4D2C8D3	// 'SHR4' (in reverse order in memory) activates SHR4 mode
+#define _A2VIDEO_3200_MAGIC_STRING 0xB0B0B2B3	// '3200' (in reverse order in memory) activates SHR 3200 mode
 #define _A2VIDEO_SHR_PALETTE_START 0x9E00	// 16 SHR palettes of 16 colors, 2 bytes per color. Total 512 bytes
 
 

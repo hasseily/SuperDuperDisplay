@@ -292,7 +292,7 @@ private:
 	bool bImguiLoadFileWindowIsOpen = false;
 	bool bImguiMemLoadAuxBank = false;
 	int iImguiMemLoadPosition = 0;
-	int overrideSHR4Mode = 0;				// Cached here to keep the value between A2WindowBeam resets
+	int overrideSHRMode = 0;
 	int overrideDoubleSHR = 0;				// At 0, don't override. Above 0, substract 1 to get the override value
 	int overrideVidHDTextMode = VIDHDMODE_NONE;
 	int overrideLegacyPaging = 0;			// Forces paging in legacy modes

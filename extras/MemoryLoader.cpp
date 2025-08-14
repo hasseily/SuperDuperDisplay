@@ -11,6 +11,7 @@
 #include <iostream>
 #include "../MemoryManager.h"
 #include "ImGuiFileDialog.h"
+#include "../LogTextManager.h"
 #include <locale.h>
 #include <sstream>
 
@@ -224,8 +225,9 @@ bool MemoryLoadDHR(const std::string &filePath) {
 
 bool MemoryLoadSHR(const std::string &filePath) {
 	bool res = false;
-	uint8_t* pMem;
-	pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + 0x2000;
+	auto memManager = MemoryManager::GetInstance();
+	auto logManager = LogTextManager::GetInstance();
+	uint8_t* pMem = memManager->GetApple2MemAuxPtr() + 0x2000;
 	std::ifstream file(filePath, std::ios::binary);
 	if (file)
 	{
@@ -233,13 +235,29 @@ bool MemoryLoadSHR(const std::string &filePath) {
 		file.seekg(0, std::ios::end);
 		size_t fileSize = file.tellg();
 		
-		if (!((fileSize == 0x8000) || (fileSize == 0x10000))) {
-			std::cerr << "Error: SHR file is not the correct size." << std::endl;
+		if (fileSize == 0x8000) {
+			logManager->AddLog(std::string("Loading SHR: " + filePath));
+		}
+		else if (fileSize == 0x9900) {
+			logManager->AddLog(std::string("Loading SHR 3200: " + filePath));
+		}
+		else if (fileSize == (0x8000 * 2)) {
+			logManager->AddLog(std::string("Loading double SHR: " + filePath));
+		}
+		else {
+			logManager->AddLog(std::string("Error! SHR unknown file size: " + filePath));
 			return res;
 		}
 
 		file.seekg(0, std::ios::beg); // Go back to the start of the file
-		file.read(reinterpret_cast<char*>(pMem), 0x8000);
+		file.read(reinterpret_cast<char*>(pMem), 0x8000);	// standard SHR
+		if (fileSize == 0x9900) {	// SHR 3200
+			// where should the palettes be loaded?
+			uint8_t* pPalStart = memManager->GetApple2MemAuxPtr() + _A2VIDEO_SHR_MAGIC_BYTES - 4;
+			uint8_t* bankPtr = (pPalStart[1] == 1 ? memManager->GetApple2MemAuxPtr() : memManager->GetApple2MemPtr());
+			uint16_t palStart = (((uint16_t)pPalStart[2]) << 8) | pPalStart[3];
+			file.read(reinterpret_cast<char*>(bankPtr + palStart), _A2VIDEO_SHR_SCANLINES * 32); // 0x1900 palette bytes
+		}
 		if (fileSize == 0x10000) {	// interlace or page flip
 			pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x2000;
 			file.read(reinterpret_cast<char*>(pMem), 0x8000);
