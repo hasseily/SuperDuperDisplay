@@ -519,10 +519,10 @@ void main() {
 	FragColor = vec4(res, corn);
 
 	if (bHalveFrameRate)
-		FragColor = HalveFrameRate(pos, FragColor);
+		FragColor = HalveFrameRate(TexCoords.xy, FragColor);
 
 	if (GhostingPercent > 0.0001) {
-		FragColor = GenerateGhosting(pos, FragColor);
+		FragColor = GenerateGhosting(TexCoords.xy, FragColor);
 	}
 	FragColor = gamma_encode(FragColor);
 }
