@@ -191,6 +191,8 @@ void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 		uint16_t _off = 0;
 		uint8_t _valHi = 0;
 		uint8_t _valLo = 0;
+
+		size_t _frameCycles = (bIsPAL ? _A2_CPU_FREQUENCY_PAL / 50 : _A2_CPU_FREQUENCY_NTSC / 60);
 		
 		v_events.push_back(SDHREvent(false, false, false, false, 0xC005, 0));	// RAMWRTON
 		for (uint32_t i = 0; i < (dbaLength / 4); ++i)
@@ -204,7 +206,7 @@ void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 				v_events.push_back(SDHREvent(false, false, false, false, _off + 0x2001, _valLo));
 			} else {
 				// add the delay between the frames using a dummy read event
-				for (size_t _d = 0; _d < ((size_t)frameDelay * (1'000'000 / 60)); ++_d) {
+				for (size_t _d = 0; _d < ((size_t)frameDelay * _frameCycles); ++_d) {
 					v_events.push_back(SDHREvent(false, false, false, true, 0, 0));
 				}
 			}
