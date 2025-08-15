@@ -830,12 +830,12 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 				// The 4 bytes are, from most to least significant:
 				// - unused (00)
 				// - Bank: 00 for Main (E0), 01 for Aux (E1)
-				// - High byte of memory
 				// - Low byte of memory
-				// Example: 00 00 22 80 means the palettes start at 0x2280 in main memory
+				// - High byte of memory
+				// Example: 00 00 80 22 means the palettes start at 0x2280 in main memory
 				uint8_t* pPalStart = memPtr + _A2VIDEO_SHR_MAGIC_BYTES - 4;
 				uint8_t* bankPtr = (pPalStart[1] == 1 ? memPtr : memInterlacePtr);
-				uint16_t palStart = (((uint16_t)pPalStart[2]) << 8) | pPalStart[3];
+				uint16_t palStart = (((uint16_t)pPalStart[3]) << 8) | pPalStart[2];
 				memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
 					bankPtr + palStart + (_y * 32),
 					32);					// palette length is 32 bytes

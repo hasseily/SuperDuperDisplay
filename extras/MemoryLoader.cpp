@@ -252,10 +252,10 @@ bool MemoryLoadSHR(const std::string &filePath) {
 		file.seekg(0, std::ios::beg); // Go back to the start of the file
 		file.read(reinterpret_cast<char*>(pMem), 0x8000);	// standard SHR
 		if (fileSize == 0x9900) {	// SHR 3200
-			// where should the palettes be loaded?
+			// where should the palettes be loaded? (See A2VideoManager.cpp)
 			uint8_t* pPalStart = memManager->GetApple2MemAuxPtr() + _A2VIDEO_SHR_MAGIC_BYTES - 4;
 			uint8_t* bankPtr = (pPalStart[1] == 1 ? memManager->GetApple2MemAuxPtr() : memManager->GetApple2MemPtr());
-			uint16_t palStart = (((uint16_t)pPalStart[2]) << 8) | pPalStart[3];
+			uint16_t palStart = (((uint16_t)pPalStart[3]) << 8) | pPalStart[2];
 			file.read(reinterpret_cast<char*>(bankPtr + palStart), _A2VIDEO_SHR_SCANLINES * 32); // 0x1900 palette bytes
 		}
 		if (fileSize == 0x10000) {	// interlace or page flip
