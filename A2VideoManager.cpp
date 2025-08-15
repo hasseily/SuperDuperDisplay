@@ -836,10 +836,13 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 				uint8_t* pPalStart = memPtr + _A2VIDEO_SHR_MAGIC_BYTES - 4;
 				uint8_t* bankPtr = (pPalStart[1] == 1 ? memPtr : memInterlacePtr);
 				uint16_t palStart = (((uint16_t)pPalStart[3]) << 8) | pPalStart[2];
-				memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
-					bankPtr + palStart + (_y * 32),
-					32);					// palette length is 32 bytes
-				vrams_write->frameSHR4Modes = A2_VSM_3200SHR;
+				if (palStart < (_A2_MEMORY_SHADOW_END - 200 * 32)) {
+					// we may not be shadowing the whole memory
+					memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
+						bankPtr + palStart + (_y * 32),
+						32);					// palette length is 32 bytes
+					vrams_write->frameSHR4Modes = A2_VSM_3200SHR;
+				}
 			}
 
 			// Do the SCB and palettes for interlacing if requested
