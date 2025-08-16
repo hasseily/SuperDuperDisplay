@@ -610,7 +610,13 @@ int main(int argc, char* argv[])
 	SDL_ShowWindow(window);
 	SDL_GetWindowPosition(window, &g_wx, &g_wy);
 	SDL_GetWindowSize(window, &g_ww, &g_wh);
-		
+
+	// Display version number
+	std::string _vstr("Version ");
+	_vstr.append(SDD_VERSION);
+	_vstr.append(" - F1 toggles Menu");
+	logTextManager->AddLog(_vstr, glm::vec4(.9f, .3f, .85f, 1.f));
+
 	// Load up the first screen in SHR, with green border color
 	Main_DisplaySplashScreen();
 
@@ -640,7 +646,7 @@ int main(int argc, char* argv[])
 	auto server_pthread_qos_override = pthread_override_qos_class_start_np(nativeHandle, qos, rel_prio);
 	if (server_pthread_qos_override == NULL) {
 		std::cerr << "pthread_override_qos_class_start_np failed\n";
-		return false;
+		return 0;
 	}
 #else
 	HANDLE hProc = GetCurrentProcess();
@@ -651,15 +657,6 @@ int main(int argc, char* argv[])
 	if (!SetThreadPriority(threadHandle, THREAD_PRIORITY_TIME_CRITICAL))
 		std::cerr << "SetThreadPriority failed: " << GetLastError() << "\n";
 #endif
-
-	// Display version number
-	int _xv = 20;
-	int _yv = 20;
-	static size_t _version[3];
-	std::string _vstr("Version ");
-	_vstr.append(SDD_VERSION);
-	_vstr.append(" - F1 toggles Menu");
-	logTextManager->AddLog(_vstr, glm::vec4(.9f, .3f, .85f, 1.f));
 
 	while (!g_quitIsRequested)
 	{
@@ -772,8 +769,6 @@ int main(int argc, char* argv[])
 						} else {								// after post processing
 							glhelper->SaveFramebufferBMP(glhelper->GetScreenshotSaveFilePath());
 						}
-						int _xv = 20;
-						int _yv = g_wh - 40;
 						logTextManager->AddLog(_vstr);
 					}
 					else if (event.key.keysym.sym == SDLK_F8) {

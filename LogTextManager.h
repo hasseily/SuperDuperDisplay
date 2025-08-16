@@ -18,7 +18,7 @@
 #define LOGTEXT_FONT "./assets/Monaco.ttf"
 constexpr uint32_t LOGTEXT_DURATION_MS = 10000;
 constexpr float LOGTEXT_FONTSIZE = 18.f;
-constexpr glm::vec2 LOGTEXT_PADDING = glm::vec2(20.f, 20.f); // how far from the screen edge
+constexpr glm::vec2 LOGTEXT_PADDING = glm::vec2(15.f, 15.f); // how far from the screen edge
 constexpr glm::vec4 LOGTEXT_COLOR = glm::vec4(1.f,1.f,1.f,1.f);
 
 enum class TTLogPosition_e
@@ -57,7 +57,7 @@ private:
 	static LogTextManager* s_instance;
 	LogTextManager() {
 		Initialize(std::string(LOGTEXT_FONT), LOGTEXT_FONTSIZE);
-		verts.reserve(120 * 240 * 6 * 4);	// 120 lines of 240 characters per line
+		verts.reserve(120 * 240 * 6 * 8);	// 120 lines of 240 characters per line
 	}
 
 };

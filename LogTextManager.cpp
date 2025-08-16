@@ -153,9 +153,6 @@ void LogTextManager::UpdateAndRender(bool shouldFlipY) {
 		if ((t.ticksFinish - _ticks) > logDurationMS)
 			t.ticksFinish = _ticks + logDurationMS;
 
-		// set this string’s color
-		shader.SetUniform("uColor", glm::vec4(t.r, t.g, t.b, t.a));
-
 		// penX and penY are before HIGH DPI scaling
 		float penX = LOGTEXT_PADDING.x;
 		float penY = yOffset;
@@ -220,20 +217,20 @@ void LogTextManager::UpdateAndRender(bool shouldFlipY) {
 
 			// 2 tris (one quad) per character
 			verts.insert(verts.end(), {
-				x0,y0,s0,t0,
-				x1,y0,s1,t0,
-				x1,y1,s1,t1,
+				x0,y0,s0,t0, t.r, t.g, t.b, t.a,
+				x1,y0,s1,t0, t.r, t.g, t.b, t.a,
+				x1,y1,s1,t1, t.r, t.g, t.b, t.a,
 
-				x0,y0,s0,t0,
-				x1,y1,s1,t1,
-				x0,y1,s0,t1
+				x0,y0,s0,t0, t.r, t.g, t.b, t.a,
+				x1,y1,s1,t1, t.r, t.g, t.b, t.a,
+				x0,y1,s0,t1, t.r, t.g, t.b, t.a
 			});
 		}
 	}
 
 	if (!verts.empty()) {
 
-		// Now add the log overlay
+		// Now add the log overlay with its color
 		// Increase the height to account for the ascents etc...
 		x0 = 0; x1 = maxWidthX + (5 * dpiScaleX);
 		y0 = 0; y1 = maxHeightY + (5 * dpiScaleY);
@@ -243,14 +240,14 @@ void LogTextManager::UpdateAndRender(bool shouldFlipY) {
 			y0 = (fbH - 20 * dpiScaleY) - y1 + (LOGTEXT_FONTSIZE + 2) * dpiScaleY;
 			y1 = (fbH - 20 * dpiScaleY);
 		}
-		verts.insert(verts.begin(), {
-			x0,y0,s0,t0,
-			x1,y0,s1,t0,
-			x1,y1,s1,t1,
+		verts.insert(verts.begin(), {	// the overlay is drawn first!
+			x0,y0,s0,t0, 0.f, 0.f, 0.f, 0.7f,
+			x1,y0,s1,t0, 0.f, 0.f, 0.f, 0.7f,
+			x1,y1,s1,t1, 0.f, 0.f, 0.f, 0.7f,
 
-			x0,y0,s0,t0,
-			x1,y1,s1,t1,
-			x0,y1,s0,t1
+			x0,y0,s0,t0, 0.f, 0.f, 0.f, 0.7f,
+			x1,y1,s1,t1, 0.f, 0.f, 0.f, 0.7f,
+			x0,y1,s0,t1, 0.f, 0.f, 0.f, 0.7f
 		});
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);

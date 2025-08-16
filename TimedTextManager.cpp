@@ -21,9 +21,9 @@ void TimedTextManager::Initialize()
 	useDefaultFont = true;
 	glGenTextures(1, &atlasTex);
 	CreateGLObjects();
-	shader.Build(_SHADER_VERTEX_BASIC_TRANSFORM, "shaders/overlay_text.frag");
+	shader.Build("shaders/basic_transform_color.vert", "shaders/overlay_text.frag");
 	texts.resize(100);
-	verts.reserve(240 * 6 * 4);	// 40 lines of 240 characters per line
+	verts.reserve(120 * 240 * 6 * 8);	// 120 lines of 240 characters per line
 	idCounter = 0;
 }
 
@@ -133,9 +133,6 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 			continue;
 		}
 
-		// set this string’s color
-		shader.SetUniform("uColor", glm::vec4(t.r, t.g, t.b, t.a));
-
 		// penX and penY are before HIGH DPI scaling
 		float penX = float(t.x);
 		float penY = float(t.y);
@@ -185,13 +182,13 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 
 				// 2 tris (one quad) per character
 				verts.insert(verts.end(), {
-					x0,y0,s0,t0,
-					x1,y0,s1,t0,
-					x1,y1,s1,t1,
+					x0,y0,s0,t0, t.r, t.g, t.b, t.a,
+					x1,y0,s1,t0, t.r, t.g, t.b, t.a,
+					x1,y1,s1,t1, t.r, t.g, t.b, t.a,
 
-					x0,y0,s0,t0,
-					x1,y1,s1,t1,
-					x0,y1,s0,t1
+					x0,y0,s0,t0, t.r, t.g, t.b, t.a,
+					x1,y1,s1,t1, t.r, t.g, t.b, t.a,
+					x0,y1,s0,t1, t.r, t.g, t.b, t.a
 				});
 			}
 		} else {	// custom font, using stb_truetype
@@ -228,13 +225,13 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 
 				// 2 tris (one quad) per character
 				verts.insert(verts.end(), {
-					x0,y0,s0,t0,
-					x1,y0,s1,t0,
-					x1,y1,s1,t1,
+					x0,y0,s0,t0,  t.r, t.g, t.b, t.a,
+					x1,y0,s1,t0,  t.r, t.g, t.b, t.a,
+					x1,y1,s1,t1,  t.r, t.g, t.b, t.a,
 
-					x0,y0,s0,t0,
-					x1,y1,s1,t1,
-					x0,y1,s0,t1
+					x0,y0,s0,t0,  t.r, t.g, t.b, t.a,
+					x1,y1,s1,t1,  t.r, t.g, t.b, t.a,
+					x0,y1,s0,t1,  t.r, t.g, t.b, t.a
 				});
 			}
 		}
@@ -245,7 +242,7 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 						 verts.size() * sizeof(float),
 						 verts.data(),
 						 GL_DYNAMIC_DRAW);
-			GLsizei count = GLsizei(verts.size() / 4);
+			GLsizei count = GLsizei(verts.size() / 8);
 			glDrawArrays(GL_TRIANGLES, 0, count);
 		}
 		verts.clear();
@@ -319,8 +316,11 @@ void TimedTextManager::CreateGLObjects() {
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glEnableVertexAttribArray(0); // vec2 position
 	glEnableVertexAttribArray(1); // vec2 texcoord
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+	glEnableVertexAttribArray(2); // vec4 color
+	constexpr GLsizei stride = 8 * sizeof(float);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, (void*)0);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(2 * sizeof(float)));
+	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, stride, (void*)(4 * sizeof(float)));
 	glBindVertexArray(0);
 }
 
