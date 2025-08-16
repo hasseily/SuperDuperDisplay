@@ -25,6 +25,10 @@ enum A2VideoModeBeam_e
 // Special less compatible modes from lesser known cards
 // like Chat Mauve RGB cards, or Apple RGB card
 // and the new SHR4 modes for VidHD and Appletini
+// Use enum instead of enum class because this stuff is used all the
+// time in integer context.
+// NOTE: the SHR4 modes need to be in the second nibble, to match the
+// SHR palette 2nd byte's high nibble
 enum A2VideoSpecialMode_e
 {
 	A2_VSM_NONE 			= 0b0000,
@@ -33,9 +37,9 @@ enum A2VideoSpecialMode_e
 	A2_VSM_HGRSPEC2		 	= 0b0100,		// Mode that forces white in middle pixel of 00100 pattern in HGR
 	
 	A2_VSM_SHR4SHR			= 0b0001'0000,	// New SHR4 modes - default SHR but with 'magic bytes' active
-	A2_VSM_SHR4RGGB			= 0b0010'0000,	// New SHR4 modes - RGGB   (see shader for details)
-	A2_VSM_SHR4PAL256		= 0b0100'0000,	// New SHR4 modes - PAL256 (see shader for details)
-	A2_VSM_SHR4R4G4B4		= 0b1000'0000,	// New SHR4 modes - R4G4B4 (see shader for details)
+	A2_VSM_SHR4RGGB			= 0b0011'0000,	// New SHR4 modes - RGGB   (see shader for details)
+	A2_VSM_SHR4PAL256		= 0b0101'0000,	// New SHR4 modes - PAL256 (see shader for details)
+	A2_VSM_SHR4R4G4B4		= 0b1001'0000,	// New SHR4 modes - R4G4B4 (see shader for details)
 
 	A2_VSM_3200SHR			= 0b0001'0000'0000,	// New SHR 3200 mode ("Brooks-3200")
 
@@ -79,7 +83,7 @@ public:
 	void SetShaderPrograms(const char* shaderVertexPath, const char* shaderFragmentPath);
 	A2VideoModeBeam_e Get_video_mode() const { return video_mode; }
 
-	std::vector<A2RenderVertex> vertices;		// Vertices with XYRelative and XYPixels
+	std::vector<A2RenderVertex> vertices;	// Vertices with XYRelative and XYPixels
 	unsigned int VAO = UINT_MAX;			// Vertex Array Object (holds buffers that are vertex related)
 	unsigned int VBO = UINT_MAX;			// Vertex Buffer Object (holds vertices)
 
@@ -87,7 +91,6 @@ public:
 	bool bForceSHRWidth = false;			// Request to force SHR width for legacy
 
 	int specialModesMask = A2_VSM_NONE;		// Or'ed A2VideoSpecialMode_e
-	int overrideSHR4Mode = 0;				// Debugging to override the SHR4 modes in the shader
 // TODO: merge pagingMode with doubleSHR4
 	int doubleSHR4 = DOUBLE_NONE;
 	int pagingMode = DOUBLE_NONE;			// Override of paging for legacy

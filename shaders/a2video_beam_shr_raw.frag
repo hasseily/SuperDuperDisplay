@@ -61,7 +61,6 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
     
  */
 
-
 // Global uniforms assigned in A2VideoManager
 uniform int hborder;			// horizontal border in cycles
 uniform int vborder;			// vertical border in scanlines
@@ -72,11 +71,11 @@ uniform usampler2D PAL256TEX;	// Video RAM texture of all colors when in PAL256 
 uniform uint ticks;              // ms since start
 uniform int frameIsOdd;			// 0 if even frame, 1 if odd frame
 uniform int specialModesMask;	// type of SHR format
-uniform int overrideSHR4Mode;	// SHR4 mode override
 uniform int doubleSHR4Mode;		// 0: normal (only bank E1 is used), 1: interlace, 2: page flip
 uniform int doubleSHR4YOffset;	// Y offset to get double data in VRAMTEX. 0 means no double data
 uniform int doublePal256YOffset;// Y offset to get double data in PAL256TEX. 0 means no double data
 uniform int monitorColorType;
+uniform bool bReversePalIdx;	// Reverse palette index (15->0), for SHR mode 3200
 
 uniform bool bIsMergedMode;				// if on, then only display lines that are legacy
 uniform sampler2D OFFSETTEX;			// X Offset texture for merged mode
@@ -91,8 +90,10 @@ uniform sampler2D OFFSETTEX;			// X Offset texture for merged mode
  A2_VSM_SHR4RGGB		= 0b0010'0000,	// New SHR4 modes - RGGB   (see shader for details)
  A2_VSM_SHR4PAL256		= 0b0100'0000,	// New SHR4 modes - PAL256 (see shader for details)
  A2_VSM_SHR4R4G4B4		= 0b1000'0000,	// New SHR4 modes - r4G4B4 (see shader for details)
+ A2_VSM_3200SHR			= 0b0001'0000'0000,	// New SHR 3200 mode ("Brooks-3200")
  };
  */
+const int A2_VSM_SHR4SHR = 0x10;
 
 in vec2 vFragPos;       // The fragment position in pixels
 out vec4 fragColor;
@@ -341,14 +342,20 @@ void main()
         colorIdx = (byteVal >> (4u * (fragOffset >> 1))) & 0xFu;
     }
 
+	// Modes like SHR-3200 use a reverse index for palette color lookup, where index 0 is the last palette value
+	if (bReversePalIdx)
+		colorIdx = 15 - colorIdx;
+
     // Get the second palette byte, we need it to determine if it's standard SHR or not
     paletteColorB2 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u + 1u, originOffsetByte.y), 0).r;
-	if (overrideSHR4Mode > 0)
+	/*
+	if (overrideSHR4Mode != SHR_DEFAULT)
 	{
 		paletteColorB2 = (paletteColorB2 & 0xFu) | (uint(overrideSHR4Mode - 1) << 4);
 	}
+	 */
 
-    if (((specialModesMask & 0xF0) != 0) || (overrideSHR4Mode > 0))	        // Frame has SHR4 modes active
+    if ((specialModesMask & A2_VSM_SHR4SHR) != 0)        // Frame has SHR4 modes active
     {
     
   		uint xpos_noborder = xpos - uint(hborder*16);

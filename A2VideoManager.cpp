@@ -31,17 +31,6 @@
 // In main.cpp
 extern uint32_t Main_GetFPSLimit();
 
-enum OverrideSHR_e
-{
-	OVERRIDESHR_NONE = 0,		// disable
-	OVERRIDESHR_SHR,			// standard SHR
-	OVERRIDESHR_RGGB,			// SHR4 RGGB
-	OVERRIDESHR_PAL256,			// SHR4 PAL256
-	OVERRIDESHR_R4G4B4,			// SHR4 R4G4B4
-	OVERRIDESHR_3200,			// SHR 3200
-	OVERRIDESHR_TOTAL_COUNT
-};
-
 // Aspect constraint callback to enforce a fixed aspect ratio for ImGui windows.
 // The aspect ratio is provided via the UserData pointer
 static inline void AspectConstraintCallback(ImGuiSizeCallbackData* data)
@@ -525,7 +514,7 @@ void A2VideoManager::StartNextFrame()
 	// For the merged mode
 	merge_last_change_y = UINT_MAX;
 	// Additional frame data resets
-	vrams_write->frameSHR4Modes = 0;
+	vrams_write->frameSHRModes = 0;
 	vrams_write->pagedMode = 0;
 
 	// And finally send an event to the main loop saying that the frame was updated
@@ -810,19 +799,42 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			// what SHR4 modes are used in this line, if SHR4 is enabled via the magic bytes
 			
 			uint32_t magicBytes = reinterpret_cast<uint32_t*>(memPtr + _A2VIDEO_SHR_MAGIC_BYTES)[0];
-			if (magicBytes == _A2VIDEO_SHR4_MAGIC_STRING)	// SHR4 mode is enabled
+			if ((magicBytes == _A2VIDEO_SHR4_MAGIC_STRING) || ((overrideSHRMode & A2_VSM_SHR4SHR) != 0))	// SHR4 mode is enabled
 			{
 				// Modes are 0,1,2,3 on the high nibble of the 2-byte palette. We need to switch to bits as per A2VideoSpecialMode_e
 				scanlineSHR4Modes = A2_VSM_SHR4SHR;	// Default SHR enabled for SHR4
 				for (uint8_t i = 0; i < 16; ++i) {
 					scanlineSHR4Modes |= (1 << ((lineStartPtr[2 + 2*i] >> 4) + 4));	// second byte of each palette color (skip SCB byte 1)
+					// But if we're overriding the mode, let's change the palette in real time to match the overridden mode
+					// This way the shader (and WindowBeam) doesn't need to know anything about overrides,
+					// it's just given the correcly overridden data. The original modes remain in scanlineSHR4Modes so we can show that
+					// to the user in the UI
+					if ((overrideSHRMode & A2_VSM_SHR4SHR) != 0) {
+						auto _lowNibble = (lineStartPtr[2 + 2*i] & 0xF);
+						switch (overrideSHRMode) {
+							case A2_VSM_SHR4SHR:
+								lineStartPtr[2 + 2*i] = _lowNibble;
+								break;
+							case A2_VSM_SHR4RGGB:
+								lineStartPtr[2 + 2*i] = _lowNibble + (1 << 4);
+								break;
+							case A2_VSM_SHR4PAL256:
+								lineStartPtr[2 + 2*i] = _lowNibble + (2 << 4);
+								break;
+							case A2_VSM_SHR4R4G4B4:
+								lineStartPtr[2 + 2*i] = _lowNibble + (3 << 4);
+								break;
+							default:
+								break;
+						}
+					}
 				}
-				vrams_write->frameSHR4Modes |= scanlineSHR4Modes;	// Add to the frame's SHR4 modes the new modes found on this line
+				vrams_write->frameSHRModes |= scanlineSHR4Modes;	// Add to the frame's SHR4 modes the new modes found on this line
 				vrams_write->pagedMode = (memPtr + _A2VIDEO_SHR_MAGIC_BYTES - 1)[0];	// the previous byte has the Double SHR4 information
 			} else if (
-				((magicBytes == _A2VIDEO_3200_MAGIC_STRING) || (overrideSHRMode == OVERRIDESHR_3200))
-				&& (overrideSHRMode != OVERRIDESHR_SHR)
-					)
+				((magicBytes == _A2VIDEO_3200_MAGIC_STRING) || (overrideSHRMode == A2_VSM_3200SHR))
+				&& ((overrideSHRMode & A2_VSM_SHR4SHR) == 0)
+					)	// i.e. if not overridden by any other SHR mode, and it's a 3200 image or we force it to be
 			{
 				// 3200 mode is enabled
 				// There's a pointer to the start of the 200 palettes (1 per line) right before the magic bytes
@@ -841,7 +853,7 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 					memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
 						bankPtr + palStart + (_y * 32),
 						32);					// palette length is 32 bytes
-					vrams_write->frameSHR4Modes = A2_VSM_3200SHR;
+					vrams_write->frameSHRModes = A2_VSM_3200SHR;
 				}
 			}
 
@@ -908,7 +920,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			// Here deal with the new SHR4 mode PAL256, where each byte is an index into the full palette
 			// of 256 colors. We have to do it here because the palette can be dynamically modified while
 			// racing the beam.
-			if (((scanlineSHR4Modes & A2_VSM_SHR4PAL256) != 0) || (windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 3))
+			if (((scanlineSHR4Modes & A2_VSM_SHR4PAL256) != 0)
+				|| (overrideSHRMode == A2_VSM_SHR4PAL256))
 			{
 				// calculate x value where x is 0-40 in the content area
 				auto _x_just_content = _x - CYCLES_SC_HBL;
@@ -951,7 +964,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 				// Here deal with the new SHR4 mode PAL256, where each byte is an index into the full palette
 				// of 256 colors. We have to do it here because the palette can be dynamically modified while
 				// racing the beam.
-				if (((scanlineSHR4Modes & A2_VSM_SHR4PAL256) != 0) || (windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode == 3))
+				if (((scanlineSHR4Modes & A2_VSM_SHR4PAL256) != 0)
+					|| (overrideSHRMode == A2_VSM_SHR4PAL256))
 				{
 					// calculate x value where x is 0-40 in the content area
 					// move to the offset to the interlace area which is the second half of the vram (i.e. slide down by _A2VIDEO_SHR_SCANLINES)
@@ -1569,7 +1583,20 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 
 
 	// Set the magic bytes, currently only in SHR mode
-	windowsbeam[A2VIDEOBEAM_SHR]->specialModesMask = vrams_read->frameSHR4Modes;
+	// This is where we handle the SHR modes override, telling the beam renderer what to do
+	switch (overrideSHRMode)
+	{
+		case A2_VSM_SHR4SHR:
+		case A2_VSM_SHR4RGGB:
+		case A2_VSM_SHR4PAL256:
+		case A2_VSM_SHR4R4G4B4:
+		case A2_VSM_3200SHR:
+			windowsbeam[A2VIDEOBEAM_SHR]->specialModesMask = overrideSHRMode;
+			break;
+		default:	// no override
+			windowsbeam[A2VIDEOBEAM_SHR]->specialModesMask = vrams_read->frameSHRModes;
+			break;
+	}
 	windowsbeam[A2VIDEOBEAM_SHR]->doubleSHR4 = ( overrideDoubleSHR > 0 ? overrideDoubleSHR - 1 : vrams_read->pagedMode);
 
 	// if we're in merged mode, prepare the offset texture
@@ -2022,12 +2049,12 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 
 			ImGui::Columns(2, "SHR_Columns", false);
 			ImGui::SeparatorText("[ SHR EXTRA MODES ]");
-			bool isNoneActive = (vrams_read->frameSHR4Modes == A2_VSM_NONE);
-			bool isSHR4SHRActive = (vrams_read->frameSHR4Modes & A2_VSM_SHR4SHR) != 0;
-			bool isSHR4RGGBActive = (vrams_read->frameSHR4Modes & A2_VSM_SHR4RGGB) != 0;
-			bool isSHR4PAL256Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4PAL256) != 0;
-			bool isSHR4R4G4B4Active = (vrams_read->frameSHR4Modes & A2_VSM_SHR4R4G4B4) != 0;
-			bool isSHR3200Active = (vrams_read->frameSHR4Modes & A2_VSM_3200SHR) != 0;
+			bool isNoneActive = (vrams_read->frameSHRModes == A2_VSM_NONE);
+			bool isSHR4SHRActive = (vrams_read->frameSHRModes & A2_VSM_SHR4SHR) != 0;
+			bool isSHR4RGGBActive = (vrams_read->frameSHRModes & A2_VSM_SHR4RGGB) >  A2_VSM_SHR4SHR;
+			bool isSHR4PAL256Active = (vrams_read->frameSHRModes & A2_VSM_SHR4PAL256)  >  A2_VSM_SHR4SHR;
+			bool isSHR4R4G4B4Active = (vrams_read->frameSHRModes & A2_VSM_SHR4R4G4B4)  >  A2_VSM_SHR4SHR;
+			bool isSHR3200Active = (vrams_read->frameSHRModes & A2_VSM_3200SHR) != 0;
 			bool isSHRInterlaced = (vrams_read->pagedMode == DOUBLE_INTERLACE);
 			bool isSHRPageFlip = (vrams_read->pagedMode == DOUBLE_PAGEFLIP);
 
@@ -2044,30 +2071,22 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			
 			ImGui::NextColumn();
 			ImGui::SeparatorText("[ OVERRIDE ]");
-			if (ImGui::RadioButton("None##SHR4override", overrideSHRMode == OVERRIDESHR_NONE))
-				overrideSHRMode = OVERRIDESHR_NONE;
-			if (ImGui::RadioButton("Force SHR", overrideSHRMode == OVERRIDESHR_SHR))
-				overrideSHRMode = OVERRIDESHR_SHR;
-			if (ImGui::RadioButton("Force RGGB", overrideSHRMode == OVERRIDESHR_RGGB))
-				overrideSHRMode = OVERRIDESHR_RGGB;
-			if (ImGui::RadioButton("Force PAL256", overrideSHRMode == OVERRIDESHR_PAL256))
-				overrideSHRMode = OVERRIDESHR_PAL256;
-			if (ImGui::RadioButton("Force R4G4B4", overrideSHRMode == OVERRIDESHR_R4G4B4))
-				overrideSHRMode = OVERRIDESHR_R4G4B4;
-			if (ImGui::RadioButton("Force 3200", overrideSHRMode == OVERRIDESHR_3200)) {
-				overrideSHRMode = OVERRIDESHR_3200;
+			auto _prevOverride = overrideSHRMode;
+			if (ImGui::RadioButton("None##SHR4override", overrideSHRMode < A2_VSM_SHR4SHR))
+				overrideSHRMode = A2_VSM_NONE;
+			if (ImGui::RadioButton("Force SHR", overrideSHRMode == A2_VSM_SHR4SHR))
+				overrideSHRMode = A2_VSM_SHR4SHR;
+			if (ImGui::RadioButton("Force RGGB", overrideSHRMode == A2_VSM_SHR4RGGB))
+				overrideSHRMode = A2_VSM_SHR4RGGB;
+			if (ImGui::RadioButton("Force PAL256", overrideSHRMode == A2_VSM_SHR4PAL256))
+				overrideSHRMode = A2_VSM_SHR4PAL256;
+			if (ImGui::RadioButton("Force R4G4B4", overrideSHRMode == A2_VSM_SHR4R4G4B4))
+				overrideSHRMode = A2_VSM_SHR4R4G4B4;
+			if (ImGui::RadioButton("Force 3200", overrideSHRMode == A2_VSM_3200SHR)) {
+				overrideSHRMode = A2_VSM_3200SHR;
 			}
-			// Decide which overrides the WindowsBeam code should see
-			// The 3200 mode looks to the shader to be just like a regular shr mode
-			// because the palettes have already been preprocessed in the vram
-			int _overrideForWB = overrideSHRMode;
-			if (overrideSHRMode == OVERRIDESHR_3200)
-				_overrideForWB = OVERRIDESHR_NONE;
-			if (windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode != _overrideForWB)
-			{
-				windowsbeam[A2VIDEOBEAM_SHR]->overrideSHR4Mode = _overrideForWB;
+			if (overrideSHRMode != _prevOverride)
 				this->ForceBeamFullScreenRender();
-			}
 			const char* _doubleSHRModes[] = { "Default", "Disable", "Interlace", "Page Flip" };
 			ImGui::PushItemWidth(100);
 			if (ImGui::Combo("Force Double SHR", &this->overrideDoubleSHR, _doubleSHRModes, IM_ARRAYSIZE(_doubleSHRModes)))

@@ -180,7 +180,7 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_w_with_border * 4),
 									(_A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines)) * (_hasDSHR4 + 1),
 									GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
-					if (((specialModesMask & A2_VSM_SHR4PAL256) != 0) || (overrideSHR4Mode == 2))
+					if ((specialModesMask & A2_VSM_SHR4PAL256) != 0)
 					{
 						glActiveTexture(_TEXUNIT_PAL256BUFFER);
 						glBindTexture(GL_TEXTURE_2D, PAL256TEX);
@@ -281,13 +281,16 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 	if (video_mode == A2VIDEOBEAM_SHR)
 	{
 		shader.SetUniform("PAL256TEX", _TEXUNIT_PAL256BUFFER - GL_TEXTURE0);
-		shader.SetUniform("overrideSHR4Mode", overrideSHR4Mode);
 		shader.SetUniform("doubleSHR4Mode", doubleSHR4);
 		int _hasDSHR4 = (doubleSHR4 == DOUBLE_NONE ? 0 : 1);
 		int _dblshr4off = _hasDSHR4 * (_A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines));
 		shader.SetUniform("doubleSHR4YOffset", _dblshr4off);
 		int _dblpaloff = _hasDSHR4 * _A2VIDEO_SHR_SCANLINES;
 		shader.SetUniform("doublePal256YOffset", _dblpaloff);
+		if ((specialModesMask & A2_VSM_3200SHR) != 0)
+			shader.SetUniform("bReversePalIdx", true);
+		else
+			shader.SetUniform("bReversePalIdx", false);
 	}
 	else 
 	{
