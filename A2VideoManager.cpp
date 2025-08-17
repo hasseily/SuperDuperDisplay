@@ -376,7 +376,8 @@ void A2VideoManager::Initialize()
 	// clear the text overlay
 	std::memset(overlay_text, 0, sizeof(overlay_text));
 	std::memset(overlay_colors, 0, sizeof(overlay_colors));
-	
+	std::memset(overlay_lines, 0, sizeof(overlay_lines));
+
 	// Set default border color
 	MemoryManager::GetInstance()->switch_c034 = 13;
 
