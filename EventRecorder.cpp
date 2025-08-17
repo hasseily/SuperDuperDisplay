@@ -54,8 +54,10 @@ void EventRecorder::MakeRAMSnapshot(size_t cycle)
 
 void EventRecorder::ApplyRAMSnapshot(size_t snapshot_index)
 {
-	if (snapshot_index > (v_memSnapshots.size() - 1))
+	if (snapshot_index > (v_memSnapshots.size() - 1)) {
 		std::cerr << "ERROR: Requested to apply nonexistent memory snapshot at index " << snapshot_index << std::endl;
+		return;
+	}
 	auto _memsize = _A2_MEMORY_SHADOW_END;
 	// Set the MAIN chunk
 	v_memSnapshots.at(snapshot_index).copyTo(MemoryManager::GetInstance()->GetApple2MemPtr(), 0, _memsize);
@@ -162,9 +164,8 @@ void EventRecorder::ReadTextEventsFromFile(std::ifstream& file)
 // The PaintWorks animations format is:
 // 0x0000-0x7FFF: first SHR animation frame, standard SHR
 // 0x8000-0x8003: length of animation data block (starting at 0x8008)
-// 0x8004-0x8007: delay time per frame, in 60th of a second
-// 0x8008-0x8011: disregard (sometimes offset to starting records)
-// 0x8011-EOF   : animations data block: 2 byte offset, 2 byte value
+// 0x8004-0x8007: delay time per frame, in number of VBLs
+// 0x8008-EOF   : animations data block: 2 byte offset, 2 byte value
 // If offset is zero, it's the end of the frame
 // Offset is to the start of the SHR image, so need to add 0x2000 in AUX mem
 void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
@@ -181,13 +182,9 @@ void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 	// Then the frame delay
 	uint32_t frameDelay = 0;
 	file.read(reinterpret_cast<char*>(&frameDelay), 4);
-	// And the unused offset
-	uint32_t _unusedOffset = 0;
-	file.read(reinterpret_cast<char*>(&_unusedOffset), 4);
 	MakeRAMSnapshot(0);	// Make a snapshot now, before doing the animations events
 	if (dbaLength > 4)
 	{
-		dbaLength -= 4;
 		uint16_t _off = 0;
 		uint8_t _valHi = 0;
 		uint8_t _valLo = 0;
@@ -200,15 +197,15 @@ void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 			file.read(reinterpret_cast<char*>(&_off), 2);
 			file.read(reinterpret_cast<char*>(&_valHi), 1);
 			file.read(reinterpret_cast<char*>(&_valLo), 1);
-			if (_off != 0)
+			if (_off == 0)	// delay
 			{
-				v_events.push_back(SDHREvent(false, false, false, false, _off + 0x2000, _valHi));
-				v_events.push_back(SDHREvent(false, false, false, false, _off + 0x2001, _valLo));
-			} else {
 				// add the delay between the frames using a dummy read event
 				for (size_t _d = 0; _d < ((size_t)frameDelay * _frameCycles); ++_d) {
 					v_events.push_back(SDHREvent(false, false, false, true, 0, 0));
 				}
+			} else if (_off < 0x7FFF) {	// proper offset
+				v_events.push_back(SDHREvent(false, false, false, false, _off + 0x2000, _valHi));
+				v_events.push_back(SDHREvent(false, false, false, false, _off + 0x2001, _valLo));
 			}
 		}
 		v_events.push_back(SDHREvent(false, false, false, false, 0xC004, 0));	// RAMWRTOFF
