@@ -164,10 +164,15 @@ void EventRecorder::ReadTextEventsFromFile(std::ifstream& file)
 // The PaintWorks animations format is:
 // 0x0000-0x7FFF: first SHR animation frame, standard SHR
 // 0x8000-0x8003: length of animation data block (starting at 0x8008)
-// 0x8004-0x8007: delay time per frame, in number of VBLs
-// 0x8008-EOF   : animations data block: 2 byte offset, 2 byte value
+// 0x8004-0x8007: delay time, in number of VBLs
+// 0x8008-EOF   : frames data block
+// For each frame:
+// 4 bytes of frame data size (including these 4 bytes)
+// Then a series 2 byte offset, 2 byte value
 // If offset is zero, it's the end of the frame
-// Offset is to the start of the SHR image, so need to add 0x2000 in AUX mem
+// Notes:
+// - PWA data is loaded just like SHR in 0x2000 in AUX mem
+// - A frame size of 00000004 means that there's a single frame that spans the whole data block
 void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 {
 	StopReplay();
@@ -179,12 +184,14 @@ void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 	// Then the animations block length
 	uint32_t dbaLength = 0;
 	file.read(reinterpret_cast<char*>(&dbaLength), 4);
-	// Then the frame delay
+	// Then the delay
 	uint32_t frameDelay = 0;
 	file.read(reinterpret_cast<char*>(&frameDelay), 4);
 	MakeRAMSnapshot(0);	// Make a snapshot now, before doing the animations events
 	if (dbaLength > 4)
 	{
+		uint32_t _currFrameSize = 0;	// size of the current frame, including this 4-byte value
+		uint32_t _currFramePtr = 0;		// where are we in the current frame?
 		uint16_t _off = 0;
 		uint8_t _valHi = 0;
 		uint8_t _valLo = 0;
@@ -192,11 +199,24 @@ void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 		size_t _frameCycles = (bIsPAL ? _A2_CPU_FREQUENCY_PAL / 50 : _A2_CPU_FREQUENCY_NTSC / 60);
 		
 		v_events.push_back(SDHREvent(false, false, false, false, 0xC005, 0));	// RAMWRTON
-		for (uint32_t i = 0; i < (dbaLength / 4); ++i)
+		uint32_t _dataPtr = 0;
+		while (_dataPtr < dbaLength)
 		{
+			if (_currFramePtr >= _currFrameSize) {
+				file.read(reinterpret_cast<char*>(&_currFrameSize), 4);
+				_dataPtr += 4;
+				if (_currFrameSize == 4) {
+					// Some apps don't use the frame size and set it to 00000004
+					// In that case, make the whole thing a single frame
+					_currFrameSize = dbaLength;
+				}
+				_currFramePtr = 4;	// move to right after the 4 bytes of size
+			}
+
 			file.read(reinterpret_cast<char*>(&_off), 2);
 			file.read(reinterpret_cast<char*>(&_valHi), 1);
 			file.read(reinterpret_cast<char*>(&_valLo), 1);
+			_dataPtr += 4;
 			if (_off == 0)	// delay
 			{
 				// add the delay between the frames using a dummy read event
