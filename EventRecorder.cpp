@@ -196,7 +196,7 @@ void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 		uint8_t _valHi = 0;
 		uint8_t _valLo = 0;
 
-		size_t _frameCycles = (bIsPAL ? _A2_CPU_FREQUENCY_PAL / 50 : _A2_CPU_FREQUENCY_NTSC / 60);
+		size_t _frameCycles = (size_t)(bIsPAL ? CYCLES_TOTAL_PAL : CYCLES_TOTAL_NTSC);
 		
 		v_events.push_back(SDHREvent(false, false, false, false, 0xC005, 0));	// RAMWRTON
 		uint32_t _dataPtr = 0;
