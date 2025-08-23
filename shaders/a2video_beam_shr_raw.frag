@@ -344,10 +344,10 @@ void main()
 
 	// Modes like SHR-3200 use a reverse index for palette color lookup, where index 0 is the last palette value
 	if (bReversePalIdx)
-		colorIdx = 15 - colorIdx;
+		colorIdx = 15u - colorIdx;
 
     // Get the second palette byte, we need it to determine if it's standard SHR or not
-    paletteColorB2 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u + 1u, originOffsetByte.y), 0).r;
+    paletteColorB2 = texelFetch(VRAMTEX, ivec2(1 + int(colorIdx)*2 + 1, originOffsetByte.y), 0).r;
 	/*
 	if (overrideSHR4Mode != SHR_DEFAULT)
 	{
