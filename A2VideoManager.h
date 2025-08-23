@@ -134,7 +134,7 @@ public:
 		uint8_t* vram_forced_hgr2 = nullptr;
 		GLfloat* offset_buffer = nullptr;
 		int frameSHRModes = 0;					// All SHR4 modes in the frame
-		int pagedMode = 0;			// DoubleSHR4Mode_e : may use E0 (main) $2000-9FFF for interlace or page flip
+		int pagedMode = 0;			// DoubleMode_e : may use E0 (main) $2000-9FFF for interlace or page flip
 	};
 
 	//////////////////////////////////////////////////////////////////////////

@@ -778,20 +778,18 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		default:
 			break;
 		}
+		auto bHasDoneDouble = false;	// flag to ensure we don't repeat the double/interlace work
 		auto memPtr = memMgr->GetApple2MemAuxPtr();
 		uint8_t* lineStartPtr = vrams_write->vram_shr + GetVramWidthSHR() * _TR_ANY_Y;
 
-		// For the additional interlacing mode data, use main mem and the second part of vram_shr
-		auto memInterlacePtr = memMgr->GetApple2MemPtr();				// main mem (E0)
-		uint8_t* lineInterlaceStartPtr = vrams_write->vram_shr + vramSHRInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y;
-
+DRAW_VRAM:
 		// get the SCB and palettes if we're starting a line
 		// and it's part of the content area. The top & bottom border areas don't care about SCB
 		// We may or may not have a border, so at this point the beamstate is either BORDER_LEFT or CONTENT
 		if ((_TR_ANY_X == 0) && (_y < mode_scanlines))
 		{
 			lineStartPtr[0] = memPtr[_A2VIDEO_SHR_SCB_START + _y];
-			// Get the palette
+			// Get the palette (might be overwritten if it's a SHR_3200 image
 			memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
 				   memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
 				   32);					// palette length is 32 bytes
@@ -831,7 +829,8 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 					}
 				}
 				vrams_write->frameSHRModes |= scanlineSHR4Modes;	// Add to the frame's SHR4 modes the new modes found on this line
-				vrams_write->pagedMode = (memPtr + _A2VIDEO_SHR_MAGIC_BYTES - 1)[0];	// the previous byte has the Double SHR4 information
+				// page mode is the first byte of the 4 control bytes which come just before the magic bytes
+				vrams_write->pagedMode = (memPtr + _A2VIDEO_SHR_CTRL_BYTES)[0];
 			} else if (
 				((magicBytes == _A2VIDEO_3200_MAGIC_STRING) || (overrideSHRMode == A2_VSM_3200SHR))
 				&& ((overrideSHRMode & A2_VSM_SHR4SHR) == 0)
@@ -841,14 +840,15 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 				// There's a pointer to the start of the 200 palettes (1 per line) right before the magic bytes
 				// The palettes could exist anywhere in memory so the developer tells us where they are
 				// The 4 bytes are, from most to least significant:
-				// - unused (00)
+				// - Paged Mode (00: no, 01: Interlace, 02: Pageflip) - defined in DoubleMode_e
 				// - Bank: 00 for Main (E0), 01 for Aux (E1)
 				// - Low byte of memory
 				// - High byte of memory
 				// Example: 00 00 80 22 means the palettes start at 0x2280 in main memory
-				uint8_t* pPalStart = memPtr + _A2VIDEO_SHR_MAGIC_BYTES - 4;
-				uint8_t* bankPtr = (pPalStart[1] == 1 ? memPtr : memInterlacePtr);
-				uint16_t palStart = (((uint16_t)pPalStart[3]) << 8) | pPalStart[2];
+				uint8_t* pCtrlStart = memPtr + _A2VIDEO_SHR_CTRL_BYTES;
+				vrams_write->pagedMode = pCtrlStart[0];	// page mode is the first control byte
+				uint8_t* bankPtr = (pCtrlStart[1] == 1 ? memMgr->GetApple2MemAuxPtr() : memMgr->GetApple2MemPtr());
+				uint16_t palStart = (((uint16_t)pCtrlStart[3]) << 8) | pCtrlStart[2];
 				if (palStart < (_A2_MEMORY_SHADOW_END - 200 * 32)) {
 					// we may not be shadowing the whole memory
 					memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
@@ -859,16 +859,26 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			}
 
 			// Do the SCB and palettes for interlacing if requested
-			bShouldPageDouble = ( overrideDoubleSHR > 0 ? 1 : (vrams_write->pagedMode > 0));
-			if (bShouldPageDouble)
+			if (!bHasDoneDouble)
 			{
-				lineInterlaceStartPtr[0] = memInterlacePtr[_A2VIDEO_SHR_SCB_START + _y];
-				// Get the palette
-				memcpy(lineInterlaceStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
-					   memInterlacePtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineInterlaceStartPtr[0] & 0xFu) * 32),
-					   32);					// palette length is 32 bytes
+				bHasDoneDouble = true;
+				bShouldPageDouble = (overrideDoubleSHR > 0 ? 1 : (vrams_write->pagedMode > 0));
+				if (bShouldPageDouble)
+				{
+					// For the additional interlacing mode data, use main mem and the second part of vram_shr
+					memPtr = memMgr->GetApple2MemPtr();				// main mem (E0)
+					lineStartPtr = vrams_write->vram_shr + vramSHRInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y;
+					
+					goto DRAW_VRAM;
+				}
 			}
 		}
+
+		// reset the pointers
+		memPtr = memMgr->GetApple2MemAuxPtr();
+		lineStartPtr = vrams_write->vram_shr + GetVramWidthSHR() * _TR_ANY_Y;
+		auto memInterlacePtr = memMgr->GetApple2MemPtr();
+		uint8_t* lineInterlaceStartPtr = vrams_write->vram_shr + vramSHRInterlaceOffset + GetVramWidthSHR() * _TR_ANY_Y;
 
 		switch (beamState)
 		{

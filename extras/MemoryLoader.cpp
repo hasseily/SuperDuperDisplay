@@ -227,7 +227,8 @@ bool MemoryLoadSHR(const std::string &filePath) {
 	bool res = false;
 	auto memManager = MemoryManager::GetInstance();
 	auto logManager = LogTextManager::GetInstance();
-	uint8_t* pMem = memManager->GetApple2MemAuxPtr() + 0x2000;
+	uint8_t* pMem;
+	uint32_t magicBytes;
 	std::ifstream file(filePath, std::ios::binary);
 	if (file)
 	{
@@ -235,33 +236,70 @@ bool MemoryLoadSHR(const std::string &filePath) {
 		file.seekg(0, std::ios::end);
 		size_t fileSize = file.tellg();
 		
-		if (fileSize == 0x8000) {
-			logManager->AddLog(std::string("Loading SHR: " + filePath));
-		}
-		else if (fileSize == 0x9900) {
-			logManager->AddLog(std::string("Loading SHR 3200: " + filePath));
-		}
-		else if (fileSize == (0x8000 * 2)) {
-			logManager->AddLog(std::string("Loading double SHR: " + filePath));
-		}
-		else {
+		if (fileSize < 0x8000) {
 			logManager->AddLog(std::string("Error! SHR unknown file size: " + filePath));
 			return res;
 		}
 
+		std::string logText = "Loading SHR";
 		file.seekg(0, std::ios::beg); // Go back to the start of the file
-		file.read(reinterpret_cast<char*>(pMem), 0x8000);	// standard SHR
-		if (fileSize == 0x9900) {	// SHR 3200
-			// where should the palettes be loaded? (See A2VideoManager.cpp)
-			uint8_t* pPalStart = memManager->GetApple2MemAuxPtr() + _A2VIDEO_SHR_MAGIC_BYTES - 4;
-			uint8_t* bankPtr = (pPalStart[1] == 1 ? memManager->GetApple2MemAuxPtr() : memManager->GetApple2MemPtr());
-			uint16_t palStart = (((uint16_t)pPalStart[3]) << 8) | pPalStart[2];
-			file.read(reinterpret_cast<char*>(bankPtr + palStart), _A2VIDEO_SHR_SCANLINES * 32); // 0x1900 palette bytes
+		pMem = memManager->GetApple2MemAuxPtr();
+		file.read(reinterpret_cast<char*>(pMem + 0x2000), 0x8000);	// standard SHR structure always in the first 0x8000
+		magicBytes = reinterpret_cast<uint32_t*>(pMem + _A2VIDEO_SHR_MAGIC_BYTES)[0];
+		if (magicBytes == _A2VIDEO_SHR4_MAGIC_STRING) {
+			// the first image is a SHR4
+			logText += "4";
 		}
-		if (fileSize == 0x10000) {	// interlace or page flip
-			pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x2000;
-			file.read(reinterpret_cast<char*>(pMem), 0x8000);
+		if (fileSize == 0x10000) {	// interlace or page flip, read the next SHR
+			logText += " + SHR";
+			pMem = MemoryManager::GetInstance()->GetApple2MemPtr();
+			file.read(reinterpret_cast<char*>(pMem + 0x2000), 0x8000);
 		}
+		else if (fileSize >= 0x9900) {	// SHR_3200 or more
+			if (magicBytes == _A2VIDEO_3200_MAGIC_STRING) {
+				// the first image is a SHR_3200
+				logText += "_3200";
+				// where should the palettes be loaded? (See A2VideoManager.cpp)
+				uint8_t* pPalStart = memManager->GetApple2MemAuxPtr() + _A2VIDEO_SHR_MAGIC_BYTES - 4;
+				uint8_t* bankPtr = (pPalStart[1] == 1 ? memManager->GetApple2MemAuxPtr() : memManager->GetApple2MemPtr());
+				uint16_t palStart = (((uint16_t)pPalStart[3]) << 8) | pPalStart[2];
+				file.read(reinterpret_cast<char*>(bankPtr + palStart), _A2VIDEO_SHR_SCANLINES * 32); // 0x1900 palette bytes
+			}
+			// now check what else is in there. Could be another SHR 3200 or whatever
+			auto _remainingSize = fileSize - 0x9900;
+			if (_remainingSize > 0) {
+				pMem = MemoryManager::GetInstance()->GetApple2MemPtr();	// 2nd image always in E0/Main
+				if (_remainingSize == 0x8000) {		// there's an SHR in there
+					logText += " + SHR";
+					file.read(reinterpret_cast<char*>(pMem + 0x2000), 0x8000);
+					magicBytes = reinterpret_cast<uint32_t*>(pMem + _A2VIDEO_SHR_MAGIC_BYTES)[0];
+					if (magicBytes == _A2VIDEO_SHR4_MAGIC_STRING) {
+						// the second image is a SHR4
+						logText += "4";
+					}
+				}
+				else if (_remainingSize == 0x9900) {	// Another SHR_3200 in there
+					logText += " + SHR_3200";
+					file.read(reinterpret_cast<char*>(pMem + 0x2000), 0x8000);
+					uint8_t* pPalStart = pMem + _A2VIDEO_SHR_MAGIC_BYTES - 4;
+					uint8_t* bankPtr = (pPalStart[1] == 1 ? memManager->GetApple2MemAuxPtr() : memManager->GetApple2MemPtr());
+					uint16_t palStart = (((uint16_t)pPalStart[3]) << 8) | pPalStart[2];
+					file.read(reinterpret_cast<char*>(bankPtr + palStart), _A2VIDEO_SHR_SCANLINES * 32); // 0x1900 palette bytes
+				}
+				else if (_remainingSize == 0x7D00) {
+					// Just 32000 SHR line bytes, which we'll use as interlace/flip data
+					// and we'll copy over the palettes, scb and other stuff
+					logText += " + SHR interlace bytes (no SCB+palettes)";
+					file.read(reinterpret_cast<char*>(pMem), 0x7D00);
+					std::memcpy(pMem + 0x7D00, memManager->GetApple2MemAuxPtr() + 0x7D00, 0x8000-0x7D00);
+				}
+				else {
+					logText += " + " + std::to_string(_remainingSize) + " unknown bytes";
+				}
+			}
+		}
+		logText += ": " + filePath;
+		logManager->AddLog(logText);
 		res = true;
 	}
 	return res;
