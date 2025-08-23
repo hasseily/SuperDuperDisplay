@@ -81,7 +81,7 @@ struct VidHdVramTextEntry {	// 4 byte struct
 		struct {
 			uint8_t backgroundColor : 4; // Lower 4 bits
 			uint8_t foregroundColor : 4; // Upper 4 bits
-		};
+		} cNibbles;
 	};
 
 	uint8_t unused;  // Byte 2 (B): Unused
@@ -92,7 +92,7 @@ struct VidHdVramTextEntry {	// 4 byte struct
 		struct {
 			uint8_t backgroundAlpha : 4; // Lower 4 bits
 			uint8_t foregroundAlpha : 4; // Upper 4 bits
-		};
+		} aNibbles;
 	};
 };
 #pragma pack(pop)

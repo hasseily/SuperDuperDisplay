@@ -773,7 +773,7 @@ int main(int argc, char* argv[])
 						 
 					}
 					else if (event.key.keysym.sym == SDLK_F6) {	// Screenshot
-						std::string _vstr = "SCREENSHOT SAVED - " + glhelper->GetScreenshotSaveFilePath();
+						_vstr = "SCREENSHOT SAVED - " + glhelper->GetScreenshotSaveFilePath();
 						if (SDL_GetModState() & KMOD_SHIFT) {	// before Post Processing
 							glhelper->SaveTextureInSlotToFile(_TEXUNIT_POSTPROCESS,
 								glhelper->GetScreenshotSaveFilePath(), bUsePNGForScreenshots);
