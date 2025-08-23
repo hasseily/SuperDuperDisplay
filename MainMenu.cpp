@@ -1008,12 +1008,12 @@ void MainMenu::ShowVideoMenu() {
 	if (ImGui::MenuItem("Screenshot (After Post Processing)", "F6")) {
 		glhelper->SaveFramebufferToFile(glhelper->GetScreenshotSaveFilePath(), _bUsePNG);
 		std::string _vstr = "SCREENSHOT SAVED - " + glhelper->GetScreenshotSaveFilePath();
-		logTextManager->AddLog(_vstr);
+        LogTextManager::GetInstance()->AddLog(_vstr);
 	}
 	if (ImGui::MenuItem("Screenshot (No Post Processing)", "Shift+F6")) {
 		glhelper->SaveTextureInSlotToFile(_TEXUNIT_POSTPROCESS, glhelper->GetScreenshotSaveFilePath(), _bUsePNG);
 		std::string _vstr = "SCREENSHOT SAVED - " + glhelper->GetScreenshotSaveFilePath();
-		logTextManager->AddLog(_vstr);
+        LogTextManager::GetInstance()->AddLog(_vstr);
 	}
 	if (ImGui::Checkbox("Use PNG for screenshots", &_bUsePNG))
 		Main_SetbUsePNGForScreenshots(_bUsePNG);
