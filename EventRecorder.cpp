@@ -147,8 +147,8 @@ void EventRecorder::ReadTextEventsFromFile(std::ifstream& file)
 		bool m2b0 = std::stoi(m2b0_str);
 		bool m2sel = std::stoi(m2sel_str);
 		bool rw = std::stoi(rw_str);
-		uint16_t addr = std::stoul(addr_str, nullptr, 16);
-		uint8_t data = std::stoul(data_str, nullptr, 16);
+		uint16_t addr = static_cast<uint16_t>(std::stoul(addr_str, nullptr, 16));
+		uint8_t data = static_cast<uint8_t>(std::stoul(data_str, nullptr, 16));
 		
 		SDHREvent event(is_iigs, m2b0, m2sel, rw, addr, data);
 		for (size_t i = 0; i < count; ++i) {
