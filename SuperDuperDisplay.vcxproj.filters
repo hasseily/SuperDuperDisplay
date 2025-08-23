@@ -132,6 +132,9 @@
     <ClCompile Include="LogTextManager.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="miniz.c">
+      <Filter>sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -264,6 +267,12 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="LogTextManager.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image_write.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="miniz.h">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

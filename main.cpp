@@ -53,6 +53,7 @@
 static SwapInterval_e g_swapInterval = SWAPINTERVAL_ADAPTIVE;
 static bool g_quitIsRequested = false;
 static uint32_t g_fpsLimit = UINT32_MAX;
+bool bUsePNGForScreenshots = true;			// PNG or BMP
 float window_bgcolor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
 int g_wx = 100, g_wy = 100, g_ww = 800, g_wh = 600;	// window dimensions when not in fullscreen
 
@@ -292,6 +293,14 @@ bool Main_IsImGuiOn()
 MainMenu* Main_GetMenuPtr()
 {
 	return menu;
+}
+
+bool Main_GetbUsePNGForScreenshots() {
+	return bUsePNGForScreenshots;
+}
+
+void Main_SetbUsePNGForScreenshots(bool bUsePNG) {
+	bUsePNGForScreenshots = bUsePNG;
 }
 
 void Main_GetBGColor(float outColor[4]) {
@@ -589,6 +598,7 @@ int main(int argc, char* argv[])
 			show_recorder_window = _sm.value("show Recorder window", show_recorder_window);
 			show_texture_window = _sm.value("show texture window", show_texture_window);
 			show_metrics_window = _sm.value("show metrics window", show_metrics_window);
+			bUsePNGForScreenshots = _sm.value("use PNG for screenshots", bUsePNGForScreenshots);
 			if (_sm.contains("window background color") && _sm["window background color"].is_array()) {
 				for (size_t i = 0; i < 4; ++i) {
 					window_bgcolor[i] = _sm["window background color"][i].get<float>();
@@ -765,9 +775,10 @@ int main(int argc, char* argv[])
 					else if (event.key.keysym.sym == SDLK_F6) {	// Screenshot
 						std::string _vstr = "SCREENSHOT SAVED - " + glhelper->GetScreenshotSaveFilePath();
 						if (SDL_GetModState() & KMOD_SHIFT) {	// before Post Processing
-							glhelper->SaveTextureInSlotBMP(_TEXUNIT_POSTPROCESS, glhelper->GetScreenshotSaveFilePath());
+							glhelper->SaveTextureInSlotToFile(_TEXUNIT_POSTPROCESS,
+								glhelper->GetScreenshotSaveFilePath(), bUsePNGForScreenshots);
 						} else {								// after post processing
-							glhelper->SaveFramebufferBMP(glhelper->GetScreenshotSaveFilePath());
+							glhelper->SaveFramebufferToFile(glhelper->GetScreenshotSaveFilePath(), bUsePNGForScreenshots);
 						}
 						logTextManager->AddLog(_vstr);
 					}
@@ -1050,6 +1061,7 @@ int main(int argc, char* argv[])
 			{"fps limit", g_fpsLimit},
 			{"vsync", (int)g_swapInterval},
 			{"videoregion", (int)cycleCounter->GetVideoRegion()},
+			{"use PNG for screenshots", bUsePNGForScreenshots},
 			{"window background color", window_bgcolor},
 			{"show F1 window", Main_IsImGuiOn()},
 			{"show Apple 2 Video window", show_a2video_window},

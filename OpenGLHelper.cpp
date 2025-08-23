@@ -7,8 +7,46 @@
 #include "imgui_impl_opengl3.h"
 #include <SDL.h>
 
+// The stb_image_write PNG implementation is suboptimal. So we're combining it with miniz for
+// a close to optimal compression. See:
+// https://blog.gibson.sh/2015/07/18/comparing-png-compression-ratios-of-stb_image_write-lodepng-miniz-and-libpng/
+
+#include "miniz.h"
+#define STBIW_MALLOC(sz) SDL_malloc(sz)
+#define STBIW_FREE(p)    SDL_free(p)
+#define STBIW_REALLOC(p)    SDL_realloc(p)
+static unsigned char* my_stbi_zlib_compress(unsigned char* data, int data_len, int* out_len, int quality)
+{
+	// Guard: data_len must be >= 0 for the miniz API (it takes size_t internally).
+	if (data_len < 0) return nullptr;
+
+	mz_ulong in_len = static_cast<mz_ulong>(data_len);
+	mz_ulong buf_len = mz_compressBound(in_len);
+
+	unsigned char* buf = static_cast<unsigned char*>(STBIW_MALLOC(buf_len));
+	if (!buf) return nullptr;
+
+	// miniz "quality" is zlib level (0..9). Clamp to be safe.
+	if (quality < 0) quality = 0;
+	if (quality > 9) quality = 9;
+
+	int rc = mz_compress2(buf, &buf_len, data, in_len, quality);
+	if (rc != MZ_OK) {
+		STBIW_FREE(buf);
+		return nullptr;
+	}
+
+	*out_len = static_cast<int>(buf_len);
+	return buf; // stb_image_write will free via STBIW_FREE
+}
+#define STBIW_ZLIB_COMPRESS  my_stbi_zlib_compress
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 // To get the exact size of the window for the screenshot
 extern SDL_Window* Main_GetSDLWindow();
+// To get the image format
+extern bool Main_GetbUsePNGForScreenshots();
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 OpenGLHelper* OpenGLHelper::s_instance;
@@ -186,67 +224,87 @@ bool OpenGLHelper::are_matrices_approx_equal(const glm::mat4& m1, const glm::mat
 	return true;
 }
 
-bool OpenGLHelper::SaveFramebufferBMP(const std::string& filename) {
+bool OpenGLHelper::SaveFramebufferToFile(const std::string& filename, bool bUsePNG) {
 	int _w = 0, _h = 0;
 	SDL_GL_GetDrawableSize(Main_GetSDLWindow(), &_w, &_h);
+	if (_w <= 0 || _h <= 0) return false;
 
 	// Read RGBA pixels from the back framebuffer
 	// The back framebuffer has the latest render without the ImGUI stuff yet
 	// If we were to use the front framebuffer it'd have the menu in it
-	std::vector<GLubyte> pixels(_w * _h * 4);
+	std::vector<GLubyte> pixels(static_cast<size_t>(_w) * static_cast<size_t>(_h) * 4);
+
 	glReadBuffer(GL_BACK);
+
+	// Ensure tight packing (no 4-byte alignment padding beyond stride = _w*4)
+	GLint oldPack = 0;
+	glGetIntegerv(GL_PACK_ALIGNMENT, &oldPack);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glReadPixels(0, 0, _w, _h, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+	glPixelStorei(GL_PACK_ALIGNMENT, oldPack);
 
 	GLenum glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL SaveFramebufferBMP error: " << glerr << std::endl;
+		std::cerr << "OpenGL SaveFramebufferToFile error: " << glerr << std::endl;
+		// continue; data may still be valid
 	}
 
-	// Flip rows because OpenGL’s origin is bottom-left, SDL’s is top-left
-	for (int y = 0; y < _h/2; ++y) {
+	// Flip rows because OpenGL’s origin is bottom-left and PNG/top-left tools expect top-left
+	for (int y = 0; y < _h / 2; ++y) {
 		int idx1 = y * _w * 4;
 		int idx2 = (_h - 1 - y) * _w * 4;
-		for (int x = 0; x < _w*4; ++x)
+		for (int x = 0; x < _w * 4; ++x)
 			std::swap(pixels[idx1 + x], pixels[idx2 + x]);
 	}
 
-	// Create an SDL surface from the pixel data
-	SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
-													pixels.data(),
-													_w, _h,
-													32,			// depth
-													_w * 4,		// pitch (bytes per row)
-													0x000000FF,	// R mask
-													0x0000FF00,	// G mask
-													0x00FF0000,	// B mask
-													0xFF000000	// A mask
-													);
-	if (!surface) {
-		std::cerr << "SDL_CreateRGBSurfaceFrom failed: " << SDL_GetError() << "\n";
-		return false;
+	if (bUsePNG) {
+		// Write PNG (4 components, stride = _w * 4)
+		if (!stbi_write_png(filename.c_str(), _w, _h, 4, pixels.data(), _w * 4)) {
+			std::cerr << "stbi_write_png failed\n";
+			return false;
+		}
 	}
+	else {	// basic BMP
 
-	// Save to BMP
-	if (SDL_SaveBMP(surface, filename.c_str()) != 0) {
-		std::cerr << "SDL_SaveBMP failed: " << SDL_GetError() << "\n";
+		// Create an SDL surface from the pixel data
+		SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
+			pixels.data(),
+			_w, _h,
+			32,			// depth
+			_w * 4,		// pitch (bytes per row)
+			0x000000FF,	// R mask
+			0x0000FF00,	// G mask
+			0x00FF0000,	// B mask
+			0xFF000000	// A mask
+		);
+		if (!surface) {
+			std::cerr << "SDL_CreateRGBSurfaceFrom failed: " << SDL_GetError() << "\n";
+			return false;
+		}
+
+		// Save to BMP
+		if (SDL_SaveBMP(surface, filename.c_str()) != 0) {
+			std::cerr << "SDL_SaveBMP failed: " << SDL_GetError() << "\n";
+			SDL_FreeSurface(surface);
+			return false;
+		}
+
 		SDL_FreeSurface(surface);
-		return false;
 	}
 
-	SDL_FreeSurface(surface);
 	return true;
 }
 
-bool OpenGLHelper::SaveTextureInSlotBMP(GLuint slot, const std::string& filename) {
+bool OpenGLHelper::SaveTextureInSlotToFile(GLuint slot, const std::string& filename, bool bUsePNG) {
 	// Find the current texture id that is in this slot, and call SaveTextureBMP
 	glActiveTexture(slot);
 	GLint target_tex_id = 0;
 	glGetIntegerv(GL_TEXTURE_BINDING_2D, &target_tex_id);
 	glActiveTexture(GL_TEXTURE0);
-	return this->SaveTextureBMP(target_tex_id, filename);
+	return this->SaveTextureToFile(target_tex_id, filename, bUsePNG);
 }
 
-bool OpenGLHelper::SaveTextureBMP(GLuint tex, const std::string& filename) {
+bool OpenGLHelper::SaveTextureToFile(GLuint tex, const std::string& filename, bool bUsePNG) {
 	GLint _w = 0, _h = 0;
 	glBindTexture(GL_TEXTURE_2D, tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
@@ -272,9 +330,15 @@ bool OpenGLHelper::SaveTextureBMP(GLuint tex, const std::string& filename) {
 		return false;
 	}
 
-	std::vector<GLubyte> pixels(_w * _h * 4);
+	std::vector<GLubyte> pixels(static_cast<size_t>(_w) * static_cast<size_t>(_h) * 4);
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+	// Ensure tight packing (no 4-byte alignment padding beyond stride = _w*4)
+	GLint oldPack = 0;
+	glGetIntegerv(GL_PACK_ALIGNMENT, &oldPack);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glReadPixels(0, 0, _w, _h, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+	glPixelStorei(GL_PACK_ALIGNMENT, oldPack);
 
 	// Cleanup FBO binding
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -287,30 +351,40 @@ bool OpenGLHelper::SaveTextureBMP(GLuint tex, const std::string& filename) {
 
 	// we don't flip rows, it's already inverted
 
-	// Create SDL surface
-	SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
-													pixels.data(),
-													_w, _h,
-													32,			// depth
-													_w * 4,		// pitch (bytes per row)
-													0x000000FF,	// R mask
-													0x0000FF00,	// G mask
-													0x00FF0000,	// B mask
-													0xFF000000	// A mask
-													);
-	if (!surface) {
-		std::cerr << "SDL_CreateRGBSurfaceFrom failed: " << SDL_GetError() << "\n";
-		return false;
+	if (bUsePNG) {
+		// Write PNG (4 components, stride = _w * 4)
+		if (!stbi_write_png(filename.c_str(), _w, _h, 4, pixels.data(), _w * 4)) {
+			std::cerr << "stbi_write_png failed\n";
+			return false;
+		}
 	}
+	else {	// basic BMP
+		// Create SDL surface
+		SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
+			pixels.data(),
+			_w, _h,
+			32,			// depth
+			_w * 4,		// pitch (bytes per row)
+			0x000000FF,	// R mask
+			0x0000FF00,	// G mask
+			0x00FF0000,	// B mask
+			0xFF000000	// A mask
+		);
+		if (!surface) {
+			std::cerr << "SDL_CreateRGBSurfaceFrom failed: " << SDL_GetError() << "\n";
+			return false;
+		}
 
-	// Save
-	if (SDL_SaveBMP(surface, filename.c_str()) != 0) {
-		std::cerr << "SDL_SaveBMP failed: " << SDL_GetError() << "\n";
+		// Save
+		if (SDL_SaveBMP(surface, filename.c_str()) != 0) {
+			std::cerr << "SDL_SaveBMP failed: " << SDL_GetError() << "\n";
+			SDL_FreeSurface(surface);
+			return false;
+		}
+
 		SDL_FreeSurface(surface);
-		return false;
 	}
 
-	SDL_FreeSurface(surface);
 	return true;
 }
 
@@ -340,7 +414,8 @@ std::string OpenGLHelper::GetScreenshotSaveFilePath()
 #endif
 	std::stringstream ss;
 	ss << std::put_time(&tm_local, "%Y%m%d_%H%M%S");	// "YYYYMMDD_HHMMSS"
-	std::string ssname = "Apple2_Screenshot_" + ss.str() + ".bmp";
+	std::string ssname = "Apple2_Screenshot_" + ss.str();
+	ssname += (Main_GetbUsePNGForScreenshots() ? ".png" : ".bmp");
 
 	// Construct the file path: screenshots/<timestamp>
 	std::filesystem::path filePath = screenshotsDir / ssname;

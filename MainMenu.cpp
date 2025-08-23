@@ -35,6 +35,8 @@ extern void Main_SetFullScreen(bool bIsFullscreen);
 extern SwapInterval_e Main_GetVsync();
 extern void Main_SetVsync(SwapInterval_e _vsync);
 extern void Main_DisplaySplashScreen();
+extern bool Main_GetbUsePNGForScreenshots();
+extern void Main_SetbUsePNGForScreenshots(bool bUsePNG);
 extern void Main_GetBGColor(float outColor[4]);
 extern void Main_SetBGColor(const float newColor[4]);
 extern void Main_ResetA2SS();
@@ -1002,12 +1004,16 @@ void MainMenu::ShowVideoMenu() {
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
 	ImGui::Separator();
+	auto _bUsePNG = Main_GetbUsePNGForScreenshots();
 	if (ImGui::MenuItem("Screenshot (After Post Processing)", "F6")) {
-		glhelper->SaveFramebufferBMP(glhelper->GetScreenshotSaveFilePath());
+		glhelper->SaveFramebufferToFile(glhelper->GetScreenshotSaveFilePath(), _bUsePNG);
 	}
 	if (ImGui::MenuItem("Screenshot (No Post Processing)", "Shift+F6")) {
-		glhelper->SaveTextureInSlotBMP(_TEXUNIT_POSTPROCESS, glhelper->GetScreenshotSaveFilePath());
+		glhelper->SaveTextureInSlotToFile(_TEXUNIT_POSTPROCESS, glhelper->GetScreenshotSaveFilePath(), _bUsePNG);
 	}
+	if (ImGui::Checkbox("Use PNG for screenshots", &_bUsePNG))
+		Main_SetbUsePNGForScreenshots(_bUsePNG);
+	ImGui::SetItemTooltip("Screenshot format -- unchecked: BMP, checked: PNG");
 }
 
 void MainMenu::ShowSoundMenu() {

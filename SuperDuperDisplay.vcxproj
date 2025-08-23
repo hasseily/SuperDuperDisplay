@@ -201,6 +201,7 @@ xcopy /y /d "$(ProjectDir)\lib\Win_x64\*.dll" "$(OutDir)"</Command>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainMenu.cpp" />
     <ClCompile Include="MemoryManager.cpp" />
+    <ClCompile Include="miniz.c" />
     <ClCompile Include="MockingboardManager.cpp" />
     <ClCompile Include="MosaicMesh.cpp" />
     <ClCompile Include="OpenGLHelper.cpp" />
@@ -246,6 +247,7 @@ xcopy /y /d "$(ProjectDir)\lib\Win_x64\*.dll" "$(OutDir)"</Command>
     <ClInclude Include="m6522.h" />
     <ClInclude Include="MainMenu.h" />
     <ClInclude Include="MemoryManager.h" />
+    <ClInclude Include="miniz.h" />
     <ClInclude Include="MockingboardManager.h" />
     <ClInclude Include="MosaicMesh.h" />
     <ClInclude Include="my_imgui_config.h" />
@@ -258,6 +260,7 @@ xcopy /y /d "$(ProjectDir)\lib\Win_x64\*.dll" "$(OutDir)"</Command>
     <ClInclude Include="SoundManager.h" />
     <ClInclude Include="SSI263.h" />
     <ClInclude Include="stb_image.h" />
+    <ClInclude Include="stb_image_write.h" />
     <ClInclude Include="TimedTextManager.h" />
     <ClInclude Include="VidHdWindowBeam.h" />
   </ItemGroup>
