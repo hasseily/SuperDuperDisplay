@@ -789,7 +789,7 @@ DRAW_VRAM:
 		if ((_TR_ANY_X == 0) && (_y < mode_scanlines))
 		{
 			lineStartPtr[0] = memPtr[_A2VIDEO_SHR_SCB_START + _y];
-			// Get the palette (might be overwritten if it's a SHR_3200 image
+			// Get the palette (might be overwritten if it's a SHR3200 image
 			memcpy(lineStartPtr + 1,	// palette starts at byte 1 in our a2shr_vram
 				   memPtr + _A2VIDEO_SHR_PALETTE_START + ((uint32_t)(lineStartPtr[0] & 0xFu) * 32),
 				   32);					// palette length is 32 bytes

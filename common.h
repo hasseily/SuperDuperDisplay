@@ -132,7 +132,7 @@ struct A2RenderVertex {
 #define _A2VIDEO_SHR_START 0x2000	// All SHR is in the AUX (E1) bank!
 #define _A2VIDEO_SHR_SIZE 0x8000
 #define _A2VIDEO_SHR_SCB_START 0x9D00			// scanline control bytes: 1 per line, 200 total
-#define _A2VIDEO_SHR_CTRL_BYTES 0x9DF8			// start of the 4 control bytes. MSB is DoubleMode_e, then bank, lo and hi of SHR_3200 palettes
+#define _A2VIDEO_SHR_CTRL_BYTES 0x9DF8			// start of the 4 control bytes. MSB is DoubleMode_e, then bank, lo and hi of SHR3200 palettes
 #define _A2VIDEO_SHR_MAGIC_BYTES 0x9DFC			// start of the 4 magic bytes determining the SHR mode
 #define _A2VIDEO_SHR_PALETTE_START 0x9E00	// 16 SHR palettes of 16 colors, 2 bytes per color. Total 512 bytes
 
@@ -144,11 +144,11 @@ struct A2RenderVertex {
  || defined(__ARMEB__) || defined(__AARCH64EB__) || defined(__MIPSEB__)
 #define _A2_BIG_ENDIAN 1
 #define _A2VIDEO_SHR4_MAGIC_STRING 0xD3C8D2B4	// 'SHR4' activates SHR4 mode
-#define _A2VIDEO_3200_MAGIC_STRING 0xB3B2B0B0	// '3200'activates SHR_3200 mode
+#define _A2VIDEO_3200_MAGIC_STRING 0xB3B2B0B0	// '3200'activates SHR3200 mode
 #else
 #define _A2_BIG_ENDIAN 0
 #define _A2VIDEO_SHR4_MAGIC_STRING 0xB4D2C8D3	// 'SHR4' (in reverse order in memory) activates SHR4 mode
-#define _A2VIDEO_3200_MAGIC_STRING 0xB0B0B2B3	// '3200' (in reverse order in memory) activates SHR_3200 mode
+#define _A2VIDEO_3200_MAGIC_STRING 0xB0B0B2B3	// '3200' (in reverse order in memory) activates SHR3200 mode
 #endif
 
 

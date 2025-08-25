@@ -181,6 +181,16 @@ void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 	auto pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + 0x2000;
 	// Read first SHR frame
 	file.read(reinterpret_cast<char*>(pMem), 0x8000);
+	// Check if it's a SHR3200
+	auto magicBytes = reinterpret_cast<uint32_t*>(pMem + _A2VIDEO_SHR_MAGIC_BYTES)[0];
+	if (magicBytes == _A2VIDEO_3200_MAGIC_STRING) {
+		MemoryManager* memManager = MemoryManager::GetInstance();
+		file.read(reinterpret_cast<char*>(pMem), 0x8000);
+		uint8_t* pPalStart = memManager->GetApple2MemAuxPtr() + _A2VIDEO_SHR_MAGIC_BYTES - 4;
+		uint8_t* bankPtr = (pPalStart[1] == 1 ? memManager->GetApple2MemAuxPtr() : memManager->GetApple2MemPtr());
+		uint16_t palStart = (((uint16_t)pPalStart[3]) << 8) | pPalStart[2];
+		file.read(reinterpret_cast<char*>(bankPtr + palStart), _A2VIDEO_SHR_SCANLINES * 32); // 0x1900 palette bytes
+	}
 	// Then the animations block length
 	uint32_t dbaLength = 0;
 	file.read(reinterpret_cast<char*>(&dbaLength), 4);
@@ -399,7 +409,7 @@ void EventRecorder::LoadRecording()
 	IGFD::FileDialogConfig config;
 	config.path = "./recordings/";
 	ImGui::SetNextWindowSize(ImVec2(800, 400));
-	ImGuiFileDialog::Instance()->OpenDialog("ChooseRecordingLoad", "Load Recording File", ".vcr,.shra,#C20000", config);
+	ImGuiFileDialog::Instance()->OpenDialog("ChooseRecordingLoad", "Load Recording File", ".vcr,.shra,#C20000, #C20002", config);
 }
 
 void EventRecorder::LoadTextEventsFromFile()
@@ -562,6 +572,8 @@ void EventRecorder::DisplayImGuiWindow(bool* p_open)
 						else if (_fileExtension == ".shra")
 							ReadPaintWorksAnimationsFile(file);
 						else if (_fileExtension == "#C20000")
+							ReadPaintWorksAnimationsFile(file);
+						else if (_fileExtension == "#C20002")
 							ReadPaintWorksAnimationsFile(file);
 					}
 					catch (std::ifstream::failure& e)

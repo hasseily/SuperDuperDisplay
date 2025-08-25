@@ -60,7 +60,7 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) 
 		IGFD::FileDialogConfig config;
 		config.path = (path.empty() ? "." : path);
 		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File",
-			".bin,.txt,.lgr,.dgr,.hgr,.dhr,.shr, #C10000", config);
+			".bin,.txt,.lgr,.dgr,.hgr,.dhr,.shr, #C10000, #C10002", config);
 	}
 	
 	// Display the file dialog
@@ -82,6 +82,8 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) 
 				else if (extension == ".shr")
 					res = MemoryLoadSHR(filePath);
 				else if (extension == "#C10000")
+					res = MemoryLoadSHR(filePath);
+				else if (extension == "#C10002")
 					res = MemoryLoadSHR(filePath);
 				if (res)
 				{
@@ -255,10 +257,10 @@ bool MemoryLoadSHR(const std::string &filePath) {
 			pMem = MemoryManager::GetInstance()->GetApple2MemPtr();
 			file.read(reinterpret_cast<char*>(pMem + 0x2000), 0x8000);
 		}
-		else if (fileSize >= 0x9900) {	// SHR_3200 or more
+		else if (fileSize >= 0x9900) {	// SHR3200 or more
 			if (magicBytes == _A2VIDEO_3200_MAGIC_STRING) {
-				// the first image is a SHR_3200
-				logText += "_3200";
+				// the first image is a SHR3200
+				logText += "3200";
 				// where should the palettes be loaded? (See A2VideoManager.cpp)
 				uint8_t* pPalStart = memManager->GetApple2MemAuxPtr() + _A2VIDEO_SHR_MAGIC_BYTES - 4;
 				uint8_t* bankPtr = (pPalStart[1] == 1 ? memManager->GetApple2MemAuxPtr() : memManager->GetApple2MemPtr());
@@ -278,8 +280,8 @@ bool MemoryLoadSHR(const std::string &filePath) {
 						logText += "4";
 					}
 				}
-				else if (_remainingSize == 0x9900) {	// Another SHR_3200 in there
-					logText += " + SHR_3200";
+				else if (_remainingSize == 0x9900) {	// Another SHR3200 in there
+					logText += " + SHR3200";
 					file.read(reinterpret_cast<char*>(pMem + 0x2000), 0x8000);
 					uint8_t* pPalStart = pMem + _A2VIDEO_SHR_MAGIC_BYTES - 4;
 					uint8_t* bankPtr = (pPalStart[1] == 1 ? memManager->GetApple2MemAuxPtr() : memManager->GetApple2MemPtr());
