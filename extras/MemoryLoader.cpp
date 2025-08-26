@@ -304,7 +304,7 @@ uint32_t ParseSHRData(std::ifstream& file, uint32_t offset, SHRFileContent_e* ty
 			return 0;
 		}
 
-		file.seekg(0, offset); // Go back to the offset requested
+		file.seekg(offset); // Go back to the offset requested
 		pMem = memManager->GetApple2MemAuxPtr();
 		*typeE1 = SHRFileContent_e::SHR;
 		file.read(reinterpret_cast<char*>(pMem + 0x2000), 0x8000);	// standard SHR structure always in the first 0x8000

@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <thread>
 #include "glm/gtc/epsilon.hpp"
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
