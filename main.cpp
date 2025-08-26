@@ -773,14 +773,12 @@ int main(int argc, char* argv[])
 						 
 					}
 					else if (event.key.keysym.sym == SDLK_F6) {	// Screenshot
-						_vstr = "SCREENSHOT SAVED - " + glhelper->GetScreenshotSaveFilePath();
 						if (SDL_GetModState() & KMOD_SHIFT) {	// before Post Processing
 							glhelper->SaveTextureInSlotToFile(_TEXUNIT_POSTPROCESS,
 								glhelper->GetScreenshotSaveFilePath(), bUsePNGForScreenshots);
 						} else {								// after post processing
 							glhelper->SaveFramebufferToFile(glhelper->GetScreenshotSaveFilePath(), bUsePNGForScreenshots);
 						}
-						logTextManager->AddLog(_vstr);
 					}
 					else if (event.key.keysym.sym == SDLK_F8) {
 						if (SDL_GetModState() & KMOD_SHIFT) {

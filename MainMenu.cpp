@@ -802,7 +802,7 @@ void MainMenu::ShowSDDMenu() {
 				for (int i = 0; i < numDisplayModes; ++i) {
 					SDL_DisplayMode mode;
 					if (SDL_GetDisplayMode(displayIndex, i, &mode) != 0) {
-						LogStreamErr() << "SDL_GetDisplayMode failed: " << SDL_GetError() << std::endl;
+						LogStreamErr() << "SDL_GetDisplayMode failed: " << SDL_GetError();
 						continue;
 					}
 					// Only store the highest refresh rate modes
@@ -1007,13 +1007,9 @@ void MainMenu::ShowVideoMenu() {
 	auto _bUsePNG = Main_GetbUsePNGForScreenshots();
 	if (ImGui::MenuItem("Screenshot (After Post Processing)", "F6")) {
 		glhelper->SaveFramebufferToFile(glhelper->GetScreenshotSaveFilePath(), _bUsePNG);
-		std::string _vstr = "SCREENSHOT SAVED - " + glhelper->GetScreenshotSaveFilePath();
-        LogTextManager::GetInstance()->AddLog(_vstr);
 	}
 	if (ImGui::MenuItem("Screenshot (No Post Processing)", "Shift+F6")) {
 		glhelper->SaveTextureInSlotToFile(_TEXUNIT_POSTPROCESS, glhelper->GetScreenshotSaveFilePath(), _bUsePNG);
-		std::string _vstr = "SCREENSHOT SAVED - " + glhelper->GetScreenshotSaveFilePath();
-        LogTextManager::GetInstance()->AddLog(_vstr);
 	}
 	if (ImGui::Checkbox("Use PNG for screenshots", &_bUsePNG))
 		Main_SetbUsePNGForScreenshots(_bUsePNG);

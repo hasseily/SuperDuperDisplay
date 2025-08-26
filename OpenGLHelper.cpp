@@ -15,8 +15,8 @@
 
 #include "miniz.h"
 #define STBIW_MALLOC(sz) SDL_malloc(sz)
-#define STBIW_FREE(p)    SDL_free(p)
-#define STBIW_REALLOC(p)    SDL_realloc(p)
+#define STBIW_FREE(p)	SDL_free(p)
+#define STBIW_REALLOC(p)	SDL_realloc(p)
 static unsigned char* my_stbi_zlib_compress(unsigned char* data, int data_len, int* out_len, int quality)
 {
 	// Guard: data_len must be >= 0 for the miniz API (it takes size_t internally).
@@ -118,7 +118,7 @@ void OpenGLHelper::set_gl_version()
 	// Decide GL+GLSL versions
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 	// GL ES 3.0 + GLSL 300 es
-    // ImGui only supports 3.0, not 3.1
+	// ImGui only supports 3.0, not 3.1
 	glsl_version = "#version 300 es";
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
@@ -187,7 +187,7 @@ void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int 
 
 GLuint OpenGLHelper::get_texture_id_at_slot(int slot)
 {
-	if (slot >= v_texture_ids.size())
+	if (slot >= (int)v_texture_ids.size())
 	{
 #ifdef DEBUG
 		std::cerr << "ERROR: Requesting a texture slot above _SDHR_MAX_TEXTURES!\n";
@@ -266,8 +266,10 @@ bool OpenGLHelper::SaveFramebufferToFile(const std::string& filename, bool bUseP
 		if (bUsePNG) {
 			// Write PNG (4 components, stride = w * 4)
 			if (!stbi_write_png(filename.c_str(), w, h, 4, px.data(), w * 4)) {
-				LogStreamErr() << "stbi_write_png failed\n";
-				return false;
+				LogStreamErr() << "stbi_write_png failed";
+			}
+			else {
+				LogStream() << "SCREENSHOT SAVED - " << filename;
 			}
 		}
 		else {	// basic BMP
@@ -284,18 +286,18 @@ bool OpenGLHelper::SaveFramebufferToFile(const std::string& filename, bool bUseP
 				0xFF000000	// A mask
 			);
 			if (!surface) {
-				LogStreamErr() << "SDL_CreateRGBSurfaceFrom failed: " << SDL_GetError() << "\n";
-				return false;
+				LogStreamErr() << "SDL_CreateRGBSurfaceFrom failed: " << SDL_GetError();
 			}
-
-			// Save to BMP
-			if (SDL_SaveBMP(surface, filename.c_str()) != 0) {
-				LogStreamErr() << "SDL_SaveBMP failed: " << SDL_GetError() << "\n";
+			else {
+				// Save to BMP
+				if (SDL_SaveBMP(surface, filename.c_str()) != 0) {
+					LogStreamErr() << "SDL_SaveBMP failed: " << SDL_GetError();
+				}
+				else {
+					LogStream() << "SCREENSHOT SAVED - " << filename;
+				}
 				SDL_FreeSurface(surface);
-				return false;
 			}
-
-			SDL_FreeSurface(surface);
 		}
 	}).detach();
 
@@ -366,8 +368,10 @@ bool OpenGLHelper::SaveTextureToFile(GLuint tex, const std::string& filename, bo
 		if (bUsePNG) {
 			// Write PNG (4 components, stride = w * 4)
 			if (!stbi_write_png(filename.c_str(), w, h, 4, px.data(), w * 4)) {
-				LogStreamErr() << "stbi_write_png failed\n";
-				return false;
+				LogStreamErr() << "stbi_write_png failed";
+			}
+			else {
+				LogStream() << "SCREENSHOT SAVED - " << filename;
 			}
 		}
 		else {	// basic BMP
@@ -383,18 +387,18 @@ bool OpenGLHelper::SaveTextureToFile(GLuint tex, const std::string& filename, bo
 				0xFF000000	// A mask
 			);
 			if (!surface) {
-				LogStreamErr() << "SDL_CreateRGBSurfaceFrom failed: " << SDL_GetError() << "\n";
-				return false;
+				LogStreamErr() << "SDL_CreateRGBSurfaceFrom failed: " << SDL_GetError();
 			}
-
-			// Save
-			if (SDL_SaveBMP(surface, filename.c_str()) != 0) {
-				LogStreamErr() << "SDL_SaveBMP failed: " << SDL_GetError() << "\n";
+			else {
+				// Save
+				if (SDL_SaveBMP(surface, filename.c_str()) != 0) {
+					LogStreamErr() << "SDL_SaveBMP failed: " << SDL_GetError();
+				}
+				else {
+					LogStream() << "SCREENSHOT SAVED - " << filename;
+				}
 				SDL_FreeSurface(surface);
-				return false;
 			}
-
-			SDL_FreeSurface(surface);
 		}
 	}).detach();
 
