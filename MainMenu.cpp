@@ -802,7 +802,7 @@ void MainMenu::ShowSDDMenu() {
 				for (int i = 0; i < numDisplayModes; ++i) {
 					SDL_DisplayMode mode;
 					if (SDL_GetDisplayMode(displayIndex, i, &mode) != 0) {
-						std::cerr << "SDL_GetDisplayMode failed: " << SDL_GetError() << std::endl;
+						LogStreamErr() << "SDL_GetDisplayMode failed: " << SDL_GetError() << std::endl;
 						continue;
 					}
 					// Only store the highest refresh rate modes

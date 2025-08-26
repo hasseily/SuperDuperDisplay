@@ -11,6 +11,9 @@
  It efficiently uses a single draw call.
 
  WARNING: Get its instance only after OpenGL has been initialized!
+
+ There's also a convenience class called LogStream that operates like std::cerr:
+ LogStream() << "Error: " << myErr << std::endl;
  */
 
 #include "TimedTextManager.h"
@@ -60,4 +63,52 @@ private:
 		verts.reserve(120 * 240 * 6 * 8);	// 120 lines of 240 characters per line
 	}
 
+};
+
+/*
+	LogStream is a convenience class that operates like std::cerr and allows for
+	manipulators like std::endl:
+	LogStream() << "This is an error: " << myErr << std::endl;
+
+	And LogStreamErr() automatically draws in red
+*/
+
+#include <sstream>
+#include <string>
+
+class LogStream {
+public:
+	explicit LogStream(const glm::vec4& color = kDefaultColor) : color_(color) {}
+	virtual ~LogStream() {
+		if (!oss_.str().empty()) {
+			LogTextManager::GetInstance()->AddLog(oss_.str(), color_);
+		}
+	}
+
+	template <typename T>
+	LogStream& operator<<(const T& value) {
+		oss_ << value;
+		return *this;
+	}
+
+	// manipulators like std::endl
+	LogStream& operator<<(std::ostream& (*manip)(std::ostream&)) {
+		manip(oss_);
+		return *this;
+	}
+
+protected:
+	std::ostringstream oss_;
+	glm::vec4 color_;
+
+private:
+	static constexpr glm::vec4 kDefaultColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+};
+
+// Derived class for error (red)
+class LogStreamErr : public LogStream {
+public:
+	LogStreamErr() : LogStream(kErrorColor) {}
+private:
+	static constexpr glm::vec4 kErrorColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 };

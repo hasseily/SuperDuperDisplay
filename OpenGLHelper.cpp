@@ -5,6 +5,7 @@
 #include "glm/gtc/epsilon.hpp"
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
+#include "LogTextManager.h"
 #include <SDL.h>
 
 // The stb_image_write PNG implementation is suboptimal. So we're combining it with miniz for
@@ -249,48 +250,53 @@ bool OpenGLHelper::SaveFramebufferToFile(const std::string& filename, bool bUseP
 		// continue; data may still be valid
 	}
 
-	// Flip rows because OpenGL’s origin is bottom-left and PNG/top-left tools expect top-left
-	for (int y = 0; y < _h / 2; ++y) {
-		int idx1 = y * _w * 4;
-		int idx2 = (_h - 1 - y) * _w * 4;
-		for (int x = 0; x < _w * 4; ++x)
-			std::swap(pixels[idx1 + x], pixels[idx2 + x]);
-	}
+	// Wrap the rest of the code in a thread because the PNG compression can be quite expensive
+	// and a Raspberry Pi will take hundreds of milliseconds to process a 1080p image
 
-	if (bUsePNG) {
-		// Write PNG (4 components, stride = _w * 4)
-		if (!stbi_write_png(filename.c_str(), _w, _h, 4, pixels.data(), _w * 4)) {
-			std::cerr << "stbi_write_png failed\n";
-			return false;
-		}
-	}
-	else {	// basic BMP
-
-		// Create an SDL surface from the pixel data
-		SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
-			pixels.data(),
-			_w, _h,
-			32,			// depth
-			_w * 4,		// pitch (bytes per row)
-			0x000000FF,	// R mask
-			0x0000FF00,	// G mask
-			0x00FF0000,	// B mask
-			0xFF000000	// A mask
-		);
-		if (!surface) {
-			std::cerr << "SDL_CreateRGBSurfaceFrom failed: " << SDL_GetError() << "\n";
-			return false;
+	std::thread([filename, bUsePNG, w = _w, h = _h, px = std::move(pixels)]() mutable {
+		// Flip rows because OpenGL’s origin is bottom-left and PNG/top-left tools expect top-left
+		for (int y = 0; y < h / 2; ++y) {
+			int idx1 = y * w * 4;
+			int idx2 = (h - 1 - y) * w * 4;
+			for (int x = 0; x < w * 4; ++x)
+				std::swap(px[idx1 + x], px[idx2 + x]);
 		}
 
-		// Save to BMP
-		if (SDL_SaveBMP(surface, filename.c_str()) != 0) {
-			std::cerr << "SDL_SaveBMP failed: " << SDL_GetError() << "\n";
+		if (bUsePNG) {
+			// Write PNG (4 components, stride = w * 4)
+			if (!stbi_write_png(filename.c_str(), w, h, 4, px.data(), w * 4)) {
+				LogStreamErr() << "stbi_write_png failed\n";
+				return false;
+			}
+		}
+		else {	// basic BMP
+
+			// Create an SDL surface from the pixel data
+			SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
+				px.data(),
+				w, h,
+				32,			// depth
+				w * 4,		// pitch (bytes per row)
+				0x000000FF,	// R mask
+				0x0000FF00,	// G mask
+				0x00FF0000,	// B mask
+				0xFF000000	// A mask
+			);
+			if (!surface) {
+				LogStreamErr() << "SDL_CreateRGBSurfaceFrom failed: " << SDL_GetError() << "\n";
+				return false;
+			}
+
+			// Save to BMP
+			if (SDL_SaveBMP(surface, filename.c_str()) != 0) {
+				LogStreamErr() << "SDL_SaveBMP failed: " << SDL_GetError() << "\n";
+				SDL_FreeSurface(surface);
+				return false;
+			}
+
 			SDL_FreeSurface(surface);
-			return false;
 		}
-
-		SDL_FreeSurface(surface);
-	}
+	}).detach();
 
 	return true;
 }
@@ -324,7 +330,7 @@ bool OpenGLHelper::SaveTextureToFile(GLuint tex, const std::string& filename, bo
 						   tex, 0);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-		std::cerr << "FBO incomplete!\n";
+		LogStreamErr() << "FBO incomplete!\n";
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glDeleteFramebuffers(1, &fbo);
 		return false;
@@ -346,44 +352,50 @@ bool OpenGLHelper::SaveTextureToFile(GLuint tex, const std::string& filename, bo
 
 	GLenum glerr;
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "OpenGL SaveTextureBMP error: " << glerr << std::endl;
+		LogStreamErr() << "OpenGL SaveTextureBMP error: " << glerr << std::endl;
 	}
 
-	// we don't flip rows, it's already inverted
+	// Wrap the rest of the code in a thread because the PNG compression can be quite expensive
+	// and a Raspberry Pi will take hundreds of milliseconds to process a 1080p image
 
-	if (bUsePNG) {
-		// Write PNG (4 components, stride = _w * 4)
-		if (!stbi_write_png(filename.c_str(), _w, _h, 4, pixels.data(), _w * 4)) {
-			std::cerr << "stbi_write_png failed\n";
-			return false;
-		}
-	}
-	else {	// basic BMP
-		// Create SDL surface
-		SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
-			pixels.data(),
-			_w, _h,
-			32,			// depth
-			_w * 4,		// pitch (bytes per row)
-			0x000000FF,	// R mask
-			0x0000FF00,	// G mask
-			0x00FF0000,	// B mask
-			0xFF000000	// A mask
-		);
-		if (!surface) {
-			std::cerr << "SDL_CreateRGBSurfaceFrom failed: " << SDL_GetError() << "\n";
-			return false;
-		}
+	std::thread([filename, bUsePNG, w = _w, h = _h, px = std::move(pixels)]() mutable {
 
-		// Save
-		if (SDL_SaveBMP(surface, filename.c_str()) != 0) {
-			std::cerr << "SDL_SaveBMP failed: " << SDL_GetError() << "\n";
+		// we don't flip rows, it's already inverted
+
+		if (bUsePNG) {
+			// Write PNG (4 components, stride = w * 4)
+			if (!stbi_write_png(filename.c_str(), w, h, 4, px.data(), w * 4)) {
+				LogStreamErr() << "stbi_write_png failed\n";
+				return false;
+			}
+		}
+		else {	// basic BMP
+			// Create SDL surface
+			SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
+				px.data(),
+				w, h,
+				32,			// depth
+				w * 4,		// pitch (bytes per row)
+				0x000000FF,	// R mask
+				0x0000FF00,	// G mask
+				0x00FF0000,	// B mask
+				0xFF000000	// A mask
+			);
+			if (!surface) {
+				LogStreamErr() << "SDL_CreateRGBSurfaceFrom failed: " << SDL_GetError() << "\n";
+				return false;
+			}
+
+			// Save
+			if (SDL_SaveBMP(surface, filename.c_str()) != 0) {
+				LogStreamErr() << "SDL_SaveBMP failed: " << SDL_GetError() << "\n";
+				SDL_FreeSurface(surface);
+				return false;
+			}
+
 			SDL_FreeSurface(surface);
-			return false;
 		}
-
-		SDL_FreeSurface(surface);
-	}
+	}).detach();
 
 	return true;
 }
@@ -394,6 +406,7 @@ std::string OpenGLHelper::GetScreenshotSaveFilePath()
 	std::filesystem::path screenshotsDir = appRoot / "screenshots";
 	if (!std::filesystem::exists(screenshotsDir)) {
 		if (!std::filesystem::create_directory(screenshotsDir)) {
+			LogStreamErr() << "Failed to create directory: " << screenshotsDir.string();
 			throw std::runtime_error("Failed to create directory: " + screenshotsDir.string());
 		}
 	}
