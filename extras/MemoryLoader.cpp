@@ -225,42 +225,108 @@ bool MemoryLoadDHR(const std::string &filePath) {
 	return res;
 }
 
-bool MemoryLoadSHR(const std::string &filePath) {
+bool MemoryLoadSHR(const std::string& filePath) {
 	bool res = false;
-	auto memManager = MemoryManager::GetInstance();
 	auto logManager = LogTextManager::GetInstance();
+	std::ifstream file(filePath, std::ios::binary);
+	SHRFileContent_e typeE1, typeE0;
+	uint32_t parsedCount = 0;
+	if (file)
+		parsedCount = ParseSHRData(file, 0, &typeE1, &typeE0);
+	if (parsedCount == 0) {
+		logManager->AddLog(std::string("Error! SHR unknown file size: " + filePath));
+		return res;
+	}
+	std::string logText = "Loading SHR";
+	switch (typeE1)
+	{
+	case SHRFileContent_e::SHR:
+		// standard SHR
+		break;
+	case SHRFileContent_e::SHR4:
+		logText += "4";
+		break;
+	case SHRFileContent_e::SHR3200:
+		logText += "3200";
+		break;
+	default:
+		// this shouldn't happen, no data should be parsed in this case
+		logText += " (UNKNOWN!?)";
+		break;
+	}
+	switch (typeE0)
+	{
+	case SHRFileContent_e::UNKNOWN:
+		// Single image, not interlaced or page flipped
+		break;
+	case SHRFileContent_e::SHR:
+		// standard SHR
+		logText += " + SHR";
+		break;
+	case SHRFileContent_e::SHR4:
+		logText += " + SHR4";
+		break;
+	case SHRFileContent_e::SHR3200:
+		logText += " + SHR3200";
+		break;
+	case SHRFileContent_e::SHR_BYTES:
+		logText += " + SHR interlace bytes (no SCB+palettes)";
+		break;
+	default:
+		break;
+	}
+
+	// Move again to the end to get the file size
+	file.seekg(0, std::ios::end);
+	size_t fileSize = file.tellg();
+	auto _remainingSize = fileSize - parsedCount;
+	if (_remainingSize != 0)
+		logText += " + " + std::to_string(_remainingSize) + " unknown bytes";
+
+	logText += ": " + filePath;
+	logManager->AddLog(logText);
+	return true;
+}
+
+uint32_t ParseSHRData(std::ifstream& file, uint32_t offset, SHRFileContent_e* typeE1, SHRFileContent_e* typeE0) {
 	uint8_t* pMem;
 	uint32_t magicBytes;
-	std::ifstream file(filePath, std::ios::binary);
 	if (file)
 	{
+		auto memManager = MemoryManager::GetInstance();
 		// Move to the end to get the file size
 		file.seekg(0, std::ios::end);
 		size_t fileSize = file.tellg();
-		
+		*typeE1 = SHRFileContent_e::UNKNOWN;
+		*typeE0 = SHRFileContent_e::UNKNOWN;
+
 		if (fileSize < 0x8000) {
-			logManager->AddLog(std::string("Error! SHR unknown file size: " + filePath));
-			return res;
+			return 0;
 		}
 
-		std::string logText = "Loading SHR";
-		file.seekg(0, std::ios::beg); // Go back to the start of the file
+		file.seekg(0, offset); // Go back to the offset requested
 		pMem = memManager->GetApple2MemAuxPtr();
+		*typeE1 = SHRFileContent_e::SHR;
 		file.read(reinterpret_cast<char*>(pMem + 0x2000), 0x8000);	// standard SHR structure always in the first 0x8000
 		magicBytes = reinterpret_cast<uint32_t*>(pMem + _A2VIDEO_SHR_MAGIC_BYTES)[0];
 		if (magicBytes == _A2VIDEO_SHR4_MAGIC_STRING) {
-			// the first image is a SHR4
-			logText += "4";
+			// the first image is actually an SHR4
+			*typeE1 = SHRFileContent_e::SHR4;
 		}
 		if (fileSize == 0x10000) {	// interlace or page flip, read the next SHR
-			logText += " + SHR";
 			pMem = MemoryManager::GetInstance()->GetApple2MemPtr();
+			*typeE0 = SHRFileContent_e::SHR;
 			file.read(reinterpret_cast<char*>(pMem + 0x2000), 0x8000);
+			magicBytes = reinterpret_cast<uint32_t*>(pMem + _A2VIDEO_SHR_MAGIC_BYTES)[0];
+			if (magicBytes == _A2VIDEO_SHR4_MAGIC_STRING) {
+				// the second image is actually an SHR4
+				*typeE0 = SHRFileContent_e::SHR4;
+			}
 		}
 		else if (fileSize >= 0x9900) {	// SHR3200 or more
 			if (magicBytes == _A2VIDEO_3200_MAGIC_STRING) {
 				// the first image is a SHR3200
-				logText += "3200";
+				*typeE1 = SHRFileContent_e::SHR3200;
 				// where should the palettes be loaded? (See A2VideoManager.cpp)
 				uint8_t* pPalStart = memManager->GetApple2MemAuxPtr() + _A2VIDEO_SHR_MAGIC_BYTES - 4;
 				uint8_t* bankPtr = (pPalStart[1] == 1 ? memManager->GetApple2MemAuxPtr() : memManager->GetApple2MemPtr());
@@ -272,16 +338,16 @@ bool MemoryLoadSHR(const std::string &filePath) {
 			if (_remainingSize > 0) {
 				pMem = MemoryManager::GetInstance()->GetApple2MemPtr();	// 2nd image always in E0/Main
 				if (_remainingSize == 0x8000) {		// there's an SHR in there
-					logText += " + SHR";
+					*typeE0 = SHRFileContent_e::SHR;
 					file.read(reinterpret_cast<char*>(pMem + 0x2000), 0x8000);
 					magicBytes = reinterpret_cast<uint32_t*>(pMem + _A2VIDEO_SHR_MAGIC_BYTES)[0];
 					if (magicBytes == _A2VIDEO_SHR4_MAGIC_STRING) {
-						// the second image is a SHR4
-						logText += "4";
+						// the second image is actually an SHR4
+						*typeE0 = SHRFileContent_e::SHR4;
 					}
 				}
 				else if (_remainingSize == 0x9900) {	// Another SHR3200 in there
-					logText += " + SHR3200";
+					*typeE0 = SHRFileContent_e::SHR3200;
 					file.read(reinterpret_cast<char*>(pMem + 0x2000), 0x8000);
 					uint8_t* pPalStart = pMem + _A2VIDEO_SHR_MAGIC_BYTES - 4;
 					uint8_t* bankPtr = (pPalStart[1] == 1 ? memManager->GetApple2MemAuxPtr() : memManager->GetApple2MemPtr());
@@ -291,20 +357,17 @@ bool MemoryLoadSHR(const std::string &filePath) {
 				else if (_remainingSize == 0x7D00) {
 					// Just 32000 SHR line bytes, which we'll use as interlace/flip data
 					// and we'll copy over the palettes, scb and other stuff
-					logText += " + SHR interlace bytes (no SCB+palettes)";
+					*typeE0 = SHRFileContent_e::SHR_BYTES;
 					file.read(reinterpret_cast<char*>(pMem), 0x7D00);
 					std::memcpy(pMem + 0x7D00, memManager->GetApple2MemAuxPtr() + 0x7D00, 0x8000-0x7D00);
 				}
 				else {
-					logText += " + " + std::to_string(_remainingSize) + " unknown bytes";
+					// there are _remainingSize bytes, do nothing with them
 				}
 			}
 		}
-		logText += ": " + filePath;
-		logManager->AddLog(logText);
-		res = true;
 	}
-	return res;
+	return (uint32_t)file.tellg();
 }
 
 std::string GetMemorySaveFilePath() {

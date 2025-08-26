@@ -4,6 +4,8 @@
 #include "CycleCounter.h"
 #include "A2VideoManager.h"
 #include "MockingboardManager.h"
+#include "extras/MemoryLoader.h"
+#include "LogTextManager.h"
 #include "imgui.h"
 #include "imgui_internal.h"		// for PushItemFlag
 #include "extras/ImGuiFileDialog.h"
@@ -173,25 +175,81 @@ void EventRecorder::ReadTextEventsFromFile(std::ifstream& file)
 // Notes:
 // - PWA data is loaded just like SHR in 0x2000 in AUX mem
 // - A frame size of 00000004 means that there's a single frame that spans the whole data block
+//
+// NOTE: The new PWA format extends the above to allow for any type of SHR as the first frame,
+//       including SHR, SHR4, SHR3200 or any combination of those in interlace or page flip mode
 void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 {
 	StopReplay();
 	ClearRecording();
 	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
+	auto logManager = LogTextManager::GetInstance();
 	auto pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + 0x2000;
-	// Read first SHR frame
-	file.read(reinterpret_cast<char*>(pMem), 0x8000);
-	// Check if it's a SHR3200
-	auto magicBytes = reinterpret_cast<uint32_t*>(pMem + _A2VIDEO_SHR_MAGIC_BYTES)[0];
-	if (magicBytes == _A2VIDEO_3200_MAGIC_STRING) {
-		MemoryManager* memManager = MemoryManager::GetInstance();
-		file.read(reinterpret_cast<char*>(pMem), 0x8000);
-		uint8_t* pPalStart = memManager->GetApple2MemAuxPtr() + _A2VIDEO_SHR_MAGIC_BYTES - 4;
-		uint8_t* bankPtr = (pPalStart[1] == 1 ? memManager->GetApple2MemAuxPtr() : memManager->GetApple2MemPtr());
-		uint16_t palStart = (((uint16_t)pPalStart[3]) << 8) | pPalStart[2];
-		file.read(reinterpret_cast<char*>(bankPtr + palStart), _A2VIDEO_SHR_SCANLINES * 32); // 0x1900 palette bytes
+
+	// First parse the SHR data at the start of the file
+	SHRFileContent_e typeE1, typeE0;
+	uint32_t parsedCount = 0;
+	if (file)
+		parsedCount = ParseSHRData(file, 0, &typeE1, &typeE0);
+	if (parsedCount == 0) {
+		logManager->AddLog(std::string("Error! SHR animation unknown file size"));
+		return;
 	}
-	// Then the animations block length
+	if (typeE1 == SHRFileContent_e::UNKNOWN) {
+		logManager->AddLog(std::string("Error! Unknown SHR type"));
+		return;
+	}
+	file.seekg(0, std::ios::end);
+	size_t fileSize = file.tellg();
+	if (fileSize - parsedCount < 8) {	// animation data is not there!
+		logManager->AddLog(std::string("Error! Not enough animation data"));
+		return;
+	}
+
+	std::string logText = "Loaded base SHR";
+	switch (typeE1)
+	{
+	case SHRFileContent_e::SHR:
+		// standard SHR
+		break;
+	case SHRFileContent_e::SHR4:
+		logText += "4";
+		break;
+	case SHRFileContent_e::SHR3200:
+		logText += "3200";
+		break;
+	default:
+		// this shouldn't happen, no data should be parsed in this case
+		logText += " (UNKNOWN!?)";
+		break;
+	}
+	switch (typeE0)
+	{
+	case SHRFileContent_e::UNKNOWN:
+		// Single image, not interlaced or page flipped
+		break;
+	case SHRFileContent_e::SHR:
+		// standard SHR
+		logText += " + SHR";
+		break;
+	case SHRFileContent_e::SHR4:
+		logText += " + SHR4";
+		break;
+	case SHRFileContent_e::SHR3200:
+		logText += " + SHR3200";
+		break;
+	case SHRFileContent_e::SHR_BYTES:
+		logText += " + SHR interlace bytes (no SCB+palettes)";
+		break;
+	default:
+		break;
+	}
+	logText += " and animation data";
+	logManager->AddLog(logText);
+
+	file.seekg(parsedCount);
+
+	// Now read the animations block length
 	uint32_t dbaLength = 0;
 	file.read(reinterpret_cast<char*>(&dbaLength), 4);
 	// Then the delay
