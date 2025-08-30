@@ -184,10 +184,10 @@ void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 	ClearRecording();
 	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
 	auto logManager = LogTextManager::GetInstance();
-	auto pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + 0x2000;
 
 	// First parse the SHR data at the start of the file
-	SHRFileContent_e typeE1, typeE0;
+	SHRFileContent_e typeE1 = SHRFileContent_e::UNKNOWN;
+	SHRFileContent_e typeE0 = SHRFileContent_e::UNKNOWN;
 	uint32_t parsedCount = 0;
 	if (file)
 		parsedCount = ParseSHRData(file, 0, &typeE1, &typeE0);
@@ -291,7 +291,7 @@ void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 				for (size_t _d = 0; _d < ((size_t)frameDelay * _frameCycles); ++_d) {
 					v_events.push_back(SDHREvent(false, false, false, true, 0, 0));
 				}
-			} else if (_off < 0x7FFF) {	// proper offset
+			} else {	// proper offset, will roll over if offset > 0xE0000
 				v_events.push_back(SDHREvent(false, false, false, false, _off + 0x2000, _valHi));
 				v_events.push_back(SDHREvent(false, false, false, false, _off + 0x2001, _valLo));
 			}

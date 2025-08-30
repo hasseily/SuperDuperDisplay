@@ -55,6 +55,7 @@
 		BBE45C122D477211008D10A9 /* VidHdWindowBeam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBE45C112D477211008D10A9 /* VidHdWindowBeam.cpp */; };
 		BBF6D2C12C358F5000E85E1E /* SoundManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */; };
 		BBF6D2C82C35A1B900E85E1E /* recordings in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBF6D2C72C35A1AE00E85E1E /* recordings */; };
+		BBFA72372E634A3400605BA2 /* miniz.c in Sources */ = {isa = PBXBuildFile; fileRef = BBFA72362E634A3400605BA2 /* miniz.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -181,6 +182,8 @@
 		BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SoundManager.cpp; sourceTree = "<group>"; };
 		BBF6D2C02C358F5000E85E1E /* SoundManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SoundManager.h; sourceTree = "<group>"; };
 		BBF6D2C72C35A1AE00E85E1E /* recordings */ = {isa = PBXFileReference; lastKnownFileType = folder; path = recordings; sourceTree = "<group>"; };
+		BBFA72352E634A3400605BA2 /* miniz.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = miniz.h; sourceTree = "<group>"; };
+		BBFA72362E634A3400605BA2 /* miniz.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = miniz.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -275,6 +278,8 @@
 				BBC172F82B6657C20044B194 /* MemoryLoader.cpp */,
 				BBC43F692B98CDE50035071D /* MemoryManager.h */,
 				BBC43F6A2B98CDE50035071D /* MemoryManager.cpp */,
+				BBFA72352E634A3400605BA2 /* miniz.h */,
+				BBFA72362E634A3400605BA2 /* miniz.c */,
 				BB006F502C3C2E49008BFFAF /* MockingboardManager.h */,
 				BB006F522C3C2E49008BFFAF /* MockingboardManager.cpp */,
 				BBB524F92B6648A100A65C62 /* MosaicMesh.h */,
@@ -417,6 +422,7 @@
 				BBE17D862C81CDCB008EF443 /* SSI263.cpp in Sources */,
 				BBB5251E2B6648A200A65C62 /* shader.cpp in Sources */,
 				BBB238ED2B8DD3B200DFEE08 /* A2WindowBeam.cpp in Sources */,
+				BBFA72372E634A3400605BA2 /* miniz.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
