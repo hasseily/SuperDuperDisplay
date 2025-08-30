@@ -59,14 +59,17 @@ void main()
 	}
 	
 	fragColor = texture(TEXIN, vTexCoords);
-	if (bNOFILTERMONO && fragColor.a > 1.001)	// it's a monochrome pixel
+	if (bNOFILTERMONO && (fragColor.a < 1.0))
 	{
-		fragColor.a = 1.0;
-		return;
-	}
-	else if (bNOFILTERMONO && fragColor.a < 0.001)	// it's transparent
-	{
-		return;
+		if (fragColor.a > 0.98)	// it's a monochrome pixel
+		{
+			fragColor.a = 1.0;
+			return;
+		}
+		else if (fragColor.a < 0.001)	// it's transparent
+		{
+			return;
+		}
 	}
 
 	float factorX = NTSC_STR / 170.667;
