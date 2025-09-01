@@ -981,14 +981,14 @@ Works best at low frame rates, below 60 FPS.");
 			ImGui::SetItemTooltip("OKlab is a smoother color space than linear RGB.");
 			ImGui::DragFloat("Brightness", &p_f_brightness, 0.01f, 0.0f, 100.0f, "%.2f");
 			ImGui::DragFloat("Contrast", &p_f_contrast, 0.01f, 0.0f, 100.0f, "%.2f");
-			ImGui::SliderFloat("Black Level", &p_f_black, -1.0f, 1.50f, "%.2f");
+			ImGui::DragFloat("Black Level", &p_f_black, 0.01f, -1.0f, 1.00f, "%.2f");
 			ImGui::DragFloat("Saturation", &p_f_saturation, 0.01f, 0.0f, 100.0f, "%.2f");
 			if (p_b_useOKlab) {
-				ImGui::SliderFloat("Hue", &p_f_hue, -0.5f, 0.5f, "%.2f");
+				ImGui::DragFloat("Hue", &p_f_hue, 0.001f, -M_PI, M_PI, "%.2f");
 			} else {
-				ImGui::SliderFloat("Green <-to-> Red Hue", &p_f_hueRG, -2.50f, 2.50f, "%.2f");
-				ImGui::SliderFloat("Blue <-to-> Red Hue", &p_f_hueRB, -2.50f, 2.50f, "%.2f");
-				ImGui::SliderFloat("Blue <-to-> Green Hue", &p_f_hueGB, -2.50f, 2.50f, "%.2f");
+				ImGui::DragFloat("Green <-to-> Red Hue", &p_f_hueRG, 0.01f, -2.50f, 2.50f, "%.2f");
+				ImGui::DragFloat("Blue <-to-> Red Hue", &p_f_hueRB, 0.01f, -2.50f, 2.50f, "%.2f");
+				ImGui::DragFloat("Blue <-to-> Green Hue", &p_f_hueGB, 0.01f, -2.50f, 2.50f, "%.2f");
 			}
 			ImGui::SliderFloat("Scan/Mask Brightness Dependence", &p_f_brDep, 0.0f, 0.5f, "%.3f");
 			ImGui::SliderInt("Color Space: sRGB,PAL,NTSC-U,NTSC-J", &p_i_cSpace, 0, 3, "%1d");
