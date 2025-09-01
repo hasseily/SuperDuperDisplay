@@ -106,8 +106,8 @@ private:
 	glm::vec2 bezelSize = glm::vec2(1.0f, 1.0f);
 
 	// Shader parameter variables
+	bool p_b_useOKlab = false;
 	bool p_b_smoothCorner = false;
-	bool p_b_extGamma = false;
 	bool p_b_slot = false;
 	bool p_b_phosphorGlow = false;
 	float p_f_barrelDistortion = 0.0f;
@@ -115,11 +115,13 @@ private:
 	float p_f_black = 0.0f;
 	float p_f_brDep = 0.2f;
 	float p_f_brightness = 1.0f;
+	float p_f_contrast = 1.0f;
 	float p_f_convB = 0.0f;
 	float p_f_convG = 0.0f;
 	float p_f_convR = 0.0f;
 	float p_f_corner = 0.0f;
 	float p_f_cStr = 0.0f;
+	float p_f_hue = 0.0f;
 	float p_f_hueGB = 0.0f;
 	float p_f_hueRB = 0.0f;
 	float p_f_hueRG = 0.0f;

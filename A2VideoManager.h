@@ -52,6 +52,13 @@ enum class BeamState_e
 	}
 }
 
+// NOTE: We're using linear RGB internally for everything.
+//	- sampling textures are loaded as sRGB and automatically transformed
+// 		to linear RGB when sampled in the shader
+//	- intermediate buffers are RGBA8 linear
+//	- output buffers such as debug or final postprocessed are sRGB and
+//		automatically transformed to sRGB when written to
+
 // Maximum number of debug windows that you can have. These windows
 // allow for visualization of any memory chunk as a video mode
 constexpr uint32_t _MAX_DEBUG_RGB_WINDOWS = 30;

@@ -153,16 +153,18 @@ const std::string* OpenGLHelper::get_glsl_version()
 }
 
 // This method loads the texture data into the texture specified at textureID
+// We assume the image is sRGB so it'll be loaded as such, and will automatically
+// convert to linear RGB when sampled
 void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID)
 {
 	GLenum glerr;
-	GLenum format = GL_RGBA;
+	GLenum format = GL_SRGB8_ALPHA8;
 	if (nrComponents == 1)
 		format = GL_RED;
 	else if (nrComponents == 3)
-		format = GL_RGBA;
+		format = GL_SRGB8;
 	else if (nrComponents == 4)
-		format = GL_RGBA;
+		format = GL_SRGB8_ALPHA8;
 
 	glBindTexture(GL_TEXTURE_2D, textureID);
 	if ((glerr = glGetError()) != GL_NO_ERROR) {

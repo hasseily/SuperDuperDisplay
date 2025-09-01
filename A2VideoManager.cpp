@@ -1343,6 +1343,7 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 	}
 
 	// Create all the debug FBOs and textures, those have a static size and can be generated once only
+	// The debug FBOs are in sRGB, which automatically decodes linear RGB to sRGB upon writing to them
 	if (FBO_debug[0] == UINT_MAX)
 	{
 		glGenFramebuffers(4, FBO_debug);
@@ -1350,13 +1351,15 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 		for (int i = 0; i < 4; i++)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[i]);
+			glEnable(GL_FRAMEBUFFER_SRGB);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, debug_texture_id[i]);
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, debug_texture_id[i], 0);
+			glDisable(GL_FRAMEBUFFER_SRGB);
 
 			GLenum _statusFBO = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 			if (_statusFBO != GL_FRAMEBUFFER_COMPLETE)
@@ -1420,12 +1423,12 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 	// -------------------------
 	// Setup framebuffer objects
 	// -------------------------
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);		// in linear RGBA8 mode
 	//glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, a2video_texture_id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, a2video_texture_id, 0);
 	GLenum _statusFBO = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	if (_statusFBO != GL_FRAMEBUFFER_COMPLETE)
@@ -1433,12 +1436,12 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 		std::cerr << "Framebuffer A2Video is not complete: " << _statusFBO << std::endl;
 	}
 
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO_NTSC);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_NTSC);		// in linear RGBA8 mode
 	//glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, ntsc_texture_id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, fb_width, fb_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ntsc_texture_id, 0);
 	_statusFBO = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	if (_statusFBO != GL_FRAMEBUFFER_COMPLETE)

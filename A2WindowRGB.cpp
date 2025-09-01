@@ -24,15 +24,19 @@ A2WindowRGB::A2WindowRGB() {
 		return;
 	}
 
+	// Framebuffer is sRGB because it will be displayed. Use GL_SRGB8_ALPHA8 and GL_FRAMEBUFFER_SRGB
+	// to automatically decode linear RGB to sRGB upon writing
 	glGenFramebuffers(1, &FBO);
 	glGenTextures(1, &texture_id);
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 	glBindTexture(GL_TEXTURE_2D, texture_id);
 
+	glEnable(GL_FRAMEBUFFER_SRGB);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture_id, 0);
+	glDisable(GL_FRAMEBUFFER_SRGB);
 
 	GLenum _statusFBO = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	if (_statusFBO != GL_FRAMEBUFFER_COMPLETE)

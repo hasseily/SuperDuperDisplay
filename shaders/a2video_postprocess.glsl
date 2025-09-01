@@ -16,7 +16,6 @@ any later version.
 */
 
 #define pi 3.1415926535897932384626433
-#define blck (1.0)/(1.0-BLACK);
 
 #ifdef GL_ES
 	#define COMPAT_PRECISION mediump
@@ -72,9 +71,9 @@ uniform COMPAT_PRECISION float GhostingPercent;
 uniform COMPAT_PRECISION float BlurSize;
 uniform bool bBlurGlow;
 
+uniform bool bUseOKlab;
 uniform bool bCORNER_SMOOTH;
-uniform bool bEXT_GAMMA;
-uniform bool bPOTATO; 
+uniform bool bPOTATO;
 uniform bool bSLOT;
 uniform bool bVIGNETTE;
 uniform COMPAT_PRECISION float BARRELDISTORTION;
@@ -82,17 +81,19 @@ uniform COMPAT_PRECISION float BGR;
 uniform COMPAT_PRECISION float BLACK; 
 uniform COMPAT_PRECISION float BR_DEP; 
 uniform COMPAT_PRECISION float BRIGHTNESS;
+uniform COMPAT_PRECISION float CONTRAST;
 uniform COMPAT_PRECISION float C_STR;
 uniform COMPAT_PRECISION float CONV_B;
 uniform COMPAT_PRECISION float CONV_G;
 uniform COMPAT_PRECISION float CONV_R;
 uniform COMPAT_PRECISION float CORNER;
-uniform COMPAT_PRECISION float GB;
 uniform COMPAT_PRECISION float MASKH;
 uniform COMPAT_PRECISION float MASKL;
 uniform COMPAT_PRECISION float MSIZE;
 uniform COMPAT_PRECISION float RB;
 uniform COMPAT_PRECISION float RG;
+uniform COMPAT_PRECISION float GB;
+uniform COMPAT_PRECISION float HUE;
 uniform COMPAT_PRECISION float SATURATION;
 uniform COMPAT_PRECISION float SCANLINE_WEIGHT;
 uniform COMPAT_PRECISION float SCAN_SPEED;
@@ -114,18 +115,48 @@ uniform COMPAT_PRECISION vec2 vZOOM;
 
 #define GAMMA 2.2
 
-//Decode gamma to linear color
-vec4 gamma_decode(vec4 srgb)
-{
-	if (bEXT_GAMMA)
-		return srgb;
-	return pow(srgb, vec4(GAMMA,GAMMA,GAMMA,1.0));
+// Color mapping
+// sRGB is automatic on the output framebuffers. The srgb converters are here for completion only
+vec3 s2l(vec3 c) { // sRGB to linear
+	return mix(c/12.92, pow((max(c,0.0)+0.055)/1.055,vec3(2.4)), step(vec3(0.04045),c));
 }
 
-//Encode linear color to gamma
-vec4 gamma_encode(vec4 lrgb)
-{
-	return pow(lrgb, 1.0/vec4(GAMMA,GAMMA,GAMMA,1.0));
+vec3 l2s(vec3 c) { // linear to sRGB
+	return mix(c*12.92, 1.055*pow(max(c,0.0),vec3(1./2.4))-0.055, step(vec3(0.0031308),c));
+}
+
+// sign-preserving cbrt for GLSL
+float cbrt1(float x) { return sign(x) * pow(abs(x), 1.0/3.0); }
+vec3  cbrt3(vec3  v) { return vec3(cbrt1(v.x), cbrt1(v.y), cbrt1(v.z)); }
+
+vec3 l2oklab(vec3 rgb) { // linear to OkLab
+	if (!bUseOKlab)
+		return rgb;
+	const mat3 rgb2lms = mat3(
+							  +0.4122214708, +0.2119034982, +0.0883024619,
+							  +0.5363325363, +0.6806995451, +0.2817188376,
+							  +0.0514459929, +0.1073969566, +0.6299787005);
+	const mat3 lms2lab = mat3(
+							  +0.2104542553, +1.9779984951, +0.0259040371,
+							  +0.7936177850, -2.4285922050, +0.7827717662,
+							  -0.0040720468, +0.4505937099, -0.8086757660);
+	vec3 lms = rgb2lms * rgb;
+	return lms2lab * pow(lms, vec3(1.0/3.0));
+}
+
+vec3 oklab2l(vec3 lab) { // OkLab to linear
+	if (!bUseOKlab)
+		return lab;
+	const mat3 lab2lms = mat3(
+							  +1.0000000000, +1.0000000000, +1.0000000000,
+							  +0.3963377774, -0.1055613458, -0.0894841775,
+							  +0.2158037573, -0.0638541728, -1.2914855480);
+	const mat3 lms2rgb = mat3(
+							  +4.0767416621, -1.2684380046, 0.0041960863,
+							  -3.3077115913, +2.6097574011, -0.7034186147,
+							  +0.2309699292, -0.3413193965, +1.7076147010);
+	vec3 lms = lab2lms * lab;
+	return lms2rgb * (lms*lms*lms);
 }
 
 // This function merges 2 generated frames: if it's an even frame nothing
@@ -134,13 +165,13 @@ vec4 gamma_encode(vec4 lrgb)
 // The background buffer isn't flipped and we overwrite it. The end result
 // is that the frame rate is halved, and we only display even+odd during
 // odd frames
-// NOTE: currentColor must be in linear space already
+// NOTE: currentColor must be in linear or oklab space already
 vec4 HalveFrameRate(vec2 coords, vec4 currentColor)
 {
 	if ((iFrameCount & 1) == 1) {
-		vec3 previousColor = gamma_decode(texture(PreviousFrame, coords)).rgb;
+		vec3 previousColor = l2oklab(texture(PreviousFrame, coords).rgb);
 
-		// Perform the mix in linear space
+		// Perform the mix in linear/oklab space
 		vec3 linearMix = (currentColor.rgb + previousColor) * 0.5;
 
 		return vec4(linearMix, 1.0);
@@ -153,7 +184,8 @@ vec4 HalveFrameRate(vec2 coords, vec4 currentColor)
 vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 {
 	float ghosting = GhostingPercent/100.0;
-	vec4 previousColor = gamma_decode(texture(PreviousFrame, coords));
+	vec4 previousColor = texture(PreviousFrame, coords);
+	previousColor.rgb = l2oklab(previousColor.rgb);
 	// Calculate the intensity levels of both frames
 	float currentIntensity = dot(currentColor.rgb, vec3(0.299, 0.587, 0.114));
 	float previousIntensity = dot(previousColor.rgb, vec3(0.299, 0.587, 0.114));
@@ -173,16 +205,15 @@ vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 }
 
 // Use the LODs for the phosphor blur, which is much faster than sampling neighbor points
-// NOTE: returns color in linear space
+// NOTE: expects and returns color in linear rgb space
 vec4 PhosphorBlur(sampler2D tex, vec2 uv, vec2 resolution, float blurAmount) {
-    vec4 color = gamma_decode(textureLod(tex, uv, blurAmount * 4.0));
+    vec4 color = textureLod(tex, uv, blurAmount * 4.0);
 	// To get a glowing style, we overlay the regular texture data at 30%
 	if (bBlurGlow)
-		color = mix(color, gamma_decode(texture(tex, uv)), 0.3);
-	return clamp(color,0.0,1.0);
+		color.rgb = mix(color.rgb, texture(tex, uv).rgb, 0.3);
     // Increase brightness linearly based on blurAmount.
     float brightnessFactor = 1.0 + blurAmount;
-    return clamp(color * brightnessFactor,0.0,1.0);
+    return (color * brightnessFactor);
 }
 
 vec3 Mask(vec2 pos, float CGWG) {
@@ -329,12 +360,10 @@ void main() {
 	if (POSTPROCESSING_LEVEL == 0) {
 		FragColor = texture(A2TextureCurrent, TexCoords);
 		if (bHalveFrameRate || ((GhostingPercent > 0.0001))) {
-			FragColor = gamma_decode(FragColor);
 			if (bHalveFrameRate)
 				FragColor = HalveFrameRate(TexCoords, FragColor);
 			if (GhostingPercent > 0.0001)
 				FragColor = GenerateGhosting(TexCoords, FragColor);
-			FragColor = gamma_encode(FragColor);
 		}
 		return;
 	}
@@ -351,13 +380,12 @@ void main() {
 	
 // Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1) {
-		FragColor = gamma_decode(texture(A2TextureCurrent, TexCoords));
+		FragColor = texture(A2TextureCurrent, TexCoords);
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
 		if (bHalveFrameRate)
 			FragColor = HalveFrameRate(TexCoords, FragColor);
 		if (GhostingPercent > 0.0001)
 			FragColor = GenerateGhosting(TexCoords, FragColor);
-		FragColor = gamma_encode(FragColor);
 		return;
 	}
 
@@ -406,16 +434,17 @@ void main() {
 
 	if (BlurSize > 0.001)
 		res0 = PhosphorBlur(A2TextureCurrent, pos, TextureSize, BlurSize);
-	else
-		res0 = gamma_decode(texture(A2TextureCurrent,pos));
+	else {
+		res0 = texture(A2TextureCurrent,pos);
+	}
 
 	res = res0.rgb;
 	// Convergence
 	if (C_STR > 0.0001) {
 		if ((abs(CONV_R)+abs(CONV_G)+abs(CONV_B)) > 0.001) {
-			float resr = gamma_decode(texture(A2TextureCurrent,pos + dx*CONV_R)).r;
-			float resg = gamma_decode(texture(A2TextureCurrent,pos + dx*CONV_G)).g;
-			float resb = gamma_decode(texture(A2TextureCurrent,pos + dx*CONV_B)).b;
+			float resr = texture(A2TextureCurrent,pos + dx*CONV_R).r;
+			float resg = texture(A2TextureCurrent,pos + dx*CONV_G).g;
+			float resb = texture(A2TextureCurrent,pos + dx*CONV_B).b;
 
 			res = vec3(res0.r*(1.0-C_STR) + resr*C_STR,
 					   res0.g*(1.0-C_STR) + resg*C_STR,
@@ -424,22 +453,7 @@ void main() {
 		}
 	}
 
-	res = clamp(res,0.0,1.0);
 	float l = dot(vec3(BR_DEP),res);
-
- // Color Spaces
-	if (iCOLOR_SPACE != 0) {
-		if (iCOLOR_SPACE == 1)
-			res *= PAL;
-		if (iCOLOR_SPACE == 2)
-			res *= NTSC;
-		if (iCOLOR_SPACE == 3)
-			res *= NTSC_J;
-		// Apply CRT-like luminances
-		res /= vec3(0.24,0.69,0.07);
-		res *= vec3(0.29,0.6,0.11); 
-		res = clamp(res,0.0,1.0);
-	}
 
 	// Mask CGWG definition, used for scanlines
 	float CGWG = 0.3;
@@ -473,29 +487,6 @@ void main() {
 				);
 	}
 
-	/*
-	// For CRT-Geom scanlines
-	if (iSCANLINE_TYPE == 3) {
-		vec3 v_pwr;
-		v_pwr = vec3(1.0/((-1.0*SCANLINE_WEIGHT+1.0)*(-0.8*CGWG+1.0))-1.2);
-		// handle interlacing
-		float s = fract(pos.y*TextureSize.y/2.001+0.5);
-		if (INTERLACE_WEIGHT > 0.001)
-			s = mod(float(iFrameCount),2.0) < 1.0 ? s: fract(s+0.5);
-
-		// Vignette
-		float x = 0.0;
-		if (VIGNETTE_WEIGHT > 0.001) {
-			x = TexCoords.x-0.5;
-			x = x*x;
-		}
-		// Calculate CRT-Geom scanlines weight and apply
-		float weight = scanlineWeights(s, res, x);
-		float weight2 = scanlineWeights(1.0-s, res, x);
-		res *= weight + weight2;
-	}
-	*/
-
 // Masks
 	vec2 xy = TexCoords*OutputSize.xy/MSIZE;	
 	res *= Mask(xy, CGWG);
@@ -504,18 +495,54 @@ void main() {
 	if (bSLOT)
 		res *= mix(slot(xy/2.0),vec3(1.0),CGWG);
 
-// Saturation
-	float lum = dot(vec3(0.29,0.60,0.11),res);
-	res = mix(vec3(lum),res,SATURATION);
+	// Do bLack level always in linear RGB space, it's more precise
+	res = (res - vec3(BLACK)) / (1.0-BLACK);
 
-// Brightness, Hue and Black Level
-	res *= BRIGHTNESS;
-	res *= hue;
-	res -= vec3(BLACK);
-	res *= blck;
+// =================================== Enter OKLab Color Space ===================================
+// Now convert to OKLab for color mods
+	res.rgb = l2oklab(res.rgb);
 
-	res = clamp(res,0.0,1.0);
+	if (bUseOKlab) {
 
+		// 1) Hue rotation in the a–b plane (preserves chroma magnitude)
+		float c = cos(HUE), s = sin(HUE);
+		vec2 ab = vec2(res.y, res.z);
+		ab = mat2(c, -s, s, c) * ab;
+		res.y = ab.x;
+		res.z = ab.y;
+
+		// 2) Saturation: scale chroma radius around neutral (L*, 0, 0)
+		res.yz *= SATURATION;
+
+		// 3) Contrast
+		const float pivotL = 0.5;	//Default 0.5
+		res.x = (res.x - pivotL) * CONTRAST + pivotL;
+
+		// 4) Brightness: perceptual lightness gain (on L*)
+		res.x *= BRIGHTNESS;
+	} else {
+
+		// 1) Hue
+		res *= hue;
+
+		// 2) Saturation
+		float slum = dot(vec3(0.29,0.60,0.11),res);
+		res = mix(vec3(slum),res,SATURATION);
+
+		// 3) Contrast
+		const float pivot = 0.18;	// 0.18 is a common scene-referred “middle gray” in linear
+		const vec3 luma = vec3(0.2126, 0.7152, 0.0722);
+		float lum  = dot(luma, res);
+		float lum2 = (lum - pivot) * CONTRAST + pivot;
+		// Scale color to reach target luminance while preserving hue
+		float scale = (lum > 1e-6) ? (lum2 / lum) : 0.0;
+		res *= scale;
+		res = clamp(res, 0.0, 1.0);	// soft clamp to reduce clipping
+
+		// 4) Brightness
+		res *= BRIGHTNESS;
+	}
+	
 	FragColor = vec4(res, corn);
 
 	if (bHalveFrameRate)
@@ -524,7 +551,26 @@ void main() {
 	if (GhostingPercent > 0.0001) {
 		FragColor = GenerateGhosting(TexCoords.xy, FragColor);
 	}
-	FragColor = gamma_encode(FragColor);
+
+// revert back to linear rgb
+	FragColor.rgb = oklab2l(FragColor.rgb);
+// =================================== Exit OKLab Color Space ===================================
+
+	// Color Spaces
+	if (iCOLOR_SPACE != 0) {
+		vec3 clr = FragColor.rgb;
+		if (iCOLOR_SPACE == 1)
+			clr *= PAL;
+		if (iCOLOR_SPACE == 2)
+			clr *= NTSC;
+		if (iCOLOR_SPACE == 3)
+			clr *= NTSC_J;
+		// Apply CRT-like luminances
+		clr /= vec3(0.24,0.69,0.07);
+		clr *= vec3(0.29,0.6,0.11);
+		FragColor.rgb = clr;
+	}
+
 }
 
 #endif

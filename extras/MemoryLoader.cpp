@@ -229,7 +229,8 @@ bool MemoryLoadSHR(const std::string& filePath) {
 	bool res = false;
 	auto logManager = LogTextManager::GetInstance();
 	std::ifstream file(filePath, std::ios::binary);
-	SHRFileContent_e typeE1, typeE0;
+	SHRFileContent_e typeE1 = SHRFileContent_e::UNKNOWN;
+	SHRFileContent_e typeE0 = SHRFileContent_e::UNKNOWN;
 	uint32_t parsedCount = 0;
 	if (file)
 		parsedCount = ParseSHRData(file, 0, &typeE1, &typeE0);

@@ -128,23 +128,25 @@ nlohmann::json PostProcessor::SerializeState()
 		{"bCRTFillWindow", bCRTFillWindow},
 		{"p_f_corner", p_f_corner},
 		{"p_b_smoothCorner", p_b_smoothCorner},
-		{"p_b_extGamma", p_b_extGamma},
+		{"p_b_useOKlab", p_b_useOKlab},
 		{"p_f_interlace", p_f_interlace},
 		{"p_b_slot", p_b_slot},
 		{"p_f_bgr", p_f_bgr},
 		{"p_f_black", p_f_black},
 		{"p_f_brDep", p_f_brDep},
 		{"p_f_brightness", p_f_brightness},
+		{"p_f_contrast", p_f_contrast},
 		{"p_i_cSpace", p_i_cSpace},
 		{"p_f_cStr", p_f_cStr},
 		{"p_f_convB", p_f_convB},
 		{"p_f_convG", p_f_convG},
 		{"p_f_convR", p_f_convR},
-		{"p_f_hueGB", p_f_hueGB},
 		{"p_i_maskType", p_i_maskType},
 		{"p_f_maskHigh", p_f_maskHigh},
 		{"p_f_maskLow", p_f_maskLow},
 		{"p_f_maskSize", p_f_maskSize},
+		{"p_f_hue", p_f_hue},
+		{"p_f_hueGB", p_f_hueGB},
 		{"p_f_hueRB", p_f_hueRB},
 		{"p_f_hueRG", p_f_hueRG},
 		{"p_f_saturation", p_f_saturation},
@@ -193,23 +195,25 @@ void PostProcessor::DeserializeState(const nlohmann::json &jsonState)
 	bAutoScale = jsonState.value("bAutoScale", bAutoScale);
 	p_f_corner = jsonState.value("p_f_corner", p_f_corner);
 	p_b_smoothCorner = jsonState.value("p_b_smoothCorner", p_b_smoothCorner);
-	p_b_extGamma = jsonState.value("p_b_extGamma", p_b_extGamma);
+	p_b_useOKlab = jsonState.value("p_b_useOKlab", p_b_useOKlab);
 	p_f_interlace = jsonState.value("p_f_interlace", p_f_interlace);
 	p_b_slot = jsonState.value("p_b_slot", p_b_slot);
 	p_f_bgr = jsonState.value("p_f_bgr", p_f_bgr);
 	p_f_black = jsonState.value("p_f_black", p_f_black);
 	p_f_brDep = jsonState.value("p_f_brDep", p_f_brDep);
 	p_f_brightness = jsonState.value("p_f_brightness", p_f_brightness);
+	p_f_contrast = jsonState.value("p_f_contrast", p_f_contrast);
 	p_i_cSpace = jsonState.value("p_i_cSpace", p_i_cSpace);
 	p_f_cStr = jsonState.value("p_f_cStr", p_f_cStr);
 	p_f_convB = jsonState.value("p_f_convB", p_f_convB);
 	p_f_convG = jsonState.value("p_f_convG", p_f_convG);
 	p_f_convR = jsonState.value("p_f_convR", p_f_convR);
-	p_f_hueGB = jsonState.value("p_f_hueGB", p_f_hueGB);
 	p_i_maskType = jsonState.value("p_i_maskType", p_i_maskType);
 	p_f_maskHigh = jsonState.value("p_f_maskHigh", p_f_maskHigh);
 	p_f_maskLow = jsonState.value("p_f_maskLow", p_f_maskLow);
 	p_f_maskSize = jsonState.value("p_f_maskSize", p_f_maskSize);
+	p_f_hue = jsonState.value("p_f_hue", p_f_hue);
+	p_f_hueGB = jsonState.value("p_f_hueGB", p_f_hueGB);
 	p_f_hueRB = jsonState.value("p_f_hueRB", p_f_hueRB);
 	p_f_hueRG = jsonState.value("p_f_hueRG", p_f_hueRG);
 	p_f_saturation = jsonState.value("p_f_saturation", p_f_saturation);
@@ -338,22 +342,24 @@ void PostProcessor::SelectShader()
 		shaderProgram.SetUniform("BlurSize", p_f_phosphorBlur);
 		shaderProgram.SetUniform("bBlurGlow", p_b_phosphorGlow);
 		shaderProgram.SetUniform("bCORNER_SMOOTH", p_b_smoothCorner);
-		shaderProgram.SetUniform("bEXT_GAMMA", p_b_extGamma);
+		shaderProgram.SetUniform("bUseOKlab", p_b_useOKlab);
 		shaderProgram.SetUniform("bSLOT", p_b_slot);
 		shaderProgram.SetUniform("BARRELDISTORTION", p_f_barrelDistortion);
 		shaderProgram.SetUniform("BGR", p_f_bgr);
 		shaderProgram.SetUniform("BLACK", p_f_black);
 		shaderProgram.SetUniform("BR_DEP", p_f_brDep);
 		shaderProgram.SetUniform("BRIGHTNESS", p_f_brightness);
+		shaderProgram.SetUniform("CONTRAST", p_f_contrast);
 		shaderProgram.SetUniform("C_STR", p_f_cStr);
 		shaderProgram.SetUniform("CONV_B", p_f_convB);
 		shaderProgram.SetUniform("CONV_G", p_f_convG);
 		shaderProgram.SetUniform("CONV_R", p_f_convR);
 		shaderProgram.SetUniform("CORNER", p_f_corner / 10000);
-		shaderProgram.SetUniform("GB", p_f_hueGB);
 		shaderProgram.SetUniform("MASKH", p_f_maskHigh);
 		shaderProgram.SetUniform("MASKL", p_f_maskLow);
 		shaderProgram.SetUniform("MSIZE", p_f_maskSize);
+		shaderProgram.SetUniform("HUE", p_f_hue);
+		shaderProgram.SetUniform("GB", p_f_hueGB);
 		shaderProgram.SetUniform("RB", p_f_hueRB);
 		shaderProgram.SetUniform("RG", p_f_hueRG);
 		shaderProgram.SetUniform("SATURATION", p_f_saturation);
@@ -410,14 +416,16 @@ void PostProcessor::RegeneratePreviousTexture()
 	tA2Quad.w = std::round((nquadRight * 0.5 + 0.5) * viewportWidth - tA2Quad.x);
 	tA2Quad.h = std::round((nquadBottom * 0.5 + 0.5) * viewportHeight - tA2Quad.y);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO_prevFrame);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_prevFrame);	// this FBO is in sRGB
+	glEnable(GL_FRAMEBUFFER_SRGB);
 	glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
 	// Also here use GL_NEAREST to get rid of tiny rounding errors that will compound
 	// dramatically at high ghosting values. Proper rounding and GL_NEAREST fix this.
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tA2Quad.w, tA2Quad.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, tA2Quad.w, tA2Quad.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, prevFrame_texture_id, 0);
+	glDisable(GL_FRAMEBUFFER_SRGB);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
 	// Always bind the previous frame texture to its dedicated texture unit
 	glActiveTexture(_TEXUNIT_PP_PREVIOUS);
@@ -548,6 +556,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		shaderProgram.SetUniform("ScanlineCount", scanlineCount);
 	}
 
+	glEnable(GL_FRAMEBUFFER_SRGB);
 	// Bind the quad VAO and draw the quad (static VBO already set up)
 	glBindVertexArray(quadVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -595,6 +604,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	}
 
 	glBindVertexArray(0);
+	glDisable(GL_FRAMEBUFFER_SRGB);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 3: " << glerr << std::endl;
@@ -616,6 +626,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		// NOTE: prevFrame is flipped on the Y axis, so we flip Y on the destination to realign it
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO_prevFrame);
+		glEnable(GL_FRAMEBUFFER_SRGB);
 		glBlitFramebuffer(tA2Quad.x, tA2Quad.y, tA2Quad.w + tA2Quad.x, tA2Quad.h + tA2Quad.y,	// source rectangle (quad region)
 			0, tA2Quad.h, tA2Quad.w, 0,									// destination rectangle (Y flipped)
 			GL_COLOR_BUFFER_BIT, GL_NEAREST);
@@ -623,6 +634,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL error PP glBlitFramebuffer: " << glerr << std::endl;
 		}
+		glDisable(GL_FRAMEBUFFER_SRGB);
 	}
 
 	//////////////////////////// END OF PREVIOUS FRAME TEXTURE ///////////////////////////
@@ -651,18 +663,20 @@ void PostProcessor::ResetToDefaults()
 	bezelSize = glm::vec2(1.0f, 1.0f);
 
 	p_b_smoothCorner = false;
-	p_b_extGamma = false;
+	p_b_useOKlab = false;
 	p_b_slot = false;
 	p_f_barrelDistortion = 0.0f;
 	p_f_bgr = 0.0f;
 	p_f_black = 0.0f;
 	p_f_brDep = 0.2f;
 	p_f_brightness = 1.0f;
+	p_f_contrast = 1.0f;
 	p_f_convB = 0.0f;
 	p_f_convG = 0.0f;
 	p_f_convR = 0.0f;
 	p_f_corner = 0.0f;
 	p_f_cStr = 0.0f;
+	p_f_hue = 0.0f;
 	p_f_hueGB = 0.0f;
 	p_f_hueRB = 0.0f;
 	p_f_hueRG = 0.0f;
@@ -671,7 +685,7 @@ void PostProcessor::ResetToDefaults()
 	p_f_maskSize = 1.0f;
 	p_f_saturation = 1.0f;
 	p_f_scanlineWeight = 1.0f;
-	p_f_scanSpeed = 1.0f;
+	p_f_scanSpeed = 0.0f;
 	p_f_filmGrain = 0.0f;
 	p_f_interlace = 0.f;
 	p_f_slotW = 3.0f;
@@ -921,7 +935,10 @@ with page flipping images");
 				// The mapping (1 - (1-x)^4) gives finer control near 100.
 				p_f_ghostingPercent = 100.0f - 100.0f * powf(1.0f - _ghostingSV/100.f, 4.0f);
 			}
-			ImGui::SetItemTooltip("WARNING: SIGNIFICANT FPS IMPACT! \nMix in a bit of ghosting to smooth animations. \nOverdo it to emulate the Apple /// monitor!");
+			ImGui::SetItemTooltip("WARNING: SIGNIFICANT FPS IMPACT! \n\
+Mix in a bit of ghosting to smooth animations. \n\
+Overdo it to emulate the Apple /// monitor!\n\
+Works best at low frame rates, below 60 FPS.");
 
 			ImGui::Separator();
 			
@@ -960,16 +977,21 @@ with page flipping images");
 			
 			// Color Settings
 			ImGui::Text("[ COLOR SETTINGS ]");
+			ImGui::Checkbox("Use OKlab instead of linear RGB", &p_b_useOKlab);
+			ImGui::SetItemTooltip("OKlab is a smoother color space than linear RGB.");
+			ImGui::DragFloat("Brightness", &p_f_brightness, 0.01f, 0.0f, 100.0f, "%.2f");
+			ImGui::DragFloat("Contrast", &p_f_contrast, 0.01f, 0.0f, 100.0f, "%.2f");
+			ImGui::SliderFloat("Black Level", &p_f_black, -1.0f, 1.50f, "%.2f");
+			ImGui::DragFloat("Saturation", &p_f_saturation, 0.01f, 0.0f, 100.0f, "%.2f");
+			if (p_b_useOKlab) {
+				ImGui::SliderFloat("Hue", &p_f_hue, -0.5f, 0.5f, "%.2f");
+			} else {
+				ImGui::SliderFloat("Green <-to-> Red Hue", &p_f_hueRG, -2.50f, 2.50f, "%.2f");
+				ImGui::SliderFloat("Blue <-to-> Red Hue", &p_f_hueRB, -2.50f, 2.50f, "%.2f");
+				ImGui::SliderFloat("Blue <-to-> Green Hue", &p_f_hueGB, -2.50f, 2.50f, "%.2f");
+			}
 			ImGui::SliderFloat("Scan/Mask Brightness Dependence", &p_f_brDep, 0.0f, 0.5f, "%.3f");
 			ImGui::SliderInt("Color Space: sRGB,PAL,NTSC-U,NTSC-J", &p_i_cSpace, 0, 3, "%1d");
-			ImGui::SliderFloat("Saturation", &p_f_saturation, 0.0f, 3.0f, "%.2f");
-			ImGui::DragFloat("Brightness", &p_f_brightness, 0.01f, 0.0f, 100.0f, "%.2f");
-			ImGui::SliderFloat("Black Level", &p_f_black, -0.50f, 0.50f, "%.2f");
-			ImGui::SliderFloat("Green <-to-> Red Hue", &p_f_hueRG, -2.50f, 2.50f, "%.2f");
-			ImGui::SliderFloat("Blue <-to-> Red Hue", &p_f_hueRB, -2.50f, 2.50f, "%.2f");
-			ImGui::SliderFloat("Blue <-to-> Green Hue", &p_f_hueGB, -2.50f, 2.50f, "%.2f");
-			ImGui::Checkbox("External Gamma In", &p_b_extGamma);
-			ImGui::SetItemTooltip("Should be checked if input is already in linear space. Keep it unchecked generally.");
 			ImGui::Separator();
 			
 			// Convergence Settings
