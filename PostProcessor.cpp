@@ -610,10 +610,8 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 
 	// DO NOT COPY INTO THE PREVIOUS FRAME TEXTURE UNLESS IT IS REQUIRED
 	// THIS _DRAMATICALLY_ REDUCES THE FPS ON A RASPBERRY PI
-	if ((p_f_ghostingPercent > 0.0000001f) || bHalveFramerate)
+	if ((p_f_ghostingPercent > 0.0000001f && p_i_postprocessingLevel > 1) || bHalveFramerate)
 	{
-
-
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL error PP 4: " << glerr << std::endl;
 		}

@@ -1350,7 +1350,6 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 		for (int i = 0; i < 4; i++)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, FBO_debug[i]);
-			glEnable(GL_FRAMEBUFFER_SRGB);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, debug_texture_id[i]);
 
@@ -1358,7 +1357,6 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, debug_texture_id[i], 0);
-			glDisable(GL_FRAMEBUFFER_SRGB);
 
 			GLenum _statusFBO = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 			if (_statusFBO != GL_FRAMEBUFFER_COMPLETE)
