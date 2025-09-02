@@ -8,7 +8,7 @@ precision highp int;
 #endif
 
 /*
-	NTSC shader by Sik
+	NTSC shader
 	It has a special feature in that the TEXTURE_IN alpha channel determines color or mono.
 	If it is 0.95, then the pixel is monochrome and will be untouched (alpha will be 1)
 	If it is Between 0.0001 and 0.95, then the pixel is filtered through NTSC color
@@ -35,9 +35,9 @@ in vec2 vTexCoords;
 out vec4 fragColor;
 
 // ---- Helpers for gamma encode/decode ----
-COMPAT_PRECISION float safePow(float x, float p) { return pow(max(x, 0.0), p); }
-COMPAT_PRECISION vec3  toVideoGamma(vec3 lin)    { return vec3(safePow(lin.r, 1.0/2.2), safePow(lin.g, 1.0/2.2), safePow(lin.b, 1.0/2.2)); }
-COMPAT_PRECISION vec3  toLinear(vec3 vid)        { return vec3(safePow(vid.r, 2.2),     safePow(vid.g, 2.2),     safePow(vid.b, 2.2));     }
+COMPAT_PRECISION float safePow(float x, float p)	{ return pow(max(x, 0.0), p); }
+COMPAT_PRECISION vec3  toVideo(vec3 lin)			{ return vec3(safePow(lin.r, 1.0/2.2), safePow(lin.g, 1.0/2.2), safePow(lin.b, 1.0/2.2)); }
+COMPAT_PRECISION vec3  toLinear(vec3 vid)			{ return vec3(safePow(vid.r, 2.2),     safePow(vid.g, 2.2),     safePow(vid.b, 2.2));     }
 
 // For NTSC
 float phase[7];		// Colorburst phase (in radians)
@@ -88,19 +88,17 @@ void main()
 		float raw2 = 0.0;
 
 		if (x >= 0.0) {
-			vec3 s1 = texture(TEXIN, vec2(x, y)).rgb;
-			if (INPUT_IS_LINEAR) s1 = toVideoGamma(s1);
-			raw1 = yiq2raw(RGB2YIQ * s1, phase[n]);
+			vec3 s1_video = toVideo(texture(TEXIN, vec2(x, y)).rgb);	// from linear
+			raw1 = yiq2raw(RGB2YIQ * s1_video, phase[n]);
 
 			if (vTexCoords.y > 0.999) {
-				vec3 s2 = texture(TEXIN, vec2(x, y - 1.0)).rgb;
-				if (INPUT_IS_LINEAR) s2 = toVideoGamma(s2);
-				raw2 = yiq2raw(RGB2YIQ * s2, phase[n] + 3.1415926);
+				vec3 s2_video = toVideo(texture(TEXIN, vec2(x, y - 1.0)).rgb);	// from linear
+				raw2 = yiq2raw(RGB2YIQ * s2_video, phase[n] + 3.1415926);
 			}
 		}
 
 		raw_y[n]	= (raw1 + raw2) * 0.5;
-		raw_iq[n] = raw1 - (raw1 + raw2) * (NTSC_COMB_STR * 0.5);
+		raw_iq[n]	= raw1 - (raw1 + raw2) * (NTSC_COMB_STR * 0.5);
 	}
 
 	float y_mix = (raw_y[0] + raw_y[1] + raw_y[2] + raw_y[3]) * 0.25;
@@ -132,12 +130,11 @@ void main()
 	// Optional display gamma tweak in video space (1.0 = neutral)
 	if (abs(NTSC_GAMMA_CORRECTION - 1.0) > 1e-5) {
 		rgbVideo = vec3(safePow(rgbVideo.r, NTSC_GAMMA_CORRECTION),
-										safePow(rgbVideo.g, NTSC_GAMMA_CORRECTION),
-										safePow(rgbVideo.b, NTSC_GAMMA_CORRECTION));
+						safePow(rgbVideo.g, NTSC_GAMMA_CORRECTION),
+						safePow(rgbVideo.b, NTSC_GAMMA_CORRECTION));
 	}
 
-	// Convert to desired output space
-	vec3 outRGB = OUTPUT_LINEAR ? toLinear(rgbVideo) : rgbVideo;
-
-	fragColor = vec4(outRGB, 1.0);
+	// Convert to linear output space
+	fragColor.rgb	= toLinear(rgbVideo);
+	fragColor.a		= 1.0;
 }

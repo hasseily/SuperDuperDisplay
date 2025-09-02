@@ -1989,9 +1989,9 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 					if (ImGui::SliderFloat("NTSC Comb Strength", &p_f_ntscCombStrength, 0.f, 1.f, "%.2f"))
 						this->ForceBeamFullScreenRender();
 					ImGui::SetItemTooltip("0.8 for model 1, 0.9 for model 2");
-					if (ImGui::SliderFloat("NTSC Gamma Correction", &p_f_ntscGammaCorrection, 0.5f, 4.f, "%.1f"))
+					if (ImGui::SliderFloat("NTSC Gamma Correction", &p_f_ntscGammaCorrection, 0.1f, 3.f, "%.1f"))
 						this->ForceBeamFullScreenRender();
-					ImGui::SetItemTooltip("sRGB is 2.2, NTSC is 2.5");
+					ImGui::SetItemTooltip("Adjust to taste, 1.0 is neutral");
 				}
 			}
 

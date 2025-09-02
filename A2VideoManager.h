@@ -313,7 +313,7 @@ private:
 	bool p_b_ntscNoFilterMono = true;		// if true, don't filter through NTSC monochrome pixels
 	float p_f_ntscStrength = 0.5f;
 	float p_f_ntscCombStrength = 0.8f;
-	float p_f_ntscGammaCorrection = 2.5f;
+	float p_f_ntscGammaCorrection = 1.0f;
 
 	// beam render state variables
 	BeamState_e beamState = BeamState_e::UNKNOWN;
