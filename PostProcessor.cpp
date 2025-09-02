@@ -624,12 +624,19 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 
 		// Now copy the screen texture to prevFrame_texture_id, to use it for the next frame
 		// NOTE: prevFrame is flipped on the Y axis, so we flip Y on the destination to realign it
-		// DO NOT glEnable(GL_FRAMEBUFFER_SRGB) here. Needs to be copied as-is.
+		// DO NOT glEnable(GL_FRAMEBUFFER_SRGB) here on Windows. Needs to be copied as-is. But only
+		// on Windows. Because maybe the window manager has its own rules.
+#if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
+		glEnable(GL_FRAMEBUFFER_SRGB);
+#endif
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO_prevFrame);
 		glBlitFramebuffer(tA2Quad.x, tA2Quad.y, tA2Quad.w + tA2Quad.x, tA2Quad.h + tA2Quad.y,	// source rectangle (quad region)
 			0, tA2Quad.h, tA2Quad.w, 0,									// destination rectangle (Y flipped)
 			GL_COLOR_BUFFER_BIT, GL_NEAREST);
+#if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
+		glDisable(GL_FRAMEBUFFER_SRGB);
+#endif
 
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL error PP glBlitFramebuffer: " << glerr << std::endl;
