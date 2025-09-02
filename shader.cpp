@@ -43,6 +43,7 @@ void Shader::Build(const char* vertexPath, const char* fragmentPath)
 
 void Shader::_Compile(const std::string* pvertexCode, const std::string* pfragmentCode)
 {
+	uniformCache.clear();
 	const char* vShaderCode = pvertexCode->c_str();
 	const char* fShaderCode = pfragmentCode->c_str();
 	// 2. compile shaders

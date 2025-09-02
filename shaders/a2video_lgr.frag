@@ -36,10 +36,8 @@ const int textRow[24]= int[24](
 0x0050, 0x00D0, 0x0150, 0x01D0, 0x0250, 0x02D0, 0x0350, 0x03D0
 );
 
-// Global uniforms assigned in A2VideoManager
+// Global uniforms
 uniform sampler2D a2ModeTexture;
-uniform uint ticks;                  // ms since start
-uniform COMPAT_PRECISION float hasFlashing;
 uniform COMPAT_PRECISION float isMixed;		// Are we in mixed mode?
 uniform COMPAT_PRECISION float isDouble;	// Are we in double res?
 
@@ -56,11 +54,6 @@ out vec4 fragColor;
 
 void main()
 {
-	// dummy use to keep unused uniforms
-	if (ticks < 0u) {			// Never true
-		uint keep = ticks;
-	}
-	
 	if ((isMixed * vFragPos.y) >= float(tileSize.y * 20u))
 	{
 		// we're in mixed mode, the bottom 4 rows are transparent

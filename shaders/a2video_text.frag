@@ -37,9 +37,9 @@ const int textRow[24]= int[24](
 0x0050, 0x00D0, 0x0150, 0x01D0, 0x0250, 0x02D0, 0x0350, 0x03D0
 );
 
-// Global uniforms assigned in A2VideoManager
+// Global uniforms
 uniform sampler2D a2ModeTexture;
-uniform uint ticks;                  // ms since start
+uniform uint ticks;							// ms since start
 uniform COMPAT_PRECISION float hasFlashing;
 uniform COMPAT_PRECISION float isMixed;		// Are we in mixed mode?
 uniform COMPAT_PRECISION float isDouble;	// Are we in double res?
@@ -59,14 +59,12 @@ out vec4 fragColor;
 
 void main()
 {
-	/* this could be used as an optimization
-	if ((isMixed * vFragPos.y) < float(tileSize.y * 20))
+	if ((isMixed * vFragPos.y) >= float(tileSize.y * 20u))
 	{
-		// we're in mixed mode, then don't bother with the top 20 of 24 rows
+		// we're in mixed mode, the bottom 4 rows are transparent
 		fragColor = vec4(0.0);
 		return;
 	}
-	*/
 	
     // first figure out which mosaic tile this fragment is part of
         // Calculate the position of the fragment in tile intervals
