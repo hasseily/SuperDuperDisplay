@@ -417,20 +417,13 @@ void PostProcessor::RegeneratePreviousTexture()
 	tA2Quad.h = std::round((nquadBottom * 0.5 + 0.5) * viewportHeight - tA2Quad.y);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, FBO_prevFrame);
-	// For some unknown reason, Windows needs the previous frame to be in SRGB
-#ifdef __NETWORKING_WINDOWS__
-	glEnable(GL_FRAMEBUFFER_SRGB);
-#endif
 	glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
 	// Also here use GL_NEAREST to get rid of tiny rounding errors that will compound
 	// dramatically at high ghosting values. Proper rounding and GL_NEAREST fix this.
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, tA2Quad.w, tA2Quad.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tA2Quad.w, tA2Quad.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, prevFrame_texture_id, 0);
-#ifdef __NETWORKING_WINDOWS__
-	glDisable(GL_FRAMEBUFFER_SRGB);
-#endif
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
 	// Always bind the previous frame texture to its dedicated texture unit
 	glActiveTexture(_TEXUNIT_PP_PREVIOUS);
@@ -561,7 +554,6 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		shaderProgram.SetUniform("ScanlineCount", scanlineCount);
 	}
 
-	glEnable(GL_FRAMEBUFFER_SRGB);
 	// Bind the quad VAO and draw the quad (static VBO already set up)
 	glBindVertexArray(quadVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -609,7 +601,6 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	}
 
 	glBindVertexArray(0);
-	glDisable(GL_FRAMEBUFFER_SRGB);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 3: " << glerr << std::endl;
