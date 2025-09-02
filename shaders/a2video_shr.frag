@@ -136,7 +136,7 @@ void main()
 	// So each palette is 32 bytes, and we jump 32 bytes at a time (<< 5) to get the requested palette
 	// Palettes are on line 0x1F, starting at 0x200
 	int paletteOffset = memstart + 0x7E00 + int(((scb & 0xFu) << 5));
-	paletteColorB1 = texelFetch(APPLE2MEMORYTEX,ivec2((paletteOffset % 1024) + + (colorIdx*2u), paletteOffset / 1024), 0).r;
-	paletteColorB2 = texelFetch(APPLE2MEMORYTEX,ivec2((paletteOffset % 1024) + + (colorIdx*2u) + 1u, paletteOffset / 1024), 0).r;
+	paletteColorB1 = texelFetch(APPLE2MEMORYTEX,ivec2((paletteOffset % 1024) + int(colorIdx*2u), paletteOffset / 1024), 0).r;
+	paletteColorB2 = texelFetch(APPLE2MEMORYTEX,ivec2((paletteOffset % 1024) + int(colorIdx*2u) + 1, paletteOffset / 1024), 0).r;
 	fragColor = ConvertIIgs2RGB((paletteColorB2 << 8) + paletteColorB1);
 }
