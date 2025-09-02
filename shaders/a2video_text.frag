@@ -48,7 +48,7 @@ uniform COMPAT_PRECISION float isDouble;	// Are we in double res?
 uniform uvec2 tileSize;
 uniform usampler2D APPLE2MEMORYTEX; // R8UI Apple 2e's memory, 1024 bytes wide
                                  // Unsigned int sampler!
-uniform int memstart = 0;		 // where to start in memory
+uniform int memstart;			 // where to start in memory
 
 uniform vec4 colorTint;
 

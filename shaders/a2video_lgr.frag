@@ -47,7 +47,7 @@ uniform COMPAT_PRECISION float isDouble;	// Are we in double res?
 uniform uvec2 tileSize;
 uniform usampler2D APPLE2MEMORYTEX; // Apple 2e's memory, starting at 0x400 for TEXT1 and 0x800 for TEXT2
                                  // Unsigned int sampler!
-uniform int memstart = 0;		// where to start in memory
+uniform int memstart;			// where to start in memory
 
 in vec2 vFragPos;       // The fragment position in pixels
 // in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
