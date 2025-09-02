@@ -180,26 +180,43 @@ vec4 HalveFrameRate(vec2 coords, vec4 currentColor)
 }
 
 // Creates a ghosting effect by mixing in the previous frame
-// NOTE: currentColor must be in linear space already
+// NOTE: currentColor must be in linear or oklab space already
 vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 {
 	float ghosting = GhostingPercent/100.0;
-	vec4 previousColor = texture(PreviousFrame, coords);
-	previousColor.rgb = l2oklab(previousColor.rgb);
-	// Calculate the intensity levels of both frames
-	float currentIntensity = dot(currentColor.rgb, vec3(0.299, 0.587, 0.114));
-	float previousIntensity = dot(previousColor.rgb, vec3(0.299, 0.587, 0.114));
 	vec4 blended = vec4(0.0,0.0,0.0,0.0);
-	if (currentIntensity > previousIntensity)	// move at a fast fixed speed towards higher intensity
-		blended = mix(currentColor, previousColor, 0.01);
-	else {
-		if ((previousIntensity - currentIntensity) < (ghosting*0.035))
-			// As we get closer to the color (the higher the ghosting, the higher the cutoff),
-			// at some point we need to accelerate the move. Otherwise at higher ghosting values
-			// the color will never be reached (especially visible when fading to black)
-			blended = mix(currentColor, previousColor, ghosting / 2.0);
-		else
+	vec4 previousColor = texture(PreviousFrame, coords);
+	// Calculate the intensity levels of both frames
+	if (bUseOKlab) {
+		previousColor.rgb = l2oklab(previousColor.rgb);
+		if (currentColor.x > previousColor.x)	// move at a fast fixed speed towards higher intensity
+			blended = mix(currentColor, previousColor, 0.01);
+		else {	// going to lower intensity
+			// As we get closer to the color, at some point we need to accelerate the move.
+			// Otherwise at higher ghosting values the color will never be reached
+			// (especially visible when fading to black).
+			// Here as the colors get closer to each other, we use more of their distance
+			// to blend instead of the ghosting value. The closer they are, the faster they merge.
+			float cdist = length (previousColor - currentColor);
+			float t = smoothstep(0.03, 0.05, cdist);
+			ghosting = mix(cdist, ghosting, t);
 			blended = mix(currentColor, previousColor, ghosting);
+		}
+	} else {	// linear rgb code for the faster (but less precise) way
+		const vec3 lumWeights = vec3(0.2126, 0.7152, 0.0722);	// for linear rgb only!
+		float currentIntensity = dot(currentColor.rgb, lumWeights);
+		float previousIntensity = dot(previousColor.rgb, lumWeights);
+		if (currentIntensity > previousIntensity)	// move at a fast fixed speed towards higher intensity
+			blended = mix(currentColor, previousColor, 0.01);
+		else {
+			if ((previousIntensity - currentIntensity) < (ghosting*0.035))
+				// As we get closer to the color (the higher the ghosting, the higher the cutoff),
+				// at some point we need to accelerate the move. Otherwise at higher ghosting values
+				// the color will never be reached (especially visible when fading to black)
+				blended = mix(currentColor, previousColor, ghosting / 2.0);
+			else
+				blended = mix(currentColor, previousColor, ghosting);
+		}
 	}
 	return blended;
 }

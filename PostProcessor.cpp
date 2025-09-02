@@ -624,9 +624,9 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 
 		// Now copy the screen texture to prevFrame_texture_id, to use it for the next frame
 		// NOTE: prevFrame is flipped on the Y axis, so we flip Y on the destination to realign it
+		// DO NOT glEnable(GL_FRAMEBUFFER_SRGB) here. Needs to be copied as-is.
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO_prevFrame);
-		glEnable(GL_FRAMEBUFFER_SRGB);
 		glBlitFramebuffer(tA2Quad.x, tA2Quad.y, tA2Quad.w + tA2Quad.x, tA2Quad.h + tA2Quad.y,	// source rectangle (quad region)
 			0, tA2Quad.h, tA2Quad.w, 0,									// destination rectangle (Y flipped)
 			GL_COLOR_BUFFER_BIT, GL_NEAREST);
@@ -634,7 +634,6 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL error PP glBlitFramebuffer: " << glerr << std::endl;
 		}
-		glDisable(GL_FRAMEBUFFER_SRGB);
 	}
 
 	//////////////////////////// END OF PREVIOUS FRAME TEXTURE ///////////////////////////
@@ -926,19 +925,21 @@ with page flipping images");
 			ImGui::SetItemTooltip("Some screen blur");
 
 			// We'll use a normalized slider value in [0,1]
-			static float _ghostingSV = 100.0f * (1.0f - pow(1.0f - p_f_ghostingPercent / 100.0f, 0.25f));
+			static float _ghostingSV = 100.0f * (1.0f - pow(1.0f - p_f_ghostingPercent / 100.0f, 0.5f));
 			if (p_f_ghostingPercent < 0.001)
 				_ghostingSV = 0.0f;
 			if (ImGui::SliderFloat("Ghosting Amount", &_ghostingSV, 0.0f, 100.0f, "%.0f"))
 			{
 				// Map sliderValue to ghosting percentage
-				// The mapping (1 - (1-x)^4) gives finer control near 100.
-				p_f_ghostingPercent = 100.0f - 100.0f * powf(1.0f - _ghostingSV/100.f, 4.0f);
+				// The mapping (1 - (1-x)^2) gives finer control near 100.
+				p_f_ghostingPercent = 100.0f - 100.0f * powf(1.0f - _ghostingSV/100.f, 2.0f);
+				std::cerr << "Ghost: " << p_f_ghostingPercent << std::endl;
 			}
 			ImGui::SetItemTooltip("WARNING: SIGNIFICANT FPS IMPACT! \n\
 Mix in a bit of ghosting to smooth animations. \n\
 Overdo it to emulate the Apple /// monitor!\n\
-Works best at low frame rates, below 60 FPS.");
+Works best at low frame rates, below 60 FPS.\n\
+Needs more ghosting for fast frame rates.");
 
 			ImGui::Separator();
 			
