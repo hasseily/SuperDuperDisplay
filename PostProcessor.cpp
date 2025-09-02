@@ -933,7 +933,6 @@ with page flipping images");
 				// Map sliderValue to ghosting percentage
 				// The mapping (1 - (1-x)^2) gives finer control near 100.
 				p_f_ghostingPercent = 100.0f - 100.0f * powf(1.0f - _ghostingSV/100.f, 2.0f);
-				std::cerr << "Ghost: " << p_f_ghostingPercent << std::endl;
 			}
 			ImGui::SetItemTooltip("WARNING: SIGNIFICANT FPS IMPACT! \n\
 Mix in a bit of ghosting to smooth animations. \n\
