@@ -562,6 +562,32 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		std::cerr << "OpenGL error PP 2: " << glerr << std::endl;
 	}
 
+	/////////////////////////// BEGIN PREVIOUS FRAME TEXTURE ///////////////////////////
+
+	// DO NOT COPY INTO THE PREVIOUS FRAME TEXTURE UNLESS IT IS REQUIRED
+	// THIS _DRAMATICALLY_ REDUCES THE FPS ON A RASPBERRY PI
+	if ((p_f_ghostingPercent > 0.0000001f && p_i_postprocessingLevel > 1) || bHalveFramerate)
+	{
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP 4: " << glerr << std::endl;
+		}
+
+		// Now copy the screen texture to prevFrame_texture_id, to use it for the next frame
+		// NOTE: prevFrame is flipped on the Y axis, so we flip Y on the destination to realign it
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO_prevFrame);
+		glBlitFramebuffer(tA2Quad.x, tA2Quad.y, tA2Quad.w + tA2Quad.x, tA2Quad.h + tA2Quad.y,	// source rectangle (quad region)
+			0, tA2Quad.h, tA2Quad.w, 0,									// destination rectangle (Y flipped)
+			GL_COLOR_BUFFER_BIT, GL_NEAREST);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error PP glBlitFramebuffer: " << glerr << std::endl;
+		}
+	}
+
+	//////////////////////////// END OF PREVIOUS FRAME TEXTURE ///////////////////////////
+
 	// Now Build and Draw the Bezel if necessary
 	if (selectedBezelFile != _PP_NO_BEZEL_FILENAME)
 	{
@@ -605,31 +631,6 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "OpenGL error PP 3: " << glerr << std::endl;
 	}
-
-	/////////////////////////// BEGIN PREVIOUS FRAME TEXTURE ///////////////////////////
-
-	// DO NOT COPY INTO THE PREVIOUS FRAME TEXTURE UNLESS IT IS REQUIRED
-	// THIS _DRAMATICALLY_ REDUCES THE FPS ON A RASPBERRY PI
-	if ((p_f_ghostingPercent > 0.0000001f && p_i_postprocessingLevel > 1) || bHalveFramerate)
-	{
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL error PP 4: " << glerr << std::endl;
-		}
-
-		// Now copy the screen texture to prevFrame_texture_id, to use it for the next frame
-		// NOTE: prevFrame is flipped on the Y axis, so we flip Y on the destination to realign it
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO_prevFrame);
-		glBlitFramebuffer(tA2Quad.x, tA2Quad.y, tA2Quad.w + tA2Quad.x, tA2Quad.h + tA2Quad.y,	// source rectangle (quad region)
-			0, tA2Quad.h, tA2Quad.w, 0,									// destination rectangle (Y flipped)
-			GL_COLOR_BUFFER_BIT, GL_NEAREST);
-
-		if ((glerr = glGetError()) != GL_NO_ERROR) {
-			std::cerr << "OpenGL error PP glBlitFramebuffer: " << glerr << std::endl;
-		}
-	}
-
-	//////////////////////////// END OF PREVIOUS FRAME TEXTURE ///////////////////////////
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
