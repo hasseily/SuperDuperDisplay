@@ -122,7 +122,7 @@ void main()
 	// fragOffset from the 7x16 tile to the correct 14x16 for the TEXT texture
 	if (isDouble > 0.0001)
 	{
-		fragOffset.x *= 2;
+		fragOffset.x *= 2.0;
 	}
 
     // Now get the texture color, using the tile uv origin and this fragment's offset

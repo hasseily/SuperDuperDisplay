@@ -106,8 +106,8 @@ void main()
 	vec2 fragOffset = ((fTileColRow - vec2(tileColRow)) * vec2(tileSize));
 	if (isDouble > 0.0001)
 	{
-		charOrigin.x *= 2;
-		fragOffset.x *= 2;
+		charOrigin.x *= 2u;
+		fragOffset.x *= 2.0;
 	}
 
     // Now get the texture color, using the tile uv origin and this fragment's offset
