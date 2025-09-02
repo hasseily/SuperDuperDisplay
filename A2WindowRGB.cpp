@@ -13,7 +13,6 @@ A2WindowRGB::A2WindowRGB() {
 	quad = { -1.f, 1.f, 2.f, -2.f };
 	bImguiWindowIsOpen = true;
 	doubleMode = false;
-	videoMode = A2VideoModeRGB_e::A2VIDEORGB_SHR;
 
 	GLint glerr;
 	glGenVertexArrays(1, &VAO);
@@ -36,7 +35,8 @@ A2WindowRGB::A2WindowRGB() {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture_id, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	this->SetVideoMode(A2VIDEORGB_SHR);
+	videoMode = A2VideoModeRGB_e::A2VIDEORGB_COUNT;
+	this->SetVideoMode(A2VIDEORGB_TEXT);
 	A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 }
 
