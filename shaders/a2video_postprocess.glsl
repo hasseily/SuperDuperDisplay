@@ -211,9 +211,7 @@ vec4 PhosphorBlur(sampler2D tex, vec2 uv, vec2 resolution, float blurAmount) {
 	// To get a glowing style, we overlay the regular texture data at 30%
 	if (bBlurGlow)
 		color.rgb = mix(color.rgb, texture(tex, uv).rgb, 0.3);
-    // Increase brightness linearly based on blurAmount.
-    float brightnessFactor = 1.0 + blurAmount;
-    return (color * brightnessFactor);
+	return clamp(color, 0.0, 1.0);
 }
 
 vec3 Mask(vec2 pos, float CGWG) {
