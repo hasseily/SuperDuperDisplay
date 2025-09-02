@@ -416,14 +416,14 @@ void PostProcessor::RegeneratePreviousTexture()
 	tA2Quad.w = std::round((nquadRight * 0.5 + 0.5) * viewportWidth - tA2Quad.x);
 	tA2Quad.h = std::round((nquadBottom * 0.5 + 0.5) * viewportHeight - tA2Quad.y);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO_prevFrame);	// this FBO is in sRGB
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO_prevFrame);
 	glEnable(GL_FRAMEBUFFER_SRGB);
 	glBindTexture(GL_TEXTURE_2D, prevFrame_texture_id);
 	// Also here use GL_NEAREST to get rid of tiny rounding errors that will compound
 	// dramatically at high ghosting values. Proper rounding and GL_NEAREST fix this.
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, tA2Quad.w, tA2Quad.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tA2Quad.w, tA2Quad.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, prevFrame_texture_id, 0);
 	glDisable(GL_FRAMEBUFFER_SRGB);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
@@ -626,17 +626,11 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 		// NOTE: prevFrame is flipped on the Y axis, so we flip Y on the destination to realign it
 		// DO NOT glEnable(GL_FRAMEBUFFER_SRGB) here on Windows. Needs to be copied as-is. But only
 		// on Windows. Because maybe the window manager has its own rules.
-#if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
-		glEnable(GL_FRAMEBUFFER_SRGB);
-#endif
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, FBO_prevFrame);
 		glBlitFramebuffer(tA2Quad.x, tA2Quad.y, tA2Quad.w + tA2Quad.x, tA2Quad.h + tA2Quad.y,	// source rectangle (quad region)
 			0, tA2Quad.h, tA2Quad.w, 0,									// destination rectangle (Y flipped)
 			GL_COLOR_BUFFER_BIT, GL_NEAREST);
-#if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
-		glDisable(GL_FRAMEBUFFER_SRGB);
-#endif
 
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL error PP glBlitFramebuffer: " << glerr << std::endl;

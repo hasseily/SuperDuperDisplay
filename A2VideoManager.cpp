@@ -1343,7 +1343,6 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 	}
 
 	// Create all the debug FBOs and textures, those have a static size and can be generated once only
-	// The debug FBOs are in sRGB, which automatically decodes linear RGB to sRGB upon writing to them
 	if (FBO_debug[0] == UINT_MAX)
 	{
 		glGenFramebuffers(4, FBO_debug);
@@ -1357,7 +1356,7 @@ void A2VideoManager::CreateOrResizeFramebuffer(int fb_width, int fb_height)
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, debug_texture_id[i], 0);
 			glDisable(GL_FRAMEBUFFER_SRGB);
 
