@@ -19,9 +19,6 @@ void LogTextManager::AddLog(const std::string &text, glm::vec4 tC) {
 	auto window = Main_GetSDLWindow();
 	int winW, winH;
 	SDL_GetWindowSize(window, &winW, &winH);
-	std::cerr << "Text font size: " << LOGTEXT_FONTSIZE << std::endl;
-	std::cerr << "Text Padding: " << LOGTEXT_PADDING.x << std::endl;
-	std::cerr << "winW: " << winW << " WIDTH: " << (winW - LOGTEXT_PADDING.x * 2) << std::endl;
 
 	while (!text.empty()) {
 		size_t pos = 0;
@@ -38,7 +35,6 @@ void LogTextManager::AddLog(const std::string &text, glm::vec4 tC) {
 			// Find end of this word
 			size_t next = remainingText.find_first_of(" \t\n", pos);
 			std::string word = remainingText.substr(pos, next - pos);
-			std::cerr << "Found word: " << word << std::endl;
 
 			// Test adding this word to the line
 			std::string test = line.empty() ? word : line + " " + word;
@@ -47,13 +43,11 @@ void LogTextManager::AddLog(const std::string &text, glm::vec4 tC) {
 					// First word is already too wide: force it through
 					line = word;
 					splitPos = (next == std::string::npos ? remainingText.size() : next);
-					std::cerr << "Accepted too wide: " << word << std::endl;
 				}
 				break;
 			}
 
 			// Accept this word
-			std::cerr << "Accepted: " << test << std::endl;
 			line = std::move(test);
 			splitPos = (next == std::string::npos ? remainingText.size() : next);
 			pos = next;
@@ -66,7 +60,6 @@ void LogTextManager::AddLog(const std::string &text, glm::vec4 tC) {
 
 		// Process the accumulated line
 		texts.push_back({ ++idCounter, line, 0, 0, SDL_GetTicks64() + logDurationMS, tC.r, tC.g, tC.b, tC.a });
-		std::cerr << "Processed line: " << line << std::endl;
 
 		// Remove processed text (and any whitespace) from remainingText
 		remainingText.erase(0, splitPos);
