@@ -11,38 +11,46 @@
 #define _A2_TEXT40_CHAR_WIDTH _A2_TEXT80_CHAR_WIDTH*2
 #define _A2_TEXT40_CHAR_HEIGHT _A2_TEXT80_CHAR_HEIGHT
 
+// Any of the below has its own instance of the class
+// because the canvas sizes are unique for each
 enum A2VideoModeBeam_e
 {
-	A2VIDEOBEAM_LEGACY,
-	A2VIDEOBEAM_SHR,
-	A2VIDEOBEAM_FORCED_TEXT1,
-	A2VIDEOBEAM_FORCED_TEXT2,
-	A2VIDEOBEAM_FORCED_HGR1,
-	A2VIDEOBEAM_FORCED_HGR2,
+	A2VIDEOBEAM_LEGACY,			// 560x384 + borders
+	A2VIDEOBEAM_SHR,			// 640x400 + borders
 	A2VIDEOBEAM_TOTAL_COUNT
 };
 
 // Special less compatible modes from lesser known cards
-// like Chat Mauve RGB cards, or Apple RGB card
-// and the new SHR4 modes for VidHD and Appletini
-// Use enum instead of enum class because this stuff is used all the
-// time in integer context.
-// NOTE: the SHR4 modes need to be in the second nibble, to match the
-// SHR palette 2nd byte's high nibble
-enum A2VideoSpecialMode_e
+// like Chat Mauve RGB cards, or Apple RGB card.
+// Those are "mods" to the modes, such as using the ALT charset for TEXT
+// Use enum instead of enum class because this stuff is used all the time in integer context.
+// NOTE: the special modes need to be in the second nibble, to match the VRAM flag byte high nibble
+enum A2ESpecialMode_e	// 8 bits only, 4 upper bits used
 {
-	A2_VSM_NONE 			= 0b0000,
-	A2_VSM_DHGRCOL140Mixed 	= 0b0001,		// Mode that mixes 560 wide B/W alongside 160 wide DHGR color
-	A2_VSM_HGRSPEC1			= 0b0010,		// Mode that forces black in middle pixel of 11011 pattern in HGR
-	A2_VSM_HGRSPEC2		 	= 0b0100,		// Mode that forces white in middle pixel of 00100 pattern in HGR
-	
-	A2_VSM_SHR4SHR			= 0b0001'0000,	// New SHR4 modes - default SHR but with 'magic bytes' active
-	A2_VSM_SHR4RGGB			= 0b0011'0000,	// New SHR4 modes - RGGB   (see shader for details)
-	A2_VSM_SHR4PAL256		= 0b0101'0000,	// New SHR4 modes - PAL256 (see shader for details)
-	A2_VSM_SHR4R4G4B4		= 0b1001'0000,	// New SHR4 modes - R4G4B4 (see shader for details)
+	A2ESM_NONE 			= 0b0000'0000,
+	A2ESM_TEXTALT 		= 0b0001'0000,	// ALT charset for TEXT
+	A2ESM_HGRSPEC1		= 0b0001'0000,	// Mode that forces black in middle pixel of 11011 pattern in HGR
+	A2ESM_HGRSPEC2		= 0b0010'0000,	// Mode that forces white in middle pixel of 00100 pattern in HGR
+	A2ESM_DHGRCOL140M 	= 0b0001'0000,	// Mode that mixes 560 wide B/W alongside 140 wide DHGR color
+};
 
-	A2_VSM_3200SHR			= 0b0001'0000'0000,	// New SHR 3200 mode ("Brooks-3200")
+// SHR special modes. These are unique to modern cards such as the Appletini
+// where video processing of the modes in real time is very costly (if not impossible)
+// on original hardware. The hardware only needs to put the correct data in memory,
+// and SDD will generate the improved image through its shader. Typically the original
+// hardware may output a simplified grayscale version of the image through judiciously
+// chosen grayscale palettes.
+// Use enum instead of enum class because this stuff is used all the time in integer context.
+// NOTE: the SHR4 modes need to be in the second nibble, to match the SHR palette 2nd byte's high nibble
+enum A2SHRSpecialMode_e
+{
+	A2SM_NONE 				= 0b0000,
+	A2SM_SHR3200			= 0b0001,		// SHR 3200 mode ("Brooks-3200")
 
+	A2SM_SHR4SHR			= 0b0001'0000,	// New SHR4 modes - default SHR but with 'magic bytes' active
+	A2SM_SHR4RGGB			= 0b0011'0000,	// New SHR4 modes - RGGB   (see shader for details)
+	A2SM_SHR4PAL256			= 0b0101'0000,	// New SHR4 modes - PAL256 (see shader for details)
+	A2SM_SHR4R4G4B4			= 0b1001'0000,	// New SHR4 modes - R4G4B4 (see shader for details)
 };
 
 // Special paged modes that use both E0 and E1 banks
@@ -90,8 +98,7 @@ public:
 	bool bIsMergedMode = false;				// Activate if this frame has both SHR and Legacy. Shader will use OFFSETEX
 	bool bForceSHRWidth = false;			// Request to force SHR width for legacy
 
-	int specialModesMask = A2_VSM_NONE;		// Or'ed A2VideoSpecialMode_e
-// TODO: merge pagingMode with doubleSHR4
+	int specialModesMask = A2SM_NONE;		// Or'ed A2SHRSpecialMode_e
 	int doubleSHR4 = DOUBLE_NONE;
 	int pagingMode = DOUBLE_NONE;			// Override of paging for legacy
 	int monitorColorType = A2_MON_COLOR;	// Monitor color type A2VideoMonitorType_e

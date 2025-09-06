@@ -84,7 +84,7 @@ struct A2RenderVertex {
 // pointer of the start of the memory
 // Anything between 0 and _A2_MEMORY_SHADOW_BEGIN in each bank is unused
 #define _A2_MEMORY_SHADOW_BEGIN 0x0000
-#define _A2_MEMORY_SHADOW_END 0xC000
+#define _A2_MEMORY_SHADOW_END 0xC000			// WARNING: IF YOU CHANGE THIS, UPDATE THE SHADERS
 
 // For all modes!
 // The data buffer is always in tex1.
@@ -120,11 +120,12 @@ struct A2RenderVertex {
 #define _SDHR_MAX_UV_SCALE 100.f				// Maximum scale of Mosaic Tile UV
 
 // ORIGINAL APPLE 2 VIDEO MODES
-#define _A2VIDEO_LEGACY_BYTES_PER_LINE 40
-#define _A2VIDEO_LEGACY_SCANLINES 24
-#define _A2VIDEO_LEGACY_WIDTH _A2VIDEO_LEGACY_BYTES_PER_LINE*7*2
-#define _A2VIDEO_LEGACY_HEIGHT _A2VIDEO_LEGACY_SCANLINES*8*2
-#define _A2VIDEO_MIN_MIXED_HEIGHT (_A2VIDEO_LEGACY_SCANLINES-4)*8*2
+#define _A2VIDEO_LEGACY_CYCLES_PER_LINE 40
+#define _A2VIDEO_LEGACY_BYTES_PER_LINE _A2VIDEO_LEGACY_CYCLES_PER_LINE
+#define _A2VIDEO_LEGACY_TEXTLINES 24
+#define _A2VIDEO_LEGACY_WIDTH _A2VIDEO_LEGACY_CYCLES_PER_LINE*7*2
+#define _A2VIDEO_LEGACY_HEIGHT _A2VIDEO_LEGACY_TEXTLINES*8*2
+#define _A2VIDEO_MIN_MIXED_HEIGHT (_A2VIDEO_LEGACY_TEXTLINES-4)*8*2
 #define _A2VIDEO_SHR_BYTES_PER_LINE 160
 #define _A2VIDEO_SHR_SCANLINES 200
 #define _A2VIDEO_SHR_WIDTH _A2VIDEO_SHR_BYTES_PER_LINE*4
@@ -173,6 +174,7 @@ struct A2RenderVertex {
 #define _SHADER_RGB_LGR_FRAGMENT "shaders/a2video_lgr.frag"
 #define _SHADER_RGB_HGR_FRAGMENT "shaders/a2video_hgr.frag"
 #define _SHADER_RGB_DHGR_FRAGMENT "shaders/a2video_dhgr.frag"
+#define _SHADER_RGB_DHGR160_FRAGMENT "shaders/a2video_dhgr160.frag"
 #define _SHADER_RGB_SHR_FRAGMENT "shaders/a2video_shr.frag"
 #define _SHADER_BEAM_LEGACY_FRAGMENT "shaders/a2video_beam_legacy.frag"
 #define _SHADER_BEAM_SHR_FRAGMENT "shaders/a2video_beam_shr_raw.frag"

@@ -44,14 +44,15 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  - It runs the video mode code on that byte and chooses the correct fragment
 
  In addition, if the magicBytes are "SHR4", we now allow for 4 graphics mode, which can be
- mixed and matched per scanline. The top 4 palette color bits determine the type:
+ mixed and matched per scanline. The top 4 palette color bits (unused originally) determine the type.
+ The 4 nibbles, starting with the 2nd byte, look like this:
  $0RGB = Pal16, Normal SHR 16-color palette entry
  $1ggg = RGGB, Bayer mode where ggg is a grayscale that is the same as the palette index
  $2RGB = Pal256, even 4-bit pixels fetch the next odd pixel to make a Pal256 lookup at $E1/9E00.
          The 12-bit RGB is used for both pixels
  $3xxx = R4G4B4, bytes AB CD EF at 4 bit groups turn into RGB pixels ABC, DEF, each pixel spanning 3 dots
  
- In order to get Pal256 working, it is neccessary to have access to the single unified palette
+ In order to get Pal256 working, it is necessary to have access to the single unified palette
  of 256 colors at the time the beam is on each byte. Therefore we have to generate another buffer called
  PAL256TEX which is a 160x200 buffer of 2 bytes: the snapshots of the colors for each byte at the time
  the beam was on it. The shader simply applies the relevant color.
@@ -82,18 +83,18 @@ uniform sampler2D OFFSETTEX;			// X Offset texture for merged mode
 
 /*
  Special modes mask for SHR
- enum A2VideoSpecialMode_e
+ enum A2SHRSpecialMode_e
  {
- A2_VSM_NONE 				= 0b0000'0000,
+ A2SM_NONE 				= 0b0000'0000,
+ A2SM_SHR3200			= 0b0000'0001,	// New SHR 3200 mode ("Brooks-3200")
  ...
- A2_VSM_SHR4SHR			= 0b0001'0000,	// New SHR4 modes - default SHR but with 'magic bytes' active
- A2_VSM_SHR4RGGB		= 0b0010'0000,	// New SHR4 modes - RGGB   (see shader for details)
- A2_VSM_SHR4PAL256		= 0b0100'0000,	// New SHR4 modes - PAL256 (see shader for details)
- A2_VSM_SHR4R4G4B4		= 0b1000'0000,	// New SHR4 modes - r4G4B4 (see shader for details)
- A2_VSM_3200SHR			= 0b0001'0000'0000,	// New SHR 3200 mode ("Brooks-3200")
+ A2SM_SHR4SHR			= 0b0001'0000,	// New SHR4 modes - default SHR but with 'magic bytes' active
+ A2SM_SHR4RGGB			= 0b0010'0000,	// New SHR4 modes - RGGB   (see shader for details)
+ A2SM_SHR4PAL256		= 0b0100'0000,	// New SHR4 modes - PAL256 (see shader for details)
+ A2SM_SHR4R4G4B4		= 0b1000'0000,	// New SHR4 modes - r4G4B4 (see shader for details)
  };
  */
-const int A2_VSM_SHR4SHR = 0x10;
+const int A2SM_SHR4SHR = 0x10;
 
 in vec2 vFragPos;       // The fragment position in pixels
 out vec4 fragColor;
@@ -347,7 +348,7 @@ void main()
 		colorIdx = 15u - colorIdx;
 
     // Get the second palette byte, we need it to determine if it's standard SHR or not
-    paletteColorB2 = texelFetch(VRAMTEX, ivec2(1 + int(colorIdx)*2 + 1, originOffsetByte.y), 0).r;
+    paletteColorB2 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u + 1u, originOffsetByte.y), 0).r;
 	/*
 	if (overrideSHR4Mode != SHR_DEFAULT)
 	{
@@ -355,7 +356,7 @@ void main()
 	}
 	 */
 
-    if ((specialModesMask & A2_VSM_SHR4SHR) != 0)        // Frame has SHR4 modes active
+    if ((specialModesMask & A2SM_SHR4SHR) != 0)        // Frame has SHR4 modes active
     {
     
   		uint xpos_noborder = xpos - uint(hborder*16);
@@ -732,8 +733,6 @@ void main()
         // get the missing first palette byte and fetch the color
         paletteColorB1 = texelFetch(VRAMTEX, ivec2(1u + colorIdx*2u, originByte.y + int(yOffsetLines)), 0).r;
         fragColor = ConvertIIgs2RGB((paletteColorB2 << 8) + paletteColorB1);
-		// same as: (TODO: check speed difference)
-		// fragColor = ConvertIIgs2RGB3Col(paletteColorB2 & 0xFu, paletteColorB1 >> 4, paletteColorB1 & 0xFu);
     }
     
     if (monitorColorType > 0)

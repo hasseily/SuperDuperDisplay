@@ -5,7 +5,7 @@
 #include "MemoryManager.h"
 #include "SDHRManager.h"
 
-A2WindowRGB::A2WindowRGB() {
+A2WindowRGB::A2WindowRGB(bool useFBO) {
 	memStart = 0x0000;
 	memAux = false;
 	shader = Shader();
@@ -26,28 +26,61 @@ A2WindowRGB::A2WindowRGB() {
 		return;
 	}
 
-	glGenFramebuffers(1, &FBO);
-	glGenTextures(1, &texture_id);
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-	glBindTexture(GL_TEXTURE_2D, texture_id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture_id, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	if (useFBO) {
+		glGenFramebuffers(1, &FBO);
+		glGenTextures(1, &texture_id);
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+		glBindTexture(GL_TEXTURE_2D, texture_id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture_id, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
 
 	videoMode = A2VideoModeRGB_e::A2VIDEORGB_COUNT;
 	this->SetVideoMode(A2VIDEORGB_TEXT);
-	A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 }
 
 A2WindowRGB::~A2WindowRGB()
 {
-	glDeleteFramebuffers(1, &FBO);
-	glDeleteTextures(1, &texture_id);
+	if (FBO != 0) {
+		glDeleteFramebuffers(1, &FBO);
+		glDeleteTextures(1, &texture_id);
+	}
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
 	bImguiWindowIsOpen = false;
 }
+
+uint32_t A2WindowRGB::GetWidth() const
+{
+	return screen_count.x;
+}
+
+uint32_t A2WindowRGB::GetHeight() const
+{
+	return screen_count.y;
+}
+
+void A2WindowRGB::SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vertical)
+{
+	border_lr_pixels = cycles_horizontal * 16;
+	border_tb_pixels = scanlines_vertical * 2;
+
+	switch (videoMode) {
+		case A2VIDEORGB_DHGR160:	// special!
+			screen_count = { _A2VIDEO_SHR_WIDTH + border_lr_pixels*2, _A2VIDEO_LEGACY_HEIGHT + border_tb_pixels*2};
+			break;
+		case A2VIDEORGB_SHR:
+			screen_count = { _A2VIDEO_SHR_WIDTH + border_lr_pixels*2, _A2VIDEO_SHR_HEIGHT + border_tb_pixels*2};
+			break;
+		default:
+			screen_count = { _A2VIDEO_LEGACY_WIDTH + border_lr_pixels*2, _A2VIDEO_LEGACY_HEIGHT + border_tb_pixels*2};
+			break;
+	}
+}
+
+uXY A2WindowRGB::GetBorder() { return uXY(border_lr_pixels, border_tb_pixels);};
 
 void A2WindowRGB::SetVideoMode(A2VideoModeRGB_e _videoMode)
 {
@@ -55,26 +88,6 @@ void A2WindowRGB::SetVideoMode(A2VideoModeRGB_e _videoMode)
 		return;
 	videoMode = _videoMode;
 	doubleMode = false;
-
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-	glBindTexture(GL_TEXTURE_2D, texture_id);
-	if (videoMode == A2VideoModeRGB_e::A2VIDEORGB_SHR) {
-		screen_count = { _A2VIDEO_SHR_WIDTH, _A2VIDEO_SHR_HEIGHT };
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, _A2VIDEO_SHR_WIDTH, _A2VIDEO_SHR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-	} 
-	else {
-		screen_count = { _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT };
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, _A2VIDEO_LEGACY_WIDTH, _A2VIDEO_LEGACY_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-	}
-
-	GLenum _statusFBO = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	if (_statusFBO != GL_FRAMEBUFFER_COMPLETE)
-	{
-		std::cerr << "A2WindowRGB glTexImage2D error: " << _statusFBO << std::endl;
-	}
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	this->UpdateVertexArray();
 
 	switch (videoMode) {
 		case A2VIDEORGB_TEXT:
@@ -98,6 +111,10 @@ void A2WindowRGB::SetVideoMode(A2VideoModeRGB_e _videoMode)
 			shader.Build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_DHGR_FRAGMENT);
 			doubleMode = true;
 			break;
+		case A2VIDEORGB_DHGR160:
+			shader.Build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_DHGR160_FRAGMENT);
+			doubleMode = true;
+			break;
 		case A2VIDEORGB_SHR:
 			shader.Build(_SHADER_A2_VERTEX_DEFAULT, _SHADER_RGB_SHR_FRAGMENT);
 			doubleMode = true;
@@ -107,6 +124,8 @@ void A2WindowRGB::SetVideoMode(A2VideoModeRGB_e _videoMode)
 			break;
 	}
 	std::cerr << "Shader built: " << shader.GetFragmentPath() << std::endl;
+	// Update the sizes
+	SetBorder(border_lr_pixels, border_tb_pixels);
 }
 
 void A2WindowRGB::UpdateVertexArray()
@@ -125,23 +144,30 @@ void A2WindowRGB::UpdateVertexArray()
 
 void A2WindowRGB::Render()
 {
-	if (!bImguiWindowIsOpen)
-		return;
-	if (!shader.isReady)
-		return;
-	if (vertices.size() == 0)
-		return;
+	if (FBO != 0) {
+		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+		GLenum glerr;
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "A2WindowRGB::RenderToFBO glBindFramebuffer error: " << glerr << std::endl;
+		}
+		glBindTexture(GL_TEXTURE_2D, texture_id);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screen_count.x, screen_count.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+		if ((glerr = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "A2WindowBeam::RenderToFBO error: " << glerr << std::endl;
+		}
 
-	GLenum glerr;
-
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-	if ((glerr = glGetError()) != GL_NO_ERROR) {
-		std::cerr << "A2WindowRGB::Render glBindFramebuffer error: " << glerr << std::endl;
+		glViewport(0, 0, screen_count.x, screen_count.y);
+		glClearColor(0, 0, 0, 1);
+		glClear(GL_COLOR_BUFFER_BIT);
 	}
 
-	glViewport(0, 0, screen_count.x, screen_count.y);
-	glClearColor(0, 0, 0, 1);
-	glClear(GL_COLOR_BUFFER_BIT);
+	if (!shader.isReady)
+		return;
+
+	// Always update vertices for rPi and GL-ES
+	this->UpdateVertexArray();
+
+	GLenum glerr;
 
 	shader.Use();
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
@@ -178,6 +204,10 @@ void A2WindowRGB::Render()
 	shader.SetUniform("memstart", memAux ? (int)(memStart + _A2_MEMORY_SHADOW_END) : (int)memStart);
 	// point the uniform at the Apple 2 memory texture
 	shader.SetUniform("APPLE2MEMORYTEX", _TEXUNIT_APPLE2MEMORY_R8UI - GL_TEXTURE0);
+	// add the border sizes
+	shader.SetUniform("borderTopLeft", glm::vec2(border_lr_pixels, border_tb_pixels));
+	shader.SetUniform("borderBottomRight", glm::vec2(screen_count.x - border_lr_pixels, screen_count.y - border_tb_pixels));
+	shader.SetUniform("borderColor", borderColor);
 	switch (videoMode) {
 		case A2VIDEORGB_TEXT:
 			shader.SetUniform("ticks", SDL_GetTicks());
@@ -219,6 +249,9 @@ void A2WindowRGB::Render()
 			shader.SetUniform("tileSize", glm::uvec2(14,2));
 			shader.SetUniform("isMixed", 0.f);			// don't use
 			break;
+		case A2VIDEORGB_DHGR160:
+			shader.SetUniform("isMixed", 0.f);			// don't use
+			break;
 		case A2VIDEORGB_SHR:
 			shader.SetUniform("tileSize", glm::uvec2(4, 2));
 			break;
@@ -232,11 +265,15 @@ void A2WindowRGB::Render()
 	glDrawArrays(GL_TRIANGLES, 0, (GLsizei)this->vertices.size());
 	glBindVertexArray(0);
 	glUseProgram(0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	if ((glerr = glGetError()) != GL_NO_ERROR) {
 		std::cerr << "A2WindowRGB render error: " << glerr << std::endl;
 	}
+
+	if (FBO != 0) {
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
 	return;
 }
 
@@ -245,6 +282,8 @@ void A2WindowRGB::DisplayImGuiWindow() {
 		return;
 	if (videoMode == A2VideoModeRGB_e::A2VIDEORGB_SHR)
 		ImGui::SetNextWindowSizeConstraints(ImVec2(_A2VIDEO_SHR_WIDTH/2, _A2VIDEO_SHR_HEIGHT/2 + 50), ImVec2(FLT_MAX, FLT_MAX));
+	else if (videoMode == A2VideoModeRGB_e::A2VIDEORGB_DHGR160)
+		ImGui::SetNextWindowSizeConstraints(ImVec2(640/2, _A2VIDEO_LEGACY_HEIGHT/2 + 50), ImVec2(FLT_MAX, FLT_MAX));
 	else
 		ImGui::SetNextWindowSizeConstraints(ImVec2(_A2VIDEO_LEGACY_WIDTH/2, _A2VIDEO_LEGACY_HEIGHT/2 + 50), ImVec2(FLT_MAX, FLT_MAX));
 	// Make each window title unique with the texture_id
@@ -255,7 +294,7 @@ void A2WindowRGB::DisplayImGuiWindow() {
 	_title += tex_str;
 	ImGui::Begin(_title.c_str(), &bImguiWindowIsOpen);
 	ImGui::PushItemWidth(100);
-	const char* videoType[] = { "TEXT", "LGR", "HGR", "DTEXT", "DLGR", "DHGR", "SHR"};
+	const char* videoType[] = { "TEXT", "LGR", "HGR", "DTEXT", "DLGR", "DHGR", "DHGR160", "SHR"};
 	int _currMode = static_cast<int>(videoMode);
 	if (ImGui::Combo("Renderer", &_currMode, videoType, IM_ARRAYSIZE(videoType)))
 	{
@@ -270,7 +309,7 @@ void A2WindowRGB::DisplayImGuiWindow() {
 		memStart = 0xFFFF;
 	if (memStart < 0)
 		memStart = 0;
-	doubleMode = ((_currMode > 2) && (_currMode < 6));
+	doubleMode = ((_currMode > A2VIDEORGB_HGR) && (_currMode < A2VIDEORGB_SHR));
 	if (doubleMode)
 	{
 		memAux = false;

@@ -1099,6 +1099,17 @@ void MainMenu::ShowSamplesMenu() {
 		MemoryLoadDHR("samples/extasie0_140mix.dhr");
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
+	if (ImGui::MenuItem("DHGR160")) {
+		Main_ResetA2SS();
+		memManager->SetSoftSwitch(A2SS_SHR, false);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_80COL, true);
+		memManager->SetSoftSwitch(A2SS_HIRES, true);
+		memManager->SetSoftSwitch(A2SS_DHGR, true);
+		a2VideoManager->bUseDHGR160 = true;
+		MemoryLoadDHR("samples/video7_160.dhr");
+		a2VideoManager->ForceBeamFullScreenRender();
+	}
 	if (ImGui::MenuItem("SHR+Legacy")) {
 		Main_ResetA2SS();
 		memManager->SetSoftSwitch(A2SS_SHR, true);
@@ -1169,17 +1180,12 @@ void MainMenu::ShowDeveloperMenu() {
 	ImGui::Separator();
 	ImGui::MenuItem("Soft Switches", "F9", &pGui->bShowSSWindow);
 	ImGui::MenuItem("Event Recorder", "", &pGui->bShowEventRecorderWindow);
-	if (ImGui::BeginMenu("Graphics Modes Windows")) {
-		ImGui::MenuItem("TEXT1", "", &a2VideoManager->bRenderTEXT1);
-		ImGui::MenuItem("TEXT2", "", &a2VideoManager->bRenderTEXT2);
-		ImGui::MenuItem("HGR1", "", &a2VideoManager->bRenderHGR1);
-		ImGui::MenuItem("HGR2", "", &a2VideoManager->bRenderHGR2);
-		ImGui::EndMenu();
-	}
 	if (ImGui::MenuItem("SHR Palette Viewer", ""))
 		pGui->bShowSHRPaletteWindow = true;
-	if (ImGui::MenuItem("RAM RGB Renderer", ""))
+	if (ImGui::MenuItem("RAM RGB Renderer", "")) {
 		a2VideoManager->CreateNewA2WindowRGB();
+		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	}
 	if (ImGui::BeginMenu("Save Memory to File")) {
 		std::string _sfpath = GetMemorySaveFilePath();
 		if (ImGui::MenuItem("LGR", ""))

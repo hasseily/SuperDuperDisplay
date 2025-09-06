@@ -43,6 +43,9 @@ uniform uint ticks;							// ms since start
 uniform COMPAT_PRECISION float hasFlashing;
 uniform COMPAT_PRECISION float isMixed;		// Are we in mixed mode?
 uniform COMPAT_PRECISION float isDouble;	// Are we in double res?
+uniform vec2 borderTopLeft;
+uniform vec2 borderBottomRight;
+uniform vec4 borderColor;
 
 // Mesh-level uniforms assigned in MosaicMesh
 uniform uvec2 tileSize;
@@ -53,13 +56,27 @@ uniform int memstart;			 // where to start in memory
 uniform vec4 colorTint;
 
 in vec2 vFragPos;       // The fragment position in pixels
-// in vec3 vColor;         // DEBUG color, a mix of all 3 vertex colors
-
 out vec4 fragColor;
+
+// determines if a point is inside a rect
+bool insideAARect_MinMax(vec2 p, vec2 mn, vec2 mx)
+{
+	// Inclusive edges; add a tiny epsilon to avoid precision glitches.
+	const float eps = 1e-6;
+	return all(greaterThanEqual(p + eps, mn)) &&
+	all(lessThanEqual   (p - eps, mx));
+}
 
 void main()
 {
-	if ((isMixed * vFragPos.y) >= float(tileSize.y * 20u))
+	if (!insideAARect_MinMax(vFragPos, borderTopLeft, borderBottomRight)) {
+		fragColor = borderColor;
+		return;
+	}
+
+	vec2 vPos = vFragPos - borderTopLeft;	// relative position inside the borders
+
+	if ((isMixed * vPos.y) >= float(tileSize.y * 20u))
 	{
 		// we're in mixed mode, the bottom 4 rows are transparent
 		fragColor = vec4(0.0);
@@ -68,7 +85,7 @@ void main()
 	
     // first figure out which mosaic tile this fragment is part of
         // Calculate the position of the fragment in tile intervals
-    vec2 fTileColRow = vFragPos / vec2(tileSize);
+    vec2 fTileColRow = vPos / vec2(tileSize);
         // Row and column number of the tile containing this fragment
     ivec2 tileColRow = ivec2(floor(fTileColRow));
 

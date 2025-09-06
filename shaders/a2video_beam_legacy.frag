@@ -21,13 +21,22 @@ This shader expects as input a VRAMTEX texture that has the following features:
 - 2x192 lines high, where the second part is unused unless interlace/paging is requested
 
 The flags byte (Color B) is:
-	bits 0-2: mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO, BORDER)
-	bit 3: ALT charset for TEXT
-	bits 4-7: BORDER color (like in the 2gs)
+	bits 0-2: 	mode (TEXT, DTEXT, LGR, DLGR, HGR, DHGR, DHGRMONO, DHGR160)
+	bit 3: 		1: BORDER, 0: CONTENT
+	bits 4-7: 	A2ESpecialMode_e legacy mode flags. They're not all useful to all modes
 
 The colors byte (Color A) is:
 	bits 0-3: background color
-	bits 4-7: foreground color
+	bits 4-7: foreground color (also BORDER color)
+
+ enum A2ESpecialMode_e
+ {
+ A2ESM_NONE 		= 0b0000'0000,
+ A2ESM_TEXTALT 		= 0b0001'0000,	// ALT charset for TEXT
+ A2ESM_HGRSPEC1		= 0b0001'0000,	// Mode that forces black in middle pixel of 11011 pattern in HGR
+ A2ESM_HGRSPEC2		= 0b0010'0000,	// Mode that forces white in middle pixel of 00100 pattern in HGR
+ A2ESM_DHGRCOL140M 	= 0b0001'0000,	// Mode that mixes 560 wide B/W alongside 140 wide DHGR color
+ };
 
 The shader goes through the following phases:
 - The fragment determines which VRAMTEX texel it's part of, including the x offset
@@ -67,17 +76,6 @@ uniform int pagingOffset;				// Y offset if paging
 uniform bool bForceSHRWidth;			// if on, stretch to SHR width. If off,
 uniform bool bIsMergedMode;				// if on, then only display lines that are legacy
 uniform sampler2D OFFSETTEX;			// X Offset texture for merged mode
-
-// Special modes mask for legacy only is
-// enum A2VideoSpecialMode_e
-// {
-// 		A2_VSM_NONE 			= 0b0000,
-// 		A2_VSM_DHGRCOL140Mixed 	= 0b0001,
-//		A2_VSM_HGRSPEC1			= 0b0010,
-//		A2_VSM_HGRSPEC2		 	= 0b0100,
-//		...
-// };
-uniform int specialModesMask;
 
 // Monitor color type
 // enum A2VideoMonitorType_e
@@ -216,6 +214,30 @@ void main()
 
 	// Extract the lower 3 bits to determine which mode to use
 	uint a2mode = targetTexel.b & 7u;	// 7 = 0b111 to mask lower 3 bits
+	// And get the upper 4 bits to determine if there are special modes
+	int specialModesMask = int(targetTexel.b >> 4);
+
+
+	// ================================= BEGIN BORDER MODE =================================
+	if ((a2mode != 7u)					// not DHGR160 where we need to recalculate borders
+		&& ((targetTexel.b & 8u) > 0u))	// 4th bit is the border flag
+	{
+		// Give to the //e the border features like the 2gs
+		// It just looks at the colors byte and grabs the border color in the upper 4 bits
+		fragColor = tintcolors[(targetTexel.a & 0xF0u) >> 4];
+
+		if (monitorColorType > 0)	// Monitor is monochrome
+		{
+			if (fragColor != tintcolors[0])
+				fragColor = monitorcolors[monitorColorType];
+			else							// black (dot is off)
+				fragColor = monitorcolors[0];
+			fragColor.a = 0.99; // To make the NTSC pass know it's mono
+		}
+		return;
+	}
+	// ================================= END BORDER MODE =================================
+
 
 	switch (a2mode) {
 		case 0u:	// TEXT
@@ -379,7 +401,7 @@ For each pixel, determine which memory byte it is part of,
 			// calculate the column offset in the color texture
 			int texXOffset = (int((byteValPrev & 0xE0u) << 2) | int((byteValNext & 0x03u) << 5)) + ((xCol - hborder) & 1) * 16;
 			
-			if ((specialModesMask & 0x6) > 0) // HGRSPEC1 or HGRSPEC2
+			if ((specialModesMask & 3) > 0) // HGRSPEC1 or HGRSPEC2
 			{
 				// The problem with the HGRSPEC modes is that we need to force some pixels
 				// to be black or white based on the bit patterns. Since we're using
@@ -399,7 +421,7 @@ For each pixel, determine which memory byte it is part of,
 				uint bankShift = targetTexel.r >> 7;	// color bit (bit 7)
 				uint fiveCenteredBits = (bitStream >> ((fragOffset.x-bankShift)/2u)) & 0x1Fu;
 				
-				if ((specialModesMask & 0x2) > 0)	// HGRSPEC1
+				if ((specialModesMask & 1) > 0)	// HGRSPEC1
 				{
 					// For SPEC1 mode, 11011 returns black
 					if (fiveCenteredBits == 0x1Bu)	// 11011
@@ -408,7 +430,7 @@ For each pixel, determine which memory byte it is part of,
 						return;
 					}
 				}
-				if ((specialModesMask & 0x4) > 0)// HGRSPEC2
+				if ((specialModesMask & 2) > 0)	// HGRSPEC2
 				{
 					// For SPEC2 mode, 00100 returns white
 					if (fiveCenteredBits == 0x4u)	// 00100
@@ -464,7 +486,7 @@ For each pixel, determine which memory byte it is part of,
 				byteVal4 = texelFetch(VRAMTEX, ivec2(xCol + 1, uFragPos.y / 2u), 0).g;
 			}
 			
-			if ((specialModesMask & 0x1) == 1) // bDHGRCOL140Mixed
+			if ((specialModesMask & 4) > 0) // DHGRCOL140M
 			{
 				// Implement COLOR140 MIXED mode
 				// High bit of the relevant byte of the dot determines if it's color or bw
@@ -510,7 +532,7 @@ For each pixel, determine which memory byte it is part of,
 					return;
 				}
 			}	// end bDHGRCOL140Mixed
-			
+
 			// Otherwise we're in color mode, same as standard DHGR
 			
 			// Calculate the column offset in the color texture
@@ -536,26 +558,44 @@ For each pixel, determine which memory byte it is part of,
 			return;
 			break;
 		}
-		case 7u:	// BORDER
+		case 7u:	// DHGR160
 		{
-			// Special border mode to give to the //e the border features like the 2gs
-			// It just looks at the flags byte and grabs the border color in the upper 4 bits
-			fragColor = tintcolors[(targetTexel.b & 0xF0u) >> 4];
-			/*
-				// The other option is to use the LGR texture colors
-				uint borderColor = targetTexel.b >> 4;
-				tintcolors[(targetTexel.a & 0xF0u) >> 4]
-				ivec2 textureSize2d = textureSize(a2ModesTex2,0);
+			// Implement DHGR160 mode that has a width of 640 dots (160 pixels)
+			// This is a Video7 RGB card DHGR mode utilizing all 8 bits for color
+			// 2 nibbles per byte give 2 pixels of 16 possible colors each
+			// Instead of 140 pixels width, this mode is 160 pixels wide.
+			// The Video7 card was using the asymmetrical Q3 clock, making the even
+			// and odd pixels be of different sizes but that's not implemented here, as
+			// that's never explained in the (sparse) docs, so it is a restriction that
+			// they would have liked to avoid.
 
-				// get the color from the LGR texture
-				uvec2 byteOrigin = uvec2(0u, borderColor * 16u);
-				fragColor = texture(a2ModesTex2,
-									(vec2(byteOrigin) + vec2(fragOffset) + vec2(0.5,0.5)) / vec2(textureSize2d));
-			*/
-			
+			// We must re-fetch the pixel because it is the wrong one due to the width difference
+			vFragUpdatedPos.x = (vFragUpdatedPos.x * (640.0/560.0));
+
+			uFragPos = uvec2(vFragUpdatedPos.x + xOffsetMerge, vFragUpdatedPos.y);
+			targetTexel = texelFetch(VRAMTEX, ivec2(uFragPos.x / 16u, uFragPos.y / 2u), 0).rgba;
+			fragOffset = uvec2(uFragPos.x % 16u, uFragPos.y % 16u);
+			a2mode = targetTexel.b & 7u;
+			// Now re-check if we're in BORDER or DHGR mode
+			if ((targetTexel.b & 8u) > 0u)	// whoops we're in the BORDER
+			{
+				fragColor = tintcolors[(targetTexel.a & 0xF0u) >> 4];
+			} else {			// DHGR160
+				uint xFragPos = uFragPos.x - uint(hborder * 16);
+				int pixelIndex = (int(xFragPos/4u) & 3);	// 4 pixels at a time
+				uint byteToUse = targetTexel.g;		// default the AUX byte
+				if (pixelIndex > 1)					// the 2 odd pixels
+					byteToUse = targetTexel.r;		// use the MAIN byte
+
+				if ((pixelIndex & 1) == 1)			// pixel is even
+					fragColor = tintcolors[byteToUse >> 4];
+				else
+					fragColor = tintcolors[byteToUse & 0xFu];
+			}
+
 			if (monitorColorType > 0)	// Monitor is monochrome
 			{
-				if (((targetTexel.b & 0xF0u) >> 4) > 0u)	// phosphor color (dot is on)
+				if (fragColor != tintcolors[0])
 					fragColor = monitorcolors[monitorColorType];
 				else							// black (dot is off)
 					fragColor = monitorcolors[0];

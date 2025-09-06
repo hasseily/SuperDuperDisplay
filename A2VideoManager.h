@@ -16,6 +16,30 @@
 #include "imgui.h"
 #include "imgui_memory_editor.h"
 
+/*
+ This class is the main renderer for SDD.
+ It uses exact cycles to generate the necessary video data for shaders to
+ render cycle-accurate video for both legacy and SHR, including a "merged mode"
+ where entrepreneurial programmers switch between legacy and SHR mid-frame.
+
+ Each cycle it updates the necessary "VRAM"s with the current state of the machine in
+ addition to the memory data, so that during VBLANK the shaders can generate the frame
+ precisely: each cycle's pixels are provided with a snapshot of the machine during that
+ cycle.
+
+ The rendering passes can be few or many, depending on the user or the machine's requirements:
+ - A legacy pass for normal Apple //e modes if they're used in this frame
+	- An NTSC pass on the legacy frame if requested by the user
+ - An SHR pass if it's used in this frame
+ - A VidHD text overlay pass for VidHD text modes
+
+ Also, legacy DHGR160 mode has an added twist that its width is 640px. Technically one could
+ switch modes in mid-frame to and from DHGR160, but the amount of cycles to do so prohibits
+ using HBLANK and so the whole thing would be a mess. Now some people like to create messes
+ via such switching (you know who you are) but those people should just stick to SHR/Legacy
+ mid-frame switching. Thank you for your understanding.
+*/
+
 enum class A2Mode_e
 {
 	NONE = 0,
@@ -135,10 +159,6 @@ public:
 		uint8_t* vram_legacy = nullptr;
 		uint8_t* vram_shr = nullptr;
 		uint8_t* vram_pal256 = nullptr;			// special vram for mode SHR4 PAL256. 2 bytes of color per byte of shr
-		uint8_t* vram_forced_text1 = nullptr;	// these force specific modes for debugging
-		uint8_t* vram_forced_text2 = nullptr;
-		uint8_t* vram_forced_hgr1 = nullptr;
-		uint8_t* vram_forced_hgr2 = nullptr;
 		GLfloat* offset_buffer = nullptr;
 		int frameSHRModes = 0;					// All SHR4 modes in the frame
 		int pagedMode = 0;			// DoubleMode_e : may use E0 (main) $2000-9FFF for interlace or page flip
@@ -176,18 +196,14 @@ public:
 	bool bUseHGRSPEC1 = false;
 	// And a HGR mode that forces the centered dot around 00100 to be white
 	bool bUseHGRSPEC2 = false;
-	
+	// And a DHGR mode that uses all 8 bits for 160x192 in 16 colors
+	bool bUseDHGR160 = false;
+
 	int eA2MonitorType = A2_MON_COLOR;
 
 	MemoryEditor mem_edit_vram_legacy;
 	MemoryEditor mem_edit_vram_shr;
 	MemoryEditor mem_edit_offset_buffer;
-	// Developer flags for specifically rendering certain legacy modes
-	// Those will be shown in ImGUI windows
-	bool bRenderTEXT1 = false;
-	bool bRenderTEXT2 = false;
-	bool bRenderHGR1 = false;
-	bool bRenderHGR2 = false;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Methods
@@ -222,10 +238,6 @@ public:
 	const uint8_t* GetSHRVRAMReadPtr() { return vrams_read->vram_shr; };
 	const uint8_t* GetSHRVRAMInterlacedReadPtr() { return vrams_read->vram_shr + GetVramSizeSHR() / _INTERLACE_MULTIPLIER; };
 	const uint8_t* GetPAL256VRAMReadPtr() { return vrams_read->vram_pal256; };
-	const uint8_t* GetTEXT1VRAMReadPtr() { return vrams_read->vram_forced_text1; };
-	const uint8_t* GetTEXT2VRAMReadPtr() { return vrams_read->vram_forced_text2; };
-	const uint8_t* GetHGR1VRAMReadPtr() { return vrams_read->vram_forced_hgr1; };
-	const uint8_t* GetHGR2VRAMReadPtr() { return vrams_read->vram_forced_hgr2; };
 	const GLfloat* GetOffsetBufferReadPtr() { return vrams_read->offset_buffer; };
 	uint8_t* GetLegacyVRAMWritePtr() { return vrams_write->vram_legacy; };
 	uint8_t* GetSHRVRAMWritePtr() { return vrams_write->vram_shr; };
@@ -348,11 +360,7 @@ private:
 	// and use the NTSC shader, into the FBO_A2Video
 	std::unique_ptr<BasicQuad> legacyNTSCQuad;
 
-	// for debugging, displaying cycle accurate textures TEXT1/2, HGR1/2
-	GLuint FBO_debug[4] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
-	GLuint debug_texture_id[4] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
-
-	// for debugging, displaying any memory chunk in any legacy mode (simple RGB only)
+	// for debugging, displaying any memory chunk in any mode (simple RGB only)
 	unsigned int APPLE2MEMORYTEX = UINT_MAX; // GL_R8UI tex holding Apple 2 memory
 	std::vector<A2WindowRGB>v_debug_rgb_windows;
 

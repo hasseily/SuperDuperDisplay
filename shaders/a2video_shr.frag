@@ -19,6 +19,10 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  Hence control bytes start at 0x100 of line 0x1F, and palettes at 0x200 of line 0x1F
  */
 
+uniform vec2 borderTopLeft;
+uniform vec2 borderBottomRight;
+uniform vec4 borderColor;
+
 uniform uvec2 tileSize;
 uniform usampler2D APPLE2MEMORYTEX; // Apple 2e's memory, starting at 0x2000 in AUX for SHR
 								 // Unsigned int sampler!
@@ -55,10 +59,26 @@ vec4 ConvertIIgs2RGB(uint gscolor)
 	return vec4(_red, _green, _blue, _alpha);
 }
 
+// determines if a point is inside a rect
+bool insideAARect_MinMax(vec2 p, vec2 mn, vec2 mx)
+{
+	// Inclusive edges; add a tiny epsilon to avoid precision glitches.
+	const float eps = 1e-6;
+	return all(greaterThanEqual(p + eps, mn)) &&
+	all(lessThanEqual   (p - eps, mx));
+}
+
 void main()
 {
+	if (!insideAARect_MinMax(vFragPos, borderTopLeft, borderBottomRight)) {
+		fragColor = borderColor;
+		return;
+	}
+
+	vec2 vPos = vFragPos - borderTopLeft;	// relative position inside the borders
+
 	// Grab Scanline Control Byte information
-	int scbByteOffset = memstart + 0x7D00 + ((int(vFragPos.y))/int(tileSize.y));
+	int scbByteOffset = memstart + 0x7D00 + ((int(vPos.y))/int(tileSize.y));
 	uint scb = texelFetch(APPLE2MEMORYTEX,ivec2(scbByteOffset % 1024, scbByteOffset / 1024), 0).r;
 	is640Mode = bool(scb & 0x80u);
 	isColorFill = bool(scb & 0x20u);
@@ -70,11 +90,11 @@ void main()
 	// If in 320 mode, there are only 2 pixels, duplicated
 	// If in 640 mode, there are 4 unique pixels
     // Reverse the fragment offset, it's cheaper when calculating the color
-	fragOffset.x = 3u - uint(int(vFragPos.x) % int(tileSize.x));
-	fragOffset.y = uint(int(vFragPos.y) % int(tileSize.y));
+	fragOffset.x = 3u - uint(int(vPos.x) % int(tileSize.x));
+	fragOffset.y = uint(int(vPos.y) % int(tileSize.y));
 	// Row and column number of the byte containing this fragment
-	ivec2 byteColRow = ivec2(vFragPos) / ivec2(tileSize);
-	
+	ivec2 byteColRow = ivec2(vPos) / ivec2(tileSize);
+
 	// Each line is 160 (0xA0) bytes
 	int byteOffset = memstart + byteColRow.y * 0xA0 + byteColRow.x;
 	uint byteVal = texelFetch(APPLE2MEMORYTEX, ivec2(byteOffset % 1024, byteOffset / 1024), 0).r;
@@ -113,7 +133,7 @@ void main()
             /*
 			// Needs to be colorfilled with the closest previous pixel color that isn't 0
 			// Start searching backward from the current position
-			for (int i = (int(vFragPos.x) - 1); i >= 0; --i)
+			for (int i = (int(vPos.x) - 1); i >= 0; --i)
 			{
 				fragOffset.x = 3u - uint(i % 4);
 				byteColRow.x = i / 4;

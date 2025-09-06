@@ -352,6 +352,7 @@ void Main_ResetA2SS() {
 	memManager->SetSoftSwitch(A2SS_DHGRMONO, false);
 	memManager->SetSoftSwitch(A2SS_GREYSCALE, false);
 	a2VideoManager->bUseDHGRCOL140Mixed = false;
+	a2VideoManager->bUseDHGR160 = false;
 	a2VideoManager->bUseHGRSPEC1 = false;
 	a2VideoManager->bUseHGRSPEC2 = false;
 	a2VideoManager->bDEMOMergedMode = false;

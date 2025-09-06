@@ -28,7 +28,6 @@ void A2WindowBeam::SetShaderPrograms(const char* shaderVertexPath, const char* s
 	this->shader.Build(shaderVertexPath, shaderFragmentPath);
 }
 
-
 uint32_t A2WindowBeam::GetWidth() const
 {
 	return screen_count.x;
@@ -43,15 +42,15 @@ void A2WindowBeam::SetBorder(uint32_t cycles_horizontal, uint32_t scanlines_vert
 {
 	border_width_cycles = cycles_horizontal;
 	border_height_scanlines = scanlines_vertical;
-	uint32_t cycles_h_with_border = 40 + (2 * border_width_cycles);
+	uint32_t cycles_h_with_border = _A2VIDEO_LEGACY_CYCLES_PER_LINE + (2 * border_width_cycles);
 	// Legacy is 14 dots per cycle, SHR is 16 dots per cycle
 	// Multiply border size by 4 and not 2 because height is doubled
 	switch (video_mode) {
 	case A2VIDEOBEAM_SHR:
-		screen_count = uXY({ cycles_h_with_border * 16 , 400 + (4 * border_height_scanlines) });
+		screen_count = uXY({ cycles_h_with_border * 16 , _A2VIDEO_SHR_HEIGHT + (4 * border_height_scanlines) });
 		break;
 	default:	//e
-		screen_count = uXY({ cycles_h_with_border * 14, 384 + (4 * border_height_scanlines) });
+		screen_count = uXY({ cycles_h_with_border * 14, _A2VIDEO_LEGACY_HEIGHT + (4 * border_height_scanlines) });
 		break;
 	}
 	UpdateVertexArray();
@@ -180,7 +179,7 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 					glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _COLORBYTESOFFSET + (cycles_w_with_border * 4),
 									(_A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines)) * (_hasDSHR4 + 1),
 									GL_RED_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetSHRVRAMReadPtr());
-					if ((specialModesMask & A2_VSM_SHR4PAL256) != 0)
+					if ((specialModesMask & A2SM_SHR4PAL256) != 0)
 					{
 						glActiveTexture(_TEXUNIT_PAL256BUFFER);
 						glBindTexture(GL_TEXTURE_2D, PAL256TEX);
@@ -190,18 +189,6 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 					}
 					glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				}
-				break;
-			case A2VIDEOBEAM_FORCED_TEXT1:
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 40, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetTEXT1VRAMReadPtr());
-				break;
-			case A2VIDEOBEAM_FORCED_TEXT2:
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 40, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetTEXT2VRAMReadPtr());
-				break;
-			case A2VIDEOBEAM_FORCED_HGR1:
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 40, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetHGR1VRAMReadPtr());
-				break;
-			case A2VIDEOBEAM_FORCED_HGR2:
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 40, 192, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetHGR2VRAMReadPtr());
 				break;
 			default:
 				int _hasDoubleSize = (pagingMode == DOUBLE_NONE ? 0 : 1);
@@ -231,18 +218,6 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				break;
 			}
-			case A2VIDEOBEAM_FORCED_TEXT1:
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetTEXT1VRAMReadPtr());
-				break;
-			case A2VIDEOBEAM_FORCED_TEXT2:
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetTEXT2VRAMReadPtr());
-				break;
-			case A2VIDEOBEAM_FORCED_HGR1:
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetHGR1VRAMReadPtr());
-				break;
-			case A2VIDEOBEAM_FORCED_HGR2:
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI, 40, 192, 0, GL_RGBA_INTEGER, GL_UNSIGNED_BYTE, A2VideoManager::GetInstance()->GetHGR2VRAMReadPtr());
-				break;
 			default:
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8UI,
 					cycles_w_with_border, (192 + (2 * border_height_scanlines))*_INTERLACE_MULTIPLIER,
@@ -259,7 +234,6 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 	shader.SetUniform("ticks", SDL_GetTicks());
 	shader.SetUniform("frameIsOdd", (int)(frame_idx & 1));
 	shader.SetUniform("bIsMergedMode", bIsMergedMode);
-	shader.SetUniform("specialModesMask", specialModesMask);
 	shader.SetUniform("monitorColorType", monitorColorType);
 	// The OFFSETTEX will only be used in case of merged SHR+legacy in the same frame
 	if (bIsMergedMode)	// point to the actual texture which is valid
@@ -280,6 +254,7 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 	// as well as any other unique mode data
 	if (video_mode == A2VIDEOBEAM_SHR)
 	{
+		shader.SetUniform("specialModesMask", specialModesMask);
 		shader.SetUniform("PAL256TEX", _TEXUNIT_PAL256BUFFER - GL_TEXTURE0);
 		shader.SetUniform("doubleSHR4Mode", doubleSHR4);
 		int _hasDSHR4 = (doubleSHR4 == DOUBLE_NONE ? 0 : 1);
@@ -287,7 +262,7 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 		shader.SetUniform("doubleSHR4YOffset", _dblshr4off);
 		int _dblpaloff = _hasDSHR4 * _A2VIDEO_SHR_SCANLINES;
 		shader.SetUniform("doublePal256YOffset", _dblpaloff);
-		if ((specialModesMask & A2_VSM_3200SHR) != 0)
+		if ((specialModesMask & A2SM_SHR3200) != 0)
 			shader.SetUniform("bReversePalIdx", true);
 		else
 			shader.SetUniform("bReversePalIdx", false);

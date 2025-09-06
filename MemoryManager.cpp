@@ -103,13 +103,14 @@ void MemoryManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, bool rw, bool 
 			// 11 : 560x192 monochrome
 			SetSoftSwitch(A2SS_DHGRMONO, false);
 			A2VideoManager::GetInstance()->bUseDHGRCOL140Mixed = false;
+			A2VideoManager::GetInstance()->bUseDHGR160 = false;
 			switch (flagsVideo7)
 			{
 			case 0b00:		// MIXED ON  80COL ON : 140x192
 				// Default
 				break;
 			case 0b01:		// MIXED OFF 80COL ON : 160x192
-				// TODO: NOT HANDLED
+				A2VideoManager::GetInstance()->bUseDHGR160 = true;
 				break;
 			case 0b10:		// MIX mode (ie. COL140Mixed mode) 140x192 + 560x192
 				// TODO: Hack. Don't force usage of A2VideoManager. Instead use another SS variable

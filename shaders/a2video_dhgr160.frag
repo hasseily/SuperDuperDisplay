@@ -9,17 +9,35 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 #endif
 
 /*
- DHGR shader
+ DHGR160 shader
  For each pixel, determine which memory byte it is part of,
  and save the x offset from the origin of the byte.
 
- There are 256 columns of 10 pixels in the DHGR texture. Acquiring the right data is a lot more complicated.
- It involves taking 20 bits out of 4 memory bytes, then shifting and grabbing different bytes for x and y
- in the texture. See UpdateDHiResCell() in RGBMonitor.cpp of the AppleWin codebase. Take 7 bits each of
- the 2 middle bytes and 3 bits each of the 2 end bytes for a total of 20 bits.
- 
+ The even bytes are from AUX, the odd bytes are from MAIN.
+ Each byte draws 2 pixels. Each pixel uses a nibble (4 bits)
+ to select 1 color from 16. Leftmost pixel is the high nibble.
+
  The Apple 2 memory passed in should start at 0x2000 in MAIN
  */
+
+const vec4 tintcolors[16] = vec4[16](
+	vec4(0.000000,	0.000000,	0.000000,	1.000000)	/*BLACK,*/
+	,vec4(0.674510,	0.070588,	0.298039,	1.000000)	/*DEEP_RED,*/
+	,vec4(0.000000,	0.027451,	0.513725,	1.000000)	/*DARK_BLUE,*/
+	,vec4(0.666667,	0.101961,	0.819608,	1.000000)	/*MAGENTA,*/
+	,vec4(0.000000,	0.513725,	0.184314,	1.000000)	/*DARK_GREEN,*/
+	,vec4(0.623529,	0.592157,	0.494118,	1.000000)	/*DARK_GRAY,*/
+	,vec4(0.000000,	0.541176,	0.709804,	1.000000)	/*BLUE,*/
+	,vec4(0.623529,	0.619608,	1.000000,	1.000000)	/*LIGHT_BLUE,*/
+	,vec4(0.478431,	0.372549,	0.000000,	1.000000)	/*BROWN,*/
+	,vec4(1.000000,	0.447059,	0.278431,	1.000000)	/*ORANGE,*/
+	,vec4(0.470588,	0.407843,	0.498039,	1.000000)	/*LIGHT_GRAY,*/
+	,vec4(1.000000,	0.478431,	0.811765,	1.000000)	/*PINK,*/
+	,vec4(0.435294,	0.901961,	0.172549,	1.000000)	/*GREEN,*/
+	,vec4(1.000000,	0.964706,	0.482353,	1.000000)	/*YELLOW,*/
+	,vec4(0.423529,	0.933333,	0.698039,	1.000000)	/*AQUA,*/
+	,vec4(1.000000,	1.000000,	1.000000,	1.000000)	/*WHITE,*/
+);
 
 // Apple 2 HGR row offsets in memory. The rows aren't contiguous in Apple 2 RAM.
 // They're interlaced because WOZ chip optimization.
@@ -58,13 +76,11 @@ uniform vec2 borderTopLeft;
 uniform vec2 borderBottomRight;
 uniform vec4 borderColor;
 
-// Mesh-level uniforms assigned in MosaicMesh
-uniform uvec2 tileSize;
 uniform usampler2D APPLE2MEMORYTEX; // Apple 2e's memory, starting at 0x2000 in MAIN for DHGR
 								 // Unsigned int sampler!
 uniform int memstart;			// where to start in memory
 
-in vec2 vFragPos;       	// The fragment position in pixels
+in vec2 vFragPos;       // The fragment position in pixels
 out vec4 fragColor;
 
 // determines if a point is inside a rect
@@ -72,8 +88,7 @@ bool insideAARect_MinMax(vec2 p, vec2 mn, vec2 mx)
 {
 	// Inclusive edges; add a tiny epsilon to avoid precision glitches.
 	const float eps = 1e-6;
-	return all(greaterThanEqual(p + eps, mn)) &&
-	all(lessThanEqual   (p - eps, mx));
+	return all(greaterThanEqual(p + eps, mn)) && all(lessThanEqual(p - eps, mx));
 }
 
 void main()
@@ -85,20 +100,19 @@ void main()
 
 	vec2 vPos = vFragPos - borderTopLeft;	// relative position inside the borders
 
-	if ((isMixed * vPos.y) >= float(tileSize.y * 160u))
+	if ((isMixed * vPos.y) >= float(2 * 160))
 	{
 		// we're in mixed mode, the bottom 4 rows of text (4*8=32 pixels) are transparent
 		fragColor = vec4(0.0);
 		return;
 	}
 	
-	// first figure out which mosaic tile (byte) this fragment is part of
-	// Calculate the position of the fragment in tile intervals
-	vec2 fTileColRow = vPos / vec2(tileSize);
+	// first figure out which byte this fragment is part of
+	// Calculate the position of the fragment in byte pair (aux+main) intervals
+	// 640x384 -> 40x192
+	vec2 fTileColRow = vPos / vec2(16,2);
 	// Row and column number of the tile containing this fragment
 	ivec2 tileColRow = ivec2(floor(fTileColRow));
-	// Fragment offset to tile origin, in pixels
-	vec2 fragOffset = ((fTileColRow - vec2(tileColRow)) * vec2(tileSize));
 	
 	// Next grab the data for that tile from the tilesBuffer
 	// No need to rescale values because we're using GL_R8UI
@@ -106,35 +120,17 @@ void main()
 	// In double mode, the even bytes are pulled from aux mem,
 	// and the odd bytes from main mem
 	int offset;
-	uint byteVal1 = 0u;
-	uint byteVal4 = 0u;
-	// The bytes from main: 1 and 3
+	uint byteVal = 0u;
 	offset = memstart + hgrRow[tileColRow.y] + tileColRow.x;
-	uint byteVal3 = texelFetch(APPLE2MEMORYTEX, ivec2(offset % 1024, offset / 1024), 0).r;
-	if (tileColRow.x > 0)	// Not at start of row, byteVal1 is valid
-	{
-		byteVal1 = texelFetch(APPLE2MEMORYTEX, ivec2((offset % 1024) - 1, offset / 1024), 0).r;
-	}
-	// The bytes from aux: 2 and 4
-	// _A2_MEMORY_SHADOW_END 0xC000
-	offset = offset + 0xC000;
-	uint byteVal2 = texelFetch(APPLE2MEMORYTEX, ivec2(offset % 1024, offset / 1024), 0).r;
-	if (tileColRow.x < 39)	// Not at end of row, byteVal4 is valid
-	{
-		byteVal4 = texelFetch(APPLE2MEMORYTEX, ivec2((offset % 1024) + 1, offset / 1024), 0).r;
-	}
-	
-	ivec2 textureSize2d = textureSize(a2ModeTexture,0);
-	
-	// Calculate the column offset in the texture
-	int wordVal = (int(byteVal1) & 0x70) | ((int(byteVal2) & 0x7F) << 7) |
-		((int(byteVal3) & 0x7F) << 14) | ((int(byteVal4) & 0x07) << 21);
-	int vColor = (tileColRow.x*14 + int(fragOffset.x)) & 3;
-	int vValue = (wordVal >> (4 + int(fragOffset.x) - vColor));
-	int xVal = 10 * ((vValue >> 8) & 0xFF) + vColor;
-	int yVal = vValue & 0xFF;
-	vec4 tex = texture(a2ModeTexture, (vec2(0.5, 0.5) + vec2(xVal, yVal)) / vec2(textureSize2d));
-	
-	fragColor = tex;
-	// fragColor = vec4(vColor, 1.f);   // for debugging
+	int pixelIndex = (int(vPos.x/4.0) & 3);	// 4 pixels at a time
+	if (pixelIndex < 2)	// AUX
+		offset = offset + 0xC000;	// _A2_MEMORY_SHADOW_END 0xC000
+	byteVal = texelFetch(APPLE2MEMORYTEX, ivec2(offset % 1024, offset / 1024), 0).r;
+
+	// Now we have a byte that has the color indexes for 2 pixels
+	if ((pixelIndex & 0x1) == 1)	// left pixel is high nibble
+		fragColor = tintcolors[byteVal >> 4];
+	else
+		fragColor = tintcolors[byteVal & 0xFu];
+
 }
