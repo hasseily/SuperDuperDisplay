@@ -1460,10 +1460,9 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 
 	// Update _TEXUNIT_APPLE2MEMORY_R8UI
 	// This is the apple 2's memory which is mapped to a "texture"
-	// It's used by any RGB renderer, right now the RGB debug windows
-	// and the DHGR160 renderer.
+	// It's used by any RGB renderer, which are right now the RGB debug windows.
 
-	if (!v_debug_rgb_windows.empty() || bUseDHGR160)
+	if (!v_debug_rgb_windows.empty())
 	{
 		// Update _TEXUNIT_APPLE2MEMORY_R8UI
 		// This is the apple 2's memory which is mapped to a "texture"

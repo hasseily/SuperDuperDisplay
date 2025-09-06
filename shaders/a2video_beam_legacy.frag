@@ -401,7 +401,7 @@ For each pixel, determine which memory byte it is part of,
 			// calculate the column offset in the color texture
 			int texXOffset = (int((byteValPrev & 0xE0u) << 2) | int((byteValNext & 0x03u) << 5)) + ((xCol - hborder) & 1) * 16;
 			
-			if ((specialModesMask & 3) > 0) // HGRSPEC1 or HGRSPEC2
+			if (specialModesMask > 0) // HGRSPEC1 or HGRSPEC2
 			{
 				// The problem with the HGRSPEC modes is that we need to force some pixels
 				// to be black or white based on the bit patterns. Since we're using
@@ -421,7 +421,7 @@ For each pixel, determine which memory byte it is part of,
 				uint bankShift = targetTexel.r >> 7;	// color bit (bit 7)
 				uint fiveCenteredBits = (bitStream >> ((fragOffset.x-bankShift)/2u)) & 0x1Fu;
 				
-				if ((specialModesMask & 1) > 0)	// HGRSPEC1
+				if (specialModesMask == 1)	// HGRSPEC1
 				{
 					// For SPEC1 mode, 11011 returns black
 					if (fiveCenteredBits == 0x1Bu)	// 11011
@@ -430,7 +430,7 @@ For each pixel, determine which memory byte it is part of,
 						return;
 					}
 				}
-				if ((specialModesMask & 2) > 0)	// HGRSPEC2
+				if (specialModesMask == 2)	// HGRSPEC2
 				{
 					// For SPEC2 mode, 00100 returns white
 					if (fiveCenteredBits == 0x4u)	// 00100
@@ -486,7 +486,7 @@ For each pixel, determine which memory byte it is part of,
 				byteVal4 = texelFetch(VRAMTEX, ivec2(xCol + 1, uFragPos.y / 2u), 0).g;
 			}
 			
-			if ((specialModesMask & 4) > 0) // DHGRCOL140M
+			if (specialModesMask == 1) // DHGRCOL140M
 			{
 				// Implement COLOR140 MIXED mode
 				// High bit of the relevant byte of the dot determines if it's color or bw
