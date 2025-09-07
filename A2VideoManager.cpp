@@ -1779,12 +1779,13 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 						this->ForceBeamFullScreenRender();
 					if (ImGui::DragFloat("NTSC Strength", &p_f_ntscStrength, .0001f, 0.00f, 1.f, "%.4f"))
 						this->ForceBeamFullScreenRender();
+					ImGui::SetItemTooltip("A working setup: Strength 0.2183 and postprocessing blur+glow+brightness\nAdjusting NTSC Gamma lower may also help");
 					if (ImGui::SliderFloat("NTSC Comb Strength", &p_f_ntscCombStrength, 0.f, 1.f, "%.2f"))
 						this->ForceBeamFullScreenRender();
 					ImGui::SetItemTooltip("0.8 for model 1, 0.9 for model 2");
 					if (ImGui::SliderFloat("NTSC Gamma Correction", &p_f_ntscGammaCorrection, 0.1f, 3.f, "%.1f"))
 						this->ForceBeamFullScreenRender();
-					ImGui::SetItemTooltip("Adjust to taste, 1.0 is neutral");
+					ImGui::SetItemTooltip("Adjust to taste, 1.0 is neutral, closer to 0.5 may emulate better old CRTs");
 				}
 			}
 
