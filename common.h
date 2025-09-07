@@ -2,7 +2,7 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#define SDD_VERSION "0.7.9 \"OK Ghost\""
+#define SDD_VERSION "0.8.0 \"Race Day\""
 
 #ifdef _DEBUG   // Visual Studio
 #define DEBUG
