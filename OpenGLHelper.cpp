@@ -158,7 +158,7 @@ const std::string* OpenGLHelper::get_glsl_version()
 void OpenGLHelper::load_texture(unsigned char* data, int width, int height, int nrComponents, GLuint textureID)
 {
 	GLenum glerr;
-	GLenum format = GL_SRGB8_ALPHA8;
+	GLenum format = GL_RGBA8;
 	if (nrComponents == 1)
 		format = GL_RED;
 

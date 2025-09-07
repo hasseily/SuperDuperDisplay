@@ -1777,7 +1777,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 					ImGui::SameLine();
 					if (ImGui::Checkbox("Clean Text", &p_b_ntscNoFilterMono))
 						this->ForceBeamFullScreenRender();
-					if (ImGui::SliderFloat("NTSC Strength", &p_f_ntscStrength, 0.05f, 1.f, "%.2f"))
+					if (ImGui::DragFloat("NTSC Strength", &p_f_ntscStrength, .0001f, 0.00f, 1.f, "%.4f"))
 						this->ForceBeamFullScreenRender();
 					if (ImGui::SliderFloat("NTSC Comb Strength", &p_f_ntscCombStrength, 0.f, 1.f, "%.2f"))
 						this->ForceBeamFullScreenRender();
