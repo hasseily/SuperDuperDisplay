@@ -467,23 +467,23 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 		@: Frame flip and start of next frame
 		&: Start next frame scanlines
 	 ||H|        |H||----------------------------------------------------------------------------|
-	 ||B|        |B||                                                                      		 |
-	 ||o|        |o||                                                                      		 |
+	 ||B|        |B||                                                                            |
+	 ||o|        |o||                                                                            |
 	 ||r| HBLANK |r||                                    Content                                 |
-	 ||d|        |d||                     CYCLES_SC_CONTENT x mode_scanlines                  	 |
-	 ||e|        |e||                                                                      		 |
-	 ||r|        |r||                                                                      		 |
-	 |		        |----------------------         Vertical border       -----------------------|
-	 |		        |--------------------------- (borders_h_scanlines) --------------------------|
-	 |@		        |............................. vertical blanking ............................|
-	 |		        |............................. vertical blanking ............................|
-	 |		        |............................. vertical blanking ............................|
-	 |		        |............................. vertical blanking ............................|
-	 |		        |............................. vertical blanking ............................|
-	 |		        |............................. vertical blanking ............................|
-	 |		        |............................. vertical blanking ............................|
+	 ||d|        |d||                     CYCLES_SC_CONTENT x mode_scanlines                     |
+	 ||e|        |e||                                                                            |
+	 ||r|        |r||                                                                            |
+	 |              |----------------------         Vertical border       -----------------------|
+	 |              |--------------------------- (borders_h_scanlines) --------------------------|
+	 |@             |............................. vertical blanking ............................|
+	 |              |............................. vertical blanking ............................|
+	 |              |............................. vertical blanking ............................|
+	 |              |............................. vertical blanking ............................|
+	 |              |............................. vertical blanking ............................|
+	 |              |............................. vertical blanking ............................|
+	 |              |............................. vertical blanking ............................|
 	 |&             |-----------------      Vertical border  (next frame)       -----------------|
-	 |		        |--------------------------- (borders_h_scanlines) --------------------------|
+	 |              |--------------------------- (borders_h_scanlines) --------------------------|
 
 	 In order to achieve a "correct" top, left, right, bottom border around the content, with
 	 the origin being at the start of the top border, we translate each border area's x & w
