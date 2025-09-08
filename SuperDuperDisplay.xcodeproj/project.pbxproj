@@ -53,6 +53,10 @@
 		BBD102112B829B7C00360B33 /* EventRecorder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */; };
 		BBE17D862C81CDCB008EF443 /* SSI263.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBE17D842C81CDCB008EF443 /* SSI263.cpp */; };
 		BBE45C122D477211008D10A9 /* VidHdWindowBeam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBE45C112D477211008D10A9 /* VidHdWindowBeam.cpp */; };
+		BBF2FDF92E6EF76100E0E8B1 /* SDL2_ttf.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BBF2FDF72E6EF76100E0E8B1 /* SDL2_ttf.framework */; };
+		BBF2FDFA2E6EF76100E0E8B1 /* SDL2_ttf.framework in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BBF2FDF72E6EF76100E0E8B1 /* SDL2_ttf.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		BBF2FDFB2E6EF76100E0E8B1 /* SDL2_image.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BBF2FDF82E6EF76100E0E8B1 /* SDL2_image.framework */; };
+		BBF2FDFC2E6EF76100E0E8B1 /* SDL2_image.framework in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BBF2FDF82E6EF76100E0E8B1 /* SDL2_image.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		BBF6D2C12C358F5000E85E1E /* SoundManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */; };
 		BBF6D2C82C35A1B900E85E1E /* recordings in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBF6D2C72C35A1AE00E85E1E /* recordings */; };
 		BBFA72372E634A3400605BA2 /* miniz.c in Sources */ = {isa = PBXBuildFile; fileRef = BBFA72362E634A3400605BA2 /* miniz.c */; };
@@ -80,6 +84,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
+				BBF2FDFC2E6EF76100E0E8B1 /* SDL2_image.framework in Embed Libraries */,
+				BBF2FDFA2E6EF76100E0E8B1 /* SDL2_ttf.framework in Embed Libraries */,
 				BB9F87252C4BEE920091F5C6 /* SDL2.framework in Embed Libraries */,
 			);
 			name = "Embed Libraries";
@@ -179,6 +185,8 @@
 		BBE17D852C81CDCB008EF443 /* SSI263.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSI263.h; sourceTree = "<group>"; };
 		BBE45C102D477211008D10A9 /* VidHdWindowBeam.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VidHdWindowBeam.h; sourceTree = "<group>"; };
 		BBE45C112D477211008D10A9 /* VidHdWindowBeam.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = VidHdWindowBeam.cpp; sourceTree = "<group>"; };
+		BBF2FDF72E6EF76100E0E8B1 /* SDL2_ttf.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2_ttf.framework; path = ../../../../../Library/Frameworks/SDL2_ttf.framework; sourceTree = "<group>"; };
+		BBF2FDF82E6EF76100E0E8B1 /* SDL2_image.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2_image.framework; path = ../../../../../Library/Frameworks/SDL2_image.framework; sourceTree = "<group>"; };
 		BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SoundManager.cpp; sourceTree = "<group>"; };
 		BBF6D2C02C358F5000E85E1E /* SoundManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SoundManager.h; sourceTree = "<group>"; };
 		BBF6D2C72C35A1AE00E85E1E /* recordings */ = {isa = PBXFileReference; lastKnownFileType = folder; path = recordings; sourceTree = "<group>"; };
@@ -195,10 +203,12 @@
 				BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */,
 				BBB525292B664A7D00A65C62 /* OpenGL.framework in Frameworks */,
 				BB044AC72CF382620002F6FA /* IOKit.framework in Frameworks */,
+				BBF2FDF92E6EF76100E0E8B1 /* SDL2_ttf.framework in Frameworks */,
 				BB044AC52CF381F80002F6FA /* CoreFoundation.framework in Frameworks */,
 				BBB5252B2B664A8F00A65C62 /* CoreVideo.framework in Frameworks */,
 				BB6BE3152CC3963B00901A03 /* libopencv_core.a in Frameworks */,
 				BB9F87242C4BEE920091F5C6 /* SDL2.framework in Frameworks */,
+				BBF2FDFB2E6EF76100E0E8B1 /* SDL2_image.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -319,6 +329,8 @@
 		BBB525272B664A7D00A65C62 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				BBF2FDF82E6EF76100E0E8B1 /* SDL2_image.framework */,
+				BBF2FDF72E6EF76100E0E8B1 /* SDL2_ttf.framework */,
 				BB044AC62CF382620002F6FA /* IOKit.framework */,
 				BB044AC42CF381F80002F6FA /* CoreFoundation.framework */,
 				BB044AC02CF37F8F0002F6FA /* libftd3xx-static.a */,
