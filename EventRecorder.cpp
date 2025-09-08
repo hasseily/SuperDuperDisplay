@@ -95,11 +95,31 @@ void EventRecorder::ReadRecordingFile(std::ifstream& file)
 	StopReplay();
 	ClearRecording();
 	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
-	// First read the ram snapshot interval
+	auto logTextManager = LogTextManager::GetInstance();
+	// ==== HEADER: version, total cycles, current cycle, snapshot interval, event vector size
+	// read the version
+	uint32_t _version = 1;
+	file.read(reinterpret_cast<char*>(&_version), sizeof(_version));
+	if (_version != 1)
+		logTextManager->AddLog("Unknown Recording File version!", glm::vec4(1.f, 0.f, 0.f, 1.f));
+	// read the total cycles
+	uint32_t _cyclesTotal = CYCLES_TOTAL_NTSC;
+	file.read(reinterpret_cast<char*>(&_cyclesTotal), sizeof(_cyclesTotal));
+	if (bIsPAL && _cyclesTotal == CYCLES_TOTAL_NTSC)
+		CycleCounter::GetInstance()->SetVideoRegion(VideoRegion_e::NTSC);
+	else if (!bIsPAL && _cyclesTotal == CYCLES_TOTAL_PAL)
+		CycleCounter::GetInstance()->SetVideoRegion(VideoRegion_e::PAL);
+	if (!(_cyclesTotal == CYCLES_TOTAL_NTSC || _cyclesTotal == CYCLES_TOTAL_PAL))
+		logTextManager->AddLog("Unknown Recording Video Region, reverting to NTSC", glm::vec4(1.f, 0.f, 0.f, 1.f));
+	// read the current cycle
+	uint32_t _cycleCurrent = 0;
+	file.read(reinterpret_cast<char*>(&_cycleCurrent), sizeof(_cycleCurrent));
+	// read the ram snapshot interval
 	file.read(reinterpret_cast<char*>(&m_current_snapshot_cycles), sizeof(m_current_snapshot_cycles));
-	// Next read the event vector size
+	// read the event vector size
 	size_t _size;
 	file.read(reinterpret_cast<char*>(&_size), sizeof(_size));
+	// ==== END HEADER
 	// Then all the RAM states
 	if (_size > 0)
 	{
