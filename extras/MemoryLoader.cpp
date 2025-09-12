@@ -155,7 +155,7 @@ bool MemoryLoadDGR(const std::string& filePath)
 		file.read(reinterpret_cast<char*>(pMem), 0x400);
 		pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x400;
 		file.read(reinterpret_cast<char*>(pMem), 0x400);
-		if (fileSize == 0x8000) {	// interlace or page flip
+		if (fileSize == 0x1000) {	// interlace or page flip
 			pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + 0x800;
 			file.read(reinterpret_cast<char*>(pMem), 0x400);
 			pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x800;
