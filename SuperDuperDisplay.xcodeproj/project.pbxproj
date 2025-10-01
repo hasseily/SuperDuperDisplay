@@ -16,14 +16,19 @@
 		BB3B32792E3778D700610E82 /* LogTextManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB3B32782E3778D400610E82 /* LogTextManager.cpp */; };
 		BB58F41D2E293B8E004D62FC /* TimedTextManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB58F41C2E293B8E004D62FC /* TimedTextManager.cpp */; };
 		BB6B2FDD2CD17D03008BC3F2 /* samples in CopyFiles */ = {isa = PBXBuildFile; fileRef = BB6B2FDC2CD17CD4008BC3F2 /* samples */; };
-		BB6BE3152CC3963B00901A03 /* libopencv_core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BB6BE3142CC395F000901A03 /* libopencv_core.a */; };
+		BB7FEE1D2E8D6CDD007CF9F4 /* libSDL2-2.0.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = BB7FEE1C2E8D6CDD007CF9F4 /* libSDL2-2.0.0.dylib */; };
+		BB7FEE1E2E8D6CDE007CF9F4 /* libSDL2-2.0.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BB7FEE1C2E8D6CDD007CF9F4 /* libSDL2-2.0.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		BB7FEE232E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = BB7FEE1F2E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib */; };
+		BB7FEE242E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BB7FEE1F2E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		BB7FEE272E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = BB7FEE212E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib */; };
+		BB7FEE282E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BB7FEE212E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		BB7FEE292E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = BB7FEE222E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib */; };
+		BB7FEE2A2E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BB7FEE222E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = BB96E3EA2B6650BA00A3077C /* libz.tbd */; };
 		BB96E3ED2B66513700A3077C /* imgui_demo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3EC2B66513700A3077C /* imgui_demo.cpp */; };
 		BB96E3F32B66515400A3077C /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3F22B66515400A3077C /* imgui_widgets.cpp */; };
 		BB96E3FD2B66525300A3077C /* shaders in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBB525002B6648A200A65C62 /* shaders */; };
 		BB96E4092B66544900A3077C /* scripts in CopyFiles */ = {isa = PBXBuildFile; fileRef = BB96E4082B66544900A3077C /* scripts */; };
-		BB9F87242C4BEE920091F5C6 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB9F87222C4BECEE0091F5C6 /* SDL2.framework */; };
-		BB9F87252C4BEE920091F5C6 /* SDL2.framework in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BB9F87222C4BECEE0091F5C6 /* SDL2.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		BB9F87282C4F09870091F5C6 /* MainMenu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB9F87262C4F09870091F5C6 /* MainMenu.cpp */; };
 		BBB238ED2B8DD3B200DFEE08 /* A2WindowBeam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */; };
 		BBB5251D2B6648A200A65C62 /* A2VideoManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525022B6648A200A65C62 /* A2VideoManager.cpp */; };
@@ -53,10 +58,6 @@
 		BBD102112B829B7C00360B33 /* EventRecorder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBD1020D2B829B7C00360B33 /* EventRecorder.cpp */; };
 		BBE17D862C81CDCB008EF443 /* SSI263.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBE17D842C81CDCB008EF443 /* SSI263.cpp */; };
 		BBE45C122D477211008D10A9 /* VidHdWindowBeam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBE45C112D477211008D10A9 /* VidHdWindowBeam.cpp */; };
-		BBF2FDF92E6EF76100E0E8B1 /* SDL2_ttf.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BBF2FDF72E6EF76100E0E8B1 /* SDL2_ttf.framework */; };
-		BBF2FDFA2E6EF76100E0E8B1 /* SDL2_ttf.framework in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BBF2FDF72E6EF76100E0E8B1 /* SDL2_ttf.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		BBF2FDFB2E6EF76100E0E8B1 /* SDL2_image.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BBF2FDF82E6EF76100E0E8B1 /* SDL2_image.framework */; };
-		BBF2FDFC2E6EF76100E0E8B1 /* SDL2_image.framework in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BBF2FDF82E6EF76100E0E8B1 /* SDL2_image.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		BBF6D2C12C358F5000E85E1E /* SoundManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */; };
 		BBF6D2C82C35A1B900E85E1E /* recordings in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBF6D2C72C35A1AE00E85E1E /* recordings */; };
 		BBFA72372E634A3400605BA2 /* miniz.c in Sources */ = {isa = PBXBuildFile; fileRef = BBFA72362E634A3400605BA2 /* miniz.c */; };
@@ -84,9 +85,10 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				BBF2FDFC2E6EF76100E0E8B1 /* SDL2_image.framework in Embed Libraries */,
-				BBF2FDFA2E6EF76100E0E8B1 /* SDL2_ttf.framework in Embed Libraries */,
-				BB9F87252C4BEE920091F5C6 /* SDL2.framework in Embed Libraries */,
+				BB7FEE242E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib in Embed Libraries */,
+				BB7FEE1E2E8D6CDE007CF9F4 /* libSDL2-2.0.0.dylib in Embed Libraries */,
+				BB7FEE282E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib in Embed Libraries */,
+				BB7FEE2A2E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib in Embed Libraries */,
 			);
 			name = "Embed Libraries";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -114,13 +116,15 @@
 		BB64A7D02C391D580044E05B /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		BB68B4C72C4248C400F96269 /* beeper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = beeper.h; sourceTree = "<group>"; };
 		BB6B2FDC2CD17CD4008BC3F2 /* samples */ = {isa = PBXFileReference; lastKnownFileType = folder; path = samples; sourceTree = "<group>"; };
-		BB6BE3142CC395F000901A03 /* libopencv_core.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopencv_core.a; path = ../../../../../opt/homebrew/Cellar/opencv/4.10.0_11/lib/libopencv_core.a; sourceTree = "<group>"; };
+		BB7FEE1C2E8D6CDD007CF9F4 /* libSDL2-2.0.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libSDL2-2.0.0.dylib"; path = "../../../../../opt/homebrew/Cellar/sdl2/2.32.10/lib/libSDL2-2.0.0.dylib"; sourceTree = "<group>"; };
+		BB7FEE1F2E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libSDL2_ttf-2.0.0.dylib"; path = "../../../../../opt/homebrew/Cellar/sdl2_ttf/2.24.0/lib/libSDL2_ttf-2.0.0.dylib"; sourceTree = "<group>"; };
+		BB7FEE212E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libopencv_core.4.12.0.dylib; path = ../../../../../opt/homebrew/Cellar/opencv/4.12.0_10/lib/libopencv_core.4.12.0.dylib; sourceTree = "<group>"; };
+		BB7FEE222E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libSDL2_image-2.0.0.dylib"; path = "../../../../../opt/homebrew/Cellar/sdl2_image/2.8.8/lib/libSDL2_image-2.0.0.dylib"; sourceTree = "<group>"; };
 		BB8330D62B6645B300071F38 /* SuperDuperDisplay */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SuperDuperDisplay; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB96E3EA2B6650BA00A3077C /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		BB96E3EC2B66513700A3077C /* imgui_demo.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_demo.cpp; path = imgui/imgui_demo.cpp; sourceTree = "<group>"; };
 		BB96E3F22B66515400A3077C /* imgui_widgets.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_widgets.cpp; path = imgui/imgui_widgets.cpp; sourceTree = "<group>"; };
 		BB96E4082B66544900A3077C /* scripts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = scripts; sourceTree = "<group>"; };
-		BB9F87222C4BECEE0091F5C6 /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2.framework; path = ../../../../../Library/Frameworks/SDL2.framework; sourceTree = "<group>"; };
 		BB9F87262C4F09870091F5C6 /* MainMenu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MainMenu.cpp; sourceTree = "<group>"; };
 		BB9F87272C4F09870091F5C6 /* MainMenu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MainMenu.h; sourceTree = "<group>"; };
 		BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = A2WindowBeam.cpp; sourceTree = "<group>"; };
@@ -185,8 +189,6 @@
 		BBE17D852C81CDCB008EF443 /* SSI263.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSI263.h; sourceTree = "<group>"; };
 		BBE45C102D477211008D10A9 /* VidHdWindowBeam.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VidHdWindowBeam.h; sourceTree = "<group>"; };
 		BBE45C112D477211008D10A9 /* VidHdWindowBeam.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = VidHdWindowBeam.cpp; sourceTree = "<group>"; };
-		BBF2FDF72E6EF76100E0E8B1 /* SDL2_ttf.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2_ttf.framework; path = ../../../../../Library/Frameworks/SDL2_ttf.framework; sourceTree = "<group>"; };
-		BBF2FDF82E6EF76100E0E8B1 /* SDL2_image.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2_image.framework; path = ../../../../../Library/Frameworks/SDL2_image.framework; sourceTree = "<group>"; };
 		BBF6D2BF2C358F5000E85E1E /* SoundManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SoundManager.cpp; sourceTree = "<group>"; };
 		BBF6D2C02C358F5000E85E1E /* SoundManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SoundManager.h; sourceTree = "<group>"; };
 		BBF6D2C72C35A1AE00E85E1E /* recordings */ = {isa = PBXFileReference; lastKnownFileType = folder; path = recordings; sourceTree = "<group>"; };
@@ -199,16 +201,16 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB7FEE272E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib in Frameworks */,
 				BB044AC12CF37F900002F6FA /* libftd3xx-static.a in Frameworks */,
+				BB7FEE292E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib in Frameworks */,
 				BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */,
+				BB7FEE1D2E8D6CDD007CF9F4 /* libSDL2-2.0.0.dylib in Frameworks */,
 				BBB525292B664A7D00A65C62 /* OpenGL.framework in Frameworks */,
 				BB044AC72CF382620002F6FA /* IOKit.framework in Frameworks */,
-				BBF2FDF92E6EF76100E0E8B1 /* SDL2_ttf.framework in Frameworks */,
+				BB7FEE232E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib in Frameworks */,
 				BB044AC52CF381F80002F6FA /* CoreFoundation.framework in Frameworks */,
 				BBB5252B2B664A8F00A65C62 /* CoreVideo.framework in Frameworks */,
-				BB6BE3152CC3963B00901A03 /* libopencv_core.a in Frameworks */,
-				BB9F87242C4BEE920091F5C6 /* SDL2.framework in Frameworks */,
-				BBF2FDFB2E6EF76100E0E8B1 /* SDL2_image.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -329,14 +331,14 @@
 		BBB525272B664A7D00A65C62 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				BBF2FDF82E6EF76100E0E8B1 /* SDL2_image.framework */,
-				BBF2FDF72E6EF76100E0E8B1 /* SDL2_ttf.framework */,
+				BB7FEE212E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib */,
+				BB7FEE222E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib */,
+				BB7FEE1F2E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib */,
+				BB7FEE1C2E8D6CDD007CF9F4 /* libSDL2-2.0.0.dylib */,
 				BB044AC62CF382620002F6FA /* IOKit.framework */,
 				BB044AC42CF381F80002F6FA /* CoreFoundation.framework */,
 				BB044AC02CF37F8F0002F6FA /* libftd3xx-static.a */,
-				BB6BE3142CC395F000901A03 /* libopencv_core.a */,
 				BB96E3EA2B6650BA00A3077C /* libz.tbd */,
-				BB9F87222C4BECEE0091F5C6 /* SDL2.framework */,
 				BBB5252A2B664A8F00A65C62 /* CoreVideo.framework */,
 				BBB525282B664A7D00A65C62 /* OpenGL.framework */,
 			);
@@ -581,10 +583,16 @@
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
+				HEADER_SEARCH_PATHS = /opt/homebrew/include;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/homebrew/lib,
 					"$(PROJECT_DIR)/lib/OSX",
+					/opt/homebrew/Cellar/sdl2/2.32.10/lib,
+					/opt/homebrew/Cellar/sdl2_ttf/2.24.0/lib,
+					"/opt/homebrew/Cellar/opencore-amr/0.1.6/lib",
+					/opt/homebrew/Cellar/opencv/4.12.0_10/lib,
+					/opt/homebrew/Cellar/sdl2_image/2.8.8/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -599,10 +607,16 @@
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
+				HEADER_SEARCH_PATHS = /opt/homebrew/include;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/homebrew/lib,
 					"$(PROJECT_DIR)/lib/OSX",
+					/opt/homebrew/Cellar/sdl2/2.32.10/lib,
+					/opt/homebrew/Cellar/sdl2_ttf/2.24.0/lib,
+					"/opt/homebrew/Cellar/opencore-amr/0.1.6/lib",
+					/opt/homebrew/Cellar/opencv/4.12.0_10/lib,
+					/opt/homebrew/Cellar/sdl2_image/2.8.8/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
