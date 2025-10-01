@@ -600,7 +600,7 @@ void MainMenu::Render() {
 		if (pGui->bShowLoadFileWindow)
 			A2VideoManager::GetInstance()->DisplayImGuiLoadFileWindow(&pGui->bShowLoadFileWindow);
 		if (pGui->bShowPPWindow)
-			PostProcessor::GetInstance()->DisplayImGuiWindow(&pGui->bShowPPWindow);
+			PostProcessor::GetInstance()->RenderImGuiWindow(&pGui->bShowPPWindow);
 		if (pGui->bShowEventRecorderWindow)
 			EventRecorder::GetInstance()->DisplayImGuiWindow(&pGui->bShowEventRecorderWindow);
 
@@ -935,7 +935,7 @@ void MainMenu::ShowSDDMenu() {
 		if (ImGui::RadioButton("Bottom Left##LogPosition", _ltm->logPosition == TTLogPosition_e::BOTTOM_LEFT))
 			_ltm->logPosition = TTLogPosition_e::BOTTOM_LEFT;
 		float logDurationSec = _ltm->logDurationMS / 1000.f;
-		if (ImGui::DragFloat("Log Display Speed", &logDurationSec, .1f, 0.1f, 100.f, "%.1f"))
+		if (ImGui::DragFloat("Display Time", &logDurationSec, .1f, 0.1f, 100.f, "%.1f"))
 			_ltm->logDurationMS = (uint32_t)(logDurationSec * 1000);
 		ImGui::PopItemWidth();
 		ImGui::EndMenu();

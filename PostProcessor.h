@@ -25,7 +25,7 @@ public:
 	~PostProcessor();
 
 	void Render(SDL_Window* window, GLuint inputTextureSlot, GLuint scanlineCount);
-	void DisplayImGuiWindow(bool* p_open);
+	void RenderImGuiWindow(bool* p_open);
 
 	nlohmann::json SerializeState();
 	void DeserializeState(const nlohmann::json &jsonState);
@@ -104,6 +104,7 @@ private:
 	std::string selectedBezelFile = _PP_NO_BEZEL_FILENAME;
 	int currentBezelIndex = 0;
 	glm::vec2 bezelSize = glm::vec2(1.0f, 1.0f);
+	glm::vec2 bezelCenter = glm::vec2(0.0f, 0.0f);
 
 	// Shader parameter variables
 	bool p_b_useOKlab = false;
