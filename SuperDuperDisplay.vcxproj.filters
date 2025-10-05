@@ -371,6 +371,9 @@
     <None Include="assets\bezels\Apple_Monitor_Only_Fun2.xcf">
       <Filter>assets\bezels</Filter>
     </None>
+    <None Include="shaders\basic_transform_color.vert">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="assets\Texture_composite_complete.png">

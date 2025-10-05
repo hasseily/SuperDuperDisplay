@@ -291,6 +291,7 @@ xcopy /y /d "$(ProjectDir)\lib\Win_x64\*.dll" "$(OutDir)"</Command>
     <None Include="shaders\a2video_text.frag" />
     <None Include="shaders\basic.frag" />
     <None Include="shaders\basic.vert" />
+    <None Include="shaders\basic_transform_color.vert" />
     <None Include="shaders\basic_with_transform.vert" />
     <None Include="shaders\ntsc_sik.frag" />
     <None Include="shaders\overlay_bezel.glsl" />
