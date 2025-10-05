@@ -70,8 +70,10 @@ static float fps_worst = 1000000.f;
 static uint64_t fps_frame_count = 0;
 static uint64_t fps_last_counter_display = 0;
 static char fps_str_buf[40];
-
-float fpsAverageTimeWindow = 1.f;	// in seconds
+float fpsAverageTimeWindow = 0.5f;	// in seconds
+TimedTextManager fpsTimedTextManager = TimedTextManager();
+size_t fpsTTId = UINT32_MAX;		// fps overlay text id
+float fps_color[4] = { 1.0f, 1.0f, 1.0f, 1.0f }; // RGBA
 
 // State booleans to determine what to do
 bool bDisplayFPSOnScreen = false;	// Show FPS on screen
@@ -179,29 +181,23 @@ void Main_DisplaySplashScreen()
 	A2VideoManager::GetInstance()->ForceBeamFullScreenRender(3);
 }
 
-void Main_DrawFPSOverlay()
-{
-	auto a2VideoManager = A2VideoManager::GetInstance();
-	if (bDisplayFPSOnScreen)
-	{
-		a2VideoManager->DrawOverlayString("AVERAGE FPS: ", 13, 0b11010010, 0, 0);
-		// a2VideoManager->DrawOverlayString("WORST FPS: ", 11, 0b11010010, 2, 1);
-	} else {
-		a2VideoManager->EraseOverlayRange(20, 0, 0);
-		// a2VideoManager->EraseOverlayRange(20, 0, 1);
-	}
-	a2VideoManager->ForceBeamFullScreenRender();
-}
-
 bool Main_IsFPSOverlay() {
 	return bDisplayFPSOnScreen;
 }
 
 void Main_SetFPSOverlay(bool isFPSOverlay) {
-	if (bDisplayFPSOnScreen != isFPSOverlay)
-	{
-		bDisplayFPSOnScreen = isFPSOverlay;
-		Main_DrawFPSOverlay();
+	bDisplayFPSOnScreen = isFPSOverlay;
+}
+
+void Main_GetFPSOverlayColor(float outColor[4]) {
+	for (int i = 0; i < 4; ++i) {
+		outColor[i] = fps_color[i];
+	}
+}
+
+void Main_SetFPSOverlayColor(const float newColor[4]) {
+	for (int i = 0; i < 4; ++i) {
+		fps_color[i] = newColor[i];
 	}
 }
 
@@ -527,6 +523,8 @@ int main(int argc, char* argv[])
 	[[maybe_unused]] auto mockingboardManager = MockingboardManager::GetInstance();
 	std::cout << "Loaded MockingboardManager " << mockingboardManager << std::endl;
 
+	fpsTimedTextManager.Initialize();
+
 	std::cout << "Renderer Initializing..." << std::endl;
 	while (!a2VideoManager->IsReady())
 	{
@@ -605,6 +603,11 @@ int main(int argc, char* argv[])
 					window_bgcolor[i] = _sm["window background color"][i].get<float>();
 				}
 			}
+			if (_sm.contains("fps text color") && _sm["fps text color"].is_array()) {
+				for (size_t i = 0; i < 4; ++i) {
+					fps_color[i] = _sm["fps text color"][i].get<float>();
+				}
+			}
 			// update the main window accordingly
 			SDL_Rect displayBounds;
 			if (SDL_GetDisplayBounds(_displayIndex, &displayBounds) == 0) {
@@ -630,9 +633,6 @@ int main(int argc, char* argv[])
 
 	// Load up the first screen in SHR, with green border color
 	Main_DisplaySplashScreen();
-
-	if (bDisplayFPSOnScreen)
-		Main_DrawFPSOverlay();
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
 	std::thread thread_server(usb_server_thread, &bShouldTerminateNetworking);
@@ -677,8 +677,6 @@ int main(int argc, char* argv[])
 			std::cerr << "Reset detected" << std::endl;
 			a2VideoManager->bShouldReboot = false;
 			a2VideoManager->ResetComputer();
-			if (bDisplayFPSOnScreen)
-				Main_DrawFPSOverlay();	// It is wiped by the reset
 		}
 		a2VideoManager->CheckSetBordersWithReinit();
 		bA2VideoDidRender = false;
@@ -882,6 +880,7 @@ int main(int argc, char* argv[])
 									 */
 								}
 								logTextManager->UpdateAndRender(true);
+								fpsTimedTextManager.UpdateAndRender(true);
 								SDL_GL_SwapWindow(window);
 								fps_frame_count++;
 							}
@@ -941,6 +940,7 @@ int main(int argc, char* argv[])
 					 */
 				}
 				logTextManager->UpdateAndRender(true);
+				fpsTimedTextManager.UpdateAndRender(true);
 				SDL_GL_SwapWindow(window);
 				fps_frame_count++;
 			}
@@ -1002,12 +1002,15 @@ int main(int argc, char* argv[])
 
 			if (bDisplayFPSOnScreen)
 			{
-				snprintf(fps_str_buf, 10,  "%.0f ", fps);
-				a2VideoManager->EraseOverlayRange(6, 13, 0);
-				a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b11010010, 13, 0);
-				// snprintf(fps_str_buf, 10, "%.0f ", fps_worst);
-				// a2VideoManager->EraseOverlayRange(6, 13, 1);
-				// a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b10010010, 13, 1);
+				snprintf(fps_str_buf, 30,  "AVERAGE FPS: %.0f ", fps);
+				fpsTimedTextManager.DeleteText(fpsTTId);
+				int _fpsww, _fpswh;
+				SDL_GetWindowSize(window, &_fpsww, &_fpswh);
+				fpsTTId = fpsTimedTextManager.AddText(fps_str_buf, _fpsww - 250, _fpswh - 18, 
+					UINT32_MAX, fps_color[0], fps_color[1], fps_color[2], fps_color[3]);
+			}
+			else {
+				fpsTimedTextManager.DeleteText(fpsTTId);
 			}
 			// Reset for next calculation
 			fps_frame_count = 0;
@@ -1062,6 +1065,7 @@ int main(int argc, char* argv[])
 			{"videoregion", (int)cycleCounter->GetVideoRegion()},
 			{"use PNG for screenshots", bUsePNGForScreenshots},
 			{"window background color", window_bgcolor},
+			{"fps text color", fps_color},
 			{"show F1 window", Main_IsImGuiOn()},
 			{"show Apple 2 Video window", show_a2video_window},
 			{"show Post Processor window", show_postprocessing_window},

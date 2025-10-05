@@ -39,6 +39,8 @@ extern bool Main_GetbUsePNGForScreenshots();
 extern void Main_SetbUsePNGForScreenshots(bool bUsePNG);
 extern void Main_GetBGColor(float outColor[4]);
 extern void Main_SetBGColor(const float newColor[4]);
+extern void Main_GetFPSOverlayColor(float outColor[4]);
+extern void Main_SetFPSOverlayColor(const float newColor[4]);
 extern void Main_ResetA2SS();
 extern bool Main_IsFPSOverlay();
 extern void Main_SetFPSOverlay(bool isFPSOverlay);
@@ -1002,6 +1004,14 @@ void MainMenu::ShowVideoMenu() {
 	if (ImGui::MenuItem("Reset FPS", "Shift+F8")) {
 		Main_ResetFPSCalculations();
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	}
+	if (ImGui::BeginMenu("FPS Text Color")) {
+		float fpsColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
+		Main_GetFPSOverlayColor(fpsColor);
+		if (ImGui::ColorEdit4("##fpsColor", fpsColor)) {
+			Main_SetFPSOverlayColor(fpsColor);
+		}
+		ImGui::EndMenu();
 	}
 	ImGui::Separator();
 	auto _bUsePNG = Main_GetbUsePNGForScreenshots();
