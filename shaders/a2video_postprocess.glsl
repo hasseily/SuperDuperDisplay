@@ -78,8 +78,8 @@ uniform bool bSLOT;
 uniform bool bVIGNETTE;
 uniform COMPAT_PRECISION float BARRELDISTORTION;
 uniform COMPAT_PRECISION float BGR;
-uniform COMPAT_PRECISION float BLACK; 
-uniform COMPAT_PRECISION float BR_DEP; 
+uniform COMPAT_PRECISION float BLACK;
+uniform COMPAT_PRECISION float BR_DEP;
 uniform COMPAT_PRECISION float BRIGHTNESS;
 uniform COMPAT_PRECISION float CONTRAST;
 uniform COMPAT_PRECISION float C_STR;
@@ -116,7 +116,11 @@ uniform COMPAT_PRECISION vec2 vZOOM;
 #define GAMMA 2.2
 
 // Color mapping
-// sRGB is automatic on the output framebuffers. The srgb converters are here for completion only
+// Basically:
+// - switch from sRGB to linear RGB whenever you sample a texture
+// - potentially move to OKLab for color changes
+// - switch back from linear RGB to sRGB for the final FragColor
+
 vec3 s2l(vec3 c) { // sRGB to linear
 	return mix(c/12.92, pow((max(c,0.0)+0.055)/1.055,vec3(2.4)), step(vec3(0.04045),c));
 }
@@ -169,7 +173,7 @@ vec3 oklab2l(vec3 lab) { // OkLab to linear
 vec4 HalveFrameRate(vec2 coords, vec4 currentColor)
 {
 	if ((iFrameCount & 1) == 1) {
-		vec3 previousColor = l2oklab(texture(PreviousFrame, coords).rgb);
+		vec3 previousColor = s2l(texture(PreviousFrame, coords).rgb);
 
 		// Perform the mix in linear/oklab space
 		vec3 linearMix = (currentColor.rgb + previousColor) * 0.5;
@@ -180,28 +184,31 @@ vec4 HalveFrameRate(vec2 coords, vec4 currentColor)
 }
 
 // Creates a ghosting effect by mixing in the previous frame
-// NOTE: currentColor must be in linear or oklab space already
+// NOTE: currentColor must be in linear space
 vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 {
 	float ghosting = GhostingPercent/100.0;
 	vec4 blended = vec4(0.0,0.0,0.0,0.0);
 	vec4 previousColor = texture(PreviousFrame, coords);
+	previousColor.rgb = s2l(previousColor.rgb);
 	// Calculate the intensity levels of both frames
 	if (bUseOKlab) {
 		previousColor.rgb = l2oklab(previousColor.rgb);
+		currentColor.rgb = l2oklab(currentColor.rgb);
 		if (currentColor.x > previousColor.x)	// move at a fast fixed speed towards higher intensity
 			blended = mix(currentColor, previousColor, 0.01);
 		else {	// going to lower intensity
-			// As we get closer to the color, at some point we need to accelerate the move.
-			// Otherwise at higher ghosting values the color will never be reached
-			// (especially visible when fading to black).
-			// Here as the colors get closer to each other, we use more of their distance
-			// to blend instead of the ghosting value. The closer they are, the faster they merge.
+				// As we get closer to the color, at some point we need to accelerate the move.
+				// Otherwise at higher ghosting values the color will never be reached
+				// (especially visible when fading to black).
+				// Here as the colors get closer to each other, we use more of their distance
+				// to blend instead of the ghosting value. The closer they are, the faster they merge.
 			float cdist = length (previousColor - currentColor);
 			float t = smoothstep(0.03, 0.05, cdist);
 			ghosting = mix(cdist, ghosting, t);
 			blended = mix(currentColor, previousColor, ghosting);
 		}
+		blended.rgb = oklab2l(blended.rgb);
 	} else {	// linear rgb code for the faster (but less precise) way
 		const vec3 lumWeights = vec3(0.2126, 0.7152, 0.0722);	// for linear rgb only!
 		float currentIntensity = dot(currentColor.rgb, lumWeights);
@@ -224,10 +231,12 @@ vec4 GenerateGhosting(vec2 coords, vec4 currentColor)
 // Use the LODs for the phosphor blur, which is much faster than sampling neighbor points
 // NOTE: expects and returns color in linear rgb space
 vec4 PhosphorBlur(sampler2D tex, vec2 uv, vec2 resolution, float blurAmount) {
-    vec4 color = textureLod(tex, uv, blurAmount * 4.0);
+	vec4 color = textureLod(tex, uv, blurAmount * 4.0);
+	color.rgb = s2l(color.rgb);
+
 	// To get a glowing style, we overlay the regular texture data at 30%
 	if (bBlurGlow)
-		color.rgb = mix(color.rgb, texture(tex, uv).rgb, 0.3);
+		color.rgb = mix(color.rgb, s2l(texture(tex, uv).rgb), 0.3);
 	return clamp(color, 0.0, 1.0);
 }
 
@@ -267,7 +276,7 @@ vec3 Mask(vec2 pos, float CGWG) {
 
 float roundCorners(vec2 p, vec2 b, float r)
 {
-    return length(max(abs(p)-b+r,0.0))-r;
+	return length(max(abs(p)-b+r,0.0))-r;
 }
 
 float scanlineWeights(float distance, vec3 color, float x) {
@@ -295,30 +304,30 @@ vec3 inv_gamma(vec3 col, vec3 power) {
 }
 
 // standard 6500k
-mat3 PAL = mat3 (					
-	1.0740 , -0.0574 , -0.0119 ,
-	0.0384 , 0.9699 , -0.0059 ,
-	-0.0079 , 0.0204 , 0.9884
-	);
+mat3 PAL = mat3 (
+				 1.0740 , -0.0574 , -0.0119 ,
+				 0.0384 , 0.9699 , -0.0059 ,
+				 -0.0079 , 0.0204 , 0.9884
+				 );
 
 // standard 6500k
-mat3 NTSC = mat3 (				 
-	0.9318 , 0.0412 , 0.0217 ,
-	0.0135 , 0.9711 , 0.0148 ,
-	0.0055 , -0.0143 , 1.0085
-	);
+mat3 NTSC = mat3 (
+				  0.9318 , 0.0412 , 0.0217 ,
+				  0.0135 , 0.9711 , 0.0148 ,
+				  0.0055 , -0.0143 , 1.0085
+				  );
 
 // standard 8500k
-mat3 NTSC_J = mat3 (					
-	0.9501 , -0.0431 , 0.0857 ,
-	0.0265 , 0.9278 , 0.0432 ,
-	0.0011 , -0.0206 , 1.3153
-	);
+mat3 NTSC_J = mat3 (
+					0.9501 , -0.0431 , 0.0857 ,
+					0.0265 , 0.9278 , 0.0432 ,
+					0.0011 , -0.0206 , 1.3153
+					);
 
 vec3 slot(vec2 pos) {
 	float h = fract(pos.x/SLOTW);
 	float v = fract(pos.y);
-	
+
 	float odd;
 	if (v<0.5)
 		odd = 0.0;
@@ -350,7 +359,7 @@ vec2 BarrelDistortion(vec2 uv) {
 	float delta2 = dot(delta.xy, delta.xy);
 	float delta4 = delta2 * delta2;
 	float delta_offset = delta4 * BARRELDISTORTION;
-	
+
 	vec2 warped = uv + delta * delta_offset;
 	return (warped - 0.5) / mix(1.0,1.2,BARRELDISTORTION/5.0) + 0.5;
 }
@@ -362,12 +371,12 @@ vec2 BarrelDistortion(vec2 uv) {
 
 float rand(vec2 co)
 {
-    float a = 12.9898;
-    float b = 78.233;
-    float c = 43758.5453;
-    float dt= dot(co.xy ,vec2(a,b));
-    float sn= mod(dt,3.14);
-    return fract(sin(sn) * c);
+	float a = 12.9898;
+	float b = 78.233;
+	float c = 43758.5453;
+	float dt= dot(co.xy ,vec2(a,b));
+	float sn= mod(dt,3.14);
+	return fract(sin(sn) * c);
 }
 
 void main() {
@@ -384,7 +393,7 @@ void main() {
 	}
 
 	vec2 q = (TexCoords.xy * TextureSize.xy / InputSize.xy);
-    vec2 uv = q;
+	vec2 uv = q;
 	float o =2.0*mod(fragCoord.y,2.0)/iResolution.x;
 
 	if (uv.x < 0.0 || uv.x > 1.0)
@@ -392,8 +401,8 @@ void main() {
 	if (uv.y < 0.0 || uv.y > 1.0)
 		discard;
 
-	
-// Apply simple horizontal scanline if required and exit
+
+	// Apply simple horizontal scanline if required and exit
 	if (POSTPROCESSING_LEVEL == 1) {
 		FragColor = texture(A2TextureCurrent, TexCoords);
 		FragColor.rgb = FragColor.rgb * (1.0 - mod(floor(TexCoords.y * TextureSize.y), 2.0));
@@ -411,28 +420,28 @@ void main() {
 
 	// Hue matrix inside main() to avoid GLES error
 	mat3 hue = mat3 (
-		1.0, RG, RB,
-		-RG, 1.0, GB,
-		-RB, -GB, 1.0
-		);
-	
-// Curvature on both axes
+					 1.0, RG, RB,
+					 -RG, 1.0, GB,
+					 -RB, -GB, 1.0
+					 );
+
+	// Curvature on both axes
 	vec2 pos = Warp(TexCoords);
 
-// If people prefer the BarrelDistortion algo
+	// If people prefer the BarrelDistortion algo
 	pos = BarrelDistortion(pos);
 
 	vec2 bpos = pos;
 	vec2 dx = vec2(ps.x,0.0);
-	
-// Quillez
+
+	// Quillez
 	vec2 ogl2 = pos*TextureSize.xy;
 	vec2 i = floor(pos*TextureSize.xy) + 0.5;
 	float f = ogl2.y - i.y;
 	pos.y = (i.y + 4.0*f*f*f)*ps.y; // smooth
 	pos.x = mix(pos.x, i.x*ps.x, 0.2);
 
-// Rounded corners
+	// Rounded corners
 	float corn = 1.0;
 	if (CORNER > 0.000001) {
 		vec2 halfRes = 0.5 * OutputSize.xy;
@@ -451,6 +460,7 @@ void main() {
 		res0 = PhosphorBlur(A2TextureCurrent, pos, TextureSize, BlurSize);
 	else {
 		res0 = texture(A2TextureCurrent,pos);
+		res0.rgb = s2l(res0.rgb);
 	}
 
 	res = res0.rgb;
@@ -496,25 +506,25 @@ void main() {
 
 		// film grain
 		res *= vec3(1.0) - FILM_GRAIN * vec3(
-					rand(pos + 0.0001 * fTime),
-					rand(pos + 0.0001 * fTime + 0.3),
-					rand(pos + 0.0001 * fTime + 0.5)
-				);
+											 rand(pos + 0.0001 * fTime),
+											 rand(pos + 0.0001 * fTime + 0.3),
+											 rand(pos + 0.0001 * fTime + 0.5)
+											 );
 	}
 
-// Masks
-	vec2 xy = TexCoords*OutputSize.xy/MSIZE;	
+	// Masks
+	vec2 xy = TexCoords*OutputSize.xy/MSIZE;
 	res *= Mask(xy, CGWG);
 
-// Apply slot mask on top of Trinitron-like mask
+	// Apply slot mask on top of Trinitron-like mask
 	if (bSLOT)
 		res *= mix(slot(xy/2.0),vec3(1.0),CGWG);
 
 	// Do bLack level always in linear RGB space, it's more precise
 	res = (res - vec3(BLACK)) / (1.0-BLACK);
 
-// =================================== Enter OKLab Color Space ===================================
-// Now convert to OKLab for color mods
+	// =================================== Enter OKLab Color Space ===================================
+	// Now convert to OKLab for color mods
 	res.rgb = l2oklab(res.rgb);
 
 	if (bUseOKlab) {
@@ -557,19 +567,13 @@ void main() {
 		// 4) Brightness
 		res *= BRIGHTNESS;
 	}
-	
+
 	FragColor = vec4(res, corn);
 
-	if (bHalveFrameRate)
-		FragColor = HalveFrameRate(TexCoords.xy, FragColor);
 
-	if (GhostingPercent > 0.0001) {
-		FragColor = GenerateGhosting(TexCoords.xy, FragColor);
-	}
-
-// revert back to linear rgb
+	// revert back to linear rgb
 	FragColor.rgb = oklab2l(FragColor.rgb);
-// =================================== Exit OKLab Color Space ===================================
+	// =================================== Exit OKLab Color Space ===================================
 
 	// Color Spaces
 	if (iCOLOR_SPACE != 0) {
@@ -585,6 +589,14 @@ void main() {
 		clr *= vec3(0.29,0.6,0.11);
 		FragColor.rgb = clr;
 	}
+
+	if (bHalveFrameRate)
+		FragColor = HalveFrameRate(TexCoords.xy, FragColor);
+
+	if (GhostingPercent > 0.0001) {
+		FragColor = GenerateGhosting(TexCoords.xy, FragColor);
+	}
+	FragColor.rgb = l2s(FragColor.rgb);
 
 }
 
