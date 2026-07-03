@@ -727,23 +727,6 @@ int main(int argc, char* argv[])
 						if (sdhrManager->IsSdhrEnabled())
 							sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
 					}
-					if (SDL_GetRelativeMouseMode()) {
-						usb_mouse_send_event(event);
-					}
-					break;
-				case SDL_MOUSEBUTTONDOWN:
-					if (SDL_GetRelativeMouseMode()) {
-						usb_mouse_send_event(event);
-					}
-					break;
-				case SDL_MOUSEBUTTONUP:
-					if (event.button.button == SDL_BUTTON_MIDDLE)
-					{
-						SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() == SDL_TRUE ? SDL_FALSE : SDL_TRUE);
-					}
-					if (SDL_GetRelativeMouseMode()) {
-						usb_mouse_send_event(event);
-					}
 					break;
 				case SDL_MOUSEWHEEL:
 					if (sdhrManager->IsSdhrEnabled())
@@ -756,9 +739,6 @@ int main(int argc, char* argv[])
 							Main_RequestAppQuit();
 							break;
 						}
-					}
-					else if (event.key.keysym.sym == SDLK_F5) {
-						SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() == SDL_TRUE ? SDL_FALSE : SDL_TRUE);
 					}
 					else if (event.key.keysym.sym == SDLK_F1) {  // Toggle ImGUI with F1
 						Main_SetImGui(gl_context, !Main_IsImGuiOn());

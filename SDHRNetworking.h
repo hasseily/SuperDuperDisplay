@@ -14,7 +14,7 @@
 #include <SDL.h>
 #include "common.h"
 
-#define PKT_BUFSZ 2048
+#define PKT_BUFSZ 16640
 
 #pragma pack(push, 1)
 
@@ -92,10 +92,5 @@ const std::string get_tini_last_error_string_async();	// Replaces async IO Pendi
 
 // Sends data to the tini via the register API
 uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* vData, bool setIncrement);
-
-// Mouse interface (temporary!)
-uint32_t usb_mouse_send_event(SDL_Event event);
-void usb_mouse_set_sensitivity(float s);
-float usb_mouse_get_sensitivity();
 
 void usb_display_imgui_window(bool* p_open);
