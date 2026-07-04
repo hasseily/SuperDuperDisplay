@@ -31,12 +31,9 @@ DEFINE_GUID(GUID_DEVINTERFACE_APPLETINI_SDD,
     0x9A, 0x64, 0x52, 0xAA, 0x35, 0xC1, 0x0B, 0x71);
 #endif
 
-// The FIFO interface ID is different than the pipe ids.
-// On Windows, the Read/WritePipe functions use pipe ids.
-// On linux/mac, they use FIFO ids.
-// The APIs are just different enough to be stupidly different.
-
 // Appletini SDD vendor device: single bulk pair on EP1.
+// (On Windows these are WinUSB pipe IDs; on macOS/Linux they are the
+// libusb endpoint addresses. Same values either way.)
 #define TINI_PIPE_WRITE 0x01
 #define TINI_PIPE_READ  0x81
 
@@ -621,20 +618,180 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 
 #else /* !__NETWORKING_WINDOWS__ */
 
-// TODO(libusb): port the WinUSB transport above to libusb-1.0 for
-// macOS/Linux. Until then the USB thread reports no device.
+// Native libusb-1.0 transport for the Appletini SDD vendor device
+// (macOS / Linux). Same semantics as the WinUSB path above: open by
+// VID/PID, claim the single vendor interface, 1 s read timeout
+// distinguishes "the Apple is off" from a dead device, and any real
+// transport error drops the handle and reconnects.
+//
+// Linux note: non-root access needs a udev rule -- see
+// 99-appletini-sdd.rules at the repo root.
+#include <libusb.h>
+
+#define TINI_USB_VID 0x1209
+#define TINI_USB_PID 0xA271
+
+static libusb_context *g_usbCtx = nullptr;
+static libusb_device_handle *g_tiniDev = nullptr;
+
+static void tini_close()
+{
+	if (g_tiniDev != nullptr) {
+		libusb_release_interface(g_tiniDev, 0);
+		libusb_close(g_tiniDev);
+		g_tiniDev = nullptr;
+	}
+	bIsConnected = false;
+}
+
+static bool tini_open()
+{
+	if (g_usbCtx == nullptr) {
+		if (libusb_init(&g_usbCtx) != 0)
+			return false;
+	}
+	g_tiniDev = libusb_open_device_with_vid_pid(g_usbCtx,
+		TINI_USB_VID, TINI_USB_PID);
+	if (g_tiniDev == nullptr)
+		return false;
+	// No kernel driver binds a vendor interface on Linux, but be safe;
+	// this is a no-op on macOS.
+	libusb_set_auto_detach_kernel_driver(g_tiniDev, 1);
+	if (libusb_claim_interface(g_tiniDev, 0) != 0) {
+		libusb_close(g_tiniDev);
+		g_tiniDev = nullptr;
+		return false;
+	}
+	activeDeviceName = "Appletini SDD Stream";
+	return true;
+}
+
+static bool tini_write(const uint8_t *buf, uint32_t len)
+{
+	int sent = 0;
+	if (g_tiniDev == nullptr)
+		return false;
+	int r = libusb_bulk_transfer(g_tiniDev, TINI_PIPE_WRITE,
+		const_cast<uint8_t *>(buf), (int)len, &sent, 1000);
+	return (r == 0) && (sent == (int)len);
+}
+
 int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 {
 	eventRecorder = EventRecorder::GetInstance();
 	clear_queues();
+	std::cout << "Starting USB thread (Appletini native libusb)" << std::endl;
+	ftStatusPrevious = 0xFFFF;
 	bIsConnected = false;
-	ftStatus = TINI_ERR_NODEV;
+	std::chrono::steady_clock::time_point next_connect_timeout{};
+
 	while (!(*shouldTerminateNetworking))
-		SDL_Delay(500);
+	{
+		if (!bIsConnected)
+		{
+			if (next_connect_timeout > std::chrono::steady_clock::now())
+			{
+				SDL_Delay(200);
+				continue;
+			}
+			next_connect_timeout = std::chrono::steady_clock::now() + std::chrono::milliseconds(1000);
+
+			activeDeviceName = "NO DEVICE";
+			if (!tini_open())
+			{
+				ftStatus = TINI_ERR_NODEV;
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "No Appletini SDD device found" << std::endl;
+				ftStatusPrevious = ftStatus;
+				continue;
+			}
+
+			std::cerr << "Connected to Appletini SDD device" << std::endl;
+			ftStatus = TINI_ERR_OK;
+			bIsConnected = true;
+
+			// set the no slot clock time
+			time_t tt = time(NULL);
+			struct tm time_val;
+			localtime_r(&tt, &time_val);
+			uint32_t set_time_buf[4];
+			set_time_buf[0] = 0x80000002; // incr set, 2 data fields;
+			set_time_buf[1] = 0x00000014; // address of time set location
+			uint8_t* tp = (uint8_t*)(&set_time_buf[2]);
+			*tp++ = 0;
+			*tp++ = ((time_val.tm_sec / 10) << 4) + (time_val.tm_sec % 10);
+			*tp++ = ((time_val.tm_min / 10) << 4) + (time_val.tm_min % 10);
+			*tp++ = ((time_val.tm_hour / 10) << 4) + (time_val.tm_hour % 10);
+			*tp++ = (((time_val.tm_wday + 1) / 10) << 4) + ((time_val.tm_wday + 1) % 10);
+			*tp++ = ((time_val.tm_mday / 10) << 4) + (time_val.tm_mday % 10);
+			*tp++ = (((time_val.tm_mon + 1) / 10) << 4) + (time_val.tm_mon % 10);
+			*tp++ = (((time_val.tm_year % 100) / 10) << 4) + ((time_val.tm_year % 100) % 10);
+			printf("Setting time... ");
+			if (!tini_write((uint8_t *)set_time_buf, 16))
+				std::cerr << "failed!" << std::endl;
+			else
+				std::cerr << "done!" << std::endl;
+
+			bRequestEnableBusEvents.store(true, std::memory_order_release);
+		}
+
+		// enable bus events when necessary
+		if (bRequestEnableBusEvents.load(std::memory_order_acquire)) {
+			std::cerr << "Enabling Appletini bus events... ";
+			uint32_t enable_msg_buf[3];
+			enable_msg_buf[0] = 0x00000001; // 1 data field
+			enable_msg_buf[1] = 0x00001000; // address of bus_event_control
+			enable_msg_buf[2] = 0x00000001; // bit 0 indicates enable bus events
+			if (!tini_write((uint8_t *)enable_msg_buf, 12))
+				std::cerr << "failed!" << std::endl;
+			else
+				std::cerr << "done!" << std::endl;
+			bRequestEnableBusEvents.store(false, std::memory_order_release); // reset
+		}
+
+		auto packet = packetFreeQueue.pop();
+		int got = 0;
+		int r = libusb_bulk_transfer(g_tiniDev, TINI_PIPE_READ,
+			packet->data, PKT_BUFSZ, &got, 1000);
+		packet->size = (uint32_t)got;
+
+		if ((r != 0) && (got <= 0))
+		{
+			if (r == LIBUSB_ERROR_TIMEOUT)
+			{
+				// The Apple is off / no events flowing. Stay connected.
+				ftStatus = TINI_ERR_TIMEOUT;
+			}
+			else
+			{
+				// Real transport failure (device rebooted, personality
+				// switched, unplugged): drop the handle and reconnect.
+				ftStatus = TINI_ERR_IO;
+				if (ftStatus != ftStatusPrevious)
+					std::cerr << "Appletini read failed ("
+						  << libusb_error_name(r)
+						  << "), reconnecting" << std::endl;
+				ftStatusPrevious = ftStatus;
+				tini_close();
+			}
+			packetFreeQueue.push(std::move(packet));
+			continue;
+		}
+		ftStatus = TINI_ERR_OK;
+
+		if (!eventRecorder->IsInReplayMode() && packet->size > 0)
+		{
+			packetInQueue.push(std::move(packet));
+		}
+		else
+		{
+			packetFreeQueue.push(std::move(packet));
+		}
+	}
+	std::cout << "ending usb read loop" << std::endl;
+	tini_close();
 	return 0;
 }
-
-static bool tini_write(const uint8_t *, uint32_t) { return false; }
 
 #endif /* __NETWORKING_WINDOWS__ */
 
