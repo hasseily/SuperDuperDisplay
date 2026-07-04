@@ -16,9 +16,10 @@
 #   pacman -S mingw-w64-ucrt-x86_64-SDL2
 #   pacman -S mingw-w64-ucrt-x86_64-zlib
 #
-# You will also need, for all platforms, the FTDI USB drivers
-# They can be downloaded at: https://ftdichip.com/drivers/d3xx-drivers/
-# Read the documentation for installation
+# You will also need, for all platforms, libusb-1.0:
+#   Linux:  apt-get install libusb-1.0-0-dev
+#   Mac OS X: brew install libusb
+#   MSYS2:  pacman -S mingw-w64-ucrt-x86_64-libusb
 #
 
 #CXX = g++
@@ -73,7 +74,7 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
 	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `/opt/homebrew/bin/sdl2-config --libs` -lz
 	LIBS += -framework CoreFoundation `pkg-config --libs libusb-1.0`
-	LIBS += -L/usr/local/lib -L/opt/homebrew/lib -Llib/OSX
+	LIBS += -L/usr/local/lib -L/opt/homebrew/lib
 
 	CXXFLAGS += `/opt/homebrew/bin/sdl2-config --cflags`
 	CXXFLAGS += `pkg-config --cflags libusb-1.0`
