@@ -126,6 +126,9 @@
     <ClCompile Include="A2WindowRGB.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="AppletiniUartTerminal.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
     <ClCompile Include="TimedTextManager.cpp">
       <Filter>sources</Filter>
     </ClCompile>
@@ -258,6 +261,9 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="A2WindowRGB.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="AppletiniUartTerminal.h">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="TimedTextManager.h">

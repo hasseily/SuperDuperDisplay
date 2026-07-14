@@ -16,6 +16,7 @@
 #include "EventRecorder.h"
 #include "SDHRManager.h"
 #include "SDHRNetworking.h"
+#include "AppletiniUartTerminal.h"
 #include "extras/MemoryLoader.h"
 #include "extras/ImGuiFileDialog.h"
 
@@ -86,6 +87,7 @@ public:
 	bool bShowImGuiMetricsWindow = false;
 	bool bShowMemoryHeatMap = false;
 	bool bShowUSBImGuiWindow = false;
+	bool bShowUartWindow = false;
 	bool bShowSHRPaletteWindow = false;
 	bool bSampleRunKarateka = false;
 
@@ -761,6 +763,9 @@ void MainMenu::Render() {
 
 		if (pGui->bShowUSBImGuiWindow)
 			usb_display_imgui_window(&pGui->bShowUSBImGuiWindow);
+
+		if (pGui->bShowUartWindow)
+			appletini_uart_terminal_imgui_window(&pGui->bShowUartWindow);
 	}
 	
 	ImGui::Render();
@@ -913,6 +918,8 @@ void MainMenu::ShowSDDMenu() {
 			ImGui::Text("%s", "No data (Apple 2 is off?)");
 		else
 			ImGui::Text("%s", get_tini_last_error_string_async().c_str());
+		ImGui::Separator();
+		ImGui::MenuItem("UARTs", "", &pGui->bShowUartWindow);
 		ImGui::EndMenu();
 	}
 	ImGui::Separator();
@@ -1251,6 +1258,7 @@ void MainMenu::ShowDeveloperMenu() {
 	}
 	ImGui::Separator();
 	ImGui::MenuItem("Appletini Communications", "", &pGui->bShowUSBImGuiWindow);
+	ImGui::MenuItem("Appletini UARTs", "", &pGui->bShowUartWindow);
 	ImGui::Separator();
 	ImGui::MenuItem("ImGui Metrics Window", "", &pGui->bShowImGuiMetricsWindow);
 }

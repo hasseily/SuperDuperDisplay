@@ -39,6 +39,7 @@
 #include "PostProcessor.h"
 #include "EventRecorder.h"
 #include "MainMenu.h"
+#include "AppletiniUartTerminal.h"
 
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
 #include <unistd.h>
@@ -567,6 +568,9 @@ int main(int argc, char* argv[])
 		if (settingsState.contains("Log")) {
 			logTextManager->DeserializeState(settingsState["Log"]);
 		}
+		if (settingsState.contains("Appletini UART")) {
+			appletini_uart_terminal_deserialize(settingsState["Appletini UART"]);
+		}
 		if (settingsState.contains("Main")) {
 			SDL_GetWindowPosition(window, &g_wx, &g_wy);
 			SDL_GetWindowSize(window, &g_ww, &g_wh);
@@ -1030,6 +1034,7 @@ int main(int argc, char* argv[])
 		settingsState["Sound"] = soundManager->SerializeState();
 		settingsState["Mockingboard"] = mockingboardManager->SerializeState();
 		settingsState["Log"] = logTextManager->SerializeState();
+		settingsState["Appletini UART"] = appletini_uart_terminal_serialize();
 		settingsState["Main"] = {
 			{"display index", SDL_GetWindowDisplayIndex(window)},
 			{"window x", _wx},

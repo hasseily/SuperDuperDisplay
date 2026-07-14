@@ -181,6 +181,7 @@
   <ItemGroup>
     <ClCompile Include="A2WindowBeam.cpp" />
     <ClCompile Include="A2WindowRGB.cpp" />
+    <ClCompile Include="AppletiniUartTerminal.cpp" />
     <ClCompile Include="Ayumi.cpp" />
     <ClCompile Include="BasicQuad.cpp" />
     <ClCompile Include="CycleCounter.cpp" />
@@ -218,6 +219,7 @@
     <ClInclude Include="A2VideoManager.h" />
     <ClInclude Include="A2WindowBeam.h" />
     <ClInclude Include="A2WindowRGB.h" />
+    <ClInclude Include="AppletiniUartTerminal.h" />
     <ClInclude Include="Ayumi.h" />
     <ClInclude Include="BasicQuad.h" />
     <ClInclude Include="beeper.h" />

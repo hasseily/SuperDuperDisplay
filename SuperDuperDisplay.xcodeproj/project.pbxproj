@@ -12,6 +12,7 @@
 		BB01620B2B83643D00A3D503 /* assets in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBD102132B829BAE00360B33 /* assets */; };
 		BB044AC52CF381F80002F6FA /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC42CF381F80002F6FA /* CoreFoundation.framework */; };
 		BB044AC72CF382620002F6FA /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC62CF382620002F6FA /* IOKit.framework */; };
+		BB21A0012ECBD10000A10001 /* AppletiniUartTerminal.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB21A0002ECBD10000A10001 /* AppletiniUartTerminal.cpp */; };
 		BB3B32792E3778D700610E82 /* LogTextManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB3B32782E3778D400610E82 /* LogTextManager.cpp */; };
 		BB58F41D2E293B8E004D62FC /* TimedTextManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB58F41C2E293B8E004D62FC /* TimedTextManager.cpp */; };
 		BB6B2FDD2CD17D03008BC3F2 /* samples in CopyFiles */ = {isa = PBXBuildFile; fileRef = BB6B2FDC2CD17CD4008BC3F2 /* samples */; };
@@ -104,6 +105,8 @@
 		BB044AC42CF381F80002F6FA /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		BB044AC62CF382620002F6FA /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		BB0E58192C7B2E8600B44B58 /* SSI263Phonemes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSI263Phonemes.h; sourceTree = "<group>"; };
+		BB21A0002ECBD10000A10001 /* AppletiniUartTerminal.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppletiniUartTerminal.cpp; sourceTree = "<group>"; };
+		BB21A0022ECBD10000A10001 /* AppletiniUartTerminal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppletiniUartTerminal.h; sourceTree = "<group>"; };
 		BB3B32772E3778C800610E82 /* LogTextManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LogTextManager.h; sourceTree = "<group>"; };
 		BB3B32782E3778D400610E82 /* LogTextManager.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LogTextManager.cpp; sourceTree = "<group>"; };
 		BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MemoryLoader.h; path = extras/MemoryLoader.h; sourceTree = "<group>"; };
@@ -253,6 +256,8 @@
 				BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */,
 				BBBB65172E07022C00762387 /* A2WindowRGB.h */,
 				BBBB65182E07022C00762387 /* A2WindowRGB.cpp */,
+				BB21A0022ECBD10000A10001 /* AppletiniUartTerminal.h */,
+				BB21A0002ECBD10000A10001 /* AppletiniUartTerminal.cpp */,
 				BBD102132B829BAE00360B33 /* assets */,
 				BB006F512C3C2E49008BFFAF /* Ayumi.h */,
 				BB006F4F2C3C2E49008BFFAF /* Ayumi.cpp */,
@@ -420,6 +425,7 @@
 				BBB525202B6648A200A65C62 /* MosaicMesh.cpp in Sources */,
 				BBB525232B6648A200A65C62 /* main.cpp in Sources */,
 				BBBB65192E07022C00762387 /* A2WindowRGB.cpp in Sources */,
+				BB21A0012ECBD10000A10001 /* AppletiniUartTerminal.cpp in Sources */,
 				BBB5251D2B6648A200A65C62 /* A2VideoManager.cpp in Sources */,
 				BBB5251F2B6648A200A65C62 /* SDHRManager.cpp in Sources */,
 				BBB525242B6648A200A65C62 /* SDHRNetworking.cpp in Sources */,
