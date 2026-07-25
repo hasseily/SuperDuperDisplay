@@ -251,7 +251,6 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 			GL_DYNAMIC_DRAW);
 		GLsizei count = GLsizei(verts.size() / 8);
 		glDrawArrays(GL_TRIANGLES, 0, count);
-		std::cerr << "tris: " << count << std::endl;
 	}
 	verts.clear();
 

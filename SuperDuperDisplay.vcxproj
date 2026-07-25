@@ -270,7 +270,6 @@
     <None Include="assets\bezels\Apple_Monitor_Only_Fun.xcf" />
     <None Include="assets\bezels\Apple_Monitor_Only_Fun2.xcf" />
     <None Include="assets\help.ini" />
-    <None Include="assets\logo.shr" />
     <None Include="imgui\imgui\misc\debuggers\imgui.natstepfilter" />
     <None Include="imgui\imgui\misc\debuggers\imgui.natvis" />
     <None Include="Makefile" />
@@ -293,6 +292,7 @@
     <None Include="shaders\basic_with_transform.vert" />
     <None Include="shaders\ntsc_sik.frag" />
     <None Include="shaders\overlay_bezel.glsl" />
+    <None Include="shaders\splash.frag" />
     <None Include="shaders\sdhr_default_330.frag" />
     <None Include="shaders\sdhr_default_330.vert" />
     <None Include="shaders\sdhr_depixelize_330.frag" />
@@ -351,6 +351,9 @@
     <Image Include="assets\bezels\procrtbedroom.png" />
     <Image Include="assets\bezels\sony_crt_420.png" />
     <Image Include="assets\bezels\sony_pvm_office.png" />
+    <Image Include="assets\splash_0.png" />
+    <Image Include="assets\splash_1.png" />
+    <Image Include="assets\splash_2.png" />
     <Image Include="assets\Texture_composite_complete.png" />
     <Image Include="assets\Texture_composite_dhgr.png" />
     <Image Include="assets\Texture_composite_hgr.png" />

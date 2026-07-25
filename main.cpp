@@ -16,6 +16,8 @@
 #include <cstring>
 #include <cstdio>
 #include <algorithm>
+#include <filesystem>
+#include <random>
 #include <thread>
 #include <atomic>
 
@@ -34,7 +36,6 @@
 #include "MockingboardManager.h"
 #include "TimedTextManager.h"
 #include "LogTextManager.h"
-#include "extras/MemoryLoader.h"
 #include "extras/ImGuiFileDialog.h"
 #include "PostProcessor.h"
 #include "EventRecorder.h"
@@ -171,15 +172,166 @@ void Main_SetVsync(SwapInterval_e _vsync)
 	Main_ResetFPSCalculations();
 }
 
-void Main_DisplaySplashScreen()
+static void Main_DisplayStartupSplashScreen()
 {
-	if (MemoryLoadSHR("assets/logo.shr"))
+	constexpr char splashDirectory[] = "assets";
+	constexpr char splashFilenamePrefix[] = "splash_";
+	constexpr uint32_t splashDurationMs = 4000;
+
+	std::vector<std::filesystem::path> splashPaths;
+	try
 	{
-		MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, true);
+		for (const auto& entry : std::filesystem::directory_iterator(splashDirectory))
+		{
+			const std::filesystem::path& path = entry.path();
+			const std::string filename = path.filename().string();
+			if (entry.is_regular_file() &&
+				filename.starts_with(splashFilenamePrefix) &&
+				(path.extension() == ".png"))
+				splashPaths.push_back(path);
+		}
 	}
-	// Run a refresh to show the first screen
-	// going through 3 frames (0/1/0) to really clean the whole thing
-	A2VideoManager::GetInstance()->ForceBeamFullScreenRender(3);
+	catch (const std::filesystem::filesystem_error& error)
+	{
+		std::cerr << "Error finding startup splash images: " << error.what() << std::endl;
+		return;
+	}
+
+	if (splashPaths.empty())
+	{
+		std::cerr << "No startup splash images found matching assets/splash_*.png" << std::endl;
+		return;
+	}
+
+	std::sort(splashPaths.begin(), splashPaths.end());
+	std::mt19937 randomGenerator(std::random_device{}());
+	std::uniform_int_distribution<size_t> splashDistribution(0, splashPaths.size() - 1);
+	const std::string splashPath = splashPaths[splashDistribution(randomGenerator)].string();
+
+	GLuint splashTexture = UINT_MAX;
+	glGenTextures(1, &splashTexture);
+	glActiveTexture(GL_TEXTURE0);
+
+	OpenGLHelper::ImageAsset splashImage;
+	splashImage.tex_id = splashTexture;
+	splashImage.AssignByFilename(splashPath.c_str());
+	if ((splashImage.image_xcount == 0) || (splashImage.image_ycount == 0))
+	{
+		glDeleteTextures(1, &splashTexture);
+		return;
+	}
+
+	// Splash images are presentation graphics, so use smooth filtering when scaled.
+	glBindTexture(GL_TEXTURE_2D, splashTexture);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	BasicQuad splashQuad(_SHADER_VERTEX_BASIC, "shaders/splash.frag");
+	splashQuad.SetInputTextureUnit(GL_TEXTURE0);
+
+	const std::string splashVersionText = std::string("Version ") + SDD_VERSION;
+	constexpr int splashVersionMargin = 12;
+	constexpr int splashVersionGlyphWidth = 14;
+	constexpr int splashVersionGlyphHeight = 16;
+	size_t splashVersionTextId = 0;
+	size_t splashVersionShadowId = 0;
+	int splashVersionWindowWidth = 0;
+	int splashVersionWindowHeight = 0;
+	auto updateSplashVersionPosition = [&](int windowWidth, int windowHeight)
+	{
+		if ((windowWidth == splashVersionWindowWidth) &&
+			(windowHeight == splashVersionWindowHeight))
+			return;
+
+		if (splashVersionTextId != 0)
+			fpsTimedTextManager.DeleteText(splashVersionTextId);
+		if (splashVersionShadowId != 0)
+			fpsTimedTextManager.DeleteText(splashVersionShadowId);
+
+		splashVersionWindowWidth = windowWidth;
+		splashVersionWindowHeight = windowHeight;
+		const int textWidth =
+			static_cast<int>(splashVersionText.size()) * splashVersionGlyphWidth;
+		const int textX = std::max(
+			splashVersionMargin,
+			windowWidth - textWidth - splashVersionMargin);
+		const int textY = std::max(
+			splashVersionMargin,
+			windowHeight - splashVersionGlyphHeight - splashVersionMargin);
+
+		splashVersionTextId = fpsTimedTextManager.AddText(
+			splashVersionText, textX, textY, splashDurationMs + 1000);
+		splashVersionShadowId = fpsTimedTextManager.AddText(
+			splashVersionText, textX + 2, textY + 2, splashDurationMs + 1000,
+			0.0f, 0.0f, 0.0f, 0.8f);
+	};
+
+	const uint64_t splashStart = SDL_GetPerformanceCounter();
+	const uint64_t splashDurationTicks =
+		(SDL_GetPerformanceFrequency() * splashDurationMs) / 1000;
+
+	while (!g_quitIsRequested &&
+		   ((SDL_GetPerformanceCounter() - splashStart) < splashDurationTicks))
+	{
+		SDL_Event event;
+		while (SDL_PollEvent(&event))
+		{
+			if (event.type == SDL_QUIT)
+				Main_RequestAppQuit();
+			else if ((event.type == SDL_WINDOWEVENT) &&
+					 (event.window.event == SDL_WINDOWEVENT_CLOSE) &&
+					 (event.window.windowID == SDL_GetWindowID(window)))
+				Main_RequestAppQuit();
+		}
+
+		int drawableWidth = 0;
+		int drawableHeight = 0;
+		SDL_GL_GetDrawableSize(window, &drawableWidth, &drawableHeight);
+		int windowWidth = 0;
+		int windowHeight = 0;
+		SDL_GetWindowSize(window, &windowWidth, &windowHeight);
+		updateSplashVersionPosition(windowWidth, windowHeight);
+		if ((drawableWidth <= 0) || (drawableHeight <= 0))
+		{
+			SDL_Delay(1);
+			continue;
+		}
+
+		const float imageAspect =
+			static_cast<float>(splashImage.image_xcount) / splashImage.image_ycount;
+		const float windowAspect =
+			static_cast<float>(drawableWidth) / drawableHeight;
+		float scaleX = 1.0f;
+		float scaleY = 1.0f;
+		if (imageAspect > windowAspect)
+			scaleY = windowAspect / imageAspect;
+		else
+			scaleX = imageAspect / windowAspect;
+
+		splashQuad.SetQuadRelativeBounds(
+			SDL_FRect{-scaleX, scaleY, 2.0f * scaleX, -2.0f * scaleY});
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, drawableWidth, drawableHeight);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, splashTexture);
+		splashQuad.Render(0);
+		fpsTimedTextManager.UpdateAndRender(true);
+		SDL_GL_SwapWindow(window);
+		SDL_Delay(1);
+	}
+
+	if (splashVersionTextId != 0)
+		fpsTimedTextManager.DeleteText(splashVersionTextId);
+	if (splashVersionShadowId != 0)
+		fpsTimedTextManager.DeleteText(splashVersionShadowId);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glDeleteTextures(1, &splashTexture);
+	glDeleteProgram(splashQuad.GetShader()->ID);
 }
 
 bool Main_IsFPSOverlay() {
@@ -635,8 +787,11 @@ int main(int argc, char* argv[])
 	_vstr.append(" - F1 toggles Menu");
 	logTextManager->AddLog(_vstr, glm::vec4(.9f, .3f, .85f, 1.f));
 
-	// Load up the first screen in SHR, with green border color
-	Main_DisplaySplashScreen();
+	// Begin in plain Apple II text mode. The host-side splash does not alter
+	// Apple II memory or soft switches.
+	Main_ResetA2SS();
+	a2VideoManager->ForceBeamFullScreenRender(3);
+	Main_DisplayStartupSplashScreen();
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
 	std::thread thread_server(usb_server_thread, &bShouldTerminateNetworking);

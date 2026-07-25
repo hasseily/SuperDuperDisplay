@@ -352,10 +352,10 @@
     <None Include="shaders\ntsc_sik.frag">
       <Filter>shaders</Filter>
     </None>
-    <None Include="assets\help.ini">
-      <Filter>assets</Filter>
+    <None Include="shaders\splash.frag">
+      <Filter>shaders</Filter>
     </None>
-    <None Include="assets\logo.shr">
+    <None Include="assets\help.ini">
       <Filter>assets</Filter>
     </None>
     <None Include="assets\bezels\Apple_IIGS_logo_2.xcf">
@@ -491,6 +491,15 @@
     </Image>
     <Image Include="assets\bezels\sony_pvm_office.png">
       <Filter>assets\bezels</Filter>
+    </Image>
+    <Image Include="assets\splash_0.png">
+      <Filter>assets</Filter>
+    </Image>
+    <Image Include="assets\splash_1.png">
+      <Filter>assets</Filter>
+    </Image>
+    <Image Include="assets\splash_2.png">
+      <Filter>assets</Filter>
     </Image>
     <Image Include="assets\bezels\Apple_II.png">
       <Filter>assets\bezels</Filter>

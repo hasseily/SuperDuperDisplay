@@ -35,7 +35,6 @@ extern bool Main_IsFullScreen();
 extern void Main_SetFullScreen(bool bIsFullscreen);
 extern SwapInterval_e Main_GetVsync();
 extern void Main_SetVsync(SwapInterval_e _vsync);
-extern void Main_DisplaySplashScreen();
 extern bool Main_GetbUsePNGForScreenshots();
 extern void Main_SetbUsePNGForScreenshots(bool bUsePNG);
 extern void Main_GetBGColor(float outColor[4]);
@@ -927,7 +926,8 @@ void MainMenu::ShowSDDMenu() {
 		auto switch_c034 = MemoryManager::GetInstance()->switch_c034;
 		A2VideoManager::GetInstance()->ResetComputer();
 		MemoryManager::GetInstance()->switch_c034 = switch_c034;
-		Main_DisplaySplashScreen();
+		Main_ResetA2SS();
+		A2VideoManager::GetInstance()->ForceBeamFullScreenRender(3);
 	}
 	ImGui::Separator();
 	if (ImGui::BeginMenu("Samples")) {
