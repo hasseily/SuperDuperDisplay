@@ -14,7 +14,12 @@
 #include <SDL.h>
 #include "common.h"
 
-#define PKT_BUFSZ 16640
+// Keep bulk-IN buffers aligned to every USB bulk max-packet size (64 bytes at
+// full speed, 512 at high speed, and 1024 at SuperSpeed).  The previous 16640
+// byte buffer ended halfway through a 512/1024-byte packet, which can make
+// libusb report an overflow and leave the received byte count undefined on
+// macOS.  17 KiB still accommodates the Appletini's 16640-byte burst.
+#define PKT_BUFSZ (17 * 1024)
 
 #pragma pack(push, 1)
 

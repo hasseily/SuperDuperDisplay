@@ -662,6 +662,21 @@ static bool tini_open()
 		g_tiniDev = nullptr;
 		return false;
 	}
+
+	// A bulk-IN buffer that ends in the middle of a USB packet can overflow on
+	// libusb's Darwin backend.  Verify the descriptor at runtime as well as
+	// keeping PKT_BUFSZ aligned for full/high/SuperSpeed devices.
+	int maxPacketSize = libusb_get_max_packet_size(
+		libusb_get_device(g_tiniDev), TINI_PIPE_READ);
+	if ((maxPacketSize <= 0) || ((PKT_BUFSZ % maxPacketSize) != 0)) {
+		std::cerr << "Invalid Appletini bulk-IN packet size ("
+			  << maxPacketSize << ") for " << PKT_BUFSZ
+			  << "-byte receive buffer" << std::endl;
+		libusb_release_interface(g_tiniDev, 0);
+		libusb_close(g_tiniDev);
+		g_tiniDev = nullptr;
+		return false;
+	}
 	activeDeviceName = "Appletini SDD Stream";
 	return true;
 }
@@ -673,7 +688,17 @@ static bool tini_write(const uint8_t *buf, uint32_t len)
 		return false;
 	int r = libusb_bulk_transfer(g_tiniDev, TINI_PIPE_WRITE,
 		const_cast<uint8_t *>(buf), (int)len, &sent, 1000);
-	return (r == 0) && (sent == (int)len);
+	if (r != LIBUSB_SUCCESS) {
+		std::cerr << "libusb write failed (" << libusb_error_name(r)
+			  << ", sent " << sent << "/" << len << ")" << std::endl;
+		return false;
+	}
+	if (sent != (int)len) {
+		std::cerr << "libusb short write (sent " << sent << "/"
+			  << len << ")" << std::endl;
+		return false;
+	}
+	return true;
 }
 
 int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
@@ -742,11 +767,14 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			enable_msg_buf[0] = 0x00000001; // 1 data field
 			enable_msg_buf[1] = 0x00001000; // address of bus_event_control
 			enable_msg_buf[2] = 0x00000001; // bit 0 indicates enable bus events
-			if (!tini_write((uint8_t *)enable_msg_buf, 12))
+			if (!tini_write((uint8_t *)enable_msg_buf, 12)) {
 				std::cerr << "failed!" << std::endl;
-			else
+			} else {
 				std::cerr << "done!" << std::endl;
-			bRequestEnableBusEvents.store(false, std::memory_order_release); // reset
+				// Only clear the request after the FPGA has received it.  The
+				// old code silently disabled retries after a failed macOS write.
+				bRequestEnableBusEvents.store(false, std::memory_order_release);
+			}
 		}
 
 		auto packet = packetFreeQueue.pop();
@@ -755,25 +783,23 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			packet->data, PKT_BUFSZ, &got, 1000);
 		packet->size = (uint32_t)got;
 
-		if ((r != 0) && (got <= 0))
-		{
-			if (r == LIBUSB_ERROR_TIMEOUT)
-			{
-				// The Apple is off / no events flowing. Stay connected.
-				ftStatus = TINI_ERR_TIMEOUT;
-			}
-			else
-			{
-				// Real transport failure (device rebooted, personality
-				// switched, unplugged): drop the handle and reconnect.
-				ftStatus = TINI_ERR_IO;
-				if (ftStatus != ftStatusPrevious)
-					std::cerr << "Appletini read failed ("
-						  << libusb_error_name(r)
-						  << "), reconnecting" << std::endl;
-				ftStatusPrevious = ftStatus;
-				tini_close();
-			}
+		if ((r == LIBUSB_ERROR_TIMEOUT) && (got == 0)) {
+			// The Apple is off / no events flowing. Stay connected.  A
+			// timeout with bytes transferred is a valid partial libusb read
+			// and is processed below.
+			ftStatus = TINI_ERR_TIMEOUT;
+			packetFreeQueue.push(std::move(packet));
+			continue;
+		}
+		if ((r != LIBUSB_SUCCESS) && (r != LIBUSB_ERROR_TIMEOUT)) {
+			// Do not turn an overflow, stall, or other transport error into
+			// an apparent OK merely because libusb returned a partial count.
+			// For non-timeout errors that count is not guaranteed reliable.
+			ftStatus = TINI_ERR_IO;
+			std::cerr << "Appletini read failed (" << libusb_error_name(r)
+				  << ", received " << got << "), reconnecting" << std::endl;
+			ftStatusPrevious = ftStatus;
+			tini_close();
 			packetFreeQueue.push(std::move(packet));
 			continue;
 		}
