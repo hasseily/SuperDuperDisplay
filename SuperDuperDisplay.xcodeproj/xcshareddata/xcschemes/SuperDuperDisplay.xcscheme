@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "BB8330D52B6645B300071F38"
-               BuildableName = "SuperDuperDisplay"
+               BuildableName = "SuperDuperDisplay.app"
                BlueprintName = "SuperDuperDisplay"
                ReferencedContainer = "container:SuperDuperDisplay.xcodeproj">
             </BuildableReference>
@@ -45,7 +45,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "BB8330D52B6645B300071F38"
-            BuildableName = "SuperDuperDisplay"
+            BuildableName = "SuperDuperDisplay.app"
             BlueprintName = "SuperDuperDisplay"
             ReferencedContainer = "container:SuperDuperDisplay.xcodeproj">
          </BuildableReference>
@@ -62,7 +62,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "BB8330D52B6645B300071F38"
-            BuildableName = "SuperDuperDisplay"
+            BuildableName = "SuperDuperDisplay.app"
             BlueprintName = "SuperDuperDisplay"
             ReferencedContainer = "container:SuperDuperDisplay.xcodeproj">
          </BuildableReference>

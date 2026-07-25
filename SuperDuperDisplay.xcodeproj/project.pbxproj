@@ -18,12 +18,7 @@
 		BB6B2FDD2CD17D03008BC3F2 /* samples in CopyFiles */ = {isa = PBXBuildFile; fileRef = BB6B2FDC2CD17CD4008BC3F2 /* samples */; };
 		BB7FEE1D2E8D6CDD007CF9F4 /* libSDL2-2.0.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = BB7FEE1C2E8D6CDD007CF9F4 /* libSDL2-2.0.0.dylib */; };
 		BB7FEE1E2E8D6CDE007CF9F4 /* libSDL2-2.0.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BB7FEE1C2E8D6CDD007CF9F4 /* libSDL2-2.0.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		BB7FEE232E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = BB7FEE1F2E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib */; };
-		BB7FEE242E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BB7FEE1F2E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		BB7FEE272E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = BB7FEE212E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib */; };
-		BB7FEE282E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BB7FEE212E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		BB7FEE292E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = BB7FEE222E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib */; };
-		BB7FEE2A2E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BB7FEE222E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		BB7FEE2C2E8D6D0F007CF9F4 /* libusb-1.0.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = BB7FEE2B2E8D6D0F007CF9F4 /* libusb-1.0.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = BB96E3EA2B6650BA00A3077C /* libz.tbd */; };
 		BB96E3ED2B66513700A3077C /* imgui_demo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3EC2B66513700A3077C /* imgui_demo.cpp */; };
 		BB96E3F32B66515400A3077C /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB96E3F22B66515400A3077C /* imgui_widgets.cpp */; };
@@ -68,7 +63,7 @@
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 12;
 			dstPath = "";
-			dstSubfolderSpec = 16;
+			dstSubfolderSpec = 7;
 			files = (
 				BBCF87052D8612E3002E26CD /* presets in CopyFiles */,
 				BB6B2FDD2CD17D03008BC3F2 /* samples in CopyFiles */,
@@ -85,10 +80,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				BB7FEE242E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib in Embed Libraries */,
 				BB7FEE1E2E8D6CDE007CF9F4 /* libSDL2-2.0.0.dylib in Embed Libraries */,
-				BB7FEE282E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib in Embed Libraries */,
-				BB7FEE2A2E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib in Embed Libraries */,
+				BB7FEE2C2E8D6D0F007CF9F4 /* libusb-1.0.0.dylib in Embed Libraries */,
 			);
 			name = "Embed Libraries";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -116,11 +109,9 @@
 		BB64A7D02C391D580044E05B /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		BB68B4C72C4248C400F96269 /* beeper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = beeper.h; sourceTree = "<group>"; };
 		BB6B2FDC2CD17CD4008BC3F2 /* samples */ = {isa = PBXFileReference; lastKnownFileType = folder; path = samples; sourceTree = "<group>"; };
-		BB7FEE1C2E8D6CDD007CF9F4 /* libSDL2-2.0.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libSDL2-2.0.0.dylib"; path = "../../../../../opt/homebrew/Cellar/sdl2/2.32.10/lib/libSDL2-2.0.0.dylib"; sourceTree = "<group>"; };
-		BB7FEE1F2E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libSDL2_ttf-2.0.0.dylib"; path = "../../../../../opt/homebrew/Cellar/sdl2_ttf/2.24.0/lib/libSDL2_ttf-2.0.0.dylib"; sourceTree = "<group>"; };
-		BB7FEE212E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libopencv_core.4.12.0.dylib; path = ../../../../../opt/homebrew/Cellar/opencv/4.12.0_10/lib/libopencv_core.4.12.0.dylib; sourceTree = "<group>"; };
-		BB7FEE222E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libSDL2_image-2.0.0.dylib"; path = "../../../../../opt/homebrew/Cellar/sdl2_image/2.8.8/lib/libSDL2_image-2.0.0.dylib"; sourceTree = "<group>"; };
-		BB8330D62B6645B300071F38 /* SuperDuperDisplay */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SuperDuperDisplay; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB7FEE1C2E8D6CDD007CF9F4 /* libSDL2-2.0.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libSDL2-2.0.0.dylib"; path = "/opt/homebrew/opt/sdl2/lib/libSDL2-2.0.0.dylib"; sourceTree = "<absolute>"; };
+		BB7FEE2B2E8D6D0F007CF9F4 /* libusb-1.0.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libusb-1.0.0.dylib"; path = "/opt/homebrew/opt/libusb/lib/libusb-1.0.0.dylib"; sourceTree = "<absolute>"; };
+		BB8330D62B6645B300071F38 /* SuperDuperDisplay.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SuperDuperDisplay.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB96E3EA2B6650BA00A3077C /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		BB96E3EC2B66513700A3077C /* imgui_demo.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_demo.cpp; path = imgui/imgui_demo.cpp; sourceTree = "<group>"; };
 		BB96E3F22B66515400A3077C /* imgui_widgets.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_widgets.cpp; path = imgui/imgui_widgets.cpp; sourceTree = "<group>"; };
@@ -201,13 +192,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BB7FEE272E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib in Frameworks */,
-				BB7FEE292E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib in Frameworks */,
 				BB96E3EB2B6650BA00A3077C /* libz.tbd in Frameworks */,
 				BB7FEE1D2E8D6CDD007CF9F4 /* libSDL2-2.0.0.dylib in Frameworks */,
 				BBB525292B664A7D00A65C62 /* OpenGL.framework in Frameworks */,
 				BB044AC72CF382620002F6FA /* IOKit.framework in Frameworks */,
-				BB7FEE232E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib in Frameworks */,
 				BB044AC52CF381F80002F6FA /* CoreFoundation.framework in Frameworks */,
 				BBB5252B2B664A8F00A65C62 /* CoreVideo.framework in Frameworks */,
 			);
@@ -242,7 +230,7 @@
 		BB8330D72B6645B300071F38 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				BB8330D62B6645B300071F38 /* SuperDuperDisplay */,
+				BB8330D62B6645B300071F38 /* SuperDuperDisplay.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -331,10 +319,8 @@
 		BBB525272B664A7D00A65C62 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				BB7FEE212E8D6D0F007CF9F4 /* libopencv_core.4.12.0.dylib */,
-				BB7FEE222E8D6D0F007CF9F4 /* libSDL2_image-2.0.0.dylib */,
-				BB7FEE1F2E8D6D0F007CF9F4 /* libSDL2_ttf-2.0.0.dylib */,
 				BB7FEE1C2E8D6CDD007CF9F4 /* libSDL2-2.0.0.dylib */,
+				BB7FEE2B2E8D6D0F007CF9F4 /* libusb-1.0.0.dylib */,
 				BB044AC62CF382620002F6FA /* IOKit.framework */,
 				BB044AC42CF381F80002F6FA /* CoreFoundation.framework */,
 				BB96E3EA2B6650BA00A3077C /* libz.tbd */,
@@ -355,6 +341,7 @@
 				BB8330D32B6645B300071F38 /* Frameworks */,
 				BB96E3E42B664CDB00A3077C /* Embed Libraries */,
 				BB8330D42B6645B300071F38 /* CopyFiles */,
+				BB7FEE2D2E8D6D0F007CF9F4 /* Use Bundled Libraries */,
 			);
 			buildRules = (
 			);
@@ -362,8 +349,8 @@
 			);
 			name = SuperDuperDisplay;
 			productName = SuperDuperDisplay;
-			productReference = BB8330D62B6645B300071F38 /* SuperDuperDisplay */;
-			productType = "com.apple.product-type.tool";
+			productReference = BB8330D62B6645B300071F38 /* SuperDuperDisplay.app */;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -396,6 +383,30 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		BB7FEE2D2E8D6D0F007CF9F4 /* Use Bundled Libraries */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
+			);
+			name = "Use Bundled Libraries";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/bundled-libraries.stamp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nbinary=\"${TARGET_BUILD_DIR}/${EXECUTABLE_PATH}\"\nrewrite_dependency() {\n    source_path=\"$1\"\n    bundled_path=\"$2\"\n    if /usr/bin/otool -L \"$binary\" | /usr/bin/grep -Fq \"$source_path\"; then\n        /usr/bin/install_name_tool -change \"$source_path\" \"$bundled_path\" \"$binary\"\n    fi\n}\nrewrite_dependency \"/opt/homebrew/opt/sdl2/lib/libSDL2-2.0.0.dylib\" \"@rpath/libSDL2-2.0.0.dylib\"\nrewrite_dependency \"/opt/homebrew/opt/libusb/lib/libusb-1.0.0.dylib\" \"@rpath/libusb-1.0.0.dylib\"\n/usr/bin/touch \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		BB8330D22B6645B300071F38 /* Sources */ = {
@@ -578,7 +589,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
@@ -587,16 +600,20 @@
 					/opt/homebrew/include,
 					"/opt/homebrew/include/libusb-1.0",
 				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Super Duper Display";
+				INFOPLIST_KEY_NSHighResolutionCapable = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/homebrew/lib,
-					/opt/homebrew/Cellar/sdl2/2.32.10/lib,
-					/opt/homebrew/Cellar/sdl2_ttf/2.24.0/lib,
-					"/opt/homebrew/Cellar/opencore-amr/0.1.6/lib",
-					/opt/homebrew/Cellar/opencv/4.12.0_10/lib,
-					/opt/homebrew/Cellar/sdl2_image/2.8.8/lib,
 				);
+				MARKETING_VERSION = 0.8.2;
 				OTHER_LDFLAGS = "-lusb-1.0";
+				PRODUCT_BUNDLE_IDENTIFIER = com.hasseily.SuperDuperDisplay;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/glad",
@@ -611,7 +628,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
@@ -620,16 +639,20 @@
 					/opt/homebrew/include,
 					"/opt/homebrew/include/libusb-1.0",
 				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Super Duper Display";
+				INFOPLIST_KEY_NSHighResolutionCapable = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/homebrew/lib,
-					/opt/homebrew/Cellar/sdl2/2.32.10/lib,
-					/opt/homebrew/Cellar/sdl2_ttf/2.24.0/lib,
-					"/opt/homebrew/Cellar/opencore-amr/0.1.6/lib",
-					/opt/homebrew/Cellar/opencv/4.12.0_10/lib,
-					/opt/homebrew/Cellar/sdl2_image/2.8.8/lib,
 				);
+				MARKETING_VERSION = 0.8.2;
 				OTHER_LDFLAGS = "-lusb-1.0";
+				PRODUCT_BUNDLE_IDENTIFIER = com.hasseily.SuperDuperDisplay;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/glad",

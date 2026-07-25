@@ -271,9 +271,16 @@ static void Main_DisplayStartupSplashScreen()
 	const uint64_t splashDurationTicks =
 		(SDL_GetPerformanceFrequency() * splashDurationMs) / 1000;
 
-	while (!g_quitIsRequested &&
-		   ((SDL_GetPerformanceCounter() - splashStart) < splashDurationTicks))
+	while (!g_quitIsRequested)
 	{
+		const uint64_t splashElapsedTicks =
+			SDL_GetPerformanceCounter() - splashStart;
+		if (splashElapsedTicks >= splashDurationTicks)
+			break;
+		const float splashProgress = std::clamp(
+			static_cast<float>(splashElapsedTicks) / splashDurationTicks,
+			0.0f, 1.0f);
+
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
@@ -318,6 +325,8 @@ static void Main_DisplayStartupSplashScreen()
 		glClear(GL_COLOR_BUFFER_BIT);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, splashTexture);
+		splashQuad.GetShader()->Use();
+		splashQuad.GetShader()->SetUniform("splashProgress", splashProgress);
 		splashQuad.Render(0);
 		fpsTimedTextManager.UpdateAndRender(true);
 		SDL_GL_SwapWindow(window);
@@ -515,9 +524,26 @@ int main(int argc, char* argv[])
 	(void)argc;		// mark as unused
 	(void)argv;		// mark as unused
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
-	// when double-clicking the app, change to its working directory
-	char *dir = dirname(strdup(argv[0]));
-	chdir(dir);
+	// Resolve resources relative to the executable so launching from Finder or
+	// Xcode does not depend on the caller's working directory.
+	std::error_code pathError;
+	std::filesystem::path executablePath =
+		std::filesystem::weakly_canonical(argv[0], pathError);
+	if (pathError)
+	{
+		pathError.clear();
+		executablePath = std::filesystem::absolute(argv[0], pathError);
+	}
+
+	std::filesystem::path workingDirectory = executablePath.parent_path();
+#if defined(__NETWORKING_APPLE__)
+	const std::filesystem::path bundleResources =
+		workingDirectory.parent_path() / "Resources";
+	if (std::filesystem::is_directory(bundleResources / "assets"))
+		workingDirectory = bundleResources;
+#endif
+	if (!workingDirectory.empty())
+		chdir(workingDirectory.string().c_str());
 #endif
 
 	GLenum glerr;
