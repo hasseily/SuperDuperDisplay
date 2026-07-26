@@ -1189,7 +1189,7 @@ void MainMenu::ShowDeveloperMenu() {
 	ImGui::MenuItem("Event Recorder", "", &pGui->bShowEventRecorderWindow);
 	if (ImGui::MenuItem("SHR Palette Viewer", ""))
 		pGui->bShowSHRPaletteWindow = true;
-	if (ImGui::MenuItem("RAM RGB Renderer", "")) {
+	if (ImGui::MenuItem("RAM Visualizer (RGB)", "")) {
 		a2VideoManager->CreateNewA2WindowRGB();
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
