@@ -864,7 +864,8 @@ void usb_display_imgui_window(bool* p_open)
 		if (!ImGui::IsWindowCollapsed())
 		{
 			ImGui::Checkbox("Increment", &bUSBImGUiIsIncrement);
-			ImGui::DragInt("Start Address", &iUSBImGUIAddressStart, 1.f, 0, 0x4000, "%04X");
+			// Only writing to RAM, not registers
+			ImGui::DragInt("Apple RAM Address", &iUSBImGUIAddressStart, 1.f, 0, 0xFFFF, "%04X");
 			ImGui::InputText("Data", cUSBImGUIData, sizeof(cUSBImGUIData));
 			ImGui::SetItemTooltip("Data is space-delimited 4 bytes in hex, e.g.: 4ce20001 0000ffa2. Max of 254 4-byte values.");
 			if (ImGui::Button("Write to Appletini"))
@@ -913,8 +914,8 @@ void usb_display_imgui_window(bool* p_open)
 					}
 					++i;  // skip the space
 				}
-				// now send to appletini
-				auto _res = usb_write_register(iUSBImGUIAddressStart, &result, bUSBImGUiIsIncrement);
+				// now send to appletini (RAM starts at 0x10000 above the register space
+				auto _res = usb_write_register(0x10000 + iUSBImGUIAddressStart, &result, bUSBImGUiIsIncrement);
 				if (_res == 0)
 					snprintf(cUSBImGUIDataError, sizeof(cUSBImGUIDataError), "FT Write Pipe Ex failed: %s", get_ft_status_message(ftStatus).c_str());
 				else
