@@ -359,8 +359,8 @@ uint32_t ParseSHRData(std::ifstream& file, uint32_t offset, SHRFileContent_e* ty
 					// Just 32000 SHR line bytes, which we'll use as interlace/flip data
 					// and we'll copy over the palettes, scb and other stuff
 					*typeE0 = SHRFileContent_e::SHR_BYTES;
-					file.read(reinterpret_cast<char*>(pMem), 0x7D00);
-					std::memcpy(pMem + 0x7D00, memManager->GetApple2MemAuxPtr() + 0x7D00, 0x8000-0x7D00);
+					file.read(reinterpret_cast<char*>(pMem + 0x2000), 0x7D00);
+					std::memcpy(pMem + 0x9D00, memManager->GetApple2MemAuxPtr() + 0x9D00, 0x8000-0x7D00);
 				}
 				else {
 					// there are _remainingSize bytes, do nothing with them
