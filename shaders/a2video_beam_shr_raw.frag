@@ -262,6 +262,10 @@ float applyFilterToColor(mat4 filterMatrix, mat4 colors) {
 
 void main()
 {
+	if (ticks < 0u) {			// Never true
+		uint keep = ticks;
+	}
+
 	// First check if we're in merged mode. If so, determine if the line is a SHR line.
 	// If not, exit early. If it is SHR, then shift accordingly
 
@@ -432,14 +436,28 @@ void main()
                 // Handle lines close to the vertical borders. Any offset that moves outside the boundaries of the image
                 // is set to a very negative number, which ends up triggering the boundary condition in
                 // the fetchByteColorsIdx functions, and returning the black color
-                if (ypos_noborder < 2u)
-                    RGGBYOffsets[0] = -5000;
-                if (ypos_noborder < 1u)
-                    RGGBYOffsets[1] = -5000;
-                if (ypos_noborder > 398u)
-                    RGGBYOffsets[3] = -5000;
-                if (ypos_noborder > 397u)
-                    RGGBYOffsets[4] = -5000;
+                // The cutoffs differ per mode: interlaced offsets step through 400 output rows,
+                // non-interlaced offsets step through 200 scanlines (each scanline is 2 output rows)
+                if (isInterlaceSHR4 == 1u)
+                {
+                    if (ypos_noborder < 2u)
+                        RGGBYOffsets[0] = -5000;
+                    if (ypos_noborder < 1u)
+                        RGGBYOffsets[1] = -5000;
+                    if (ypos_noborder > 398u)
+                        RGGBYOffsets[3] = -5000;
+                    if (ypos_noborder > 397u)
+                        RGGBYOffsets[4] = -5000;
+                } else {
+                    if (ypos_noborder < 4u)
+                        RGGBYOffsets[0] = -5000;
+                    if (ypos_noborder < 2u)
+                        RGGBYOffsets[1] = -5000;
+                    if (ypos_noborder > 397u)
+                        RGGBYOffsets[3] = -5000;
+                    if (ypos_noborder > 395u)
+                        RGGBYOffsets[4] = -5000;
+                }
 
                 // Let's use matrices to store the colors. We need to store exactly 13 colors.
                 // So we can use a 4x4 matrix and keep the last values 0.
@@ -679,7 +697,7 @@ void main()
 				if (isInterlaceSHR4 == 1u)	// the offset is used for odd lines
 					yPal256OffsetLines = uint(doublePal256YOffset) * (ypos_noborder & 1u);
 				if (isPageFlipSHR4 == 1u)		// the offset is used for odd frames
-					yPal256OffsetLines = uint(doublePal256YOffset) * (ticks & 1u);
+					yPal256OffsetLines = uint(doublePal256YOffset) * uint(frameIsOdd);
 				uint pal256Word = texelFetch(PAL256TEX,ivec2(xpos_noborder >> 2, (ypos_noborder >> 1) + yPal256OffsetLines),0).r;
 				fragColor = ConvertIIgs2RGB(pal256Word);
                 break;

@@ -16,6 +16,7 @@
 #include "EventRecorder.h"
 #include "SDHRManager.h"
 #include "SDHRNetworking.h"
+#include "AppletiniUartTerminal.h"
 #include "extras/MemoryLoader.h"
 #include "extras/ImGuiFileDialog.h"
 
@@ -34,11 +35,12 @@ extern bool Main_IsFullScreen();
 extern void Main_SetFullScreen(bool bIsFullscreen);
 extern SwapInterval_e Main_GetVsync();
 extern void Main_SetVsync(SwapInterval_e _vsync);
-extern void Main_DisplaySplashScreen();
 extern bool Main_GetbUsePNGForScreenshots();
 extern void Main_SetbUsePNGForScreenshots(bool bUsePNG);
 extern void Main_GetBGColor(float outColor[4]);
 extern void Main_SetBGColor(const float newColor[4]);
+extern void Main_GetFPSOverlayColor(float outColor[4]);
+extern void Main_SetFPSOverlayColor(const float newColor[4]);
 extern void Main_ResetA2SS();
 extern bool Main_IsFPSOverlay();
 extern void Main_SetFPSOverlay(bool isFPSOverlay);
@@ -84,6 +86,7 @@ public:
 	bool bShowImGuiMetricsWindow = false;
 	bool bShowMemoryHeatMap = false;
 	bool bShowUSBImGuiWindow = false;
+	bool bShowUartWindow = false;
 	bool bShowSHRPaletteWindow = false;
 	bool bSampleRunKarateka = false;
 
@@ -379,8 +382,7 @@ void MainMenu::Render() {
 			ImGui::Separator();
 			ImGui::Text("Version: %s", SDD_VERSION);
 			ImGui::Text("Software: Henri \"Rikkles\" Asseily");
-			ImGui::Text("Design & Firmware: John \"Elltwo\" Flanagan");
-			ImGui::Text("Appletini logo by Rikkles+Fatdog");
+			ImGui::Text("Beta Tester Extraordinaire: FatDog");
 			ImGui::Separator();
 			
 			ImGui::TextWrapped("SuperDuperDisplay is a hybrid emulation frontend for Appletini, the Apple 2 Bus Card.");
@@ -760,6 +762,9 @@ void MainMenu::Render() {
 
 		if (pGui->bShowUSBImGuiWindow)
 			usb_display_imgui_window(&pGui->bShowUSBImGuiWindow);
+
+		if (pGui->bShowUartWindow)
+			appletini_uart_terminal_imgui_window(&pGui->bShowUartWindow);
 	}
 	
 	ImGui::Render();
@@ -912,6 +917,8 @@ void MainMenu::ShowSDDMenu() {
 			ImGui::Text("%s", "No data (Apple 2 is off?)");
 		else
 			ImGui::Text("%s", get_tini_last_error_string_async().c_str());
+		ImGui::Separator();
+		ImGui::MenuItem("UARTs", "", &pGui->bShowUartWindow);
 		ImGui::EndMenu();
 	}
 	ImGui::Separator();
@@ -919,7 +926,8 @@ void MainMenu::ShowSDDMenu() {
 		auto switch_c034 = MemoryManager::GetInstance()->switch_c034;
 		A2VideoManager::GetInstance()->ResetComputer();
 		MemoryManager::GetInstance()->switch_c034 = switch_c034;
-		Main_DisplaySplashScreen();
+		Main_ResetA2SS();
+		A2VideoManager::GetInstance()->ForceBeamFullScreenRender(3);
 	}
 	ImGui::Separator();
 	if (ImGui::BeginMenu("Samples")) {
@@ -978,15 +986,6 @@ void MainMenu::ShowMotherboardMenu() {
 	ImGui::MenuItem("Apple //e Memory", "", &pGui->mem_edit_a2e.Open);
 	ImGui::MenuItem("Apple //e Memory Heat Map", "", &pGui->bShowMemoryHeatMap);
 
-	ImGui::Separator();
-	bool _bMouseIsLocked = (SDL_GetRelativeMouseMode() == SDL_TRUE);
-	if (ImGui::Checkbox("Apple Mouse (F5)", &_bMouseIsLocked))
-	{
-		SDL_SetRelativeMouseMode(_bMouseIsLocked ? SDL_TRUE : SDL_FALSE);
-	}
-	float _ms = usb_mouse_get_sensitivity();
-	if (ImGui::SliderFloat("Apple Mouse Speed", &_ms, 0, 1.0))
-		usb_mouse_set_sensitivity(_ms);
 }
 
 void MainMenu::ShowVideoMenu() {
@@ -1002,6 +1001,14 @@ void MainMenu::ShowVideoMenu() {
 	if (ImGui::MenuItem("Reset FPS", "Shift+F8")) {
 		Main_ResetFPSCalculations();
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
+	}
+	if (ImGui::BeginMenu("FPS Text Color")) {
+		float fpsColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f }; // RGBA
+		Main_GetFPSOverlayColor(fpsColor);
+		if (ImGui::ColorEdit4("##fpsColor", fpsColor)) {
+			Main_SetFPSOverlayColor(fpsColor);
+		}
+		ImGui::EndMenu();
 	}
 	ImGui::Separator();
 	auto _bUsePNG = Main_GetbUsePNGForScreenshots();
@@ -1182,7 +1189,7 @@ void MainMenu::ShowDeveloperMenu() {
 	ImGui::MenuItem("Event Recorder", "", &pGui->bShowEventRecorderWindow);
 	if (ImGui::MenuItem("SHR Palette Viewer", ""))
 		pGui->bShowSHRPaletteWindow = true;
-	if (ImGui::MenuItem("RAM RGB Renderer", "")) {
+	if (ImGui::MenuItem("RAM Visualizer (RGB)", "")) {
 		a2VideoManager->CreateNewA2WindowRGB();
 		A2VideoManager::GetInstance()->ForceBeamFullScreenRender();
 	}
@@ -1251,6 +1258,7 @@ void MainMenu::ShowDeveloperMenu() {
 	}
 	ImGui::Separator();
 	ImGui::MenuItem("Appletini Communications", "", &pGui->bShowUSBImGuiWindow);
+	ImGui::MenuItem("Appletini UARTs", "", &pGui->bShowUartWindow);
 	ImGui::Separator();
 	ImGui::MenuItem("ImGui Metrics Window", "", &pGui->bShowImGuiMetricsWindow);
 }

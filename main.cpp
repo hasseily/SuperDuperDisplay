@@ -16,8 +16,11 @@
 #include <cstring>
 #include <cstdio>
 #include <algorithm>
+#include <filesystem>
+#include <random>
 #include <thread>
 #include <atomic>
+#include <limits>
 
 #include "common.h"
 #include "shader.h"
@@ -34,11 +37,11 @@
 #include "MockingboardManager.h"
 #include "TimedTextManager.h"
 #include "LogTextManager.h"
-#include "extras/MemoryLoader.h"
 #include "extras/ImGuiFileDialog.h"
 #include "PostProcessor.h"
 #include "EventRecorder.h"
 #include "MainMenu.h"
+#include "AppletiniUartTerminal.h"
 
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
 #include <unistd.h>
@@ -48,6 +51,8 @@
 #include <sys/resource.h>
 #else
 #include <windows.h>
+#undef max
+#undef min
 #endif
 
 static SwapInterval_e g_swapInterval = SWAPINTERVAL_ADAPTIVE;
@@ -70,8 +75,10 @@ static float fps_worst = 1000000.f;
 static uint64_t fps_frame_count = 0;
 static uint64_t fps_last_counter_display = 0;
 static char fps_str_buf[40];
-
-float fpsAverageTimeWindow = 1.f;	// in seconds
+float fpsAverageTimeWindow = 0.5f;	// in seconds
+TimedTextManager fpsTimedTextManager = TimedTextManager();
+size_t fpsTTId = UINT32_MAX;		// fps overlay text id
+float fps_color[4] = { 1.0f, 1.0f, 1.0f, 1.0f }; // RGBA
 
 // State booleans to determine what to do
 bool bDisplayFPSOnScreen = false;	// Show FPS on screen
@@ -168,29 +175,175 @@ void Main_SetVsync(SwapInterval_e _vsync)
 	Main_ResetFPSCalculations();
 }
 
-void Main_DisplaySplashScreen()
+static void Main_DisplayStartupSplashScreen()
 {
-	if (MemoryLoadSHR("assets/logo.shr"))
-	{
-		MemoryManager::GetInstance()->SetSoftSwitch(A2SS_SHR, true);
-	}
-	// Run a refresh to show the first screen
-	// going through 3 frames (0/1/0) to really clean the whole thing
-	A2VideoManager::GetInstance()->ForceBeamFullScreenRender(3);
-}
+	constexpr char splashDirectory[] = "assets";
+	constexpr char splashFilenamePrefix[] = "splash_";
+	constexpr uint32_t splashDurationMs = 4000;
 
-void Main_DrawFPSOverlay()
-{
-	auto a2VideoManager = A2VideoManager::GetInstance();
-	if (bDisplayFPSOnScreen)
+	std::vector<std::filesystem::path> splashPaths;
+	try
 	{
-		a2VideoManager->DrawOverlayString("AVERAGE FPS: ", 13, 0b11010010, 0, 0);
-		// a2VideoManager->DrawOverlayString("WORST FPS: ", 11, 0b11010010, 2, 1);
-	} else {
-		a2VideoManager->EraseOverlayRange(20, 0, 0);
-		// a2VideoManager->EraseOverlayRange(20, 0, 1);
+		for (const auto& entry : std::filesystem::directory_iterator(splashDirectory))
+		{
+			const std::filesystem::path& path = entry.path();
+			const std::string filename = path.filename().string();
+			if (entry.is_regular_file() &&
+				filename.starts_with(splashFilenamePrefix) &&
+				(path.extension() == ".png"))
+				splashPaths.push_back(path);
+		}
 	}
-	a2VideoManager->ForceBeamFullScreenRender();
+	catch (const std::filesystem::filesystem_error& error)
+	{
+		std::cerr << "Error finding startup splash images: " << error.what() << std::endl;
+		return;
+	}
+
+	if (splashPaths.empty())
+	{
+		std::cerr << "No startup splash images found matching assets/splash_*.png" << std::endl;
+		return;
+	}
+
+	std::sort(splashPaths.begin(), splashPaths.end());
+	std::mt19937 randomGenerator(std::random_device{}());
+	std::uniform_int_distribution<size_t> splashDistribution(0, splashPaths.size() - 1);
+	const std::string splashPath = splashPaths[splashDistribution(randomGenerator)].string();
+
+	GLuint splashTexture = UINT_MAX;
+	glGenTextures(1, &splashTexture);
+	glActiveTexture(GL_TEXTURE0);
+
+	OpenGLHelper::ImageAsset splashImage;
+	splashImage.tex_id = splashTexture;
+	splashImage.AssignByFilename(splashPath.c_str());
+	if ((splashImage.image_xcount == 0) || (splashImage.image_ycount == 0))
+	{
+		glDeleteTextures(1, &splashTexture);
+		return;
+	}
+
+	// Splash images are presentation graphics, so use smooth filtering when scaled.
+	glBindTexture(GL_TEXTURE_2D, splashTexture);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	BasicQuad splashQuad(_SHADER_VERTEX_BASIC, "shaders/splash.frag");
+	splashQuad.SetInputTextureUnit(GL_TEXTURE0);
+
+	const std::string splashVersionText = std::string("Version ") + SDD_VERSION;
+	constexpr int splashVersionMargin = 12;
+	constexpr int splashVersionGlyphWidth = 14;
+	constexpr int splashVersionGlyphHeight = 16;
+	size_t splashVersionTextId = 0;
+	size_t splashVersionShadowId = 0;
+	int splashVersionWindowWidth = 0;
+	int splashVersionWindowHeight = 0;
+	auto updateSplashVersionPosition = [&](int windowWidth, int windowHeight)
+	{
+		if ((windowWidth == splashVersionWindowWidth) &&
+			(windowHeight == splashVersionWindowHeight))
+			return;
+
+		if (splashVersionTextId != 0)
+			fpsTimedTextManager.DeleteText(splashVersionTextId);
+		if (splashVersionShadowId != 0)
+			fpsTimedTextManager.DeleteText(splashVersionShadowId);
+
+		splashVersionWindowWidth = windowWidth;
+		splashVersionWindowHeight = windowHeight;
+		const int textWidth =
+			static_cast<int>(splashVersionText.size()) * splashVersionGlyphWidth;
+		const int textX = std::max(
+			splashVersionMargin,
+			windowWidth - textWidth - splashVersionMargin);
+		const int textY = std::max(
+			splashVersionMargin,
+			windowHeight - splashVersionGlyphHeight - splashVersionMargin);
+
+		splashVersionTextId = fpsTimedTextManager.AddText(
+			splashVersionText, textX, textY, splashDurationMs + 1000);
+		splashVersionShadowId = fpsTimedTextManager.AddText(
+			splashVersionText, textX + 2, textY + 2, splashDurationMs + 1000,
+			0.0f, 0.0f, 0.0f, 0.8f);
+	};
+
+	const uint64_t splashStart = SDL_GetPerformanceCounter();
+	const uint64_t splashDurationTicks =
+		(SDL_GetPerformanceFrequency() * splashDurationMs) / 1000;
+
+	while (!g_quitIsRequested)
+	{
+		const uint64_t splashElapsedTicks =
+			SDL_GetPerformanceCounter() - splashStart;
+		if (splashElapsedTicks >= splashDurationTicks)
+			break;
+		const float splashProgress = std::clamp(
+			static_cast<float>(splashElapsedTicks) / splashDurationTicks,
+			0.0f, 1.0f);
+
+		SDL_Event event;
+		while (SDL_PollEvent(&event))
+		{
+			if (event.type == SDL_QUIT)
+				Main_RequestAppQuit();
+			else if ((event.type == SDL_WINDOWEVENT) &&
+					 (event.window.event == SDL_WINDOWEVENT_CLOSE) &&
+					 (event.window.windowID == SDL_GetWindowID(window)))
+				Main_RequestAppQuit();
+		}
+
+		int drawableWidth = 0;
+		int drawableHeight = 0;
+		SDL_GL_GetDrawableSize(window, &drawableWidth, &drawableHeight);
+		int windowWidth = 0;
+		int windowHeight = 0;
+		SDL_GetWindowSize(window, &windowWidth, &windowHeight);
+		updateSplashVersionPosition(windowWidth, windowHeight);
+		if ((drawableWidth <= 0) || (drawableHeight <= 0))
+		{
+			SDL_Delay(1);
+			continue;
+		}
+
+		const float imageAspect =
+			static_cast<float>(splashImage.image_xcount) / splashImage.image_ycount;
+		const float windowAspect =
+			static_cast<float>(drawableWidth) / drawableHeight;
+		float scaleX = 1.0f;
+		float scaleY = 1.0f;
+		if (imageAspect > windowAspect)
+			scaleY = windowAspect / imageAspect;
+		else
+			scaleX = imageAspect / windowAspect;
+
+		splashQuad.SetQuadRelativeBounds(
+			SDL_FRect{-scaleX, scaleY, 2.0f * scaleX, -2.0f * scaleY});
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, drawableWidth, drawableHeight);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, splashTexture);
+		splashQuad.GetShader()->Use();
+		splashQuad.GetShader()->SetUniform("splashProgress", splashProgress);
+		splashQuad.Render(0);
+		fpsTimedTextManager.UpdateAndRender(true);
+		SDL_GL_SwapWindow(window);
+		SDL_Delay(1);
+	}
+
+	if (splashVersionTextId != 0)
+		fpsTimedTextManager.DeleteText(splashVersionTextId);
+	if (splashVersionShadowId != 0)
+		fpsTimedTextManager.DeleteText(splashVersionShadowId);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glDeleteTextures(1, &splashTexture);
+	glDeleteProgram(splashQuad.GetShader()->ID);
 }
 
 bool Main_IsFPSOverlay() {
@@ -198,10 +351,18 @@ bool Main_IsFPSOverlay() {
 }
 
 void Main_SetFPSOverlay(bool isFPSOverlay) {
-	if (bDisplayFPSOnScreen != isFPSOverlay)
-	{
-		bDisplayFPSOnScreen = isFPSOverlay;
-		Main_DrawFPSOverlay();
+	bDisplayFPSOnScreen = isFPSOverlay;
+}
+
+void Main_GetFPSOverlayColor(float outColor[4]) {
+	for (int i = 0; i < 4; ++i) {
+		outColor[i] = fps_color[i];
+	}
+}
+
+void Main_SetFPSOverlayColor(const float newColor[4]) {
+	for (int i = 0; i < 4; ++i) {
+		fps_color[i] = newColor[i];
 	}
 }
 
@@ -366,9 +527,26 @@ int main(int argc, char* argv[])
 	(void)argc;		// mark as unused
 	(void)argv;		// mark as unused
 #if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
-	// when double-clicking the app, change to its working directory
-	char *dir = dirname(strdup(argv[0]));
-	chdir(dir);
+	// Resolve resources relative to the executable so launching from Finder or
+	// Xcode does not depend on the caller's working directory.
+	std::error_code pathError;
+	std::filesystem::path executablePath =
+		std::filesystem::weakly_canonical(argv[0], pathError);
+	if (pathError)
+	{
+		pathError.clear();
+		executablePath = std::filesystem::absolute(argv[0], pathError);
+	}
+
+	std::filesystem::path workingDirectory = executablePath.parent_path();
+#if defined(__NETWORKING_APPLE__)
+	const std::filesystem::path bundleResources =
+		workingDirectory.parent_path() / "Resources";
+	if (std::filesystem::is_directory(bundleResources / "assets"))
+		workingDirectory = bundleResources;
+#endif
+	if (!workingDirectory.empty())
+		chdir(workingDirectory.string().c_str());
 #endif
 
 	GLenum glerr;
@@ -527,6 +705,8 @@ int main(int argc, char* argv[])
 	[[maybe_unused]] auto mockingboardManager = MockingboardManager::GetInstance();
 	std::cout << "Loaded MockingboardManager " << mockingboardManager << std::endl;
 
+	fpsTimedTextManager.Initialize();
+
 	std::cout << "Renderer Initializing..." << std::endl;
 	while (!a2VideoManager->IsReady())
 	{
@@ -569,6 +749,9 @@ int main(int argc, char* argv[])
 		if (settingsState.contains("Log")) {
 			logTextManager->DeserializeState(settingsState["Log"]);
 		}
+		if (settingsState.contains("Appletini UART")) {
+			appletini_uart_terminal_deserialize(settingsState["Appletini UART"]);
+		}
 		if (settingsState.contains("Main")) {
 			SDL_GetWindowPosition(window, &g_wx, &g_wy);
 			SDL_GetWindowSize(window, &g_ww, &g_wh);
@@ -605,6 +788,11 @@ int main(int argc, char* argv[])
 					window_bgcolor[i] = _sm["window background color"][i].get<float>();
 				}
 			}
+			if (_sm.contains("fps text color") && _sm["fps text color"].is_array()) {
+				for (size_t i = 0; i < 4; ++i) {
+					fps_color[i] = _sm["fps text color"][i].get<float>();
+				}
+			}
 			// update the main window accordingly
 			SDL_Rect displayBounds;
 			if (SDL_GetDisplayBounds(_displayIndex, &displayBounds) == 0) {
@@ -628,11 +816,11 @@ int main(int argc, char* argv[])
 	_vstr.append(" - F1 toggles Menu");
 	logTextManager->AddLog(_vstr, glm::vec4(.9f, .3f, .85f, 1.f));
 
-	// Load up the first screen in SHR, with green border color
-	Main_DisplaySplashScreen();
-
-	if (bDisplayFPSOnScreen)
-		Main_DrawFPSOverlay();
+	// Begin in plain Apple II text mode. The host-side splash does not alter
+	// Apple II memory or soft switches.
+	Main_ResetA2SS();
+	a2VideoManager->ForceBeamFullScreenRender(3);
+	Main_DisplayStartupSplashScreen();
 
 	// Run the network thread that will update the internal state as well as the apple 2 memory
 	std::thread thread_server(usb_server_thread, &bShouldTerminateNetworking);
@@ -677,8 +865,6 @@ int main(int argc, char* argv[])
 			std::cerr << "Reset detected" << std::endl;
 			a2VideoManager->bShouldReboot = false;
 			a2VideoManager->ResetComputer();
-			if (bDisplayFPSOnScreen)
-				Main_DrawFPSOverlay();	// It is wiped by the reset
 		}
 		a2VideoManager->CheckSetBordersWithReinit();
 		bA2VideoDidRender = false;
@@ -729,23 +915,6 @@ int main(int argc, char* argv[])
 						if (sdhrManager->IsSdhrEnabled())
 							sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
 					}
-					if (SDL_GetRelativeMouseMode()) {
-						usb_mouse_send_event(event);
-					}
-					break;
-				case SDL_MOUSEBUTTONDOWN:
-					if (SDL_GetRelativeMouseMode()) {
-						usb_mouse_send_event(event);
-					}
-					break;
-				case SDL_MOUSEBUTTONUP:
-					if (event.button.button == SDL_BUTTON_MIDDLE)
-					{
-						SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() == SDL_TRUE ? SDL_FALSE : SDL_TRUE);
-					}
-					if (SDL_GetRelativeMouseMode()) {
-						usb_mouse_send_event(event);
-					}
 					break;
 				case SDL_MOUSEWHEEL:
 					if (sdhrManager->IsSdhrEnabled())
@@ -758,9 +927,6 @@ int main(int argc, char* argv[])
 							Main_RequestAppQuit();
 							break;
 						}
-					}
-					else if (event.key.keysym.sym == SDLK_F5) {
-						SDL_SetRelativeMouseMode(SDL_GetRelativeMouseMode() == SDL_TRUE ? SDL_FALSE : SDL_TRUE);
 					}
 					else if (event.key.keysym.sym == SDLK_F1) {  // Toggle ImGUI with F1
 						Main_SetImGui(gl_context, !Main_IsImGuiOn());
@@ -882,6 +1048,7 @@ int main(int argc, char* argv[])
 									 */
 								}
 								logTextManager->UpdateAndRender(true);
+								fpsTimedTextManager.UpdateAndRender(true);
 								SDL_GL_SwapWindow(window);
 								fps_frame_count++;
 							}
@@ -941,6 +1108,7 @@ int main(int argc, char* argv[])
 					 */
 				}
 				logTextManager->UpdateAndRender(true);
+				fpsTimedTextManager.UpdateAndRender(true);
 				SDL_GL_SwapWindow(window);
 				fps_frame_count++;
 			}
@@ -1002,12 +1170,15 @@ int main(int argc, char* argv[])
 
 			if (bDisplayFPSOnScreen)
 			{
-				snprintf(fps_str_buf, 10,  "%.0f ", fps);
-				a2VideoManager->EraseOverlayRange(6, 13, 0);
-				a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b11010010, 13, 0);
-				// snprintf(fps_str_buf, 10, "%.0f ", fps_worst);
-				// a2VideoManager->EraseOverlayRange(6, 13, 1);
-				// a2VideoManager->DrawOverlayString(fps_str_buf, 10, 0b10010010, 13, 1);
+				snprintf(fps_str_buf, 30,  "AVERAGE FPS: %.0f ", fps);
+				fpsTimedTextManager.DeleteText(fpsTTId);
+				int _fpsww, _fpswh;
+				SDL_GetWindowSize(window, &_fpsww, &_fpswh);
+				fpsTTId = fpsTimedTextManager.AddText(fps_str_buf, _fpsww - 250, _fpswh - 18, 
+					UINT32_MAX, fps_color[0], fps_color[1], fps_color[2], fps_color[3]);
+			}
+			else {
+				fpsTimedTextManager.DeleteText(fpsTTId);
 			}
 			// Reset for next calculation
 			fps_frame_count = 0;
@@ -1047,6 +1218,7 @@ int main(int argc, char* argv[])
 		settingsState["Sound"] = soundManager->SerializeState();
 		settingsState["Mockingboard"] = mockingboardManager->SerializeState();
 		settingsState["Log"] = logTextManager->SerializeState();
+		settingsState["Appletini UART"] = appletini_uart_terminal_serialize();
 		settingsState["Main"] = {
 			{"display index", SDL_GetWindowDisplayIndex(window)},
 			{"window x", _wx},
@@ -1062,6 +1234,7 @@ int main(int argc, char* argv[])
 			{"videoregion", (int)cycleCounter->GetVideoRegion()},
 			{"use PNG for screenshots", bUsePNGForScreenshots},
 			{"window background color", window_bgcolor},
+			{"fps text color", fps_color},
 			{"show F1 window", Main_IsImGuiOn()},
 			{"show Apple 2 Video window", show_a2video_window},
 			{"show Post Processor window", show_postprocessing_window},

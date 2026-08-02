@@ -1,0 +1,4 @@
+# Appletini SDD Stream (SuperDuperDisplay USB transport):
+# allow non-root access to the vendor device.
+# Install: sudo cp 99-appletini-sdd.rules /etc/udev/rules.d/ && sudo udevadm control --reload-rules
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="a271", MODE="0666", TAG+="uaccess"

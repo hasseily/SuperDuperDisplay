@@ -14,7 +14,12 @@
 #include <SDL.h>
 #include "common.h"
 
-#define PKT_BUFSZ 2048
+// Keep bulk-IN buffers aligned to every USB bulk max-packet size (64 bytes at
+// full speed, 512 at high speed, and 1024 at SuperSpeed).  The previous 16640
+// byte buffer ended halfway through a 512/1024-byte packet, which can make
+// libusb report an overflow and leave the received byte count undefined on
+// macOS.  17 KiB still accommodates the Appletini's 16640-byte burst.
+#define PKT_BUFSZ (17 * 1024)
 
 #pragma pack(push, 1)
 
@@ -92,10 +97,5 @@ const std::string get_tini_last_error_string_async();	// Replaces async IO Pendi
 
 // Sends data to the tini via the register API
 uint32_t usb_write_register(uint32_t addressStart, const std::vector<uint32_t>* vData, bool setIncrement);
-
-// Mouse interface (temporary!)
-uint32_t usb_mouse_send_event(SDL_Event event);
-void usb_mouse_set_sensitivity(float s);
-float usb_mouse_get_sensitivity();
 
 void usb_display_imgui_window(bool* p_open);

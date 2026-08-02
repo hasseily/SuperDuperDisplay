@@ -5,7 +5,10 @@
 //  Created by Henri Asseily on 17/07/2025.
 //
 //  This class allows you to draw colored text on screen using the default Apple 2 font
-//  or a custom font. The text will last a certain number of milliseconds. To use:
+//  or a custom font. The text will last a certain number of milliseconds.
+//  Each instance of the class uses one draw call, however many strings it draws. Don't abuse.
+// 
+// To use:
 //
 //  Instance an object via the default constructor, such as:
 //  	TimedTextManager timedTextManager;
@@ -27,7 +30,6 @@
 //
 //  NOTES:
 //  - Set use80ColDefaultFont to true to use the 80 col version of the default Apple II font
-//  - It uses 1 draw call per string, very inefficently, because the color is a uniform. TODO: change this to pass the color in the VAO.
 
 #pragma once
 #include "common.h"
@@ -64,6 +66,8 @@ public:
 				 float r = 1.f, float g = 1.f, float b = 1.f, float a = 1.f);
 	// Deletes the text before its scheduled removal. Returns true if the text was deleted
 	bool DeleteText(const size_t id);
+	// Deletes all text managed by this instance
+	void DeleteAll();
 	// Call UpdateAndRender from within the render code, before the framebuffer is unbound
 	// Use shouldFlipY to align based on OGL or SDL
 	void UpdateAndRender(bool shouldFlipY = false);

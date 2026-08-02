@@ -218,13 +218,6 @@ public:
 	void CreateNewA2WindowRGB();
 	void ToggleA2Video(bool value);
 
-	// Overlay String drawing
-	void DrawOverlayString(const std::string& text, uint8_t colors, uint32_t x, uint32_t y);
-	void DrawOverlayString(const char* text, uint8_t len, uint8_t colors, uint32_t x, uint32_t y);
-	void DrawOverlayCharacter(const char c, uint8_t colors, uint32_t x, uint32_t y);
-	void EraseOverlayRange(uint8_t len, uint32_t x, uint32_t y);
-	void EraseOverlayCharacter(uint32_t x, uint32_t y);
-
 	// Methods for the single multipurpose beam racing shader
 	void BeamIsAtPosition(uint32_t _x, uint32_t _y);
 
@@ -397,12 +390,6 @@ private:
 	// used to determine how many user events are active
 	SDL_Event user_events_active[MAX_USEREVENTS_IN_QUEUE];
 
-	// Overlay strings handling
-	uint8_t overlay_text[_OVERLAY_CHAR_WIDTH *24];	// text for each overlay
-	uint8_t overlay_colors[_OVERLAY_CHAR_WIDTH *24];
-	uint8_t overlay_lines[24];
-	bool bWasSHRBeforeOverlay = false;
-	void UpdateOverlayLine(uint32_t y);
 };
 #endif // A2VIDEOMANAGER_H
 

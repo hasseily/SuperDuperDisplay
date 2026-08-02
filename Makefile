@@ -16,9 +16,10 @@
 #   pacman -S mingw-w64-ucrt-x86_64-SDL2
 #   pacman -S mingw-w64-ucrt-x86_64-zlib
 #
-# You will also need, for all platforms, the FTDI USB drivers
-# They can be downloaded at: https://ftdichip.com/drivers/d3xx-drivers/
-# Read the documentation for installation
+# You will also need, for all platforms, libusb-1.0:
+#   Linux:  apt-get install libusb-1.0-0-dev
+#   Mac OS X: brew install libusb
+#   MSYS2:  pacman -S mingw-w64-ucrt-x86_64-libusb
 #
 
 #CXX = g++
@@ -26,7 +27,7 @@
 
 EXE = SuperDuperDisplay
 IMGUI_DIR = imgui
-SOURCES = main.cpp OpenGLHelper.cpp MosaicMesh.cpp MemoryManager.cpp SDHRNetworking.cpp SDHRManager.cpp SDHRWindow.cpp TimedTextManager.cpp LogTextManager.cpp
+SOURCES = main.cpp OpenGLHelper.cpp MosaicMesh.cpp MemoryManager.cpp SDHRNetworking.cpp AppletiniUartTerminal.cpp SDHRManager.cpp SDHRWindow.cpp TimedTextManager.cpp LogTextManager.cpp
 SOURCES += A2VideoManager.cpp A2WindowBeam.cpp A2WindowRGB.cpp shader.cpp PostProcessor.cpp CycleCounter.cpp EventRecorder.cpp SoundManager.cpp
 SOURCES += Ayumi.cpp MockingboardManager.cpp SSI263.cpp MainMenu.cpp VidHdWindowBeam.cpp BasicQuad.cpp
 SOURCES += extras/MemoryLoader.cpp extras/ImGuiFileDialog.cpp miniz.c
@@ -35,9 +36,9 @@ SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl2.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
-LINUX_GL_LIBS = -lGL -lftd3xx
+LINUX_GL_LIBS = -lGL `pkg-config --libs libusb-1.0`
 
-CXXFLAGS = -std=c++17 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -Iglad
+CXXFLAGS = -std=c++20 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -Iglad
 CXXFLAGS += -Wall -Wformat -Wno-unused-function -Wno-unknown-pragmas
 CONFIGFLAGS =
 LIBS =
@@ -50,7 +51,7 @@ LIBS =
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	CXXFLAGS += -DIMGUI_IMPL_OPENGL_ES2
-	LINUX_GL_LIBS = -lGLESv2 -lftd3xx
+	LINUX_GL_LIBS = -lGLESv2 `pkg-config --libs libusb-1.0`
 endif
 ## If you're on a Raspberry Pi and want to use the legacy drivers,
 ## use the following instead:
@@ -65,23 +66,25 @@ ifeq ($(UNAME_S), Linux) #LINUX
 	LIBS += $(LINUX_GL_LIBS) -l:libz.a -lpthread -ldl `sdl2-config --libs`
 
 	CXXFLAGS += `sdl2-config --cflags`
+	CXXFLAGS += `pkg-config --cflags libusb-1.0`
 	CFLAGS = $(CXXFLAGS)
 endif
 
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
 	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `/opt/homebrew/bin/sdl2-config --libs` -lz
-	LIBS += -framework CoreFoundation -lftd3xx-static
-	LIBS += -L/usr/local/lib -L/opt/homebrew/lib -Llib/OSX
+	LIBS += -framework CoreFoundation `pkg-config --libs libusb-1.0`
+	LIBS += -L/usr/local/lib -L/opt/homebrew/lib
 
 	CXXFLAGS += `/opt/homebrew/bin/sdl2-config --cflags`
+	CXXFLAGS += `pkg-config --cflags libusb-1.0`
 	CXXFLAGS += -I/usr/local/include -I/opt/homebrew/include
 	CFLAGS = $(CXXFLAGS)
 endif
 
 ifeq ($(OS), Windows_NT)
     ECHO_MESSAGE = "MinGW"
-    LIBS += -llibz -lgdi32 -lopengl32 -limm32 -lWs2_32 `pkg-config --static --libs sdl2` -lftd3xx
+    LIBS += -llibz -lgdi32 -lopengl32 -limm32 -lWs2_32 `pkg-config --static --libs sdl2` -lsetupapi -lwinusb
 
     CXXFLAGS += `pkg-config --cflags sdl2`
 	CXXFLAGS += -I/ucrt64/include/

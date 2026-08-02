@@ -126,6 +126,9 @@
     <ClCompile Include="A2WindowRGB.cpp">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="AppletiniUartTerminal.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
     <ClCompile Include="TimedTextManager.cpp">
       <Filter>sources</Filter>
     </ClCompile>
@@ -251,9 +254,6 @@
     <ClInclude Include="extras\ImGuiFileDialogConfig.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="ftd3xx_win.h">
-      <Filter>headers</Filter>
-    </ClInclude>
     <ClInclude Include="VidHdWindowBeam.h">
       <Filter>headers</Filter>
     </ClInclude>
@@ -261,6 +261,9 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="A2WindowRGB.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="AppletiniUartTerminal.h">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="TimedTextManager.h">
@@ -349,11 +352,10 @@
     <None Include="shaders\ntsc_sik.frag">
       <Filter>shaders</Filter>
     </None>
-    <None Include="lib\Win_x64\FTD3XXWU.dll" />
-    <None Include="assets\help.ini">
-      <Filter>assets</Filter>
+    <None Include="shaders\splash.frag">
+      <Filter>shaders</Filter>
     </None>
-    <None Include="assets\logo.shr">
+    <None Include="assets\help.ini">
       <Filter>assets</Filter>
     </None>
     <None Include="assets\bezels\Apple_IIGS_logo_2.xcf">
@@ -370,6 +372,9 @@
     </None>
     <None Include="assets\bezels\Apple_Monitor_Only_Fun2.xcf">
       <Filter>assets\bezels</Filter>
+    </None>
+    <None Include="shaders\basic_transform_color.vert">
+      <Filter>shaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -487,6 +492,15 @@
     <Image Include="assets\bezels\sony_pvm_office.png">
       <Filter>assets\bezels</Filter>
     </Image>
+    <Image Include="assets\splash_0.png">
+      <Filter>assets</Filter>
+    </Image>
+    <Image Include="assets\splash_1.png">
+      <Filter>assets</Filter>
+    </Image>
+    <Image Include="assets\splash_2.png">
+      <Filter>assets</Filter>
+    </Image>
     <Image Include="assets\bezels\Apple_II.png">
       <Filter>assets\bezels</Filter>
     </Image>
@@ -525,8 +539,5 @@
     <Font Include="assets\BerkeliumIIHGR.ttf">
       <Filter>assets</Filter>
     </Font>
-  </ItemGroup>
-  <ItemGroup>
-    <Library Include="lib\Win_x64\FTD3XXWU.lib" />
   </ItemGroup>
 </Project>

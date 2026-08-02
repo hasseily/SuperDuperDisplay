@@ -56,6 +56,11 @@ bool TimedTextManager::DeleteText(const size_t id) {
 	return false;
 }
 
+void TimedTextManager::DeleteAll()
+{
+	texts.clear();
+}
+
 void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 	if (texts.empty())
 		return;
@@ -235,18 +240,19 @@ void TimedTextManager::UpdateAndRender(bool shouldFlipY) {
 				});
 			}
 		}
-		// Draw the string given the uniforms
-		if (!verts.empty()) {
-			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			glBufferData(GL_ARRAY_BUFFER,
-						 verts.size() * sizeof(float),
-						 verts.data(),
-						 GL_DYNAMIC_DRAW);
-			GLsizei count = GLsizei(verts.size() / 8);
-			glDrawArrays(GL_TRIANGLES, 0, count);
-		}
-		verts.clear();
 	}
+
+	// Draw the string given the uniforms
+	if (!verts.empty()) {
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER,
+			verts.size() * sizeof(float),
+			verts.data(),
+			GL_DYNAMIC_DRAW);
+		GLsizei count = GLsizei(verts.size() / 8);
+		glDrawArrays(GL_TRIANGLES, 0, count);
+	}
+	verts.clear();
 
 	// restore depth writes & test for next passes
 	if (depthMaskState == GL_TRUE)

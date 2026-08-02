@@ -106,64 +106,6 @@ static std::string fontpath = "assets/Apple2eFont14x16";
 A2VideoManager* A2VideoManager::s_instance;
 
 //////////////////////////////////////////////////////////////////////////
-// Overlay String Methods
-//////////////////////////////////////////////////////////////////////////
-
-void A2VideoManager::DrawOverlayString(const std::string& text, uint8_t colors, uint32_t x, uint32_t y)
-{
-	for (uint8_t i = 0; i < text.length(); ++i)
-	{
-		overlay_text[_OVERLAY_CHAR_WIDTH * y + x + i] = text.c_str()[i] + 0x80;
-		overlay_colors[_OVERLAY_CHAR_WIDTH * y + x + i] = colors;
-	}
-	overlay_lines[y] = 1;
-}
-
-void A2VideoManager::DrawOverlayString(const char* text, uint8_t len, uint8_t colors, uint32_t x, uint32_t y)
-{
-	(void)len;
-	uint8_t i = 0;
-	while (text[i] != '\0')
-	{
-		overlay_text[_OVERLAY_CHAR_WIDTH * y + x + i] = text[i] + 0x80;
-		overlay_colors[_OVERLAY_CHAR_WIDTH * y+ + x + i] = colors;
-		++i;
-	}
-	overlay_lines[y] = 1;
-}
-
-void A2VideoManager::DrawOverlayCharacter(const char c, uint8_t colors, uint32_t x, uint32_t y)
-{
-	overlay_text[_OVERLAY_CHAR_WIDTH * y + x] = c + 0x80;
-	overlay_colors[_OVERLAY_CHAR_WIDTH * y + x] = colors;
-	overlay_lines[y] = 1;
-}
-
-void A2VideoManager::EraseOverlayRange(uint8_t len, uint32_t x, uint32_t y)
-{
-	memset(overlay_text + (_OVERLAY_CHAR_WIDTH * y + x), 0, len);
-	UpdateOverlayLine(y);
-}
-
-void A2VideoManager::EraseOverlayCharacter(uint32_t x, uint32_t y)
-{
-	overlay_text[_OVERLAY_CHAR_WIDTH * y + x] = 0;
-	UpdateOverlayLine(y);
-}
-
-inline void A2VideoManager::UpdateOverlayLine(uint32_t y)
-{
-	for (uint8_t i=0; i< _OVERLAY_CHAR_WIDTH; ++i) {
-		if (overlay_text[_OVERLAY_CHAR_WIDTH * y + i] > 0)
-		{
-			overlay_lines[y] = 1;
-			return;
-		}
-	}
-	overlay_lines[y] = 0;
-}
-
-//////////////////////////////////////////////////////////////////////////
 // Manager Methods
 //////////////////////////////////////////////////////////////////////////
 
@@ -304,11 +246,6 @@ void A2VideoManager::Initialize()
 	
 	// tell the next Render() call to run initialization routines
 	bShouldInitializeRender = true;
-	
-	// clear the text overlay
-	std::memset(overlay_text, 0, sizeof(overlay_text));
-	std::memset(overlay_colors, 0, sizeof(overlay_colors));
-	std::memset(overlay_lines, 0, sizeof(overlay_lines));
 
 	// Set default border color
 	MemoryManager::GetInstance()->switch_c034 = 13;
@@ -576,39 +513,6 @@ void A2VideoManager::BeamIsAtPosition(uint32_t _x, uint32_t _y)
 			break;
 		// std::cerr << "switched " << BeamStateToString(_oldBeamState) << " --> " << BeamStateToString(beamState) << std::endl;
 		_oldBeamState = beamState;
-	}
-
-	// Check for text overlay in this position
-	if ((_y < COUNT_SC_CONTENT) && (overlay_lines[_y / 8] == 1))
-	{
-		if (_x == 0)
-		{
-			bWasSHRBeforeOverlay = memMgr->IsSoftSwitch(A2SS_SHR);
-			memMgr->SetSoftSwitch(A2SS_SHR, false);
-		} else if (_x == (CYCLES_SC_TOTAL - 1))
-		{
-			memMgr->SetSoftSwitch(A2SS_SHR, bWasSHRBeforeOverlay);
-		}
-		if (beamState == BeamState_e::CONTENT)
-		{
-			if (_x < CYCLES_SC_HBL || _y >= mode_scanlines)		// bounds check if mode changes midway
-				return;
-
-			uint32_t _toff = _OVERLAY_CHAR_WIDTH * (_y/8) + (_x - CYCLES_SC_HBL);
-			// Override when the byte is an overlay
-			if (overlay_text[_toff] > 0)
-			{
-				if (vrams_write->mode == A2Mode_e::SHR)
-					vrams_write->mode = A2Mode_e::MERGED;
-				for (uint8_t ii=0; ii<8; ++ii) {
-					uint8_t* byteStartPtr = vrams_write->vram_legacy + (GetVramWidthLegacy() * (_TR_ANY_Y + ii) + _TR_ANY_X) * 4;
-					byteStartPtr[0] = overlay_text[_toff];		// main
-					byteStartPtr[2] = 0b1000;
-					byteStartPtr[3] = overlay_colors[_toff];
-				}
-				return;
-			}
-		}
 	}
 
 	auto vramSHRInterlaceOffset = GetVramSizeSHR() / _INTERLACE_MULTIPLIER;	// Offset to 2nd half of the vram
