@@ -20,6 +20,7 @@
 #include <random>
 #include <thread>
 #include <atomic>
+#include <limits>
 
 #include "common.h"
 #include "shader.h"
@@ -50,6 +51,8 @@
 #include <sys/resource.h>
 #else
 #include <windows.h>
+#undef max
+#undef min
 #endif
 
 static SwapInterval_e g_swapInterval = SWAPINTERVAL_ADAPTIVE;
