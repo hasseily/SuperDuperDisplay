@@ -268,11 +268,9 @@ void process_single_event(NetEvent &e)
 	 HANDLE SOFT SWITCHES EVENTS
 	 *********************************
 	 */
-	if (e.is_iigs == true)
+	if ((e.addr >> 8) == 0xc0)
 	{
-		if (e.addr >> 8 == 0xc0)
-			memMgr->ProcessSoftSwitch(e.addr, e.data, e.rw, e.is_iigs);
-		// ignore non-control
+		memMgr->ProcessSoftSwitch(e.addr, e.data, e.rw, e.is_iigs);
 		return;
 	}
 }
