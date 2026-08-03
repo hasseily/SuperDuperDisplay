@@ -415,7 +415,7 @@ even display frame = page A ($E1)
 
 Each selected page remains a 200-row image and may be doubled vertically for presentation. The page selector MUST be coherent for image bytes, SCBs, normal palettes, SHR-3200 line palettes, and PAL256 palette snapshots.
 
-> NOTE: SDD selects page-flip data for image bytes, palettes, and PAL256 snapshots from one rendered-frame parity value; implementations SHOULD likewise use a single parity value everywhere. The original idea for page flip was to take advantage of high frame rate monitors to blend fast flipping images. In hardware that renders below 120Hz it is required to manually blend the pair of images. This can be manually toggled in SDD inside the CRT shader (F3), with the checkbox `Merge Frame Pairs`. When using frame merging, frame rate automatically gets halved. The code does more work, but it has twice as long to do it.
+> NOTE: SDD selects page-flip data for image bytes, palettes, and PAL256 snapshots from one rendered-frame parity value; implementations SHOULD likewise use a single parity value everywhere. The original idea for page flip was to take advantage of high frame rate monitors to blend fast flipping images. Below 120 Hz, SDD automatically blends each pair of page-flip frames and halves the presented frame rate. The CRT shader (F3) checkbox `Merge Frame Pairs` remains available to force the same behavior independently.
 
 ## 11. Beam-time capture order
 

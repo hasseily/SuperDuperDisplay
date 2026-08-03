@@ -91,15 +91,24 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) 
 		IGFD::FileDialogConfig config;
 		config.path = (path.empty() ? "." : path);
 		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File",
-			".bin,.txt,.lgr,.lgri,.dlr,.dlri,.dgr,.hgr,.hgri,.dhr,.dhri,.shr, #C10000, #C10002", config);
+			"All legacy modes{.lgr,.lgri,.lgrp,.dlr,.dlri,.dlrp,.dgr,.dgri,.dgrp,.hgr,.hgri,.hgrp,.dhr,.dhri,.dhrp}"
+			",All SHR modes{.shr,.shr4,.shr4i,.shr4p,.3200,#C10000,#C10002}"
+			",.bin,Any (*.*){.*}", config);
 	}
 	
 	// Display the file dialog
 	if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey")) {
 		// Check if a file was selected
 		if (ImGuiFileDialog::Instance()->IsOk()) {
-			std::string filePath = ImGuiFileDialog::Instance()->GetFilePathName();
-			path = ImGuiFileDialog::Instance()->GetCurrentPath();
+			// GetSelection preserves the selected directory. GetFilePathName is for save dialogs
+			// and can collapse this to a same-named file in the process working directory.
+			const auto selection = ImGuiFileDialog::Instance()->GetSelection(IGFD_ResultMode_KeepInputFile);
+			if (selection.empty()) {
+				ImGuiFileDialog::Instance()->Close();
+				return false;
+			}
+			const std::string filePath = selection.cbegin()->second;
+			path = std::filesystem::path(filePath).parent_path().string();
 			if (filePath.length() >= 4) {
 				std::string extension = std::filesystem::path(filePath).extension().string();
 				std::transform(extension.begin(), extension.end(), extension.begin(),
@@ -108,15 +117,15 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) 
 					extension = "#C10000";
 				else if (filePath.ends_with("#C10002"))
 					extension = "#C10002";
-				if (extension == ".lgr" || extension == ".lgri")
+				if (extension == ".lgr" || extension == ".lgri" || extension == ".lgrp")
 					res = MemoryLoadLGR(filePath);
-				else if (extension == ".dlr" || extension == ".dlri" || extension == ".dgr")
+				else if (extension == ".dlr" || extension == ".dlri" || extension == ".dlrp" || extension == ".dgr" || extension == ".dgri" || extension == ".dgrp")
 					res =  MemoryLoadDGR(filePath);
-				else if (extension == ".hgr" || extension == ".hgri")
+				else if (extension == ".hgr" || extension == ".hgri" || extension == ".hgrp")
 					res = MemoryLoadHGR(filePath);
-				else if (extension == ".dhr" || extension == ".dhri")
+				else if (extension == ".dhr" || extension == ".dhri" || extension == ".dhrp")
 					res = MemoryLoadDHR(filePath);
-				else if (extension == ".shr")
+				else if (extension == ".shr" || extension == ".shr4" || extension == ".shr4i" || extension == ".shr4p" || extension == ".3200")
 					res = MemoryLoadSHR(filePath);
 				else if (extension == "#C10000")
 					res = MemoryLoadSHR(filePath);
@@ -129,11 +138,8 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) 
 				}
 			}
 			// If a file is selected, read and load it into the array
-			if (filePath[0] != '\0') {
+			if (!filePath.empty()) {
 				res = MemoryLoad(filePath, position, bAuxBank);
-				
-				// Reset filePath for next operation
-				filePath[0] = '\0';
 			}
 		}
 		ImGuiFileDialog::Instance()->Close();

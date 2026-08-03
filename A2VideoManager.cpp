@@ -1285,10 +1285,13 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 
 	const int legacyPagingMode = GetLegacyPagingMode();
 	const bool bLegacyPageFlipActive = (legacyPagingMode == DOUBLE_PAGEFLIP);
+	const int shrPagingMode = GetSHRPagingMode();
+	const bool bSHRPageFlipActive = (shrPagingMode == DOUBLE_PAGEFLIP);
+	const bool bPageFlipActive = bLegacyPageFlipActive || bSHRPageFlipActive;
 
 	// Page flip is temporal presentation, so it must be redrawn for every host
 	// output frame even when the captured Apple II frame has not changed.
-	if ((rendered_frame_idx == vrams_read->frame_idx) && !bAlwaysRenderBuffer && !bLegacyPageFlipActive)
+	if ((rendered_frame_idx == vrams_read->frame_idx) && !bAlwaysRenderBuffer && !bPageFlipActive)
 	{
 		_texUnit = _TEXUNIT_POSTPROCESS;
 		return false;
@@ -1469,14 +1472,14 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 			windowsbeam[A2VIDEOBEAM_SHR]->specialModesMask = vrams_read->frameSHRModes;
 			break;
 	}
-	windowsbeam[A2VIDEOBEAM_SHR]->doubleSHR4 = ( overrideDoubleSHR > 0 ? overrideDoubleSHR - 1 : vrams_read->pagedMode);
+	windowsbeam[A2VIDEOBEAM_SHR]->doubleSHR4 = shrPagingMode;
 	windowsbeam[A2VIDEOBEAM_LEGACY]->pagingMode = legacyPagingMode;
 
-	if (bLegacyPageFlipActive && !bLegacyPageFlipWasActive)
-		legacy_page_flip_frame_idx = 0;
-	bLegacyPageFlipWasActive = bLegacyPageFlipActive;
-	const uint64_t legacyRenderFrameIdx = (bLegacyPageFlipActive
-		? legacy_page_flip_frame_idx++
+	if (bPageFlipActive && !bPageFlipWasActive)
+		page_flip_frame_idx = 0;
+	bPageFlipWasActive = bPageFlipActive;
+	const uint64_t pageFlipRenderFrameIdx = (bPageFlipActive
+		? page_flip_frame_idx++
 		: current_frame_idx);
 
 	// if we're in merged mode, prepare the offset texture
@@ -1503,7 +1506,7 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 			glClearColor(0.f, 0.f, 0.f, 0.f);
 			glClear(GL_COLOR_BUFFER_BIT);
 		}
-		winBeamLegacy->Render(legacyRenderFrameIdx);
+		winBeamLegacy->Render(pageFlipRenderFrameIdx);
 		if (p_b_ntsc && (eA2MonitorType == A2_MON_COLOR))
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
@@ -1538,7 +1541,7 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 		// Only SHR is active, just bind the correct output for the postprocessor
 		windowsbeam[A2VIDEOBEAM_SHR]->monitorColorType = eA2MonitorType;
 		windowsbeam[A2VIDEOBEAM_SHR]->bIsMergedMode = (vrams_read->mode == A2Mode_e::MERGED);
-		windowsbeam[A2VIDEOBEAM_SHR]->Render(current_frame_idx);
+		windowsbeam[A2VIDEOBEAM_SHR]->Render(pageFlipRenderFrameIdx);
 		// std::cerr << "Rendered SHR to viewport " << fb_width << "x" << fb_height << " - " << current_frame_idx << std::endl;
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "SHR Mode draw error: " << glerr << std::endl;
@@ -1590,6 +1593,15 @@ int A2VideoManager::GetLegacyPagingMode() const
 	if (vrams_read->mode != A2Mode_e::LEGACY && vrams_read->mode != A2Mode_e::MERGED)
 		return DOUBLE_NONE;
 	return vrams_read->legacyPagedMode;
+}
+
+int A2VideoManager::GetSHRPagingMode() const
+{
+	if (vrams_read == nullptr)
+		return DOUBLE_NONE;
+	if (vrams_read->mode != A2Mode_e::SHR && vrams_read->mode != A2Mode_e::MERGED)
+		return DOUBLE_NONE;
+	return (overrideDoubleSHR > 0 ? overrideDoubleSHR - 1 : vrams_read->pagedMode);
 }
 
 GLuint A2VideoManager::GetOutputTextureId()

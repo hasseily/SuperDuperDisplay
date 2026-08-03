@@ -899,7 +899,7 @@ Effectively halves the frame rate\n\
 but removes any flickering associated\n\
 with page flipping images");
 		if (bAutomaticFrameMerging)
-			ImGui::TextDisabled("Automatic: legacy page flip output is below 120 Hz");
+			ImGui::TextDisabled("Automatic: page flip output is below 120 Hz");
 		if (p_i_postprocessingLevel == 2) {
 			ImGui::Separator();
 			// Scanline and Interlacing

@@ -240,6 +240,7 @@ public:
 	GLuint GetOutputTextureId();		// merged output
 	bool Render(GLuint &texUnit);	// outputs the texture unit used, and returns if it rendered or not
 	int GetLegacyPagingMode() const;
+	int GetSHRPagingMode() const;
 
 	inline uint32_t GetVramWidthLegacy() { return (40 + (2 * borders_w_cycles)); };	// in 4 bytes!
 	inline uint32_t GetVramHeightLegacy() { return  (192 + (2 * borders_h_scanlines)); };
@@ -373,8 +374,8 @@ private:
 	unsigned int OFFSETTEX = UINT_MAX;
 	A2Mode_e merge_last_change_mode = A2Mode_e::NONE;
 	uint32_t merge_last_change_y = UINT_MAX;
-	uint64_t legacy_page_flip_frame_idx = 0;	// Host-output parity for coherent legacy page flipping
-	bool bLegacyPageFlipWasActive = false;
+	uint64_t page_flip_frame_idx = 0;	// Host-output parity shared by active legacy and SHR page flipping
+	bool bPageFlipWasActive = false;
 
 	// Those could be anywhere up to 6 or 7 cycles for horizontal borders
 	// and a lot more for vertical borders. We just decided on a size

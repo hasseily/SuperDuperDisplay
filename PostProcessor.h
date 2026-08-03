@@ -104,7 +104,7 @@ private:
 	int integer_scale = 1;		// Base integer scale used
 	bool bAutoScale = true;		// Automatically scale to max scale?
 	bool bHalveFramerate = false;	// Mixes every pair of frames, to avoid page flip flicker
-	bool bAutomaticFrameMerging = false;	// Required for legacy page flip below 120 Hz
+	bool bAutomaticFrameMerging = false;	// Required for legacy or SHR page flip below 120 Hz
 #define _PP_NO_BEZEL_FILENAME "NONE"
 	std::string selectedBezelFile = _PP_NO_BEZEL_FILENAME;
 	int currentBezelIndex = 0;

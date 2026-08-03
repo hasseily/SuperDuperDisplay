@@ -1017,7 +1017,8 @@ int main(int argc, char* argv[])
 								window_bgcolor[3]);
 							glClear(GL_COLOR_BUFFER_BIT);
 							postProcessor->SetAutomaticFrameMerging(
-								a2VideoManager->GetLegacyPagingMode() == DOUBLE_PAGEFLIP
+								(a2VideoManager->GetLegacyPagingMode() == DOUBLE_PAGEFLIP
+									|| a2VideoManager->GetSHRPagingMode() == DOUBLE_PAGEFLIP)
 								&& Main_GetOutputRefreshRate() < 120);
 							postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
 							if (!postProcessor->ShouldFrameBeSkipped())
@@ -1065,7 +1066,8 @@ int main(int argc, char* argv[])
 
 			// Now run the postprocessing (not for IsSwapApple2Bus)
 			postProcessor->SetAutomaticFrameMerging(
-				a2VideoManager->GetLegacyPagingMode() == DOUBLE_PAGEFLIP
+				(a2VideoManager->GetLegacyPagingMode() == DOUBLE_PAGEFLIP
+					|| a2VideoManager->GetSHRPagingMode() == DOUBLE_PAGEFLIP)
 				&& Main_GetOutputRefreshRate() < 120);
 			postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
 
