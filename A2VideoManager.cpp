@@ -366,6 +366,13 @@ int A2VideoManager::DetectLegacyPagingMode() const
 	return DOUBLE_NONE;
 }
 
+int A2VideoManager::ResolveLegacyPagingMode() const
+{
+	return (overrideLegacyPaging == DOUBLE_NONE
+		? DetectLegacyPagingMode()
+		: overrideLegacyPaging);
+}
+
 void A2VideoManager::StartNextFrame()
 {
 	// start the next frame
@@ -399,9 +406,7 @@ void A2VideoManager::StartNextFrame()
 	vrams_write->pagedMode = 0;
 	// A2Li is level-sampled once per frame. A user override still exists for
 	// testing images that do not carry an in-band marker.
-	vrams_write->legacyPagedMode = (overrideLegacyPaging == DOUBLE_NONE
-		? DetectLegacyPagingMode()
-		: overrideLegacyPaging);
+	vrams_write->legacyPagedMode = ResolveLegacyPagingMode();
 
 	// And finally send an event to the main loop saying that the frame was updated
 	// This is necessary when synching to the Apple 2 VSYNC. Don't create a new event if there are 4
@@ -1063,6 +1068,10 @@ void A2VideoManager::SwitchToMergedMode(uint32_t scanline)
 
 void A2VideoManager::ForceBeamFullScreenRender(const uint64_t numFrames)
 {
+	// A forced capture must use the current UI override (or current A2Li marker),
+	// rather than the mode sampled before the override changed.
+	vrams_write->legacyPagedMode = ResolveLegacyPagingMode();
+
 	// Move the beam over the whole screen
 	auto totalscanlines = (current_region == VideoRegion_e::NTSC ? SC_TOTAL_NTSC : SC_TOTAL_PAL);
 	// Start 2 lines after the frame flip in the VBLANK non-border area

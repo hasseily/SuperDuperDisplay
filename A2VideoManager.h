@@ -287,6 +287,7 @@ private:
 	}
 	void StartNextFrame();
 	int DetectLegacyPagingMode() const;
+	int ResolveLegacyPagingMode() const;
 	void SwitchToMergedMode(uint32_t scanline);
 	void CreateOrResizeFramebuffer(int fb_width, int fb_height);
 	void PrepareOffsetTexture();

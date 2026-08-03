@@ -254,8 +254,10 @@ static void Main_DisplayStartupSplashScreen()
 
 	const std::string splashVersionText = std::string("Version ") + SDD_VERSION;
 	constexpr int splashVersionMargin = 12;
-	constexpr int splashVersionGlyphWidth = 14;
-	constexpr int splashVersionGlyphHeight = 16;
+	constexpr int splashVersionGlyphWidth = 7;
+	// The narrow Apple II font keeps the complete version visible in small windows.
+	const bool previousUse80ColDefaultFont = fpsTimedTextManager.use80ColDefaultFont;
+	fpsTimedTextManager.use80ColDefaultFont = true;
 	size_t splashVersionTextId = 0;
 	size_t splashVersionShadowId = 0;
 	int splashVersionWindowWidth = 0;
@@ -278,14 +280,12 @@ static void Main_DisplayStartupSplashScreen()
 		const int textX = std::max(
 			splashVersionMargin,
 			windowWidth - textWidth - splashVersionMargin);
-		const int textY = std::max(
-			splashVersionMargin,
-			windowHeight - splashVersionGlyphHeight - splashVersionMargin);
+		const int textY = splashVersionMargin;
 
 		splashVersionTextId = fpsTimedTextManager.AddText(
-			splashVersionText, textX, textY, splashDurationMs + 1000);
+			splashVersionText, textX, textY, UINT32_MAX);
 		splashVersionShadowId = fpsTimedTextManager.AddText(
-			splashVersionText, textX + 2, textY + 2, splashDurationMs + 1000,
+			splashVersionText, textX + 2, textY + 2, UINT32_MAX,
 			0.0f, 0.0f, 0.0f, 0.8f);
 	};
 
@@ -327,16 +327,16 @@ static void Main_DisplayStartupSplashScreen()
 			continue;
 		}
 
-		const float imageAspect =
-			static_cast<float>(splashImage.image_xcount) / splashImage.image_ycount;
-		const float windowAspect =
-			static_cast<float>(drawableWidth) / drawableHeight;
-		float scaleX = 1.0f;
-		float scaleY = 1.0f;
-		if (imageAspect > windowAspect)
-			scaleY = windowAspect / imageAspect;
-		else
-			scaleX = imageAspect / windowAspect;
+		// Native image dimensions are the upper limit: only shrink to fit.
+		const float imageScale = std::min({
+			1.0f,
+			static_cast<float>(drawableWidth) / splashImage.image_xcount,
+			static_cast<float>(drawableHeight) / splashImage.image_ycount
+		});
+		const float scaleX =
+			(imageScale * splashImage.image_xcount) / drawableWidth;
+		const float scaleY =
+			(imageScale * splashImage.image_ycount) / drawableHeight;
 
 		splashQuad.SetQuadRelativeBounds(
 			SDL_FRect{-scaleX, scaleY, 2.0f * scaleX, -2.0f * scaleY});
@@ -359,6 +359,7 @@ static void Main_DisplayStartupSplashScreen()
 		fpsTimedTextManager.DeleteText(splashVersionTextId);
 	if (splashVersionShadowId != 0)
 		fpsTimedTextManager.DeleteText(splashVersionShadowId);
+	fpsTimedTextManager.use80ColDefaultFont = previousUse80ColDefaultFont;
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glDeleteTextures(1, &splashTexture);

@@ -12,8 +12,39 @@
 #include "../MemoryManager.h"
 #include "ImGuiFileDialog.h"
 #include "../LogTextManager.h"
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
 #include <locale.h>
 #include <sstream>
+
+namespace
+{
+	enum class LoadedVideoMode
+	{
+		LGR,
+		DLGR,
+		HGR,
+		DHGR,
+		SHR
+	};
+
+	void SetLoadedVideoMode(LoadedVideoMode mode)
+	{
+		auto memManager = MemoryManager::GetInstance();
+		const bool isDouble = (mode == LoadedVideoMode::DLGR || mode == LoadedVideoMode::DHGR);
+		const bool isHires = (mode == LoadedVideoMode::HGR || mode == LoadedVideoMode::DHGR);
+
+		memManager->SetSoftSwitch(A2SS_SHR, mode == LoadedVideoMode::SHR);
+		memManager->SetSoftSwitch(A2SS_TEXT, false);
+		memManager->SetSoftSwitch(A2SS_MIXED, false);
+		memManager->SetSoftSwitch(A2SS_PAGE2, false);
+		memManager->SetSoftSwitch(A2SS_HIRES, isHires);
+		memManager->SetSoftSwitch(A2SS_80COL, isDouble);
+		memManager->SetSoftSwitch(A2SS_DHGR, isDouble);
+		memManager->SetSoftSwitch(A2SS_DHGRMONO, false);
+	}
+}
 
 bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank, size_t fileSize) {
 	bool res = false;
@@ -70,7 +101,13 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) 
 			std::string filePath = ImGuiFileDialog::Instance()->GetFilePathName();
 			path = ImGuiFileDialog::Instance()->GetCurrentPath();
 			if (filePath.length() >= 4) {
-				std::string extension = ImGuiFileDialog::Instance()->GetCurrentFilter();
+				std::string extension = std::filesystem::path(filePath).extension().string();
+				std::transform(extension.begin(), extension.end(), extension.begin(),
+					[](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+				if (filePath.ends_with("#C10000"))
+					extension = "#C10000";
+				else if (filePath.ends_with("#C10002"))
+					extension = "#C10002";
 				if (extension == ".lgr" || extension == ".lgri")
 					res = MemoryLoadLGR(filePath);
 				else if (extension == ".dlr" || extension == ".dlri" || extension == ".dgr")
@@ -128,6 +165,7 @@ bool MemoryLoadLGR(const std::string& filePath)
 			pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x800;
 			file.read(reinterpret_cast<char*>(pMem), 0x400);
 		}
+		SetLoadedVideoMode(LoadedVideoMode::LGR);
 		res = true;
 	}
 	return res;
@@ -161,6 +199,7 @@ bool MemoryLoadDGR(const std::string& filePath)
 			pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x800;
 			file.read(reinterpret_cast<char*>(pMem), 0x400);
 		}
+		SetLoadedVideoMode(LoadedVideoMode::DLGR);
 		res = true;
 	}
 	return res;
@@ -188,6 +227,7 @@ bool MemoryLoadHGR(const std::string &filePath) {
 			pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x4000;
 			file.read(reinterpret_cast<char*>(pMem), 0x2000);
 		}
+		SetLoadedVideoMode(LoadedVideoMode::HGR);
 		res = true;
 	}
 	return res;
@@ -220,6 +260,7 @@ bool MemoryLoadDHR(const std::string &filePath) {
 			pMem = MemoryManager::GetInstance()->GetApple2MemPtr() + 0x4000;
 			file.read(reinterpret_cast<char*>(pMem), 0x2000);
 		}
+		SetLoadedVideoMode(LoadedVideoMode::DHGR);
 		res = true;
 	}
 	return res;
@@ -286,6 +327,7 @@ bool MemoryLoadSHR(const std::string& filePath) {
 
 	logText += ": " + filePath;
 	logManager->AddLog(logText);
+	SetLoadedVideoMode(LoadedVideoMode::SHR);
 	return true;
 }
 
