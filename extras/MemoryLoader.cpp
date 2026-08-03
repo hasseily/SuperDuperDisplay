@@ -60,7 +60,7 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) 
 		IGFD::FileDialogConfig config;
 		config.path = (path.empty() ? "." : path);
 		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File",
-			".bin,.txt,.lgr,.dgr,.hgr,.dhr,.shr, #C10000, #C10002", config);
+			".bin,.txt,.lgr,.lgri,.dlr,.dlri,.dgr,.hgr,.hgri,.dhr,.dhri,.shr, #C10000, #C10002", config);
 	}
 	
 	// Display the file dialog
@@ -71,13 +71,13 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) 
 			path = ImGuiFileDialog::Instance()->GetCurrentPath();
 			if (filePath.length() >= 4) {
 				std::string extension = ImGuiFileDialog::Instance()->GetCurrentFilter();
-				if (extension == ".lgr")
+				if (extension == ".lgr" || extension == ".lgri")
 					res = MemoryLoadLGR(filePath);
-				else if (extension == ".dgr")
+				else if (extension == ".dlr" || extension == ".dlri" || extension == ".dgr")
 					res =  MemoryLoadDGR(filePath);
-				else if (extension == ".hgr")
+				else if (extension == ".hgr" || extension == ".hgri")
 					res = MemoryLoadHGR(filePath);
-				else if (extension == ".dhr")
+				else if (extension == ".dhr" || extension == ".dhri")
 					res = MemoryLoadDHR(filePath);
 				else if (extension == ".shr")
 					res = MemoryLoadSHR(filePath);
@@ -412,7 +412,7 @@ bool MemorySaveLGR(const std::string& filePath, size_t fileSize /*= 0x400*/)
 		return false;
 	}
 
-	std::string fullPath = filePath + ".lgr";
+	std::string fullPath = filePath + (fileSize == 0x800 ? ".lgri" : ".lgr");
 	std::ofstream outFile(fullPath, std::ios::binary);
 	if (!outFile) {
 		std::cerr << "Error: Failed to open file for writing: " << fullPath << std::endl;
@@ -440,11 +440,11 @@ bool MemorySaveDGR(const std::string& filePath, size_t fileSize /*= 0x800*/)
 {
 	uint8_t* pMem;
 	if (!((fileSize == 0x800) || (fileSize == 0x1000))) {
-		std::cerr << "Error: DHR file is not the correct size." << std::endl;
+		std::cerr << "Error: DLR file is not the correct size." << std::endl;
 		return false;
 	}
 
-	std::string fullPath = filePath + ".dgr";
+	std::string fullPath = filePath + (fileSize == 0x1000 ? ".dlri" : ".dlr");
 	std::ofstream outFile(fullPath, std::ios::binary);
 	if (!outFile) {
 		std::cerr << "Error: Failed to open file for writing: " << fullPath << std::endl;
@@ -488,7 +488,7 @@ bool MemorySaveHGR(const std::string& filePath, size_t fileSize /*= 0x2000*/)
 		return false;
 	}
 
-	std::string fullPath = filePath + ".hgr";
+	std::string fullPath = filePath + (fileSize == 0x4000 ? ".hgri" : ".hgr");
 	std::ofstream outFile(fullPath, std::ios::binary);
 	if (!outFile) {
 		std::cerr << "Error: Failed to open file for writing: " << fullPath << std::endl;
@@ -520,7 +520,7 @@ bool MemorySaveDHR(const std::string& filePath, size_t fileSize /*= 0x4000*/)
 		return false;
 	}
 
-	std::string fullPath = filePath + ".dhr";
+	std::string fullPath = filePath + (fileSize == 0x8000 ? ".dhri" : ".dhr");
 	std::ofstream outFile(fullPath, std::ios::binary);
 	if (!outFile) {
 		std::cerr << "Error: Failed to open file for writing: " << fullPath << std::endl;
@@ -538,7 +538,7 @@ bool MemorySaveDHR(const std::string& filePath, size_t fileSize /*= 0x4000*/)
 		std::cerr << "Error: Failed to write main memory data to file: " << fullPath << std::endl;
 		return false;
 	}
-	if (fileSize == 0x4000) {
+	if (fileSize == 0x8000) {
 		pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + 0x4000;
 		outFile.write(reinterpret_cast<char*>(pMem), 0x2000);
 		if (!outFile) {
@@ -556,7 +556,7 @@ bool MemorySaveDHR(const std::string& filePath, size_t fileSize /*= 0x4000*/)
 	return true;
 }
 
-bool MemorySaveSHR(const std::string& filePath, size_t fileSize /*= 0x80000*/)
+bool MemorySaveSHR(const std::string& filePath, size_t fileSize /*= 0x8000*/)
 {
 	uint8_t* pMem;
 	pMem = MemoryManager::GetInstance()->GetApple2MemAuxPtr() + 0x2000;

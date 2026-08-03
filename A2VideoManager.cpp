@@ -156,6 +156,9 @@ void A2VideoManager::Initialize()
 		vrams_array[i].frame_idx = current_frame_idx + i;
 		vrams_array[i].bWasRendered = true;		// otherwise it won't render the first frame
 		vrams_array[i].mode = A2Mode_e::NONE;
+		vrams_array[i].frameSHRModes = 0;
+		vrams_array[i].pagedMode = DOUBLE_NONE;
+		vrams_array[i].legacyPagedMode = DOUBLE_NONE;
 		if (vrams_array[i].vram_legacy != nullptr)
 		{
 			delete[] vrams_array[i].vram_legacy;
@@ -344,6 +347,25 @@ SDL_FRect A2VideoManager::CenteredQuadInFramebufferWithOffset(const SDL_FRect& q
 	return resQuad;
 }
 
+int A2VideoManager::DetectLegacyPagingMode() const
+{
+	auto memMgr = MemoryManager::GetInstance();
+	if (memMgr->IsSoftSwitch(A2SS_SHR) || memMgr->IsSoftSwitch(A2SS_TEXT))
+		return DOUBLE_NONE;
+
+	// The marker is in the first screen hole of page 2 in main memory.
+	// HIRES selects the HGR/DHGR family; otherwise use the LGR/DLGR family.
+	const uint16_t markerAddress = (memMgr->IsSoftSwitch(A2SS_HIRES) ? 0x4078 : 0x0878);
+	const uint8_t* marker = memMgr->GetApple2MemPtr() + markerAddress;
+	constexpr uint8_t signature[] = { 0xC1, 0xB2, 0xCC, 0xE9 }; // high-bit-set ASCII "A2Li"
+
+	if (memcmp(marker, signature, sizeof(signature)) != 0)
+		return DOUBLE_NONE;
+	if (marker[4] == DOUBLE_INTERLACE || marker[4] == DOUBLE_PAGEFLIP)
+		return marker[4];
+	return DOUBLE_NONE;
+}
+
 void A2VideoManager::StartNextFrame()
 {
 	// start the next frame
@@ -375,6 +397,11 @@ void A2VideoManager::StartNextFrame()
 	// Additional frame data resets
 	vrams_write->frameSHRModes = 0;
 	vrams_write->pagedMode = 0;
+	// A2Li is level-sampled once per frame. A user override still exists for
+	// testing images that do not carry an in-band marker.
+	vrams_write->legacyPagedMode = (overrideLegacyPaging == DOUBLE_NONE
+		? DetectLegacyPagingMode()
+		: overrideLegacyPaging);
 
 	// And finally send an event to the main loop saying that the frame was updated
 	// This is necessary when synching to the Apple 2 VSYNC. Don't create a new event if there are 4
@@ -852,7 +879,7 @@ DRAW_VRAM:
 	// bits 4-7: foreground color (also BORDER color)
 	uint8_t colors = 0;
 
-	bShouldPageDouble = (overrideLegacyPaging > 0 ? 1 : 0);
+	bShouldPageDouble = (vrams_write->legacyPagedMode != DOUBLE_NONE);
 
 
 	if (beamState >= BeamState_e::BORDER_LEFT)	// the beam is in a visible area!
@@ -943,7 +970,7 @@ DRAW_VRAM:
 				// Check for page 2
 				bool isPage2 = false;
 				// Careful: it's only page 2 if 80STORE is off
-				if (memMgr->IsSoftSwitch(A2SS_PAGE2) && !memMgr->IsSoftSwitch(A2SS_80STORE))
+				if (!bShouldPageDouble && memMgr->IsSoftSwitch(A2SS_PAGE2) && !memMgr->IsSoftSwitch(A2SS_80STORE))
 					isPage2 = true;
 
 				// Finally set the 4 VRAM bytes
@@ -954,7 +981,7 @@ DRAW_VRAM:
 				if ((flags & 0b111) < 4)	// D/TEXT AND D/LGR
 				{
 					startMem = _A2VIDEO_TEXT1_START;
-					if (((flags & 0b111) < 3) && isPage2)		// check for page 2 (DLGR doesn't have it)
+					if (isPage2)
 						startMem = _A2VIDEO_TEXT2_START;
 					byteStartPtr[0] = *(memMgr->GetApple2MemPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
 					byteStartPtr[1] = *(memMgr->GetApple2MemAuxPtr() + startMem + g_RAM_TEXTOffsets[_y / 8] + (_x - CYCLES_SC_HBL));
@@ -1247,8 +1274,12 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 		return false;
 	}
 
-	// Exit if we've already rendered the buffer
-	if ((rendered_frame_idx == vrams_read->frame_idx) && !bAlwaysRenderBuffer)
+	const int legacyPagingMode = GetLegacyPagingMode();
+	const bool bLegacyPageFlipActive = (legacyPagingMode == DOUBLE_PAGEFLIP);
+
+	// Page flip is temporal presentation, so it must be redrawn for every host
+	// output frame even when the captured Apple II frame has not changed.
+	if ((rendered_frame_idx == vrams_read->frame_idx) && !bAlwaysRenderBuffer && !bLegacyPageFlipActive)
 	{
 		_texUnit = _TEXUNIT_POSTPROCESS;
 		return false;
@@ -1430,6 +1461,14 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 			break;
 	}
 	windowsbeam[A2VIDEOBEAM_SHR]->doubleSHR4 = ( overrideDoubleSHR > 0 ? overrideDoubleSHR - 1 : vrams_read->pagedMode);
+	windowsbeam[A2VIDEOBEAM_LEGACY]->pagingMode = legacyPagingMode;
+
+	if (bLegacyPageFlipActive && !bLegacyPageFlipWasActive)
+		legacy_page_flip_frame_idx = 0;
+	bLegacyPageFlipWasActive = bLegacyPageFlipActive;
+	const uint64_t legacyRenderFrameIdx = (bLegacyPageFlipActive
+		? legacy_page_flip_frame_idx++
+		: current_frame_idx);
 
 	// if we're in merged mode, prepare the offset texture
 	if (vrams_read->mode == A2Mode_e::MERGED)
@@ -1455,7 +1494,7 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 			glClearColor(0.f, 0.f, 0.f, 0.f);
 			glClear(GL_COLOR_BUFFER_BIT);
 		}
-		winBeamLegacy->Render(current_frame_idx);
+		winBeamLegacy->Render(legacyRenderFrameIdx);
 		if (p_b_ntsc && (eA2MonitorType == A2_MON_COLOR))
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, FBO_A2Video);
@@ -1533,6 +1572,15 @@ bool A2VideoManager::Render(GLuint &_texUnit)
 
 	_texUnit = _TEXUNIT_POSTPROCESS;
 	return true;
+}
+
+int A2VideoManager::GetLegacyPagingMode() const
+{
+	if (vrams_read == nullptr)
+		return DOUBLE_NONE;
+	if (vrams_read->mode != A2Mode_e::LEGACY && vrams_read->mode != A2Mode_e::MERGED)
+		return DOUBLE_NONE;
+	return vrams_read->legacyPagedMode;
 }
 
 GLuint A2VideoManager::GetOutputTextureId()
@@ -1747,17 +1795,21 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 
 			ImGui::NextColumn();
 			ImGui::SeparatorText("[ LEGACY PAGING ]");
-			if (ImGui::RadioButton("Normal##Legacyoverride", overrideLegacyPaging == DOUBLE_NONE))
+			bool legacyPagingChanged = false;
+			if (ImGui::RadioButton("Automatic (A2Li)##Legacyoverride", overrideLegacyPaging == DOUBLE_NONE)) {
 				overrideLegacyPaging = DOUBLE_NONE;
-			if (ImGui::RadioButton("Interlace##Legacyoverride", overrideLegacyPaging == DOUBLE_INTERLACE))
-				overrideLegacyPaging = DOUBLE_INTERLACE;
-			if (ImGui::RadioButton("Page Flip##Legacyoverride", overrideLegacyPaging == DOUBLE_PAGEFLIP))
-				overrideLegacyPaging = DOUBLE_PAGEFLIP;
-			if (windowsbeam[A2VIDEOBEAM_LEGACY]->pagingMode != overrideLegacyPaging)
-			{
-				windowsbeam[A2VIDEOBEAM_LEGACY]->pagingMode = overrideLegacyPaging;
-				this->ForceBeamFullScreenRender();
+				legacyPagingChanged = true;
 			}
+			if (ImGui::RadioButton("Force Interlace##Legacyoverride", overrideLegacyPaging == DOUBLE_INTERLACE)) {
+				overrideLegacyPaging = DOUBLE_INTERLACE;
+				legacyPagingChanged = true;
+			}
+			if (ImGui::RadioButton("Force Page Flip##Legacyoverride", overrideLegacyPaging == DOUBLE_PAGEFLIP)) {
+				overrideLegacyPaging = DOUBLE_PAGEFLIP;
+				legacyPagingChanged = true;
+			}
+			if (legacyPagingChanged)
+				this->ForceBeamFullScreenRender();
 			ImGui::Columns(1);
 
 			ImGui::Columns(2, "SHR_Columns", false);
@@ -1785,7 +1837,7 @@ void A2VideoManager::DisplayImGuiWindow(bool* p_open)
 			ImGui::NextColumn();
 			ImGui::SeparatorText("[ OVERRIDE ]");
 			auto _prevOverride = overrideSHRMode;
-			if (ImGui::RadioButton("None##SHR4override", overrideSHRMode < A2SM_SHR4SHR))
+			if (ImGui::RadioButton("None##SHR4override", overrideSHRMode == A2SM_NONE))
 				overrideSHRMode = A2SM_NONE;
 			if (ImGui::RadioButton("Force SHR", overrideSHRMode == A2SM_SHR4SHR))
 				overrideSHRMode = A2SM_SHR4SHR;

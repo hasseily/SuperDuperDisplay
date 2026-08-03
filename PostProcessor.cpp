@@ -441,6 +441,14 @@ void PostProcessor::RegeneratePreviousTexture()
 
 void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint scanlineCount)
 {
+	const bool bFrameMerging = bHalveFramerate || bAutomaticFrameMerging;
+	if (bFrameMerging != bFrameMergingWasActive)
+	{
+		frame_merge_count = 0;
+		bFrameMergingWasActive = bFrameMerging;
+	}
+	bSkipCurrentFrame = bFrameMerging && ((frame_merge_count & 1) == 0);
+
 	if (bezelImageAsset.tex_id == UINT_MAX)
 	{
 		std::vector<std::string> _bezelFiles;
@@ -551,7 +559,8 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	shaderProgram.SetUniform("A2TextureCurrent", texUnitCurrent - GL_TEXTURE0);
 	shaderProgram.SetUniform("PreviousFrame", _TEXUNIT_PP_PREVIOUS - GL_TEXTURE0);
 	shaderProgram.SetUniform("iFrameCount", frame_count);
-	shaderProgram.SetUniform("bHalveFrameRate", bHalveFramerate);
+	shaderProgram.SetUniform("iFrameMergeCount", frame_merge_count);
+	shaderProgram.SetUniform("bHalveFrameRate", bFrameMerging);
 	// Only used for the full PP shader
 	if (p_i_postprocessingLevel > 1) {
 		shaderProgram.SetUniform("OutputSize", glm::vec2(quadWidth, quadHeight));
@@ -570,7 +579,7 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 
 	// DO NOT COPY INTO THE PREVIOUS FRAME TEXTURE UNLESS IT IS REQUIRED
 	// THIS _DRAMATICALLY_ REDUCES THE FPS ON A RASPBERRY PI
-	if ((p_f_ghostingPercent > 0.0000001f && p_i_postprocessingLevel > 1) || bHalveFramerate)
+	if ((p_f_ghostingPercent > 0.0000001f && p_i_postprocessingLevel > 1) || bFrameMerging)
 	{
 		if ((glerr = glGetError()) != GL_NO_ERROR) {
 			std::cerr << "OpenGL error PP 4: " << glerr << std::endl;
@@ -642,6 +651,8 @@ void PostProcessor::Render(SDL_Window* window, GLuint inputTextureSlot, GLuint s
 	// revert the texture assignment
 	glActiveTexture(GL_TEXTURE0);
 	++frame_count;
+	if (bFrameMerging)
+		++frame_merge_count;
 }
 
 
@@ -887,6 +898,8 @@ Merges every pair of even and odd frames.\n\
 Effectively halves the frame rate\n\
 but removes any flickering associated\n\
 with page flipping images");
+		if (bAutomaticFrameMerging)
+			ImGui::TextDisabled("Automatic: legacy page flip output is below 120 Hz");
 		if (p_i_postprocessingLevel == 2) {
 			ImGui::Separator();
 			// Scanline and Interlacing

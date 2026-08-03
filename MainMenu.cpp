@@ -1196,24 +1196,24 @@ void MainMenu::ShowDeveloperMenu() {
 		std::string _sfpath = GetMemorySaveFilePath();
 		if (ImGui::MenuItem("LGR", ""))
 			MemorySaveLGR(_sfpath);
-		if (ImGui::MenuItem("LGR 2K", ""))
+		if (ImGui::MenuItem("LGRi", ""))
 			MemorySaveLGR(_sfpath, 0x800);
-		if (ImGui::MenuItem("DGR", ""))
+		if (ImGui::MenuItem("DLR", ""))
 			MemorySaveDGR(_sfpath);
-		if (ImGui::MenuItem("DGR 4K", ""))
+		if (ImGui::MenuItem("DLRi", ""))
 			MemorySaveDGR(_sfpath, 0x1000);
 		if (ImGui::MenuItem("HGR", ""))
 			MemorySaveHGR(_sfpath);
-		if (ImGui::MenuItem("HGR 16K", ""))
+		if (ImGui::MenuItem("HGRi", ""))
 			MemorySaveHGR(_sfpath, 0x4000);
 		if (ImGui::MenuItem("DHGR", ""))
 			MemorySaveDHR(_sfpath);
-		if (ImGui::MenuItem("DHGR 32K", ""))
+		if (ImGui::MenuItem("DHRi", ""))
 			MemorySaveDHR(_sfpath, 0x8000);
 		if (ImGui::MenuItem("SHR", ""))
-			MemorySaveDHR(_sfpath);
+			MemorySaveSHR(_sfpath);
 		if (ImGui::MenuItem("SHR 64K", ""))
-			MemorySaveDHR(_sfpath, 0x10000);
+			MemorySaveSHR(_sfpath, 0x10000);
 		ImGui::EndMenu();
 	}
 

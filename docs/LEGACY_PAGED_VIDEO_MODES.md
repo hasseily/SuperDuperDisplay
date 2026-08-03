@@ -123,13 +123,14 @@ Consumers that alternate MUST select the page from a single frame-parity value f
 
 ## 6. SDD reference behavior
 
-SuperDuperDisplay currently drives legacy paging from a user override, not from the `A2Li` signal: the `[ LEGACY PAGING ]` radio buttons (Normal / Interlace / Page Flip) in the Apple 2 Video window set `overrideLegacyPaging`, which feeds the legacy beam shader's `pagingMode` uniform (`A2VideoManager.cpp`, `A2WindowBeam.cpp`, `shaders/a2video_beam_legacy.frag`). Honoring `A2Li` in-band is a planned extension of that path.
+SuperDuperDisplay samples the `A2Li` signal from its main-memory shadow at every frame start. The `[ LEGACY PAGING ]` controls default to **Automatic (A2Li)** and retain Force Interlace / Force Page Flip options for testing files that lack an in-band marker. The sampled or forced value feeds the legacy beam shader's `pagingMode` uniform (`A2VideoManager.cpp`, `A2WindowBeam.cpp`, `shaders/a2video_beam_legacy.frag`).
 
 Implementation notes, for compatibility work:
 
-- While an override is active the beam capture stores a second copy of every visible byte in the upper half of legacy VRAM. The primary half holds the page the machine is displaying (per `PAGE2`/`80STORE`); the secondary half always holds page 2 data. The double capture applies to every legacy mode, including text, so SDD's override can page-double modes outside the `A2Li` graphics gating.
+- While paging is active the beam capture stores a second copy of every visible byte in the upper half of legacy VRAM. The primary half holds page 1 and the secondary half holds page 2, independent of live `PAGE2`. Automatic `A2Li` paging is graphics-gated as specified in section 3.4; a forced override can still page-double text for diagnostics.
 - The fragment shader shifts odd output lines into the secondary VRAM half for interlace, and shifts entire odd-parity frames there for page flip.
-- Frame merging for sub-120 Hz page flip is the post-processor's `Merge Frame Pairs` checkbox in the CRT shader window (F3). It halves the effective frame rate and blends frame pairs; the code does more work per output frame, but has twice as long to do it.
+- Page-flip parity advances on every host render, even when the captured Apple II frame has not changed, so 120 Hz and faster outputs alternate coherent whole pages at output cadence.
+- Below 120 Hz, page flip automatically enables the post-processor's rendered-frame pair merge. It performs the 50/50 blend after legacy rendering (and after the optional NTSC pass), skips the unmerged member of each pair, and presents only blended frames. The manual `Merge Frame Pairs` checkbox remains available independently.
 
 ## 7. Appletini ONE reference behavior
 

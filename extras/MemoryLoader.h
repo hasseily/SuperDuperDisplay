@@ -28,11 +28,11 @@ bool MemoryLoadSHR(const std::string &filePath);
 uint32_t ParseSHRData(std::ifstream& file, uint32_t offset, SHRFileContent_e* typeE1, SHRFileContent_e* typeE0);
 // Returns a fully formatted file path for saving, no suffix
 std::string GetMemorySaveFilePath();
-// the save methods auto-append the correct suffix (.hgr, .dgr, .shr)
+// The save methods append the specified legacy suffix, using the *i form for page pairs.
 bool MemorySaveLGR(const std::string& filePath, size_t fileSize = 0x400);	// 0x800 for interlace/pageflip
-bool MemorySaveDGR(const std::string& filePath, size_t fileSize = 0x800);	// 0x1000 for interlace/pageflip
+bool MemorySaveDGR(const std::string& filePath, size_t fileSize = 0x800);	// .dlr, or .dlri for 0x1000
 bool MemorySaveHGR(const std::string& filePath, size_t fileSize = 0x2000);	// 0x4000 for interlace/pageflip
 bool MemorySaveDHR(const std::string& filePath, size_t fileSize = 0x4000);	// 0x8000 for interlace/pageflip
-bool MemorySaveSHR(const std::string& filePath, size_t fileSize = 0x80000);	// 0x10000 for interlace/pageflip
+bool MemorySaveSHR(const std::string& filePath, size_t fileSize = 0x8000);	// 0x10000 for interlace/pageflip
 
 #endif /* MEMORYLOADER_H */

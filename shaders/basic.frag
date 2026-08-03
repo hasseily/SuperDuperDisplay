@@ -9,6 +9,7 @@ in vec2 vTexCoords;
 out vec4 FragColor;
 
 uniform COMPAT_PRECISION int iFrameCount;
+uniform COMPAT_PRECISION int iFrameMergeCount;
 uniform sampler2D A2TextureCurrent;
 uniform sampler2D PreviousFrame;
 uniform bool bHalveFrameRate;
@@ -32,7 +33,7 @@ vec3 toGamma(vec3 linearColor) {
 // odd frames
 vec4 HalveFrameRate(vec2 coords, vec4 currentColor)
 {
-	if ((iFrameCount & 1) == 1) {
+	if ((iFrameMergeCount & 1) == 1) {
 		vec4 previousColor = texture(PreviousFrame, coords);
 
 		// Convert both colors to linear space

@@ -35,6 +35,7 @@ out vec2 scale;
 out vec2 ps;
 
 uniform COMPAT_PRECISION int iFrameCount;
+uniform COMPAT_PRECISION int iFrameMergeCount;
 uniform COMPAT_PRECISION vec2 OutputSize;
 uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
@@ -53,6 +54,7 @@ void main()
 #elif defined(FRAGMENT)
 
 uniform COMPAT_PRECISION int iFrameCount;
+uniform COMPAT_PRECISION int iFrameMergeCount;
 uniform COMPAT_PRECISION vec2 OutputSize;
 uniform COMPAT_PRECISION vec2 TextureSize;
 uniform COMPAT_PRECISION vec2 InputSize;
@@ -172,7 +174,7 @@ vec3 oklab2l(vec3 lab) { // OkLab to linear
 // NOTE: currentColor must be in linear or oklab space already
 vec4 HalveFrameRate(vec2 coords, vec4 currentColor)
 {
-	if ((iFrameCount & 1) == 1) {
+	if ((iFrameMergeCount & 1) == 1) {
 		vec3 previousColor = s2l(texture(PreviousFrame, coords).rgb);
 
 		// Perform the mix in linear/oklab space

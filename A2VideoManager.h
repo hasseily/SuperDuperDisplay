@@ -162,6 +162,7 @@ public:
 		GLfloat* offset_buffer = nullptr;
 		int frameSHRModes = 0;					// All SHR4 modes in the frame
 		int pagedMode = 0;			// DoubleMode_e : may use E0 (main) $2000-9FFF for interlace or page flip
+		int legacyPagedMode = 0;		// DoubleMode_e sampled from the A2Li marker (or the user override) at frame start
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -238,6 +239,7 @@ public:
 	GLfloat* GetOffsetBufferWritePtr() { return vrams_write->offset_buffer; };
 	GLuint GetOutputTextureId();		// merged output
 	bool Render(GLuint &texUnit);	// outputs the texture unit used, and returns if it rendered or not
+	int GetLegacyPagingMode() const;
 
 	inline uint32_t GetVramWidthLegacy() { return (40 + (2 * borders_w_cycles)); };	// in 4 bytes!
 	inline uint32_t GetVramHeightLegacy() { return  (192 + (2 * borders_h_scanlines)); };
@@ -284,6 +286,7 @@ private:
 		Initialize();
 	}
 	void StartNextFrame();
+	int DetectLegacyPagingMode() const;
 	void SwitchToMergedMode(uint32_t scanline);
 	void CreateOrResizeFramebuffer(int fb_width, int fb_height);
 	void PrepareOffsetTexture();
@@ -307,7 +310,7 @@ private:
 	int overrideSHRMode = 0;
 	int overrideDoubleSHR = 0;				// At 0, don't override. Above 0, substract 1 to get the override value
 	int overrideVidHDTextMode = VIDHDMODE_NONE;
-	int overrideLegacyPaging = 0;			// Forces paging in legacy modes
+	int overrideLegacyPaging = 0;			// 0: honor A2Li, otherwise force a DoubleMode_e value
 	int c022TextColorForeNibble = 0;
 	int c022TextColorBackNibble = 0;
 	int vidHdTextAlphaForeNibble = 0b1111;
@@ -369,6 +372,8 @@ private:
 	unsigned int OFFSETTEX = UINT_MAX;
 	A2Mode_e merge_last_change_mode = A2Mode_e::NONE;
 	uint32_t merge_last_change_y = UINT_MAX;
+	uint64_t legacy_page_flip_frame_idx = 0;	// Host-output parity for coherent legacy page flipping
+	bool bLegacyPageFlipWasActive = false;
 
 	// Those could be anywhere up to 6 or 7 cycles for horizontal borders
 	// and a lot more for vertical borders. We just decided on a size

@@ -26,6 +26,7 @@ public:
 
 	void Render(SDL_Window* window, GLuint inputTextureSlot, GLuint scanlineCount);
 	void RenderImGuiWindow(bool* p_open);
+	void SetAutomaticFrameMerging(bool enabled) { bAutomaticFrameMerging = enabled; };
 
 	nlohmann::json SerializeState();
 	void DeserializeState(const nlohmann::json &jsonState);
@@ -33,8 +34,8 @@ public:
 	// Tells main.cpp to skip flipping the buffers if we are halving the frame rate
 	// This actually skips even frames if ShouldFrameBeSkipped() is called after the frame
 	// is created
-	const bool ShouldFrameBeSkipped() { return (bHalveFramerate && (frame_count & 1) == 1); };
-	const bool IsFrameRateHalved() { return bHalveFramerate; };
+	const bool ShouldFrameBeSkipped() { return bSkipCurrentFrame; };
+	const bool IsFrameRateHalved() { return bHalveFramerate || bAutomaticFrameMerging; };
 
 	// public properties
 	std::vector<Shader>v_ppshaders;
@@ -95,11 +96,15 @@ private:
 	bool bCRTFillWindow = false;
 
 	int frame_count = 0;	// Frame count for interlacing, it may not be aligned with A2Video frames
+	int frame_merge_count = 0;
+	bool bFrameMergingWasActive = false;
+	bool bSkipCurrentFrame = false;
 	char preset_name_buffer[28];	// Preset's name
 	int max_integer_scale = 1;	// Maximum possible integer scale given screen size
 	int integer_scale = 1;		// Base integer scale used
 	bool bAutoScale = true;		// Automatically scale to max scale?
 	bool bHalveFramerate = false;	// Mixes every pair of frames, to avoid page flip flicker
+	bool bAutomaticFrameMerging = false;	// Required for legacy page flip below 120 Hz
 #define _PP_NO_BEZEL_FILENAME "NONE"
 	std::string selectedBezelFile = _PP_NO_BEZEL_FILENAME;
 	int currentBezelIndex = 0;

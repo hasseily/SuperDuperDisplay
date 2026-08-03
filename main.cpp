@@ -67,6 +67,27 @@ static SDL_DisplayMode g_fullscreenMode;
 
 static bool g_isLinuxConsole = false;
 
+static int Main_GetOutputRefreshRate()
+{
+	SDL_DisplayMode displayMode = {};
+	int refreshRate = 0;
+	const int displayIndex = (window == nullptr ? -1 : SDL_GetWindowDisplayIndex(window));
+	if (displayIndex >= 0 && SDL_GetCurrentDisplayMode(displayIndex, &displayMode) == 0)
+		refreshRate = displayMode.refresh_rate;
+	if (refreshRate <= 0)
+		refreshRate = g_fullscreenMode.refresh_rate;
+	if (refreshRate <= 0)
+		refreshRate = 60;
+
+	// Apple II bus synchronization produces at most one output per 50/60 Hz
+	// source frame. An explicit lower FPS cap also lowers presentation rate.
+	if (g_swapInterval == SWAPINTERVAL_APPLE2BUS)
+		refreshRate = std::min(refreshRate, 60);
+	if (g_fpsLimit != UINT32_MAX)
+		refreshRate = std::min(refreshRate, static_cast<int>(g_fpsLimit));
+	return refreshRate;
+}
+
 // For FPS calculations
 static auto pfreq = SDL_GetPerformanceFrequency();
 static float fps_worst = 1000000.f;
@@ -994,6 +1015,9 @@ int main(int argc, char* argv[])
 								window_bgcolor[2],
 								window_bgcolor[3]);
 							glClear(GL_COLOR_BUFFER_BIT);
+							postProcessor->SetAutomaticFrameMerging(
+								a2VideoManager->GetLegacyPagingMode() == DOUBLE_PAGEFLIP
+								&& Main_GetOutputRefreshRate() < 120);
 							postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
 							if (!postProcessor->ShouldFrameBeSkipped())
 							{
@@ -1039,6 +1063,9 @@ int main(int argc, char* argv[])
 			glClear(GL_COLOR_BUFFER_BIT);
 
 			// Now run the postprocessing (not for IsSwapApple2Bus)
+			postProcessor->SetAutomaticFrameMerging(
+				a2VideoManager->GetLegacyPagingMode() == DOUBLE_PAGEFLIP
+				&& Main_GetOutputRefreshRate() < 120);
 			postProcessor->Render(window, A2VIDEO_TEX_UNIT, a2VideoManager->ScreenSize().y);
 
 			// Determine if frame should be swapped, or nothing done
