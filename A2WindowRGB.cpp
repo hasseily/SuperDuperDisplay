@@ -3,7 +3,6 @@
 #include <SDL_timer.h>
 #include "A2VideoManager.h"
 #include "MemoryManager.h"
-#include "SDHRManager.h"
 
 A2WindowRGB::A2WindowRGB(bool useFBO) {
 	memStart = 0x0000;

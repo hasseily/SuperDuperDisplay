@@ -15,7 +15,7 @@
 */
 
 #include "common.h"
-#include "SDHRNetworking.h"	// for SDHREvent
+#include "AppletiniNetworking.h"	// for NetEvent
 #include <vector>
 #include <string>
 #include <thread>
@@ -36,7 +36,7 @@ enum class EventRecorderStates_e
 class EventRecorder
 {
 public:
-	void RecordEvent(SDHREvent* sdhr_event);
+	void RecordEvent(NetEvent* event);
 	void DisplayImGuiWindow(bool* p_open);
 	void SetPAL(bool isPal);				// Sets PAL (true) or NTSC (false)
 	inline const EventRecorderStates_e GetState() { return m_state; };
@@ -80,7 +80,7 @@ private:
 	void MakeRAMSnapshot(size_t cycle);
 	void ApplyRAMSnapshot(size_t snapshot_index);
 	void WriteRecordingFile(std::ofstream& file);
-	void WriteEvent(const SDHREvent& event, std::ofstream& file);
+	void WriteEvent(const NetEvent& event, std::ofstream& file);
 	void ReadEvent(std::ifstream& file);
 
 	bool bIsPAL = false;						// Is the machine PAL?
@@ -89,7 +89,7 @@ private:
 	void SetState(EventRecorderStates_e _state);
 
 	std::vector<ByteBuffer> v_memSnapshots;	// memory snapshots at regular intervals
-	std::vector<SDHREvent> v_events;
+	std::vector<NetEvent> v_events;
 
 
 	// Replay thread control

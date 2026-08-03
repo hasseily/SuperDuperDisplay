@@ -59,7 +59,7 @@ OpenGLHelper* OpenGLHelper::s_instance;
 
 void OpenGLHelper::Initialize()
 {
-	for (size_t i = 0; i < _SDHR_MAX_TEXTURES; i++)
+	for (size_t i = 0; i < _MAX_TEXTURES; i++)
 	{
 		v_texture_ids.push_back(UINT_MAX);
 	}
@@ -188,7 +188,7 @@ GLuint OpenGLHelper::get_texture_id_at_slot(int slot)
 	if (slot >= (int)v_texture_ids.size())
 	{
 #ifdef DEBUG
-		std::cerr << "ERROR: Requesting a texture slot above _SDHR_MAX_TEXTURES!\n";
+		std::cerr << "ERROR: Requesting a texture slot above _MAX_TEXTURES!\n";
 #endif
 		return UINT_MAX;
 	}

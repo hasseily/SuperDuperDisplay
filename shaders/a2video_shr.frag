@@ -9,7 +9,7 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 #endif
 
 /*
- SHR shader
+ RGB SHR shader
  For each pixel, get its byte value and row. Then get its control byte.
  Then using the control byte info, get the palette. And with the byte value, get the color from the palette.
 

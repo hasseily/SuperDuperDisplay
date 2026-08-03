@@ -9,7 +9,6 @@
 #include "common.h"
 #include <SDL_timer.h>
 #include "A2VideoManager.h"
-#include "SDHRManager.h"
 #include "MemoryManager.h"
 
 VidHdWindowBeam::VidHdWindowBeam(VidHdMode_e _mode)

@@ -290,8 +290,7 @@ bool A2VideoManager::IsReady()
 void A2VideoManager::ToggleA2Video(bool value)
 {
 	// If true, the A2 Video reinitializes fully
-	// Only call this method when reinit is necessary,
-	// like changing mode from SDHR to A2 Video
+	// Only call this method when reinit is necessary
 	bA2VideoEnabled = value;
 	if (bA2VideoEnabled)
 		bShouldInitializeRender = true;

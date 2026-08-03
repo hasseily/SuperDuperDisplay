@@ -110,14 +110,10 @@ struct A2RenderVertex {
 #define _TEXUNIT_IMAGE_COMPOSITE_DHGR GL_TEXTURE8
 #define _TEXUNIT_IMAGE_FONT_VIDHD_8X8 GL_TEXTURE9
 
+#define _MAX_TEXTURES (_TEXUNIT_APPLE2MEMORY_R8UI - _TEXUNIT_IMAGE_ASSETS_START)	// Max # of image assets available
+
 // AUDIO
 #define _AUDIO_SAMPLE_RATE 44100
-
-// DEFINITIONS OF SDHR SPECS
-#define _SDHR_UPLOAD_REGION_SIZE 256*256*256	// Upload data region size (should be 16MB)
-#define _SDHR_MAX_WINDOWS 256
-#define _SDHR_MAX_TEXTURES (_TEXUNIT_APPLE2MEMORY_R8UI - _TEXUNIT_IMAGE_ASSETS_START)	// Max # of image assets available
-#define _SDHR_MAX_UV_SCALE 100.f				// Maximum scale of Mosaic Tile UV
 
 // ORIGINAL APPLE 2 VIDEO MODES
 #define _A2VIDEO_LEGACY_CYCLES_PER_LINE 40
@@ -180,10 +176,5 @@ struct A2RenderVertex {
 #define _SHADER_BEAM_SHR_FRAGMENT "shaders/a2video_beam_shr_raw.frag"
 //#define _SHADER_BEAM_MERGE_FRAGMENT "shaders/a2video_beam_merge.frag"
 #define _SHADER_VIDHD_TEXT_FRAGMENT "shaders/vidhd_beam_text.frag"
-
-#define _SHADER_SDHR_VERTEX_DEFAULT "shaders/sdhr_default_330.vert"
-#define _SHADER_SDHR_FRAGMENT_DEFAULT "shaders/sdhr_default_330.frag"
-#define _SHADER_SDHR_VERTEX_DEPIXELIZE "shaders/sdhr_depixelize_330.vert"
-#define _SHADER_SDHR_FRAGMENT_DEPIXELIZE "shaders/sdhr_depixelize_330.frag"
 
 #endif	// COMMON_H

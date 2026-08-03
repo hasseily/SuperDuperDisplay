@@ -14,8 +14,7 @@
 #include "LogTextManager.h"
 #include "PostProcessor.h"
 #include "EventRecorder.h"
-#include "SDHRManager.h"
-#include "SDHRNetworking.h"
+#include "AppletiniNetworking.h"
 #include "AppletiniUartTerminal.h"
 #include "extras/MemoryLoader.h"
 #include "extras/ImGuiFileDialog.h"
@@ -91,7 +90,7 @@ public:
 	bool bSampleRunKarateka = false;
 
 	MemoryEditor mem_edit_a2e;
-	MemoryEditor mem_edit_sdhr_upload;
+	MemoryEditor mem_edit_net_upload;
 
 	Gui() {}
 
@@ -247,7 +246,7 @@ MainMenu::MainMenu(SDL_GLContext gl_context, SDL_Window* window)
 	
 	pGui->mem_edit_a2e.Open = false;
 	pGui->mem_edit_a2e.HighlightFn = Memory_HighlightWriteFunction;
-	pGui->mem_edit_sdhr_upload.Open = false;
+	pGui->mem_edit_net_upload.Open = false;
 
 	// --- Load help topics from INI ---
 	pGui->LoadHelpFromIni("assets/help.ini");
@@ -513,10 +512,10 @@ void MainMenu::Render() {
 			ImGui::SetNextWindowSizeConstraints(ImVec2(300, 250), ImVec2(FLT_MAX, FLT_MAX));
 			ImGui::Begin("Texture Viewer", &pGui->bShowTextureWindow);
 			ImVec2 avail_size = ImGui::GetContentRegionAvail();
-			ImGui::SliderInt("Texture Slot Number", &pGui->iTextureSlotIdx, 0, _SDHR_MAX_TEXTURES + 5, "slot %d", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::SliderInt("Texture Slot Number", &pGui->iTextureSlotIdx, 0, _MAX_TEXTURES + 5, "slot %d", ImGuiSliderFlags_AlwaysClamp);
 			GLint _w, _h;
 			auto glhelper = OpenGLHelper::GetInstance();
-			if (pGui->iTextureSlotIdx < _SDHR_MAX_TEXTURES)
+			if (pGui->iTextureSlotIdx < _MAX_TEXTURES)
 			{
 				glBindTexture(GL_TEXTURE_2D, glhelper->get_texture_id_at_slot(pGui->iTextureSlotIdx));
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
@@ -525,7 +524,7 @@ void MainMenu::Render() {
 				ImGui::Image(reinterpret_cast<void*>(glhelper->get_texture_id_at_slot(pGui->iTextureSlotIdx)),
 							 ImVec2(avail_size.x, avail_size.y - 30), ImVec2(0, 0), ImVec2(1, 1));
 			}
-			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES)
+			else if (pGui->iTextureSlotIdx == _MAX_TEXTURES)
 			{
 				glBindTexture(GL_TEXTURE_2D, a2VideoManager->GetOutputTextureId());
 				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &_w);
@@ -533,7 +532,7 @@ void MainMenu::Render() {
 				ImGui::Text("Output Texture ID: %d (%d x %d)", (int)a2VideoManager->GetOutputTextureId(), _w, _h);
 				ImGui::Image(reinterpret_cast<void*>(a2VideoManager->GetOutputTextureId()), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
-			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 1)
+			else if (pGui->iTextureSlotIdx == _MAX_TEXTURES + 1)
 			{
 				glActiveTexture(_TEXUNIT_PP_BEZEL);
 				GLint target_tex_id = 0;
@@ -545,7 +544,7 @@ void MainMenu::Render() {
 				ImGui::Text("_TEXUNIT_PP_BEZEL: %d (%d x %d)", target_tex_id, _w, _h);
 				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
-			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 2)
+			else if (pGui->iTextureSlotIdx == _MAX_TEXTURES + 2)
 			{
 				glActiveTexture(_TEXUNIT_PP_BEZEL_GLASS);
 				GLint target_tex_id = 0;
@@ -557,7 +556,7 @@ void MainMenu::Render() {
 				ImGui::Text("_TEXUNIT_PP_BEZEL_GLASS: %d (%d x %d)", target_tex_id, _w, _h);
 				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
-			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 3)
+			else if (pGui->iTextureSlotIdx == _MAX_TEXTURES + 3)
 			{
 				glActiveTexture(_TEXUNIT_PP_PREVIOUS);
 				GLint target_tex_id = 0;
@@ -569,7 +568,7 @@ void MainMenu::Render() {
 				ImGui::Text("_TEXUNIT_PP_PREVIOUS: %d (%d x %d)", target_tex_id, _w, _h);
 				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
-			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 4)
+			else if (pGui->iTextureSlotIdx == _MAX_TEXTURES + 4)
 			{
 				glActiveTexture(_TEXUNIT_POSTPROCESS);
 				GLint target_tex_id = 0;
@@ -581,7 +580,7 @@ void MainMenu::Render() {
 				ImGui::Text("_TEXUNIT_POSTPROCESS: %d (%d x %d)", target_tex_id, _w, _h);
 				ImGui::Image(reinterpret_cast<void*>(target_tex_id), avail_size, ImVec2(0, 0), ImVec2(1, 1));
 			}
-			else if (pGui->iTextureSlotIdx == _SDHR_MAX_TEXTURES + 5)
+			else if (pGui->iTextureSlotIdx == _MAX_TEXTURES + 5)
 			{
 				glActiveTexture(_TEXUNIT_PRE_NTSC);
 				GLint target_tex_id = 0;
@@ -751,10 +750,10 @@ void MainMenu::Render() {
 		A2VideoManager::GetInstance()->DisplayImGuiExtraWindows();
 		A2VideoManager::GetInstance()->DisplayImGUIRGBDebugWindows();
 
-		if (pGui->mem_edit_sdhr_upload.Open)
+		if (pGui->mem_edit_net_upload.Open)
 		{
 			auto memManager = MemoryManager::GetInstance();
-			pGui->mem_edit_sdhr_upload.DrawWindow("Memory Editor: SDHR Upload Region", memManager->GetApple2MemPtr(), 2 * _A2_MEMORY_SHADOW_END);
+			pGui->mem_edit_net_upload.DrawWindow("Memory Editor: Network Upload Region", memManager->GetApple2MemPtr(), 2 * _A2_MEMORY_SHADOW_END);
 		}
 		
 		if (pGui->bShowImGuiMetricsWindow)
@@ -1248,14 +1247,6 @@ void MainMenu::ShowDeveloperMenu() {
 		ImGui::EndMenu();
 	}
 	ImGui::MenuItem("SDD Textures", "", &pGui->bShowTextureWindow);
-	ImGui::Separator();
-	if (ImGui::BeginMenu("SDHR")) {
-		auto sdhrManager = SDHRManager::GetInstance();
-		ImGui::MenuItem("Untextured Geometry", "", &sdhrManager->bDebugNoTextures);
-		ImGui::MenuItem("Perspective Projection", "", &sdhrManager->bUsePerspective);
-		ImGui::MenuItem("Upload Region Memory Window", "", &pGui->mem_edit_sdhr_upload.Open);
-		ImGui::EndMenu();
-	}
 	ImGui::Separator();
 	ImGui::MenuItem("Appletini Communications", "", &pGui->bShowUSBImGuiWindow);
 	ImGui::MenuItem("Appletini UARTs", "", &pGui->bShowUartWindow);

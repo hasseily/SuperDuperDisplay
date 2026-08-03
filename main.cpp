@@ -25,11 +25,9 @@
 #include "common.h"
 #include "shader.h"
 #include "camera.h"
-#include "MosaicMesh.h"
 
-#include "SDHRNetworking.h"
+#include "AppletiniNetworking.h"
 #include "MemoryManager.h"
-#include "SDHRManager.h"
 #include "A2VideoManager.h"
 #include "OpenGLHelper.h"
 #include "CycleCounter.h"
@@ -690,8 +688,6 @@ int main(int argc, char* argv[])
 	std::cout << "Loaded LogTextManager " << logTextManager << std::endl;
 	[[maybe_unused]] auto memManager = MemoryManager::GetInstance();
 	std::cout << "Loaded MemoryManager " << memManager << std::endl;
-	[[maybe_unused]] auto sdhrManager = SDHRManager::GetInstance();
-	std::cout << "Loaded SDHRManager " << sdhrManager << std::endl;
 	[[maybe_unused]] auto a2VideoManager = A2VideoManager::GetInstance();
 	std::cout << "Loaded A2VideoManager " << a2VideoManager << std::endl;
 	[[maybe_unused]] auto postProcessor = PostProcessor::GetInstance();
@@ -910,15 +906,8 @@ int main(int argc, char* argv[])
 					break;
 				case SDL_MOUSEMOTION:
 					lastMouseMoveTime = SDL_GetTicks();
-					if (event.motion.state & SDL_BUTTON_RMASK) {
-						// Move the camera when the right mouse button is pressed while moving the mouse
-						if (sdhrManager->IsSdhrEnabled())
-							sdhrManager->camera.ProcessMouseMovement((float)event.motion.xrel, (float)event.motion.yrel);
-					}
 					break;
 				case SDL_MOUSEWHEEL:
-					if (sdhrManager->IsSdhrEnabled())
-						sdhrManager->camera.ProcessMouseScroll((float)event.wheel.y);
 					break;
 				case SDL_KEYDOWN:
 				{
@@ -972,33 +961,6 @@ int main(int argc, char* argv[])
 					else if (event.key.keysym.sym == SDLK_TAB && (event.key.keysym.mod & KMOD_ALT)) {
 						if (Main_IsFullScreen())
 							Main_SetFullScreen(false);
-					}
-					if (sdhrManager->IsSdhrEnabled())
-					{
-						// Camera movement!
-						switch (event.key.keysym.sym)
-						{
-						case SDLK_w:
-							sdhrManager->camera.ProcessKeyboard(FORWARD, deltaTime);
-							break;
-						case SDLK_s:
-							sdhrManager->camera.ProcessKeyboard(BACKWARD, deltaTime);
-							break;
-						case SDLK_a:
-							sdhrManager->camera.ProcessKeyboard(LEFT, deltaTime);
-							break;
-						case SDLK_d:
-							sdhrManager->camera.ProcessKeyboard(RIGHT, deltaTime);
-							break;
-						case SDLK_q:
-							sdhrManager->camera.ProcessKeyboard(CLIMB, deltaTime);
-							break;
-						case SDLK_z:
-							sdhrManager->camera.ProcessKeyboard(DESCEND, deltaTime);
-							break;
-						default:
-							break;
-						};
 					}
 				}
 					break;
@@ -1062,9 +1024,6 @@ int main(int argc, char* argv[])
 
 		if (!bIsSwapApple2Bus)
 		{
-			// if (sdhrManager->IsSdhrEnabled())
-			// 		A2VIDEO_TEX_UNIT = sdhrManager->Render();
-			// else
 			if (bShouldRenderA2Video)
 				bA2VideoDidRender = a2VideoManager->Render(A2VIDEO_TEX_UNIT);
 			if (A2VIDEO_TEX_UNIT == A2VIDEORENDER_ERROR)

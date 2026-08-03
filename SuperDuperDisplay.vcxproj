@@ -202,12 +202,9 @@
     <ClCompile Include="MemoryManager.cpp" />
     <ClCompile Include="miniz.c" />
     <ClCompile Include="MockingboardManager.cpp" />
-    <ClCompile Include="MosaicMesh.cpp" />
     <ClCompile Include="OpenGLHelper.cpp" />
     <ClCompile Include="PostProcessor.cpp" />
-    <ClCompile Include="SDHRManager.cpp" />
-    <ClCompile Include="SDHRNetworking.cpp" />
-    <ClCompile Include="SDHRWindow.cpp" />
+    <ClCompile Include="AppletiniNetworking.cpp" />
     <ClCompile Include="A2VideoManager.cpp" />
     <ClCompile Include="shader.cpp" />
     <ClCompile Include="SoundManager.cpp" />
@@ -248,13 +245,10 @@
     <ClInclude Include="MemoryManager.h" />
     <ClInclude Include="miniz.h" />
     <ClInclude Include="MockingboardManager.h" />
-    <ClInclude Include="MosaicMesh.h" />
     <ClInclude Include="my_imgui_config.h" />
     <ClInclude Include="OpenGLHelper.h" />
     <ClInclude Include="PostProcessor.h" />
-    <ClInclude Include="SDHRManager.h" />
-    <ClInclude Include="SDHRNetworking.h" />
-    <ClInclude Include="SDHRWindow.h" />
+    <ClInclude Include="AppletiniNetworking.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="SoundManager.h" />
     <ClInclude Include="SSI263.h" />
@@ -281,6 +275,7 @@
     <None Include="shaders\a2video_beam_shr.frag" />
     <None Include="shaders\a2video_beam_shr_raw.frag" />
     <None Include="shaders\a2video_dhgr.frag" />
+    <None Include="shaders\a2video_dhgr160.frag" />
     <None Include="shaders\a2video_hgr.frag" />
     <None Include="shaders\a2video_lgr.frag" />
     <None Include="shaders\a2video_postprocess.glsl" />
@@ -293,10 +288,6 @@
     <None Include="shaders\ntsc_sik.frag" />
     <None Include="shaders\overlay_bezel.glsl" />
     <None Include="shaders\splash.frag" />
-    <None Include="shaders\sdhr_default_330.frag" />
-    <None Include="shaders\sdhr_default_330.vert" />
-    <None Include="shaders\sdhr_depixelize_330.frag" />
-    <None Include="shaders\sdhr_depixelize_330.vert" />
     <None Include="shaders\vidhd_beam_text.frag" />
   </ItemGroup>
   <ItemGroup>

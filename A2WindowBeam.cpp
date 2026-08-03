@@ -2,7 +2,6 @@
 #include "common.h"
 #include <SDL_timer.h>
 #include "A2VideoManager.h"
-#include "SDHRManager.h"
 
 A2WindowBeam::A2WindowBeam(A2VideoModeBeam_e _video_mode, const char* shaderVertexPath, const char* shaderFragmentPath)
 {

@@ -39,7 +39,7 @@ public:
 	bool SaveTextureToFile(GLuint tex, const std::string& filename, bool bUsePNG = false);
 	std::string GetScreenshotSaveFilePath();
 
-	// The created texture ids (max is _SDHR_MAX_TEXTURES)
+	// The created texture ids (max is _MAX_TEXTURES)
 	std::vector<GLuint>v_texture_ids;
 
 	// public singleton code

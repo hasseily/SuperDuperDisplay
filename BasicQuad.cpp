@@ -2,7 +2,6 @@
 #include "common.h"
 #include <SDL_timer.h>
 #include "A2VideoManager.h"
-#include "SDHRManager.h"
 
 BasicQuad::BasicQuad(const char* shaderVertexPath, const char* shaderFragmentPath)
 {

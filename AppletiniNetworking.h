@@ -32,21 +32,21 @@ struct Packet {
 	}
 };
 
-struct SDHRPacketHeader {
+struct NetPacketHeader {
 	uint32_t seqno;
 	uint32_t cmdtype;
 };
 
 #pragma pack(pop)
 
-struct SDHREvent {
+struct NetEvent {
     bool is_iigs;   // 2gs == 1, 2e == 0
     bool m2b0; 
 	bool m2sel;
 	bool rw;        // read == 1, write == 0
 	uint16_t addr;
 	uint8_t data;
-	SDHREvent(bool is_iigs_, bool m2b0_, bool m2sel_, bool rw_, uint16_t addr_, uint8_t data_) :
+	NetEvent(bool is_iigs_, bool m2b0_, bool m2sel_, bool rw_, uint16_t addr_, uint8_t data_) :
 		is_iigs(is_iigs_), m2b0(m2b0_), m2sel(m2sel_), rw(rw_), addr(addr_), data(data_) {}
 };
 
@@ -64,8 +64,6 @@ enum class BusEventFlags : uint32_t {
 constexpr bool state_has_flag(uint32_t value, BusEventFlags flag);
 std::string bus_event_state_to_string(uint32_t state);
 
-#define CXSDHR_CTRL 0xC0A0	// SDHR command
-#define CXSDHR_DATA 0xC0A1	// SDHR data
 
 // Call this method as a new thread
 // It loops infinitely and waits for packets
@@ -75,11 +73,8 @@ int usb_server_thread(std::atomic<bool>* shouldTerminateNetworking);
 // Call this method as a new thread
 // It loops indefinitely and processes the packets queue
 // Each packet contains a minumum of 64 events.
-// If the events are SDHR data, it appends them to a command_buffer
-// When it parses a SDHR_PROCESS_EVENTS event, it calls SDHRManager
-// which itself processes the command_buffer
 int process_usb_events_thread(std::atomic<bool>* shouldTerminateProcessing);
-void process_single_event(SDHREvent& e);
+void process_single_event(NetEvent& e);
 void terminate_processing_thread();
 
 void clear_queues();

@@ -9,7 +9,7 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 #endif
 
 /*
- D/LGR shader
+ RGB D/LGR shader
  For each pixel, determine which memory byte it is part of,
  and save the x and y offsets from the origin of the byte.
  Then based on the value of that byte, determine the origin

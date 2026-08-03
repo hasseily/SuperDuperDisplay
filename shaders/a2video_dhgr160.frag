@@ -9,7 +9,7 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
 #endif
 
 /*
- DHGR160 shader
+ RGB DHGR160 shader
  For each pixel, determine which memory byte it is part of,
  and save the x offset from the origin of the byte.
 

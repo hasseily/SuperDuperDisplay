@@ -8,6 +8,8 @@ precision highp int;
 layout(pixel_center_integer) in vec4 gl_FragCoord;
 #endif
 
+// RGB Text shader
+
 /*
 Regular Charset:
 $00..$1F Inverse  Uppercase Letters (aka glyphs of ASCII $40..$5F)

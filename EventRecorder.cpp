@@ -172,7 +172,7 @@ void EventRecorder::ReadTextEventsFromFile(std::ifstream& file)
 		uint16_t addr = static_cast<uint16_t>(std::stoul(addr_str, nullptr, 16));
 		uint8_t data = static_cast<uint8_t>(std::stoul(data_str, nullptr, 16));
 		
-		SDHREvent event(is_iigs, m2b0, m2sel, rw, addr, data);
+		NetEvent event(is_iigs, m2b0, m2sel, rw, addr, data);
 		for (size_t i = 0; i < count; ++i) {
 			v_events.push_back(event);
 		}
@@ -286,7 +286,7 @@ void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 
 		size_t _frameCycles = (size_t)(bIsPAL ? CYCLES_TOTAL_PAL : CYCLES_TOTAL_NTSC);
 		
-		v_events.push_back(SDHREvent(false, false, false, false, 0xC005, 0));	// RAMWRTON
+		v_events.push_back(NetEvent(false, false, false, false, 0xC005, 0));	// RAMWRTON
 		uint32_t _dataPtr = 0;
 		while (_dataPtr < dbaLength)
 		{
@@ -309,20 +309,20 @@ void EventRecorder::ReadPaintWorksAnimationsFile(std::ifstream& file)
 			{
 				// add the delay between the frames using a dummy read event
 				for (size_t _d = 0; _d < ((size_t)frameDelay * _frameCycles); ++_d) {
-					v_events.push_back(SDHREvent(false, false, false, true, 0, 0));
+					v_events.push_back(NetEvent(false, false, false, true, 0, 0));
 				}
 			} else {	// proper offset, will roll over if offset > 0xE0000
-				v_events.push_back(SDHREvent(false, false, false, false, _off + 0x2000, _valHi));
-				v_events.push_back(SDHREvent(false, false, false, false, _off + 0x2001, _valLo));
+				v_events.push_back(NetEvent(false, false, false, false, _off + 0x2000, _valHi));
+				v_events.push_back(NetEvent(false, false, false, false, _off + 0x2001, _valLo));
 			}
 		}
-		v_events.push_back(SDHREvent(false, false, false, false, 0xC004, 0));	// RAMWRTOFF
+		v_events.push_back(NetEvent(false, false, false, false, 0xC004, 0));	// RAMWRTOFF
 	}
 	bHasRecording = true;
 }
 
-void EventRecorder::WriteEvent(const SDHREvent& event, std::ofstream& file) {
-	// Serialize and write each member of SDHREvent to the file
+void EventRecorder::WriteEvent(const NetEvent& event, std::ofstream& file) {
+	// Serialize and write each member of NetEvent to the file
 	file.write(reinterpret_cast<const char*>(&event.is_iigs), sizeof(event.is_iigs));
 	file.write(reinterpret_cast<const char*>(&event.m2b0), sizeof(event.m2b0));
 	file.write(reinterpret_cast<const char*>(&event.rw), sizeof(event.rw));
@@ -331,7 +331,7 @@ void EventRecorder::WriteEvent(const SDHREvent& event, std::ofstream& file) {
 }
 
 void EventRecorder::ReadEvent(std::ifstream& file) {
-	auto event = SDHREvent(false, false, false, 0, 0, 0);
+	auto event = NetEvent(false, false, false, 0, 0, 0);
 	file.read(reinterpret_cast<char*>(&event.is_iigs), sizeof(event.is_iigs));
 	file.read(reinterpret_cast<char*>(&event.m2b0), sizeof(event.m2b0));
 	file.read(reinterpret_cast<char*>(&event.rw), sizeof(event.rw));
@@ -508,13 +508,13 @@ void EventRecorder::SetPAL(bool isPal) {
 	bIsPAL = isPal;
 }
 
-void EventRecorder::RecordEvent(SDHREvent* sdhr_event)
+void EventRecorder::RecordEvent(NetEvent* event)
 {
 	if (m_state != EventRecorderStates_e::RECORDING)
 		return;
 	if ((currentReplayEvent % RECORDER_MEM_SNAPSHOT_CYCLES) == 0)
 		MakeRAMSnapshot(currentReplayEvent);
-	v_events.push_back(*sdhr_event);
+	v_events.push_back(*event);
 	++currentReplayEvent;
 	if (v_events.size() == (size_t)1'000'000 * MAXRECORDING_SECONDS)
 		StopRecording();

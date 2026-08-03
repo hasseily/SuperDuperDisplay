@@ -1,10 +1,9 @@
 #include "ConcurrentQueue.h"
-#include "SDHRNetworking.h"
+#include "AppletiniNetworking.h"
 #include "MemoryManager.h"
 #include "A2VideoManager.h"
 #include "SoundManager.h"
 #include "MockingboardManager.h"
-#include "SDHRManager.h"
 #include "CycleCounter.h"
 #include "EventRecorder.h"
 #include "MainMenu.h"
@@ -170,7 +169,7 @@ void clear_queues()
 	}
 }
 
-void insert_event(SDHREvent *e)
+void insert_event(NetEvent *e)
 {
 	(void)e; // mark as unused
 	assert("ERROR: CANNOT INSERT EVENT");
@@ -184,7 +183,7 @@ void terminate_processing_thread()
 	packetInQueue.push(std::move(packet));
 }
 
-void process_single_event(SDHREvent &e)
+void process_single_event(NetEvent &e)
 {
 	/*
 		Uncomment the below code to log specific events between 2 gates at 03FE and 03FF
@@ -269,94 +268,12 @@ void process_single_event(SDHREvent &e)
 	 HANDLE SOFT SWITCHES EVENTS
 	 *********************************
 	 */
-	// TODO: *** SDHR IS DISABLED FOR 2GS ***
-	//		because we're getting spurious 0xC0A0 events from the GS
-	if ((e.is_iigs == true) || ((e.addr != CXSDHR_CTRL) && (e.addr != CXSDHR_DATA)))
+	if (e.is_iigs == true)
 	{
 		if (e.addr >> 8 == 0xc0)
 			memMgr->ProcessSoftSwitch(e.addr, e.data, e.rw, e.is_iigs);
 		// ignore non-control
 		return;
-	}
-	/*
-	 *********************************
-	 HANDLE SDHR (0xC0A0/1) EVENTS
-	 *********************************
-	 */
-	// std::cerr << "cmd " << e.addr << " " << (uint32_t) e.data << std::endl;
-	auto sdhrMgr = SDHRManager::GetInstance();
-	auto a2VideoMgr = A2VideoManager::GetInstance();
-	SDHRCtrl_e _ctrl;
-	switch (e.addr & 0x0f)
-	{
-	case 0x00:
-		// std::cout << "This is a control packet!" << std::endl;
-		_ctrl = (SDHRCtrl_e)e.data;
-		switch (_ctrl)
-		{
-		case SDHR_CTRL_DISABLE:
-#ifdef DEBUG
-			std::cout << "CONTROL: Disable SDHR" << std::endl;
-#endif
-			sdhrMgr->ToggleSdhr(false);
-			a2VideoMgr->ToggleA2Video(true);
-			break;
-		case SDHR_CTRL_ENABLE:
-			// #ifdef DEBUG
-			std::cout << "CONTROL: Enable SDHR" << std::endl;
-			// #endif
-			sdhrMgr->ToggleSdhr(true);
-			a2VideoMgr->ToggleA2Video(false);
-			break;
-		case SDHR_CTRL_RESET:
-			// #ifdef DEBUG
-			std::cout << "CONTROL: Reset SDHR" << std::endl;
-			// #endif
-			sdhrMgr->ResetSdhr();
-			break;
-		case SDHR_CTRL_PROCESS:
-		{
-			/*
-			 At this point we have a complete set of commands to process.
-			 Wait for the main thread to finish loading any previous changes into the GPU, then process
-			 the commands.
-			 */
-
-#ifdef DEBUG
-			std::cout << "CONTROL: Process SDHR" << std::endl;
-#endif
-			while (sdhrMgr->dataState != DATASTATE_e::DATA_IDLE)
-			{
-			};
-			bool processingSucceeded = sdhrMgr->ProcessCommands();
-			sdhrMgr->dataState = DATASTATE_e::DATA_UPDATED;
-			if (processingSucceeded)
-			{
-#ifdef DEBUG
-				std::cout << "Processing SDHR succeeded!" << std::endl;
-#endif
-			}
-			else
-			{
-				// #ifdef DEBUG
-				std::cerr << "ERROR: Processing SDHR failed!" << std::endl;
-				// #endif
-			}
-			sdhrMgr->ClearBuffer();
-			break;
-		}
-		default:
-			std::cerr << "ERROR: Unknown control packet type: " << std::hex << (uint32_t)e.data << std::endl;
-			break;
-		}
-		break;
-	case 0x01:
-		// std::cout << "This is a data packet" << std::endl;
-		sdhrMgr->AddPacketDataToBuffer(e.data);
-		break;
-	default:
-		std::cerr << "ERROR: Unknown packet type: " << std::hex << e.addr << std::endl;
-		break;
 	}
 }
 
@@ -444,7 +361,7 @@ int process_usb_events_thread(std::atomic<bool> *shouldTerminateProcessing)
 						A2VideoManager::GetInstance()->bShouldReboot = true;
 					}
 					event_reset_prev = event_reset;
-					SDHREvent ev(0, 0, 0, rw, addr, data);
+					NetEvent ev(0, 0, 0, rw, addr, data);
 					process_single_event(ev);
 				}
 				}
