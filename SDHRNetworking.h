@@ -26,7 +26,8 @@
 struct Packet {
 	uint8_t data[PKT_BUFSZ];
 	uint32_t size;
-	Packet() : size(1) {
+	uint32_t generation;	// stream generation the bytes belong to (see streamGeneration)
+	Packet() : size(1), generation(0) {
 		memset(data, 0, 1);
 	}
 };

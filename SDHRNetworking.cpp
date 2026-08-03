@@ -63,7 +63,31 @@ static bool event_reset = 1;
 static bool event_reset_prev = 1;
 
 // Atomics to ask the server process to send messages to the tini
-std::atomic<bool> bRequestEnableBusEvents = true;
+std::atomic<bool> bRequestEnableBusEvents = false;
+// Ask the server thread for a full stream resync: disable bus events, drain
+// everything in flight, then re-enable. This is the recovery path whenever
+// byte-stream framing may have been lost (parser desync, reconnect, replay),
+// as opposed to bRequestEnableBusEvents which assumes framing is intact.
+std::atomic<bool> bRequestResyncBusEvents = false;
+// Incremented by the server thread after each drain, before re-enabling.
+// Every received packet is stamped with it; the processing thread discards
+// its partial message buffer when the stamp changes, so stale pre-resync
+// bytes can never be glued to the fresh, aligned stream.
+static std::atomic<uint32_t> streamGeneration{0};
+
+// The Appletini's register message format is [header][address][data words...],
+// where header bit 31 is the address-increment flag, bits 24-30 are unused,
+// and bits 0-23 are the data word count. Real bursts are at most 16640 bytes
+// (4160 words), so anything above this cap - or nonzero unused bits - means
+// the byte stream lost framing (e.g. a truncated USB read) and every
+// buffered byte is unusable.
+#define TINI_MAX_MSG_WORDS 0x10000
+// Insurance cap on the reassembly buffer; a legitimate incomplete message
+// can never buffer more than TINI_MAX_MSG_WORDS*4 + one USB packet.
+#define TINI_MAX_RX_BUFFER (1024 * 1024)
+// After this much silence the watchdog forces a stream resync. Harmless if
+// the Apple is simply off; recovers a silently wedged stream otherwise.
+#define TINI_WATCHDOG_SECONDS 5
 
 static ConcurrentQueue<std::shared_ptr<Packet>> packetInQueue;
 static ConcurrentQueue<std::shared_ptr<Packet>> packetFreeQueue;
@@ -339,17 +363,34 @@ void process_single_event(SDHREvent &e)
 int process_usb_events_thread(std::atomic<bool> *shouldTerminateProcessing)
 {
 	std::cout << "starting usb processing thread" << std::endl;
+	uint32_t currentGeneration = streamGeneration.load(std::memory_order_acquire);
+	bool bParserDesynced = false;
 	while (!(*shouldTerminateProcessing))
 	{
 		auto packet = packetInQueue.pop();
+		if (packet->generation != currentGeneration)
+		{
+			// A stream resync completed: the new generation starts at a clean
+			// message boundary, so drop any partial message from the old stream.
+			currentGeneration = packet->generation;
+			rx_message_buffer.clear();
+			bParserDesynced = false;
+		}
+		else if (bParserDesynced)
+		{
+			// Framing was lost: everything is garbage until the resync
+			packetFreeQueue.push(std::move(packet));
+			continue;
+		}
 		rx_message_buffer.insert(rx_message_buffer.end(),
 								 packet->data, packet->data + packet->size);
 		packetFreeQueue.push(std::move(packet));
+		bool bDesyncDetected = (rx_message_buffer.size() > TINI_MAX_RX_BUFFER);
 		uint32_t *s = (uint32_t *)&rx_message_buffer[0];
 		uint32_t *b = s;
 		auto word_size = rx_message_buffer.size() / 4;
 		uint32_t *e = b + word_size;
-		while (b < e)
+		while (!bDesyncDetected && (b < e))
 		{
 			if ((e - b) < 2)
 			{
@@ -358,6 +399,12 @@ int process_usb_events_thread(std::atomic<bool> *shouldTerminateProcessing)
 			}
 			bool addr_incr = (b[0] & (1 << 31)) != 0;
 			uint32_t data_count = b[0] & 0xffffff;
+			if (((b[0] & 0x7F000000u) != 0) || (data_count > TINI_MAX_MSG_WORDS))
+			{
+				// impossible header: the byte stream lost framing
+				bDesyncDetected = true;
+				break;
+			}
 			if ((e - b) < (2 + data_count))
 			{
 				// not enough for all data
@@ -407,6 +454,14 @@ int process_usb_events_thread(std::atomic<bool> *shouldTerminateProcessing)
 				}
 			}
 			b += data_count;
+		}
+		if (bDesyncDetected)
+		{
+			std::cerr << "ERROR: Appletini bus stream desynchronized, forcing a stream resync" << std::endl;
+			rx_message_buffer.clear();
+			bParserDesynced = true;
+			bRequestResyncBusEvents.store(true, std::memory_order_release);
+			continue;
 		}
 		auto data_removed = (b - s);
 		if (data_removed > 0)
@@ -499,6 +554,54 @@ static bool tini_write(const uint8_t *buf, uint32_t len)
 	return sent == len;
 }
 
+// Resynchronize the bus event stream: disable bus events, drain everything
+// still in flight (a full read timeout proves the pipeline is empty), bump
+// the stream generation, then re-enable. After this the next byte received
+// is guaranteed to start a fresh message. Returns false on any transport
+// failure, in which case the caller should drop the handle and reconnect.
+static bool tini_resync_stream()
+{
+	static uint8_t drainBuf[PKT_BUFSZ];
+	uint32_t ctl_msg_buf[3];
+	ctl_msg_buf[0] = 0x00000001; // 1 data field
+	ctl_msg_buf[1] = 0x00001000; // address of bus_event_control
+	ctl_msg_buf[2] = 0x00000000; // disable bus events
+	if (!tini_write((uint8_t *)ctl_msg_buf, 12))
+	{
+		std::cerr << "Appletini resync: disable write failed" << std::endl;
+		return false;
+	}
+	// Bound the drain in case the device ignores the disable
+	auto drain_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+	while (true)
+	{
+		ULONG got = 0;
+		BOOL ok = WinUsb_ReadPipe(g_tiniWinusb, TINI_PIPE_READ,
+			drainBuf, PKT_BUFSZ, &got, NULL);
+		if (!ok)
+		{
+			if (GetLastError() == ERROR_SEM_TIMEOUT)
+				break;	// drained
+			std::cerr << "Appletini resync: drain read failed" << std::endl;
+			return false;
+		}
+		if (std::chrono::steady_clock::now() > drain_deadline)
+		{
+			std::cerr << "Appletini resync: stream did not stop on disable" << std::endl;
+			return false;
+		}
+	}
+	// Everything received from here on belongs to the new, aligned stream
+	streamGeneration.fetch_add(1, std::memory_order_release);
+	ctl_msg_buf[2] = 0x00000001; // enable bus events
+	if (!tini_write((uint8_t *)ctl_msg_buf, 12))
+	{
+		std::cerr << "Appletini resync: enable write failed" << std::endl;
+		return false;
+	}
+	return true;
+}
+
 int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 {
 	eventRecorder = EventRecorder::GetInstance();
@@ -507,6 +610,9 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 	ftStatusPrevious = 0xFFFF;
 	bIsConnected = false;
 	std::chrono::steady_clock::time_point next_connect_timeout{};
+	std::chrono::steady_clock::time_point last_data_time = std::chrono::steady_clock::now();
+	std::chrono::steady_clock::time_point next_watchdog_resync{};
+	bool bWatchdogAnnounced = false;
 
 	while (!(*shouldTerminateNetworking))
 	{
@@ -555,7 +661,23 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			else
 				std::cerr << "done!" << std::endl;
 
-			bRequestEnableBusEvents.store(true, std::memory_order_release);
+			// Full resync rather than a plain enable: the device FIFO may
+			// still hold a partial message from before the (re)connect
+			bRequestResyncBusEvents.store(true, std::memory_order_release);
+			last_data_time = std::chrono::steady_clock::now();
+			bWatchdogAnnounced = false;
+		}
+
+		// full stream resync when necessary
+		if (bRequestResyncBusEvents.load(std::memory_order_acquire)) {
+			if (!tini_resync_stream()) {
+				// Leave the request set: the reconnect path requests a
+				// resync again once the device is reopened
+				tini_close();
+				continue;
+			}
+			bRequestResyncBusEvents.store(false, std::memory_order_release);
+			last_data_time = std::chrono::steady_clock::now();
 		}
 
 		// enable bus events when necessary
@@ -565,10 +687,15 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			enable_msg_buf[0] = 0x00000001; // 1 data field
 			enable_msg_buf[1] = 0x00001000; // address of bus_event_control
 			enable_msg_buf[2] = 0x00000001; // bit 0 indicates enable bus events
-			if (!tini_write((uint8_t *)enable_msg_buf, 12))
+			if (!tini_write((uint8_t *)enable_msg_buf, 12)) {
+				// A failed 12-byte control write means the device is gone
+				// or wedged: drop the handle and reconnect
 				std::cerr << "failed!" << std::endl;
-			else
-				std::cerr << "done!" << std::endl;
+				tini_close();
+				continue;
+			}
+			std::cerr << "done!" << std::endl;
+			// Only clear the request once the FPGA has received it
 			bRequestEnableBusEvents.store(false, std::memory_order_release); // reset
 		}
 
@@ -585,6 +712,22 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			{
 				// The Apple is off / no events flowing. Stay connected.
 				ftStatus = TINI_ERR_TIMEOUT;
+				// Watchdog: the Apple bus generates events on every cycle
+				// when the machine is running, so prolonged silence is either
+				// "Apple off" (a resync is harmless) or a wedged stream
+				// (a resync recovers it). Resync periodically until data flows.
+				auto now = std::chrono::steady_clock::now();
+				if ((now - last_data_time > std::chrono::seconds(TINI_WATCHDOG_SECONDS))
+					&& (now >= next_watchdog_resync))
+				{
+					if (!bWatchdogAnnounced)
+					{
+						std::cerr << "No Appletini bus events, resyncing stream" << std::endl;
+						bWatchdogAnnounced = true;
+					}
+					bRequestResyncBusEvents.store(true, std::memory_order_release);
+					next_watchdog_resync = now + std::chrono::seconds(TINI_WATCHDOG_SECONDS);
+				}
 			}
 			else
 			{
@@ -601,6 +744,9 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			continue;
 		}
 		ftStatus = TINI_ERR_OK;
+		packet->generation = streamGeneration.load(std::memory_order_acquire);
+		last_data_time = std::chrono::steady_clock::now();
+		bWatchdogAnnounced = false;
 
 		if (!eventRecorder->IsInReplayMode() && packet->size > 0)
 		{
@@ -701,6 +847,55 @@ static bool tini_write(const uint8_t *buf, uint32_t len)
 	return true;
 }
 
+// Resynchronize the bus event stream: disable bus events, drain everything
+// still in flight (a full read timeout proves the pipeline is empty), bump
+// the stream generation, then re-enable. After this the next byte received
+// is guaranteed to start a fresh message. Returns false on any transport
+// failure, in which case the caller should drop the handle and reconnect.
+static bool tini_resync_stream()
+{
+	static uint8_t drainBuf[PKT_BUFSZ];
+	uint32_t ctl_msg_buf[3];
+	ctl_msg_buf[0] = 0x00000001; // 1 data field
+	ctl_msg_buf[1] = 0x00001000; // address of bus_event_control
+	ctl_msg_buf[2] = 0x00000000; // disable bus events
+	if (!tini_write((uint8_t *)ctl_msg_buf, 12))
+	{
+		std::cerr << "Appletini resync: disable write failed" << std::endl;
+		return false;
+	}
+	// Bound the drain in case the device ignores the disable
+	auto drain_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+	while (true)
+	{
+		int got = 0;
+		int r = libusb_bulk_transfer(g_tiniDev, TINI_PIPE_READ,
+			drainBuf, PKT_BUFSZ, &got, 1000);
+		if ((r == LIBUSB_ERROR_TIMEOUT) && (got == 0))
+			break;	// drained
+		if ((r != LIBUSB_SUCCESS) && (r != LIBUSB_ERROR_TIMEOUT))
+		{
+			std::cerr << "Appletini resync: drain read failed ("
+				  << libusb_error_name(r) << ")" << std::endl;
+			return false;
+		}
+		if (std::chrono::steady_clock::now() > drain_deadline)
+		{
+			std::cerr << "Appletini resync: stream did not stop on disable" << std::endl;
+			return false;
+		}
+	}
+	// Everything received from here on belongs to the new, aligned stream
+	streamGeneration.fetch_add(1, std::memory_order_release);
+	ctl_msg_buf[2] = 0x00000001; // enable bus events
+	if (!tini_write((uint8_t *)ctl_msg_buf, 12))
+	{
+		std::cerr << "Appletini resync: enable write failed" << std::endl;
+		return false;
+	}
+	return true;
+}
+
 int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 {
 	eventRecorder = EventRecorder::GetInstance();
@@ -709,6 +904,9 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 	ftStatusPrevious = 0xFFFF;
 	bIsConnected = false;
 	std::chrono::steady_clock::time_point next_connect_timeout{};
+	std::chrono::steady_clock::time_point last_data_time = std::chrono::steady_clock::now();
+	std::chrono::steady_clock::time_point next_watchdog_resync{};
+	bool bWatchdogAnnounced = false;
 
 	while (!(*shouldTerminateNetworking))
 	{
@@ -757,7 +955,23 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			else
 				std::cerr << "done!" << std::endl;
 
-			bRequestEnableBusEvents.store(true, std::memory_order_release);
+			// Full resync rather than a plain enable: the device FIFO may
+			// still hold a partial message from before the (re)connect
+			bRequestResyncBusEvents.store(true, std::memory_order_release);
+			last_data_time = std::chrono::steady_clock::now();
+			bWatchdogAnnounced = false;
+		}
+
+		// full stream resync when necessary
+		if (bRequestResyncBusEvents.load(std::memory_order_acquire)) {
+			if (!tini_resync_stream()) {
+				// Leave the request set: the reconnect path requests a
+				// resync again once the device is reopened
+				tini_close();
+				continue;
+			}
+			bRequestResyncBusEvents.store(false, std::memory_order_release);
+			last_data_time = std::chrono::steady_clock::now();
 		}
 
 		// enable bus events when necessary
@@ -768,7 +982,11 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			enable_msg_buf[1] = 0x00001000; // address of bus_event_control
 			enable_msg_buf[2] = 0x00000001; // bit 0 indicates enable bus events
 			if (!tini_write((uint8_t *)enable_msg_buf, 12)) {
+				// A failed 12-byte control write means the device is gone
+				// or wedged: drop the handle and reconnect
 				std::cerr << "failed!" << std::endl;
+				tini_close();
+				continue;
 			} else {
 				std::cerr << "done!" << std::endl;
 				// Only clear the request after the FPGA has received it.  The
@@ -788,6 +1006,22 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			// timeout with bytes transferred is a valid partial libusb read
 			// and is processed below.
 			ftStatus = TINI_ERR_TIMEOUT;
+			// Watchdog: the Apple bus generates events on every cycle
+			// when the machine is running, so prolonged silence is either
+			// "Apple off" (a resync is harmless) or a wedged stream
+			// (a resync recovers it). Resync periodically until data flows.
+			auto now = std::chrono::steady_clock::now();
+			if ((now - last_data_time > std::chrono::seconds(TINI_WATCHDOG_SECONDS))
+				&& (now >= next_watchdog_resync))
+			{
+				if (!bWatchdogAnnounced)
+				{
+					std::cerr << "No Appletini bus events, resyncing stream" << std::endl;
+					bWatchdogAnnounced = true;
+				}
+				bRequestResyncBusEvents.store(true, std::memory_order_release);
+				next_watchdog_resync = now + std::chrono::seconds(TINI_WATCHDOG_SECONDS);
+			}
 			packetFreeQueue.push(std::move(packet));
 			continue;
 		}
@@ -804,6 +1038,9 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			continue;
 		}
 		ftStatus = TINI_ERR_OK;
+		packet->generation = streamGeneration.load(std::memory_order_acquire);
+		last_data_time = std::chrono::steady_clock::now();
+		bWatchdogAnnounced = false;
 
 		if (!eventRecorder->IsInReplayMode() && packet->size > 0)
 		{
@@ -863,6 +1100,10 @@ void usb_display_imgui_window(bool* p_open)
 		ImGui::Begin("Appletini Communications", p_open);
 		if (!ImGui::IsWindowCollapsed())
 		{
+			if (ImGui::Button("Resync Bus Stream"))
+				bRequestResyncBusEvents.store(true, std::memory_order_release);
+			ImGui::SetItemTooltip("Disable, drain and re-enable the Appletini bus event stream. Use if the display stops updating.");
+			ImGui::Separator();
 			ImGui::Checkbox("Increment", &bUSBImGUiIsIncrement);
 			// Only writing to RAM, not registers
 			ImGui::DragInt("Apple RAM Address", &iUSBImGUIAddressStart, 1.f, 0, 0xFFFF, "%04X");
