@@ -43,19 +43,19 @@ layout(pixel_center_integer) in vec4 gl_FragCoord;
  - It grabs the texel and determines the video mode to use
  - It runs the video mode code on that byte and chooses the correct fragment
 
- In addition, if the magicBytes are "SHR4", we now allow for 4 graphics mode, which can be
- mixed and matched per scanline. The top 4 palette color bits (unused originally) determine the type.
+ In addition, if the magicBytes are "SHR4", we now allow for 4 graphics modes. The top 4 palette
+ color bits (unused originally) determine the type. PAL256 is field-wide because it reinterprets
+ the complete image byte area as a packed 320x100 raster; the other modes can be mixed per scanline.
  The 4 nibbles, starting with the 2nd byte, look like this:
  $0RGB = Pal16, Normal SHR 16-color palette entry
  $1ggg = RGGB, Bayer mode where ggg is a grayscale that is the same as the palette index
- $2RGB = Pal256, even 4-bit pixels fetch the next odd pixel to make a Pal256 lookup at $E1/9E00.
-         The 12-bit RGB is used for both pixels
+ $2RGB = Pal256, each byte is one 8-bit lookup into the flat palette at $9E00.
  $3xxx = R4G4B4, bytes AB CD EF at 4 bit groups turn into RGB pixels ABC, DEF, each pixel spanning 3 dots
  
  In order to get Pal256 working, it is necessary to have access to the single unified palette
  of 256 colors at the time the beam is on each byte. Therefore we have to generate another buffer called
- PAL256TEX which is a 160x200 buffer of 2 bytes: the snapshots of the colors for each byte at the time
- the beam was on it. The shader simply applies the relevant color.
+ PAL256TEX. Each bank is a packed 320x100 buffer of 16-bit color snapshots, one for every image byte.
+ PAL256i places the 320x100 AUX field above the 320x100 main field instead of alternating banks.
          
 
  See comments in the code below.
@@ -90,11 +90,12 @@ uniform sampler2D OFFSETTEX;			// X Offset texture for merged mode
  ...
  A2SM_SHR4SHR			= 0b0001'0000,	// New SHR4 modes - default SHR but with 'magic bytes' active
  A2SM_SHR4RGGB			= 0b0010'0000,	// New SHR4 modes - RGGB   (see shader for details)
- A2SM_SHR4PAL256		= 0b0100'0000,	// New SHR4 modes - PAL256 (see shader for details)
+ A2SM_SHR4PAL256		= 0b0100'0000,	// PAL256 mode-presence bit
  A2SM_SHR4R4G4B4		= 0b1000'0000,	// New SHR4 modes - r4G4B4 (see shader for details)
  };
  */
 const int A2SM_SHR4SHR = 0x10;
+const int A2SM_SHR4PAL256 = 0x40;
 
 in vec2 vFragPos;       // The fragment position in pixels
 out vec4 fragColor;
@@ -310,6 +311,34 @@ void main()
             fragColor = GetMonochromeValue(fragColor, monitorcolors[monitorColorType]);
         return;
     }
+
+	uint xpos_noborder = xpos - uint(hborder*16);
+	uint ypos_noborder = ypos - uint(vborder*2);
+
+	// PAL256 is a field-wide packed mode. Each bank contains a 320x100
+	// image: two consecutive physical 160-byte SHR lines form one packed
+	// row. Progressive output repeats each row four times. PAL256i maps
+	// AUX to the top 100 rows and main to the bottom 100 rows, repeating
+	// each row twice; it never alternates banks by output-row parity.
+	if ((specialModesMask & A2SM_SHR4PAL256) != 0)
+	{
+		uint pal256Y;
+		if (isInterlaceSHR4 == 1u)
+			pal256Y = ypos_noborder >> 1;
+		else
+		{
+			pal256Y = ypos_noborder >> 2;
+			if (isPageFlipSHR4 == 1u)
+				pal256Y += uint(doublePal256YOffset) * uint(frameIsOdd);
+		}
+
+		uint pal256Word = texelFetch(PAL256TEX,
+			ivec2(xpos_noborder >> 1, pal256Y), 0).r;
+		fragColor = ConvertIIgs2RGB(pal256Word);
+		if (monitorColorType > 0)
+			fragColor = GetMonochromeValue(fragColor, monitorcolors[monitorColorType]);
+		return;
+	}
     
     // grab the the scb
     uint scb = texelFetch(VRAMTEX, ivec2(0, scanline + yOffsetLines), 0).r;
@@ -363,9 +392,6 @@ void main()
     if ((specialModesMask & A2SM_SHR4SHR) != 0)        // Frame has SHR4 modes active
     {
     
-  		uint xpos_noborder = xpos - uint(hborder*16);
-		uint ypos_noborder = ypos - uint(vborder*2);
-
         switch (paletteColorB2 >> 4) {
             case 0u:    // Standard SHR
             {
@@ -683,22 +709,11 @@ void main()
             }
             case 2u:    // Pal256
             {
-                /*
-                    $2RGB = PAL256
-                    Even 4-bit pixels fetch the next odd pixel to make a Pal256 lookup at $E1/9E00.
-                    The 12-bit RGB is used for both pixels.
-                */
-				// Use the special pregenerated PAL256 colors buffer:
-				// 160 words per line, 2 bytes per pair of pixels
-				// Both pixels use the same color. PAL256TEX is a R16UI
-				// The reason the CPU pregenerates the colors is that they depend on the state of
-				// all the palettes at the time of the beam cycle.
-				uint yPal256OffsetLines = 0u;
-				if (isInterlaceSHR4 == 1u)	// the offset is used for odd lines
-					yPal256OffsetLines = uint(doublePal256YOffset) * (ypos_noborder & 1u);
-				if (isPageFlipSHR4 == 1u)		// the offset is used for odd frames
-					yPal256OffsetLines = uint(doublePal256YOffset) * uint(frameIsOdd);
-				uint pal256Word = texelFetch(PAL256TEX,ivec2(xpos_noborder >> 2, (ypos_noborder >> 1) + yPal256OffsetLines),0).r;
+				// PAL256 is handled as a field-wide mode before normal SHR
+				// per-entry dispatch. Keep this deterministic fallback for
+				// malformed mode masks.
+				uint pal256Word = texelFetch(PAL256TEX,
+					ivec2(xpos_noborder >> 1, ypos_noborder >> 2), 0).r;
 				fragColor = ConvertIIgs2RGB(pal256Word);
                 break;
             }

@@ -1,0 +1,153 @@
+name: Build release packages
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SDD_VERSION: 0.9.1
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: NuGet/setup-nuget@v2
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Install SDL2
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP "SDL2-devel.zip"
+          $destination = Join-Path $env:RUNNER_TEMP "SDL2"
+          Invoke-WebRequest `
+            -Uri "https://github.com/libsdl-org/SDL/releases/download/release-2.30.5/SDL2-devel-2.30.5-VC.zip" `
+            -OutFile $archive
+          Expand-Archive -Path $archive -DestinationPath $destination
+          "SDL2_DIR=$destination\SDL2-2.30.5" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Restore NuGet packages
+        run: nuget restore SuperDuperDisplay.sln -PackagesDirectory packages
+
+      - name: Build
+        run: msbuild SuperDuperDisplay.sln /m /p:Configuration=Release /p:Platform=x64
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $stage = "dist\SuperDuperDisplay-$env:SDD_VERSION-Windows-x64"
+          New-Item -ItemType Directory -Path $stage -Force | Out-Null
+          Copy-Item "Release\SuperDuperDisplay.exe" $stage
+          Copy-Item "$env:SDL2_DIR\lib\x64\SDL2.dll" $stage
+          Copy-Item assets, shaders, presets, samples, recordings, docs -Destination $stage -Recurse
+          Copy-Item README.md, LICENSE, 99-appletini-sdd.rules -Destination $stage
+          Compress-Archive `
+            -Path $stage `
+            -DestinationPath "dist\SuperDuperDisplay-$env:SDD_VERSION-Windows-x64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: dist/SuperDuperDisplay-${{ env.SDD_VERSION }}-Windows-x64.zip
+          if-no-files-found: error
+
+  linux:
+    name: Linux x64
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libsdl2-dev zlib1g-dev libusb-1.0-0-dev libgles2-mesa-dev pkg-config
+
+      - name: Build
+        run: |
+          make clean
+          make -j2 release
+
+      - name: Package
+        run: |
+          stage="dist/SuperDuperDisplay-${SDD_VERSION}-Linux-x64"
+          mkdir -p "${stage}"
+          cp SuperDuperDisplay README.md LICENSE 99-appletini-sdd.rules "${stage}/"
+          cp -R assets shaders presets samples recordings docs "${stage}/"
+          tar -C dist -czf "dist/SuperDuperDisplay-${SDD_VERSION}-Linux-x64.tar.gz" \
+            "SuperDuperDisplay-${SDD_VERSION}-Linux-x64"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: dist/SuperDuperDisplay-${{ env.SDD_VERSION }}-Linux-x64.tar.gz
+          if-no-files-found: error
+
+  macos:
+    name: macOS arm64
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install sdl2 libusb
+
+      - name: Build app bundle
+        run: |
+          xcodebuild \
+            -project SuperDuperDisplay.xcodeproj \
+            -scheme SuperDuperDisplay \
+            -configuration Release \
+            -derivedDataPath build/macos \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Verify and package app bundle
+        run: |
+          app="build/macos/Build/Products/Release/SuperDuperDisplay.app"
+          test -x "${app}/Contents/MacOS/SuperDuperDisplay"
+          otool -L "${app}/Contents/MacOS/SuperDuperDisplay"
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent "${app}" \
+            "dist/SuperDuperDisplay-${SDD_VERSION}-macOS-arm64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: dist/SuperDuperDisplay-${{ env.SDD_VERSION }}-macOS-arm64.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - windows
+      - linux
+      - macos
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" release-assets/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "SuperDuperDisplay ${SDD_VERSION}" \
+            --generate-notes \
+            --verify-tag

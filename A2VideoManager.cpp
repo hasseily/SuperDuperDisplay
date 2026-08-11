@@ -181,11 +181,15 @@ void A2VideoManager::Initialize()
 		}
 		vrams_array[i].vram_legacy = new uint8_t[GetVramSizeLegacy()];
 		vrams_array[i].vram_shr = new uint8_t[GetVramSizeSHR()];
-		vrams_array[i].vram_pal256 = new uint8_t[_A2VIDEO_SHR_BYTES_PER_LINE*2*_A2VIDEO_SHR_SCANLINES*_INTERLACE_MULTIPLIER];
+		vrams_array[i].vram_pal256 = new uint8_t[
+			_A2VIDEO_PAL256_WIDTH * sizeof(uint16_t) *
+			_A2VIDEO_PAL256_HEIGHT * _INTERLACE_MULTIPLIER];
 		vrams_array[i].offset_buffer = new GLfloat[GetVramHeightSHR()];
 		memset(vrams_array[i].vram_legacy, 0, GetVramSizeLegacy());
 		memset(vrams_array[i].vram_shr, 0, GetVramSizeSHR());
-		memset(vrams_array[i].vram_pal256, 0, _A2VIDEO_SHR_BYTES_PER_LINE*2*_A2VIDEO_SHR_SCANLINES*_INTERLACE_MULTIPLIER);
+		memset(vrams_array[i].vram_pal256, 0,
+			_A2VIDEO_PAL256_WIDTH * sizeof(uint16_t) *
+			_A2VIDEO_PAL256_HEIGHT * _INTERLACE_MULTIPLIER);
 		memset(vrams_array[i].offset_buffer, 0, GetVramHeightSHR() * sizeof(GLfloat));
 	}
 	vrams_write = &vrams_array[0];
@@ -791,9 +795,15 @@ DRAW_VRAM:
 			if (((scanlineSHR4Modes & A2SM_SHR4PAL256) != 0)
 				|| (overrideSHRMode == A2SM_SHR4PAL256))
 			{
-				// calculate x value where x is 0-40 in the content area
+				// PAL256 packs two physical 160-byte SHR scanlines side by side
+				// into one 320-pixel row. This reinterprets the complete $7D00
+				// image area as a contiguous 320x100 byte-index field.
 				auto _x_just_content = _x - CYCLES_SC_HBL;
-				auto pal256ByteStartPtr = vrams_write->vram_pal256 + (_y * _A2VIDEO_SHR_BYTES_PER_LINE + (4 * _x_just_content))*2;
+				const uint32_t pal256X = ((_y & 1u) * _A2VIDEO_SHR_BYTES_PER_LINE)
+					+ (4 * _x_just_content);
+				const uint32_t pal256Y = _y >> 1;
+				auto pal256ByteStartPtr = vrams_write->vram_pal256
+					+ ((pal256Y * _A2VIDEO_PAL256_WIDTH + pal256X) * sizeof(uint16_t));
 
 				for (uint32_t i = 0; i < 4; i++)
 				{
@@ -835,10 +845,18 @@ DRAW_VRAM:
 				if (((scanlineSHR4Modes & A2SM_SHR4PAL256) != 0)
 					|| (overrideSHRMode == A2SM_SHR4PAL256))
 				{
-					// calculate x value where x is 0-40 in the content area
-					// move to the offset to the interlace area which is the second half of the vram (i.e. slide down by _A2VIDEO_SHR_SCANLINES)
+					// The main-memory PAL256 field follows the auxiliary field as
+					// another packed 320x100 image. PAL256i displays this second
+					// field as the bottom half instead of alternating banks by row.
 					auto _x_just_content = _x - CYCLES_SC_HBL;
-					auto pal256ByteStartPtr = vrams_write->vram_pal256 + ((_y + _A2VIDEO_SHR_SCANLINES) * _A2VIDEO_SHR_BYTES_PER_LINE + (4 * _x_just_content))*2;
+					const uint32_t pal256X = ((_y & 1u) * _A2VIDEO_SHR_BYTES_PER_LINE)
+						+ (4 * _x_just_content);
+					const uint32_t pal256Y = _y >> 1;
+					const uint32_t pal256MainOffset =
+						_A2VIDEO_PAL256_WIDTH * _A2VIDEO_PAL256_HEIGHT;
+					auto pal256ByteStartPtr = vrams_write->vram_pal256
+						+ ((pal256MainOffset + pal256Y * _A2VIDEO_PAL256_WIDTH + pal256X)
+							* sizeof(uint16_t));
 
 					for (uint32_t i = 0; i < 4; i++)
 					{

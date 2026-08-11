@@ -110,7 +110,7 @@ private:
 	uXY screen_count = {0,0};				// width,height in pixels of visible screen area of window
 
 	unsigned int VRAMTEX = UINT_MAX;		// GL_R8UI VRAM buffer texture. Format depends on legacy or SHR mode
-	unsigned int PAL256TEX = UINT_MAX;		// GL_R16UI Special VRAM for SHR4 PAL256 mode
+	unsigned int PAL256TEX = UINT_MAX;		// GL_R16UI PAL256 fields: 320x100 AUX followed by 320x100 main
 
 	uint32_t border_width_cycles = 0;
 	uint32_t border_height_scanlines = 0;

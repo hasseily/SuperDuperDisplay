@@ -1,6 +1,6 @@
 # SHR-3200 (Brooks) and SHR4 Video Modes
 
-Implementation specification, revision 1.0 (2026-08-02)
+Implementation specification, revision 1.1 (2026-08-10)
 
 ## 1. Purpose and scope
 
@@ -179,11 +179,11 @@ SHR4 is active only when the SHR4 magic is present. The normal SCB selects one o
 | ---: | --- | --- |
 | 0 | SHR | Standard palette color |
 | 1 | RGGB | Raw Bayer/CFA sample reconstructed to RGB |
-| 2 | PAL256 | Whole image byte indexes one 256-entry palette |
+| 2 | PAL256 | Field-wide packed image; each image byte indexes one 256-entry palette |
 | 3 | R4G4B4 | Nibble stream contains direct 4:4:4 RGB components |
 | 4-15 | Reserved | Invalid/undefined |
 
-Mode selection is therefore **per selected palette entry**, not simply per frame or per scanline. Different source sample values can select different modes on the same row. A producer that wants a uniform mode SHOULD put the same selector in every palette entry that the row can select. Setting all 16 selected-palette entries is simplest; setting all 256 palette entries is safest when SCBs may change.
+Mode selection is **per selected palette entry** for standard SHR, RGGB, and R4G4B4. Those modes can coexist on the same row. PAL256 is the exception: because it changes the image area's geometry, the presence of selector `2` declares a field-wide PAL256 image and takes precedence over per-entry decoding. A PAL256 producer MUST put selector `2` in every palette entry so recognition is unambiguous and every byte value remains a valid index.
 
 The mode selector belongs to the center/output sample. RGGB neighbor samples contribute their raw numeric values even if those neighbors would select another mode when rendered at their own positions.
 
@@ -295,34 +295,63 @@ An implementation MAY use a different demosaic algorithm, but will not be pixel-
 
 ## 7. SHR4 mode 2: PAL256
 
-### 7.1 Pixel encoding
+### 7.1 Packed pixel encoding
 
-PAL256 combines the two 4-bit nibbles of each image byte into one 8-bit palette index:
+PAL256 treats each complete image byte as one 8-bit palette index. It reinterprets the contiguous `$7D00`-byte image area as 100 rows of 320 bytes instead of 200 rows of 160 bytes:
 
 ```text
-index = image_byte(y, xb)              // 0-255
-color = palette256[index] & $0FFF
+pal256_index(y, x) = memory[$2000 + 320*y + x]
+color(y, x) = palette256[pal256_index(y, x)] & $0FFF
+
+0 <= x < 320
+0 <= y < 100
+```
+
+Equivalently, each packed PAL256 row joins two consecutive physical SHR image rows side by side:
+
+```text
+packed x   0..159 = physical SHR row 2*y,     byte 0..159
+packed x 160..319 = physical SHR row 2*y + 1, byte 0..159
 ```
 
 The 256-entry palette is the normal 512-byte palette region at `$9E00-$9FFF`, treated as one contiguous array. Entry `i` is stored at `$9E00 + 2*i` in normal little-endian IIgs color order. The SHR4 selector occupies the unused high nibble and does not alter the low 12-bit color.
 
-Each input byte produces one PAL256 color spanning four 640-wide output samples, or the width of two normal 320-mode samples. The effective PAL256 raster is therefore 160×200 in single-page mode and 160×400 in interlace mode.
+The native PAL256 raster is 320×100. Each PAL256 pixel spans two samples in SDD's 640-wide output. A progressive presentation repeats every PAL256 row four times to fill 640×400.
 
-For consistent dispatch, the selected normal-SHR palette entries MUST carry selector `2`. A producer will normally set selector `2` on every one of the 256 entries, which also makes every byte value a valid PAL256 color.
+PAL256 is field-wide and cannot be spatially mixed with standard SHR, RGGB, or R4G4B4. Producers MUST set selector `2` on all 256 palette entries.
 
-SCB bit 7 does not change PAL256's byte-to-pixel geometry. Producers SHOULD use 320 mode (`SCB bit 7 = 0`) and MUST clear color fill (`SCB bit 5 = 0`).
+SCBs do not change PAL256's packed byte geometry. Producers SHOULD clear SCB bits 7 and 5 for compatibility with recognizers that inspect the conventional SHR control plane.
 
-### 7.2 Beam-racing requirement
+### 7.2 PAL256i (`page_mode = 1`)
 
-The IIgs palette can change while a row is being scanned. Correct live-video decoding MUST use the color stored in palette entry `index` at the instant the corresponding image byte is fetched by the video beam. Looking up all bytes against the palette state at end-of-frame is not equivalent.
-
-An SDD-compatible capture implementation snapshots one 12-bit color per image byte:
+PAL256i is one 320×200 image made by vertically concatenating two complete 320×100 PAL256 fields:
 
 ```text
-pal256_snapshot[y][xb] = palette_state_at_beam_time[image_byte(y, xb)]
+PAL256i rows   0.. 99 = auxiliary bank $E1 packed rows 0..99
+PAL256i rows 100..199 = main bank      $E0 packed rows 0..99
 ```
 
-This is a 160×200 array of 16-bit words for one page. A static image decoder, for which palette memory does not change during display, can perform the lookup directly.
+The first field therefore supplies the top half and the second field supplies the bottom half. PAL256i MUST NOT alternate or ping-pong between auxiliary and main memory by output-row parity. A 640×400 presentation doubles each of the resulting 200 rows vertically.
+
+Both banks MUST contain the SHR4 magic, `page_mode = 1`, a complete packed image field, and a valid 256-color palette. Each half is decoded against the palette state from its own bank.
+
+`page_mode = 2` remains PAL256 page flip: it selects one complete 320×100 field per displayed frame (or blends the two complete fields under the sub-120 Hz merge rule). It is distinct from PAL256i.
+
+### 7.3 Beam-racing requirement
+
+The IIgs palette can change while a physical SHR row is being scanned. Correct live-video decoding MUST use the color stored in palette entry `index` at the instant the corresponding image byte is fetched by the video beam. Looking up all bytes against the palette state at end-of-frame is not equivalent.
+
+An SDD-compatible capture implementation snapshots one 12-bit color per physical image byte, then reinterprets the contiguous snapshot buffer using the packed coordinates from section 7.1:
+
+```text
+snapshot[source_y][source_x] =
+    palette_state_at_beam_time[image_byte(source_y, source_x)]
+
+pal256_snapshot[packed_y][packed_x] =
+    snapshot[2*packed_y + floor(packed_x/160)][packed_x mod 160]
+```
+
+This is a 320×100 array of 16-bit words for one bank. PAL256i and page flip store a second 320×100 array immediately after the first. A static image decoder, for which palette memory does not change during display, can perform the lookup directly.
 
 ## 8. SHR4 mode 3: R4G4B4
 
@@ -385,17 +414,17 @@ The palette records' high mode nibbles have no SHR4 meaning under `3200` magic a
 
 ## 10. Two-page modes
 
-`page_mode` applies to SHR4 and SHR-3200. Page A is the SHR page in `$E1`; page B is the same `$2000-$9FFF` layout in `$E0`.
+`page_mode` applies to SHR4 and SHR-3200. Page A is the SHR page in `$E1`; page B is the same `$2000-$9FFF` layout in `$E0`. PAL256 uses the same two banks but gives interlace mode the special fixed-half mapping in section 7.2.
 
 Both pages SHOULD contain matching extension magic and valid control data. This is especially important to SDD, which captures SCBs, palettes, and mode metadata independently from each bank. For two-page SHR-3200, each page MUST provide a valid pointer to the line-palette table appropriate to that page.
 
 ### 10.1 Single page (`page_mode = 0`)
 
-Use only page A (`$E1`). Present 200 source rows, normally doubled vertically to 400 display rows.
+Use only page A (`$E1`). Ordinary SHR4 and SHR-3200 present 200 source rows, normally doubled vertically to 400 display rows. PAL256 presents its packed 320×100 field, with every row repeated four times for a 640×400 presentation.
 
 ### 10.2 Interlace (`page_mode = 1`)
 
-Construct a 400-row image by alternating banks at the same source-row number:
+For standard SHR4, RGGB, R4G4B4, and SHR-3200, construct a 400-row image by alternating banks at the same source-row number:
 
 ```text
 output row 2*y     = page A ($E1), source row y
@@ -403,6 +432,8 @@ output row 2*y + 1 = page B ($E0), source row y
 ```
 
 Do not vertically duplicate either source row. RGGB CFA parity is based on the resulting 400-row output: page A supplies even CFA rows and page B supplies odd CFA rows.
+
+PAL256i is the exception. It constructs a 320×200 image by placing all 100 packed rows from page A above all 100 packed rows from page B, as specified in section 7.2. It does not alternate banks by row.
 
 ### 10.3 Page flip (`page_mode = 2`)
 
@@ -413,7 +444,7 @@ even display frame = page A ($E1)
  odd display frame = page B ($E0)
 ```
 
-Each selected page remains a 200-row image and may be doubled vertically for presentation. The page selector MUST be coherent for image bytes, SCBs, normal palettes, SHR-3200 line palettes, and PAL256 palette snapshots.
+Each selected non-PAL256 page remains a 200-row image and may be doubled vertically for presentation. Each selected PAL256 page is one packed 320×100 field and is quadrupled vertically. The page selector MUST be coherent for image bytes, SCBs, normal palettes, SHR-3200 line palettes, and PAL256 palette snapshots.
 
 > NOTE: SDD selects page-flip data for image bytes, palettes, and PAL256 snapshots from one rendered-frame parity value; implementations SHOULD likewise use a single parity value everywhere. The original idea for page flip was to take advantage of high frame rate monitors to blend fast flipping images. Below 120 Hz, SDD automatically blends each pair of page-flip frames and halves the presented frame rate. The CRT shader (F3) checkbox `Merge Frame Pairs` remains available to force the same behavior independently.
 
@@ -427,8 +458,8 @@ A live capture device that aims to reproduce SDD behavior SHOULD operate in this
 4. For SHR-3200, replace the selected palette snapshot with the row's 32-byte line-palette record.
 5. As each group of image bytes is fetched by the beam, snapshot those bytes.
 6. If 320-mode color fill is enabled, apply fill from left to right to the captured nibbles.
-7. If PAL256 may be selected, snapshot the full-palette color indexed by each captured image byte, after any SDD-compatible color fill, at that same beam time.
-8. Repeat independently for page B when a two-page mode is active.
+7. If PAL256 is present, snapshot the full-palette color indexed by every captured image byte at that same beam time, then reinterpret each bank's contiguous snapshots as 320×100.
+8. Repeat independently for page B when PAL256i or another two-page mode is active.
 
 The ordinary selected palette is stable for a row because SHR hardware latches it at row start. PAL256 is the exception: it deliberately observes the live 256-entry palette throughout the row.
 
@@ -483,9 +514,9 @@ It also recognizes a `$10000` file as two complete `$8000` SHR/SHR4 pages. These
 2. Write `$D3 $C8 $D2 $B4` at `$9DFC`.
 3. Write the requested `page_mode` at `$9DF8` and clear `$9DF9-$9DFB`.
 4. Clear SCB color fill for all extended raw-data modes.
-5. Put selector `0`, `1`, `2`, or `3` into the high nibble of every palette entry that image samples can select.
+5. Put selector `0`, `1`, or `3` into the high nibble of every palette entry that image samples can select. For PAL256, put selector `2` into all 256 entries because PAL256 is field-wide.
 6. For RGGB, write raw intensities in normal 320/640 sample order.
-7. For PAL256, write one 8-bit palette index per image byte and populate all 256 low-12-bit palette colors.
+7. For PAL256, write 100 packed rows of 320 byte-indices contiguously from `$2000` and populate all 256 low-12-bit palette colors.
 8. For R4G4B4, write RGB component nibbles in `R,G,B,R,G,B,...` order and use 320-mode SCBs.
 
 ### 13.2 SHR-3200 image
@@ -503,6 +534,7 @@ It also recognizes a `$10000` file as two complete `$8000` SHR/SHR4 pages. These
 2. Write the same nonzero `page_mode` and appropriate magic in both pages.
 3. Give each SHR-3200 page its own valid palette-table pointer.
 4. Keep palette selectors and SCB modes valid independently on both pages.
+5. For PAL256i, put the top 100 packed rows in page A and the bottom 100 packed rows in page B; do not split the image into alternating rows.
 
 ## 14. Decoder outline
 
@@ -511,6 +543,22 @@ The following pseudocode intentionally separates mode selection from mode render
 ```text
 decode_frame(memory, frame_parity):
     page_mode = sanitize(memory[E1:$9DF8])
+
+    if magic(E1) == "SHR4" and field_uses_selector(E1, 2):
+        for output_y in 0..399:
+            if page_mode == INTERLACE:
+                combined_y = output_y/2
+                bank = E1 if combined_y < 100 else E0
+                packed_y = combined_y mod 100
+            else:
+                bank = E0 if page_mode == PAGE_FLIP and frame_parity == 1
+                          else E1
+                packed_y = output_y/4
+
+            for output_x in 0..639:
+                packed_x = output_x/2
+                output pal256_snapshot[bank][packed_y][packed_x]
+        return
 
     for output_y in presentation_height:
         (bank, source_y) = select_page_and_row(page_mode,
@@ -543,7 +591,7 @@ decode_frame(memory, frame_parity):
                 0: output palette[index] & $0FFF
                 1: output demosaic(raw_sample_neighborhood,
                                    output_x, output_y)
-                2: output beam_time_pal256_snapshot[source_y][output_x/4]
+                2: invalid mixed PAL256 declaration; use deterministic fallback
                 3: output r4g4b4_triplet(row_bytes, output_x/2)
                 default: output implementation-defined fallback
 ```
@@ -581,10 +629,19 @@ palette entries at q=0,1,2,3 -> 8, 13, 2, 7
 
 ```text
 image byte $A5 -> palette256 entry 165
-output samples x=0,1,2,3 for that byte all use entry 165
+the corresponding PAL256 pixel uses entry 165
+640-wide output samples 2*x and 2*x+1 both use that color
+
+$2000 -> packed coordinate (0,0)
+$209F -> packed coordinate (159,0)
+$20A0 -> packed coordinate (160,0)
+$213F -> packed coordinate (319,0)
+$2140 -> packed coordinate (0,1)
 ```
 
 The byte MUST NOT be interpreted as separate palette entries `$A` and `$5` after PAL256 dispatch.
+
+For PAL256i, combined row 99 comes from AUX packed row 99 and combined row 100 comes from main packed row 0. No combined row alternates banks with its neighbor.
 
 ### 15.5 R4G4B4
 
@@ -616,13 +673,13 @@ An interoperable implementation should verify all of the following:
 - The primary page is `$E1`; the secondary page is `$E0`.
 - A Brooks row palette has exactly 16 entries and palette indices are reversed.
 - SHR4 dispatch uses the palette entry selected by the current normal SHR sample.
-- SHR4 selectors `0`, `1`, `2`, and `3` may coexist on one row.
+- SHR4 selectors `0`, `1`, and `3` may coexist on one row; selector `2` declares field-wide PAL256.
 - 320 data is high nibble first; 640 data is most significant 2-bit pair first.
 - The 640-mode palette mapping matches the table in section 2.5.
 - RGGB phase begins with red at `(0,0)` and uses raw sample values, not palette RGB.
-- PAL256 combines a whole byte into one index and uses a beam-time palette snapshot.
+- PAL256 packs the `$7D00` image bytes as 320×100, combines each whole byte into one index, and uses a beam-time palette snapshot.
 - R4G4B4 groups six consecutive nibbles into two RGB pixels.
-- Interlace alternates `$E1/$E0` by output row; page flip alternates by frame.
+- Interlace alternates `$E1/$E0` by output row for non-PAL256 modes; PAL256i concatenates AUX above main; page flip alternates by frame.
 - Page selection is identical across image data and all palette sources.
 - Unknown selector and page-mode values are handled deterministically.
 

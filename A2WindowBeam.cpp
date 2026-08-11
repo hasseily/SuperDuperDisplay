@@ -182,7 +182,7 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 					{
 						glActiveTexture(_TEXUNIT_PAL256BUFFER);
 						glBindTexture(GL_TEXTURE_2D, PAL256TEX);
-						glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _A2VIDEO_SHR_BYTES_PER_LINE, _A2VIDEO_SHR_SCANLINES * (_hasDSHR4 + 1),
+						glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, _A2VIDEO_PAL256_WIDTH, _A2VIDEO_PAL256_HEIGHT * (_hasDSHR4 + 1),
 										GL_RED_INTEGER, GL_UNSIGNED_SHORT, (uint16_t*)(A2VideoManager::GetInstance()->GetPAL256VRAMReadPtr()));
 						glActiveTexture(_TEXUNIT_DATABUFFER_R8UI);
 					}
@@ -210,9 +210,10 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 				// Create the PAL256TEX texture
 				glActiveTexture(_TEXUNIT_PAL256BUFFER);
 				glBindTexture(GL_TEXTURE_2D, PAL256TEX);
-				// The size of the PAL256 texture is 2 bytes per SHR byte. Add the interlacing and that's 4x scanlines
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, _A2VIDEO_SHR_BYTES_PER_LINE,
-					2 *_A2VIDEO_SHR_SCANLINES * _INTERLACE_MULTIPLIER, 0,
+				// Each bank is a packed 320x100 PAL256 field, stored as one
+				// 16-bit beam-time color per image byte.
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, _A2VIDEO_PAL256_WIDTH,
+					_A2VIDEO_PAL256_HEIGHT * _INTERLACE_MULTIPLIER, 0,
 					GL_RED_INTEGER, GL_UNSIGNED_SHORT, A2VideoManager::GetInstance()->GetPAL256VRAMReadPtr());
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 				break;
@@ -259,7 +260,7 @@ void A2WindowBeam::Render(uint64_t frame_idx)
 		int _hasDSHR4 = (doubleSHR4 == DOUBLE_NONE ? 0 : 1);
 		int _dblshr4off = _hasDSHR4 * (_A2VIDEO_SHR_SCANLINES + (2 * border_height_scanlines));
 		shader.SetUniform("doubleSHR4YOffset", _dblshr4off);
-		int _dblpaloff = _hasDSHR4 * _A2VIDEO_SHR_SCANLINES;
+		int _dblpaloff = _hasDSHR4 * _A2VIDEO_PAL256_HEIGHT;
 		shader.SetUniform("doublePal256YOffset", _dblpaloff);
 		if ((specialModesMask & A2SM_SHR3200) != 0)
 			shader.SetUniform("bReversePalIdx", true);

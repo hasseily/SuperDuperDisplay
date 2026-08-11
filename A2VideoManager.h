@@ -158,7 +158,7 @@ public:
 		A2Mode_e mode = A2Mode_e::NONE;
 		uint8_t* vram_legacy = nullptr;
 		uint8_t* vram_shr = nullptr;
-		uint8_t* vram_pal256 = nullptr;			// special vram for mode SHR4 PAL256. 2 bytes of color per byte of shr
+		uint8_t* vram_pal256 = nullptr;			// PAL256 beam-time colors: two 320x100 fields, 2 bytes per pixel
 		GLfloat* offset_buffer = nullptr;
 		int frameSHRModes = 0;					// All SHR4 modes in the frame
 		int pagedMode = 0;			// DoubleMode_e : may use E0 (main) $2000-9FFF for interlace or page flip
