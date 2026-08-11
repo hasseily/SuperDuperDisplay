@@ -34,6 +34,7 @@ SuperDuperDisplay
 /imgui.ini
 /JSON/Schemas/Catalog
 /Release
+/dist
 
 # MacOS
 .DS_Store

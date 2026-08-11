@@ -13,8 +13,13 @@
 #include <fstream>
 #include <sstream>
 #include <chrono>
+#include <limits>
+#include <new>
 
 constexpr uint32_t MAXRECORDING_SECONDS = 30;	// Max number of seconds to record
+constexpr uint32_t VCR_VERSION_CURRENT = 2;
+constexpr size_t VCR_EVENT_BYTES_V1 = 6;	// is_iigs, m2b0, rw, addr, data
+constexpr size_t VCR_EVENT_BYTES_V2 = 7;	// v1 plus m2sel
 
 // below because "The declaration of a static data member in its class definition is not a definition"
 EventRecorder* EventRecorder::s_instance;
@@ -56,7 +61,7 @@ void EventRecorder::MakeRAMSnapshot(size_t cycle)
 
 void EventRecorder::ApplyRAMSnapshot(size_t snapshot_index)
 {
-	if (snapshot_index > (v_memSnapshots.size() - 1)) {
+	if (snapshot_index >= v_memSnapshots.size()) {
 		std::cerr << "ERROR: Requested to apply nonexistent memory snapshot at index " << snapshot_index << std::endl;
 		return;
 	}
@@ -69,13 +74,14 @@ void EventRecorder::ApplyRAMSnapshot(size_t snapshot_index)
 
 void EventRecorder::WriteRecordingFile(std::ofstream& file)
 {
-	// TODO: 	Start with a version
-	//			Then write PAL/NTSC
-	//			Then write VBL state for event 0
-	
-	// First store the RAM snapshot interval
+	const uint32_t version = VCR_VERSION_CURRENT;
+	const uint32_t cyclesTotal = bIsPAL ? CYCLES_TOTAL_PAL : CYCLES_TOTAL_NTSC;
+	const uint32_t cycleCurrent = static_cast<uint32_t>(
+		CycleCounter::GetInstance()->GetCyclesSinceReset() % cyclesTotal);
+	file.write(reinterpret_cast<const char*>(&version), sizeof(version));
+	file.write(reinterpret_cast<const char*>(&cyclesTotal), sizeof(cyclesTotal));
+	file.write(reinterpret_cast<const char*>(&cycleCurrent), sizeof(cycleCurrent));
 	file.write(reinterpret_cast<const char*>(&m_current_snapshot_cycles), sizeof(m_current_snapshot_cycles));
-	// Next store the event vector size
 	auto _size = v_events.size();
 	file.write(reinterpret_cast<const char*>(&_size), sizeof(_size));
 	// Next store the RAM states
@@ -90,54 +96,106 @@ void EventRecorder::WriteRecordingFile(std::ofstream& file)
 	}
 }
 
-void EventRecorder::ReadRecordingFile(std::ifstream& file)
+bool EventRecorder::ReadRecordingFile(std::ifstream& file)
 {
 	StopReplay();
 	ClearRecording();
-	v_events.reserve(1000000 * MAXRECORDING_SECONDS);
 	auto logTextManager = LogTextManager::GetInstance();
-	// ==== HEADER: version, total cycles, current cycle, snapshot interval, event vector size
-	// read the version
-	uint32_t _version = 1;
-	file.read(reinterpret_cast<char*>(&_version), sizeof(_version));
-	if (_version != 1)
-		logTextManager->AddLog("Unknown Recording File version!", glm::vec4(1.f, 0.f, 0.f, 1.f));
-	// read the total cycles
-	uint32_t _cyclesTotal = CYCLES_TOTAL_NTSC;
-	file.read(reinterpret_cast<char*>(&_cyclesTotal), sizeof(_cyclesTotal));
-	if (bIsPAL && _cyclesTotal == CYCLES_TOTAL_NTSC)
-		CycleCounter::GetInstance()->SetVideoRegion(VideoRegion_e::NTSC);
-	else if (!bIsPAL && _cyclesTotal == CYCLES_TOTAL_PAL)
-		CycleCounter::GetInstance()->SetVideoRegion(VideoRegion_e::PAL);
-	if (!(_cyclesTotal == CYCLES_TOTAL_NTSC || _cyclesTotal == CYCLES_TOTAL_PAL))
-		logTextManager->AddLog("Unknown Recording Video Region, reverting to NTSC", glm::vec4(1.f, 0.f, 0.f, 1.f));
-	// read the current cycle
+	auto fail = [&](const std::string& message) {
+		logTextManager->AddLog("Recording load error: " + message, glm::vec4(1.f, 0.f, 0.f, 1.f));
+		ClearRecording();
+		return false;
+	};
+	if (!file.is_open())
+		return fail("file could not be opened");
+
+	file.seekg(0, std::ios::end);
+	const std::streamoff fileSize = file.tellg();
+	file.seekg(0, std::ios::beg);
+	const size_t legacyHeaderBytes = 2 * sizeof(size_t);
+	const size_t versionedHeaderBytes = 3 * sizeof(uint32_t) + 2 * sizeof(size_t);
+	if (fileSize < static_cast<std::streamoff>(legacyHeaderBytes))
+		return fail("file is too small for a VCR header");
+
+	// Versioned recordings begin with version and video timing. Original VCR
+	// recordings begin directly with the size_t snapshot interval and event count.
+	uint32_t _version = 0;
+	uint32_t _cyclesTotal = bIsPAL ? CYCLES_TOTAL_PAL : CYCLES_TOTAL_NTSC;
 	uint32_t _cycleCurrent = 0;
-	file.read(reinterpret_cast<char*>(&_cycleCurrent), sizeof(_cycleCurrent));
-	// read the ram snapshot interval
-	file.read(reinterpret_cast<char*>(&m_current_snapshot_cycles), sizeof(m_current_snapshot_cycles));
-	// read the event vector size
-	size_t _size;
-	file.read(reinterpret_cast<char*>(&_size), sizeof(_size));
-	// ==== END HEADER
-	// Then all the RAM states
-	if (_size > 0)
+	file.read(reinterpret_cast<char*>(&_version), sizeof(_version));
+	file.read(reinterpret_cast<char*>(&_cyclesTotal), sizeof(_cyclesTotal));
+	const bool hasVersionedHeader =
+		(_version == 1 || _version == VCR_VERSION_CURRENT) &&
+		(_cyclesTotal == CYCLES_TOTAL_NTSC || _cyclesTotal == CYCLES_TOTAL_PAL);
+	file.clear();
+	file.seekg(0, std::ios::beg);
+	if (hasVersionedHeader)
 	{
-		for (size_t i = 0; i <= (_size / m_current_snapshot_cycles); ++i) {
-			auto snapshot = ByteBuffer(RECORDER_TOTALMEMSIZE);
-			file.read(reinterpret_cast<char*>(snapshot.data()), (RECORDER_TOTALMEMSIZE) / sizeof(uint8_t));
-			v_memSnapshots.push_back(std::move(snapshot));
-		}
+		file.read(reinterpret_cast<char*>(&_version), sizeof(_version));
+		file.read(reinterpret_cast<char*>(&_cyclesTotal), sizeof(_cyclesTotal));
+		file.read(reinterpret_cast<char*>(&_cycleCurrent), sizeof(_cycleCurrent));
+		if (bIsPAL && _cyclesTotal == CYCLES_TOTAL_NTSC)
+			CycleCounter::GetInstance()->SetVideoRegion(VideoRegion_e::NTSC);
+		else if (!bIsPAL && _cyclesTotal == CYCLES_TOTAL_PAL)
+			CycleCounter::GetInstance()->SetVideoRegion(VideoRegion_e::PAL);
+	}
+	else
+	{
+		_version = 0;
+		logTextManager->AddLog("Loading legacy unversioned VCR recording");
+	}
+	file.read(reinterpret_cast<char*>(&m_current_snapshot_cycles), sizeof(m_current_snapshot_cycles));
+	size_t _size = 0;
+	file.read(reinterpret_cast<char*>(&_size), sizeof(_size));
+	if (!file)
+		return fail("truncated VCR header");
+	if (m_current_snapshot_cycles == 0)
+		return fail("snapshot interval is zero");
+	const size_t maxEvents = 1000000ull * MAXRECORDING_SECONDS;
+	if (_size > maxEvents)
+		return fail("event count exceeds the recorder limit");
+
+	const size_t snapshotCount = (_size == 0 ? 0 : ((_size - 1) / m_current_snapshot_cycles) + 1);
+	const size_t eventBytes = (_version < 2 ? VCR_EVENT_BYTES_V1 : VCR_EVENT_BYTES_V2);
+	const size_t headerBytes = hasVersionedHeader ? versionedHeaderBytes : legacyHeaderBytes;
+	if (snapshotCount > (std::numeric_limits<size_t>::max() - headerBytes) / RECORDER_TOTALMEMSIZE)
+		return fail("snapshot count overflows the file layout");
+	const size_t snapshotsBytes = snapshotCount * RECORDER_TOTALMEMSIZE;
+	if (_size > (std::numeric_limits<size_t>::max() - headerBytes - snapshotsBytes) / eventBytes)
+		return fail("event count overflows the file layout");
+	const size_t expectedBytes = headerBytes + snapshotsBytes + (_size * eventBytes);
+	if (expectedBytes > static_cast<size_t>(fileSize))
+		return fail("file is truncated");
+	// ==== END HEADER
+	try
+	{
+		v_memSnapshots.reserve(snapshotCount);
+		v_events.reserve(_size);
+	}
+	catch (const std::bad_alloc&)
+	{
+		return fail("not enough memory for this recording");
+	}
+	// Then all the RAM states
+	for (size_t i = 0; i < snapshotCount; ++i)
+	{
+		auto snapshot = ByteBuffer(RECORDER_TOTALMEMSIZE);
+		file.read(reinterpret_cast<char*>(snapshot.data()), RECORDER_TOTALMEMSIZE);
+		if (!file)
+			return fail("RAM snapshot data is truncated");
+		v_memSnapshots.push_back(std::move(snapshot));
 	}
 	std::cout << "Reading " << _size << " events from file" << std::endl;
 	// And finally the events
-	if (_size > 0)
+	for (size_t i = 0; i < _size; ++i)
 	{
-		for (size_t i = 0; i < _size; ++i) {
-			ReadEvent(file);
-		}
+		if (!ReadEvent(file, _version >= 2))
+			return fail("event data is truncated");
 	}
-	bHasRecording = true;
+	bHasRecording = (_size > 0 && !v_memSnapshots.empty());
+	if (!bHasRecording)
+		return fail("recording contains no replayable events");
+	return true;
 }
 
 void EventRecorder::ReadTextEventsFromFile(std::ifstream& file)
@@ -325,19 +383,25 @@ void EventRecorder::WriteEvent(const NetEvent& event, std::ofstream& file) {
 	// Serialize and write each member of NetEvent to the file
 	file.write(reinterpret_cast<const char*>(&event.is_iigs), sizeof(event.is_iigs));
 	file.write(reinterpret_cast<const char*>(&event.m2b0), sizeof(event.m2b0));
+	file.write(reinterpret_cast<const char*>(&event.m2sel), sizeof(event.m2sel));
 	file.write(reinterpret_cast<const char*>(&event.rw), sizeof(event.rw));
 	file.write(reinterpret_cast<const char*>(&event.addr), sizeof(event.addr));
 	file.write(reinterpret_cast<const char*>(&event.data), sizeof(event.data));
 }
 
-void EventRecorder::ReadEvent(std::ifstream& file) {
+bool EventRecorder::ReadEvent(std::ifstream& file, bool hasM2Select) {
 	auto event = NetEvent(false, false, false, 0, 0, 0);
 	file.read(reinterpret_cast<char*>(&event.is_iigs), sizeof(event.is_iigs));
 	file.read(reinterpret_cast<char*>(&event.m2b0), sizeof(event.m2b0));
+	if (hasM2Select)
+		file.read(reinterpret_cast<char*>(&event.m2sel), sizeof(event.m2sel));
 	file.read(reinterpret_cast<char*>(&event.rw), sizeof(event.rw));
 	file.read(reinterpret_cast<char*>(&event.addr), sizeof(event.addr));
 	file.read(reinterpret_cast<char*>(&event.data), sizeof(event.data));
+	if (!file)
+		return false;
 	v_events.push_back(std::move(event));
+	return true;
 }
 
 //////////////////////////////////////////////////////////////////////////

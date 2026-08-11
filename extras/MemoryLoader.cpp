@@ -80,7 +80,71 @@ bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank, s
 	return res;
 }
 
-bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) {
+uint32_t GetMemoryLoadStart(MemoryLoadFormat_e format)
+{
+	switch (format)
+	{
+	case MemoryLoadFormat_e::TEXT:
+	case MemoryLoadFormat_e::DTEXT:
+	case MemoryLoadFormat_e::LGR:
+	case MemoryLoadFormat_e::DLGR:
+		return _A2VIDEO_TEXT1_START;
+	case MemoryLoadFormat_e::HGR:
+	case MemoryLoadFormat_e::HGR_SPEC1:
+	case MemoryLoadFormat_e::HGR_SPEC2:
+	case MemoryLoadFormat_e::DHGR:
+	case MemoryLoadFormat_e::DHGR_MONO:
+	case MemoryLoadFormat_e::DHGR_COL140_MIXED:
+	case MemoryLoadFormat_e::DHGR160:
+	case MemoryLoadFormat_e::SHR:
+	case MemoryLoadFormat_e::SHR3200:
+	case MemoryLoadFormat_e::SHR4_SHR:
+	case MemoryLoadFormat_e::SHR4_RGGB:
+	case MemoryLoadFormat_e::SHR4_PAL256:
+	case MemoryLoadFormat_e::SHR4_PAL256I:
+	case MemoryLoadFormat_e::SHR4_R4G4B4:
+		return _A2VIDEO_HGR1_START;
+	default:
+		return 0;
+	}
+}
+
+bool MemoryLoadWithFormat(const std::string& filePath, MemoryLoadFormat_e format,
+	uint32_t rawPosition, bool rawAuxBank)
+{
+	switch (format)
+	{
+	case MemoryLoadFormat_e::TEXT:
+	case MemoryLoadFormat_e::LGR:
+		return MemoryLoadLGR(filePath);
+	case MemoryLoadFormat_e::DTEXT:
+	case MemoryLoadFormat_e::DLGR:
+		return MemoryLoadDGR(filePath);
+	case MemoryLoadFormat_e::HGR:
+	case MemoryLoadFormat_e::HGR_SPEC1:
+	case MemoryLoadFormat_e::HGR_SPEC2:
+		return MemoryLoadHGR(filePath);
+	case MemoryLoadFormat_e::DHGR:
+	case MemoryLoadFormat_e::DHGR_MONO:
+	case MemoryLoadFormat_e::DHGR_COL140_MIXED:
+	case MemoryLoadFormat_e::DHGR160:
+		return MemoryLoadDHR(filePath);
+	case MemoryLoadFormat_e::SHR:
+	case MemoryLoadFormat_e::SHR3200:
+	case MemoryLoadFormat_e::SHR4_SHR:
+	case MemoryLoadFormat_e::SHR4_RGGB:
+	case MemoryLoadFormat_e::SHR4_PAL256:
+	case MemoryLoadFormat_e::SHR4_PAL256I:
+	case MemoryLoadFormat_e::SHR4_R4G4B4:
+		return MemoryLoadSHR(filePath);
+	case MemoryLoadFormat_e::AUTO:
+	default:
+		return MemoryLoad(filePath, rawPosition, rawAuxBank);
+	}
+}
+
+bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path,
+	MemoryLoadFormat_e format) {
 	setlocale(LC_ALL, ".UTF8");
 	bool res = false;
 	if (ImGui::Button("Load File"))
@@ -92,7 +156,7 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) 
 		config.path = (path.empty() ? "." : path);
 		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File",
 			"All legacy modes{.lgr,.lgri,.lgrp,.dlr,.dlri,.dlrp,.dgr,.dgri,.dgrp,.hgr,.hgri,.hgrp,.dhr,.dhri,.dhrp}"
-			",All SHR modes{.shr,.shr4,.shr4i,.shr4p,.3200,#C10000,#C10002}"
+			",All SHR modes{.shr,.shr4,.shr4i,.shr4p,.pal256,.pal256i,.3200,#C10000,#C10002}"
 			",.bin,Any (*.*){.*}", config);
 	}
 	
@@ -109,7 +173,11 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) 
 			}
 			const std::string filePath = selection.cbegin()->second;
 			path = std::filesystem::path(filePath).parent_path().string();
-			if (filePath.length() >= 4) {
+			if (format != MemoryLoadFormat_e::AUTO)
+			{
+				res = MemoryLoadWithFormat(filePath, format, position, bAuxBank);
+			}
+			else if (filePath.length() >= 4) {
 				std::string extension = std::filesystem::path(filePath).extension().string();
 				std::transform(extension.begin(), extension.end(), extension.begin(),
 					[](unsigned char c) { return static_cast<char>(std::tolower(c)); });
@@ -125,7 +193,7 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) 
 					res = MemoryLoadHGR(filePath);
 				else if (extension == ".dhr" || extension == ".dhri" || extension == ".dhrp")
 					res = MemoryLoadDHR(filePath);
-				else if (extension == ".shr" || extension == ".shr4" || extension == ".shr4i" || extension == ".shr4p" || extension == ".3200")
+				else if (extension == ".shr" || extension == ".shr4" || extension == ".shr4i" || extension == ".shr4p" || extension == ".pal256" || extension == ".pal256i" || extension == ".3200")
 					res = MemoryLoadSHR(filePath);
 				else if (extension == "#C10000")
 					res = MemoryLoadSHR(filePath);
@@ -137,8 +205,8 @@ bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path) 
 					return res;
 				}
 			}
-			// If a file is selected, read and load it into the array
-			if (!filePath.empty()) {
+			// In automatic mode, an unrecognized suffix is a raw memory load.
+			if (!res && format == MemoryLoadFormat_e::AUTO && !filePath.empty()) {
 				res = MemoryLoad(filePath, position, bAuxBank);
 			}
 		}
@@ -276,6 +344,10 @@ bool MemoryLoadSHR(const std::string& filePath) {
 	bool res = false;
 	auto logManager = LogTextManager::GetInstance();
 	std::ifstream file(filePath, std::ios::binary);
+	if (!file.is_open()) {
+		logManager->AddLog(std::string("Error! Unable to open SHR file: " + filePath));
+		return false;
+	}
 	SHRFileContent_e typeE1 = SHRFileContent_e::UNKNOWN;
 	SHRFileContent_e typeE0 = SHRFileContent_e::UNKNOWN;
 	uint32_t parsedCount = 0;

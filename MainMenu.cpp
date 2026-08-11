@@ -1034,6 +1034,7 @@ void MainMenu::ShowSamplesMenu() {
 	auto memManager = MemoryManager::GetInstance();
 	auto a2VideoManager = A2VideoManager::GetInstance();
 	auto eventRecorder = EventRecorder::GetInstance();
+	auto logManager = LogTextManager::GetInstance();
 
 	if (ImGui::MenuItem("Text & HGR")) {
 		Main_ResetA2SS();
@@ -1113,19 +1114,28 @@ void MainMenu::ShowSamplesMenu() {
 		memManager->SetSoftSwitch(A2SS_HIRES, true);
 		memManager->SetSoftSwitch(A2SS_DHGR, true);
 		a2VideoManager->bUseDHGR160 = true;
-		MemoryLoadDHR("samples/video7_160.dhr");
-		a2VideoManager->ForceBeamFullScreenRender();
+		if (MemoryLoadDHR("samples/video7_160.dhr"))
+			a2VideoManager->ForceBeamFullScreenRender();
+		else
+			logManager->AddLog("Unable to load samples/video7_160.dhr");
 	}
 	if (ImGui::MenuItem("SHR+Legacy")) {
 		Main_ResetA2SS();
+		a2VideoManager->ApplyMemoryLoadFormat(MemoryLoadFormat_e::AUTO);
+		memManager->SetSoftSwitch(A2SS_TEXT, true);
 		memManager->SetSoftSwitch(A2SS_SHR, true);
-		MemoryLoadSHR("samples/paintworks.shr");
-		std::ifstream legacydemo("./samples/tomahawk2_hgr.bin", std::ios::binary);
-		legacydemo.seekg(0, std::ios::beg); // Go back to the start of the file
-		legacydemo.read(reinterpret_cast<char*>(MemoryManager::GetInstance()->GetApple2MemPtr()), 0x4000);
-		a2VideoManager->bDEMOMergedMode = true;
-		a2VideoManager->bAlignQuadsToScanline = true;
-		a2VideoManager->ForceBeamFullScreenRender();
+		const bool shrLoaded = MemoryLoadSHR("samples/paintworks.shr");
+		const bool legacyLoaded = MemoryLoad("samples/tomahawk2_hgr.bin", 0, false, 0x4000);
+		if (shrLoaded && legacyLoaded)
+		{
+			a2VideoManager->bDEMOMergedMode = true;
+			a2VideoManager->bAlignQuadsToScanline = true;
+			a2VideoManager->ForceBeamFullScreenRender();
+		}
+		else
+		{
+			logManager->AddLog("Unable to load the SHR+Legacy sample files");
+		}
 	}
 	if (ImGui::MenuItem("SHR RGGB (Bayer) 320@16")) {
 		Main_ResetA2SS();
@@ -1143,6 +1153,24 @@ void MainMenu::ShowSamplesMenu() {
 		MemoryLoadSHR("samples/SHR RGGB/640_04_abstracteyear99#C10000");
 		a2VideoManager->ForceBeamFullScreenRender();
 	}
+	if (ImGui::MenuItem("PAL256 (Observatory)")) {
+		Main_ResetA2SS();
+		a2VideoManager->ApplyMemoryLoadFormat(MemoryLoadFormat_e::AUTO);
+		memManager->SetSoftSwitch(A2SS_SHR, true);
+		if (MemoryLoadSHR("samples/observatory.pal256"))
+			a2VideoManager->ForceBeamFullScreenRender();
+		else
+			logManager->AddLog("Unable to load samples/observatory.pal256");
+	}
+	if (ImGui::MenuItem("PAL256i (Sky City)")) {
+		Main_ResetA2SS();
+		a2VideoManager->ApplyMemoryLoadFormat(MemoryLoadFormat_e::AUTO);
+		memManager->SetSoftSwitch(A2SS_SHR, true);
+		if (MemoryLoadSHR("samples/skycity.pal256i"))
+			a2VideoManager->ForceBeamFullScreenRender();
+		else
+			logManager->AddLog("Unable to load samples/skycity.pal256i");
+	}
 	if (ImGui::MenuItem("SHR Animation (PWA $C2)")) {
 		Main_ResetA2SS();
 		memManager->SetSoftSwitch(A2SS_SHR, true);
@@ -1155,20 +1183,31 @@ void MainMenu::ShowSamplesMenu() {
 	auto _smtext = (pGui->bSampleRunKarateka ? "Stop Karateka Demo" : "Run Karateka Demo");
 	if (ImGui::MenuItem(_smtext)) {
 		pGui->bSampleRunKarateka = !pGui->bSampleRunKarateka;
+		bool replayStarted = false;
 		if (pGui->bSampleRunKarateka) {
 			std::ifstream karatekafile("./recordings/karateka.vcr", std::ios::binary);
 			Main_ResetA2SS();
 			memManager->SetSoftSwitch(A2SS_SHR, false);
-			eventRecorder->ReadRecordingFile(karatekafile);
-			eventRecorder->StartReplay();
-			memManager->SetSoftSwitch(A2SS_TEXT, false);
-			memManager->SetSoftSwitch(A2SS_HIRES, true);
-			a2VideoManager->ForceBeamFullScreenRender();
+			if (eventRecorder->ReadRecordingFile(karatekafile))
+			{
+				memManager->SetSoftSwitch(A2SS_TEXT, false);
+				memManager->SetSoftSwitch(A2SS_HIRES, true);
+				// StartReplay applies the first RAM snapshot before launching its
+				// worker. Do not force-render from this UI thread afterwards: the
+				// replay events will advance the beam and publish the first frame.
+				eventRecorder->StartReplay();
+				replayStarted = true;
+			}
+			else
+			{
+				pGui->bSampleRunKarateka = false;
+			}
 		} else {
 			eventRecorder->StopReplay();
 		}
 		Main_ResetFPSCalculations();
-		a2VideoManager->ForceBeamFullScreenRender();
+		if (!replayStarted)
+			a2VideoManager->ForceBeamFullScreenRender();
 	}
 	if (ImGui::MenuItem("Speech Demo")) {
 		MockingboardManager::GetInstance()->Util_SpeakDemoPhrase();

@@ -1058,6 +1058,11 @@ void A2VideoManager::SwitchToMergedMode(uint32_t scanline)
 	if (bIsSwitchingToMergedMode)
 		return;
 	bIsSwitchingToMergedMode = true;
+	// Backfilling previous scanlines must not replace the state already computed
+	// for the outer beam position. In particular, a mode change at x=0 can leave
+	// the backfill in CONTENT at x=64; treating the original x=0 as content then
+	// underflows (_x - CYCLES_SC_HBL) during the legacy memory read.
+	const BeamState_e outerBeamState = beamState;
 	// set the vrams write mode, and flip the A2SS_SHR softswitch to the previous
 	// setting to rerun the scanlines, before returning it to its current state
 	vrams_write->mode = A2Mode_e::MERGED;
@@ -1081,6 +1086,7 @@ void A2VideoManager::SwitchToMergedMode(uint32_t scanline)
 		}
 	}
 	memMgr->SetSoftSwitch(A2SS_SHR, !memMgr->IsSoftSwitch(A2SS_SHR));
+	beamState = outerBeamState;
 	bIsSwitchingToMergedMode = false;
 }
 
@@ -1661,24 +1667,119 @@ void A2VideoManager::DisplayCharRomsImGuiChunk()
 	}
 }
 
+void A2VideoManager::ApplyMemoryLoadFormat(MemoryLoadFormat_e format)
+{
+	bUseHGRSPEC1 = false;
+	bUseHGRSPEC2 = false;
+	bUseDHGRCOL140Mixed = false;
+	bUseDHGR160 = false;
+	bDEMOMergedMode = false;
+	overrideSHRMode = A2SM_NONE;
+	overrideDoubleSHR = 0;
+	if (format == MemoryLoadFormat_e::AUTO)
+		return;
+
+	auto memManager = MemoryManager::GetInstance();
+	const bool isText = (format == MemoryLoadFormat_e::TEXT || format == MemoryLoadFormat_e::DTEXT);
+	const bool isDoubleLegacy =
+		format == MemoryLoadFormat_e::DTEXT || format == MemoryLoadFormat_e::DLGR ||
+		format == MemoryLoadFormat_e::DHGR || format == MemoryLoadFormat_e::DHGR_MONO ||
+		format == MemoryLoadFormat_e::DHGR_COL140_MIXED || format == MemoryLoadFormat_e::DHGR160;
+	const bool isHires =
+		format == MemoryLoadFormat_e::HGR || format == MemoryLoadFormat_e::HGR_SPEC1 ||
+		format == MemoryLoadFormat_e::HGR_SPEC2 || format == MemoryLoadFormat_e::DHGR ||
+		format == MemoryLoadFormat_e::DHGR_MONO ||
+		format == MemoryLoadFormat_e::DHGR_COL140_MIXED || format == MemoryLoadFormat_e::DHGR160;
+	const bool isSHR = format >= MemoryLoadFormat_e::SHR;
+
+	memManager->SetSoftSwitch(A2SS_SHR, isSHR);
+	memManager->SetSoftSwitch(A2SS_TEXT, isText);
+	memManager->SetSoftSwitch(A2SS_MIXED, false);
+	memManager->SetSoftSwitch(A2SS_PAGE2, false);
+	memManager->SetSoftSwitch(A2SS_80STORE, false);
+	memManager->SetSoftSwitch(A2SS_HIRES, isHires);
+	memManager->SetSoftSwitch(A2SS_80COL, isDoubleLegacy);
+	memManager->SetSoftSwitch(A2SS_DHGR, isDoubleLegacy);
+	memManager->SetSoftSwitch(A2SS_DHGRMONO, format == MemoryLoadFormat_e::DHGR_MONO);
+
+	bUseHGRSPEC1 = (format == MemoryLoadFormat_e::HGR_SPEC1);
+	bUseHGRSPEC2 = (format == MemoryLoadFormat_e::HGR_SPEC2);
+	bUseDHGRCOL140Mixed = (format == MemoryLoadFormat_e::DHGR_COL140_MIXED);
+	bUseDHGR160 = (format == MemoryLoadFormat_e::DHGR160);
+	if (isSHR)
+	{
+		// A forced single-page mode must also suppress paging metadata in the file.
+		overrideDoubleSHR = DOUBLE_NONE + 1;
+		switch (format)
+		{
+		case MemoryLoadFormat_e::SHR3200:
+			overrideSHRMode = A2SM_SHR3200;
+			break;
+		case MemoryLoadFormat_e::SHR4_RGGB:
+			overrideSHRMode = A2SM_SHR4RGGB;
+			break;
+		case MemoryLoadFormat_e::SHR4_PAL256:
+			overrideSHRMode = A2SM_SHR4PAL256;
+			break;
+		case MemoryLoadFormat_e::SHR4_PAL256I:
+			overrideSHRMode = A2SM_SHR4PAL256;
+			overrideDoubleSHR = DOUBLE_INTERLACE + 1;
+			break;
+		case MemoryLoadFormat_e::SHR4_R4G4B4:
+			overrideSHRMode = A2SM_SHR4R4G4B4;
+			break;
+		case MemoryLoadFormat_e::SHR:
+		case MemoryLoadFormat_e::SHR4_SHR:
+		default:
+			overrideSHRMode = A2SM_SHR4SHR;
+			break;
+		}
+	}
+}
+
 void A2VideoManager::DisplayImGuiLoadFileWindow(bool* p_open)
 {
 	bImguiLoadFileWindowIsOpen = p_open;
 	if (p_open) {
-		ImGui::SetNextWindowSizeConstraints(ImVec2(300, 100), ImVec2(FLT_MAX, FLT_MAX));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(390, 140), ImVec2(FLT_MAX, FLT_MAX));
 		ImGui::Begin("Load File into Memory", p_open);
 		if (!ImGui::IsWindowCollapsed())
 		{
+			const char* loadFormats[] = {
+				"Automatic / raw address",
+				"TEXT", "DTEXT", "LGR", "DLGR", "HGR", "HGR SPEC1", "HGR SPEC2",
+				"DHGR", "DHGR Mono", "DHGR COL140 Mixed", "DHGR160",
+				"SHR", "SHR 3200", "SHR4 SHR", "SHR4 RGGB", "SHR4 PAL256",
+				"SHR4 PAL256i", "SHR4 R4G4B4"
+			};
+			ImGui::PushItemWidth(210);
+			ImGui::Combo("Video Format", &iImguiMemLoadFormat, loadFormats, IM_ARRAYSIZE(loadFormats));
+			ImGui::PopItemWidth();
+			const auto loadFormat = static_cast<MemoryLoadFormat_e>(iImguiMemLoadFormat);
+			const bool forceFormat = (loadFormat != MemoryLoadFormat_e::AUTO);
+			if (forceFormat)
+			{
+				iImguiMemLoadPosition = static_cast<int>(GetMemoryLoadStart(loadFormat));
+				bImguiMemLoadAuxBank = (loadFormat >= MemoryLoadFormat_e::SHR);
+			}
 			ImGui::Text("Load Memory Start: ");
 			ImGui::SameLine();
 			ImGui::PushItemWidth(120);
+			ImGui::BeginDisabled(forceFormat);
 			ImGui::InputInt("##mem_load", &iImguiMemLoadPosition, 1, 1024, ImGuiInputTextFlags_CharsHexadecimal);
+			ImGui::EndDisabled();
 			ImGui::PopItemWidth();
 			iImguiMemLoadPosition = std::clamp(iImguiMemLoadPosition, 0, 0xFFFF);
+			ImGui::BeginDisabled(forceFormat);
 			ImGui::Checkbox("AUX Bank", &bImguiMemLoadAuxBank);
+			ImGui::EndDisabled();
+			if (forceFormat)
+				ImGui::SetItemTooltip("The selected video format determines the load address and bank layout.");
 			ImGui::SameLine(); ImGui::Text("   "); ImGui::SameLine();
-			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank, sImguiLoadPath))
+			if (MemoryLoadUsingDialog(iImguiMemLoadPosition, bImguiMemLoadAuxBank,
+				sImguiLoadPath, loadFormat))
 			{
+				ApplyMemoryLoadFormat(loadFormat);
 				// Force a double render because the top border is part of the previous beam scan
 				this->ForceBeamFullScreenRender();
 				this->ForceBeamFullScreenRender();

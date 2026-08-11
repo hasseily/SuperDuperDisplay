@@ -53,7 +53,7 @@ public:
 	~EventRecorder();
 
 	// This method reads a binary recording file previously saved using SaveRecording()
-	void ReadRecordingFile(std::ifstream& file);
+	bool ReadRecordingFile(std::ifstream& file);
 	// This method reads a text event file, generally used for debugging
 	void ReadTextEventsFromFile(std::ifstream& file);
 	// This method reads a PaintWorks Animations file, also for debugging
@@ -81,7 +81,7 @@ private:
 	void ApplyRAMSnapshot(size_t snapshot_index);
 	void WriteRecordingFile(std::ofstream& file);
 	void WriteEvent(const NetEvent& event, std::ofstream& file);
-	void ReadEvent(std::ifstream& file);
+	bool ReadEvent(std::ifstream& file, bool hasM2Select);
 
 	bool bIsPAL = false;						// Is the machine PAL?
 	bool bHasRecording = false;

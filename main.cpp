@@ -544,30 +544,46 @@ void Main_ResetA2SS() {
 // Main code
 int main(int argc, char* argv[])
 {
-	(void)argc;		// mark as unused
-	(void)argv;		// mark as unused
-#if defined(__NETWORKING_APPLE__) || defined (__NETWORKING_LINUX__)
-	// Resolve resources relative to the executable so launching from Finder or
-	// Xcode does not depend on the caller's working directory.
+	// Resolve resources relative to the executable on every platform. Release
+	// packages put assets beside the executable, while Visual Studio places the
+	// executable one directory below the source-tree assets.
 	std::error_code pathError;
-	std::filesystem::path executablePath =
-		std::filesystem::weakly_canonical(argv[0], pathError);
+	std::filesystem::path executablePath;
+#ifdef _WIN32
+	(void)argc;
+	(void)argv;
+	wchar_t executablePathBuffer[32768] = {};
+	const DWORD executablePathLength = GetModuleFileNameW(
+		nullptr, executablePathBuffer, static_cast<DWORD>(std::size(executablePathBuffer)));
+	if (executablePathLength > 0 && executablePathLength < std::size(executablePathBuffer))
+		executablePath = std::filesystem::path(executablePathBuffer);
+#else
+	if (argc > 0 && argv != nullptr && argv[0] != nullptr)
+		executablePath = std::filesystem::weakly_canonical(argv[0], pathError);
 	if (pathError)
 	{
 		pathError.clear();
 		executablePath = std::filesystem::absolute(argv[0], pathError);
 	}
+#endif
 
+	auto hasResourceTree = [](const std::filesystem::path& directory) {
+		return std::filesystem::is_directory(directory / "assets") &&
+			std::filesystem::is_directory(directory / "shaders") &&
+			std::filesystem::is_directory(directory / "samples") &&
+			std::filesystem::is_directory(directory / "recordings");
+	};
 	std::filesystem::path workingDirectory = executablePath.parent_path();
 #if defined(__NETWORKING_APPLE__)
 	const std::filesystem::path bundleResources =
 		workingDirectory.parent_path() / "Resources";
-	if (std::filesystem::is_directory(bundleResources / "assets"))
+	if (hasResourceTree(bundleResources))
 		workingDirectory = bundleResources;
 #endif
-	if (!workingDirectory.empty())
-		chdir(workingDirectory.string().c_str());
-#endif
+	if (!hasResourceTree(workingDirectory) && hasResourceTree(workingDirectory.parent_path()))
+		workingDirectory = workingDirectory.parent_path();
+	if (hasResourceTree(workingDirectory))
+		std::filesystem::current_path(workingDirectory, pathError);
 
 	GLenum glerr;
 	// Setup SDL

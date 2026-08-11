@@ -16,6 +16,8 @@
 #include "imgui.h"
 #include "imgui_memory_editor.h"
 
+enum class MemoryLoadFormat_e;
+
 /*
  This class is the main renderer for SDD.
  It uses exact cycles to generate the necessary video data for shaders to
@@ -218,6 +220,7 @@ public:
 	void DisplayImGUIRGBDebugWindows();
 	void CreateNewA2WindowRGB();
 	void ToggleA2Video(bool value);
+	void ApplyMemoryLoadFormat(MemoryLoadFormat_e format);
 
 	// Methods for the single multipurpose beam racing shader
 	void BeamIsAtPosition(uint32_t _x, uint32_t _y);
@@ -309,6 +312,7 @@ private:
 	bool bImguiLoadFileWindowIsOpen = false;
 	bool bImguiMemLoadAuxBank = false;
 	int iImguiMemLoadPosition = 0;
+	int iImguiMemLoadFormat = 0;
 	int overrideSHRMode = 0;
 	int overrideDoubleSHR = 0;				// At 0, don't override. Above 0, substract 1 to get the override value
 	int overrideVidHDTextMode = VIDHDMODE_NONE;

@@ -17,8 +17,39 @@ enum class SHRFileContent_e
 	TOTAL_COUNT
 };
 
-bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path);
+// Optional interpretation for files selected in the memory loader. AUTO keeps
+// extension-based loading and falls back to the user-entered raw address. Every
+// other entry forces both the video mode and its conventional load address.
+enum class MemoryLoadFormat_e
+{
+	AUTO = 0,
+	TEXT,
+	DTEXT,
+	LGR,
+	DLGR,
+	HGR,
+	HGR_SPEC1,
+	HGR_SPEC2,
+	DHGR,
+	DHGR_MONO,
+	DHGR_COL140_MIXED,
+	DHGR160,
+	SHR,
+	SHR3200,
+	SHR4_SHR,
+	SHR4_RGGB,
+	SHR4_PAL256,
+	SHR4_PAL256I,
+	SHR4_R4G4B4,
+	TOTAL_COUNT
+};
+
+uint32_t GetMemoryLoadStart(MemoryLoadFormat_e format);
+bool MemoryLoadUsingDialog(uint32_t position, bool bAuxBank, std::string& path,
+	MemoryLoadFormat_e format = MemoryLoadFormat_e::AUTO);
 bool MemoryLoad(const std::string &filePath, uint32_t position, bool bAuxBank, size_t fileSize = 0);
+bool MemoryLoadWithFormat(const std::string& filePath, MemoryLoadFormat_e format,
+	uint32_t rawPosition = 0, bool rawAuxBank = false);
 bool MemoryLoadLGR(const std::string &filePath);
 bool MemoryLoadDGR(const std::string &filePath);
 bool MemoryLoadHGR(const std::string &filePath);
