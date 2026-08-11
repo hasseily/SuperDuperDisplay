@@ -13,6 +13,7 @@
 		BB044AC52CF381F80002F6FA /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC42CF381F80002F6FA /* CoreFoundation.framework */; };
 		BB044AC72CF382620002F6FA /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB044AC62CF382620002F6FA /* IOKit.framework */; };
 		BB21A0012ECBD10000A10001 /* AppletiniUartTerminal.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB21A0002ECBD10000A10001 /* AppletiniUartTerminal.cpp */; };
+		BB21A0052ECBD10000A10001 /* AppletiniNetworking.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB21A0032ECBD10000A10001 /* AppletiniNetworking.cpp */; };
 		BB3B32792E3778D700610E82 /* LogTextManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB3B32782E3778D400610E82 /* LogTextManager.cpp */; };
 		BB58F41D2E293B8E004D62FC /* TimedTextManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BB58F41C2E293B8E004D62FC /* TimedTextManager.cpp */; };
 		BB6B2FDD2CD17D03008BC3F2 /* samples in CopyFiles */ = {isa = PBXBuildFile; fileRef = BB6B2FDC2CD17CD4008BC3F2 /* samples */; };
@@ -28,12 +29,8 @@
 		BBB238ED2B8DD3B200DFEE08 /* A2WindowBeam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */; };
 		BBB5251D2B6648A200A65C62 /* A2VideoManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525022B6648A200A65C62 /* A2VideoManager.cpp */; };
 		BBB5251E2B6648A200A65C62 /* shader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525042B6648A200A65C62 /* shader.cpp */; };
-		BBB5251F2B6648A200A65C62 /* SDHRManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525082B6648A200A65C62 /* SDHRManager.cpp */; };
-		BBB525202B6648A200A65C62 /* MosaicMesh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB5250B2B6648A200A65C62 /* MosaicMesh.cpp */; };
 		BBB525212B6648A200A65C62 /* OpenGLHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB5250C2B6648A200A65C62 /* OpenGLHelper.cpp */; };
-		BBB525222B6648A200A65C62 /* SDHRWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB5250E2B6648A200A65C62 /* SDHRWindow.cpp */; };
 		BBB525232B6648A200A65C62 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525142B6648A200A65C62 /* main.cpp */; };
-		BBB525242B6648A200A65C62 /* SDHRNetworking.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB525162B6648A200A65C62 /* SDHRNetworking.cpp */; };
 		BBB525262B6648A200A65C62 /* PostProcessor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBB5251A2B6648A200A65C62 /* PostProcessor.cpp */; };
 		BBB525292B664A7D00A65C62 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BBB525282B664A7D00A65C62 /* OpenGL.framework */; };
 		BBB5252B2B664A8F00A65C62 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BBB5252A2B664A8F00A65C62 /* CoreVideo.framework */; };
@@ -100,6 +97,8 @@
 		BB0E58192C7B2E8600B44B58 /* SSI263Phonemes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSI263Phonemes.h; sourceTree = "<group>"; };
 		BB21A0002ECBD10000A10001 /* AppletiniUartTerminal.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppletiniUartTerminal.cpp; sourceTree = "<group>"; };
 		BB21A0022ECBD10000A10001 /* AppletiniUartTerminal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppletiniUartTerminal.h; sourceTree = "<group>"; };
+		BB21A0032ECBD10000A10001 /* AppletiniNetworking.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AppletiniNetworking.cpp; sourceTree = "<group>"; };
+		BB21A0042ECBD10000A10001 /* AppletiniNetworking.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppletiniNetworking.h; sourceTree = "<group>"; };
 		BB3B32772E3778C800610E82 /* LogTextManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LogTextManager.h; sourceTree = "<group>"; };
 		BB3B32782E3778D400610E82 /* LogTextManager.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = LogTextManager.cpp; sourceTree = "<group>"; };
 		BB47D1A42BCC49B5008A6DD6 /* MemoryLoader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MemoryLoader.h; path = extras/MemoryLoader.h; sourceTree = "<group>"; };
@@ -121,33 +120,25 @@
 		BBB4E5BF2B83ECCE00764C50 /* A2WindowBeam.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = A2WindowBeam.cpp; sourceTree = "<group>"; };
 		BBB4E5C02B83ECCE00764C50 /* A2WindowBeam.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = A2WindowBeam.h; sourceTree = "<group>"; };
 		BBB524F82B6648A100A65C62 /* shader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = shader.h; sourceTree = "<group>"; };
-		BBB524F92B6648A100A65C62 /* MosaicMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MosaicMesh.h; sourceTree = "<group>"; };
 		BBB524FA2B6648A100A65C62 /* OpenGLHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OpenGLHelper.h; sourceTree = "<group>"; };
 		BBB524FB2B6648A100A65C62 /* PostProcessor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PostProcessor.h; sourceTree = "<group>"; };
 		BBB524FC2B6648A100A65C62 /* A2VideoManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = A2VideoManager.h; sourceTree = "<group>"; };
 		BBB524FE2B6648A100A65C62 /* ProjectConfig.xconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ProjectConfig.xconfig; sourceTree = "<group>"; };
-		BBB524FF2B6648A100A65C62 /* SDHRWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SDHRWindow.h; sourceTree = "<group>"; };
 		BBB525002B6648A200A65C62 /* shaders */ = {isa = PBXFileReference; lastKnownFileType = folder; path = shaders; sourceTree = "<group>"; };
-		BBB525012B6648A200A65C62 /* SDHRNetworking.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SDHRNetworking.h; sourceTree = "<group>"; };
 		BBB525022B6648A200A65C62 /* A2VideoManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = A2VideoManager.cpp; sourceTree = "<group>"; };
 		BBB525032B6648A200A65C62 /* GRAddr2XY.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GRAddr2XY.h; sourceTree = "<group>"; };
 		BBB525042B6648A200A65C62 /* shader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = shader.cpp; sourceTree = "<group>"; };
 		BBB525052B6648A200A65C62 /* stb_image.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stb_image.h; sourceTree = "<group>"; };
 		BBB525062B6648A200A65C62 /* imgui.ini */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = imgui.ini; sourceTree = "<group>"; };
 		BBB525072B6648A200A65C62 /* my_imgui_config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = my_imgui_config.h; sourceTree = "<group>"; };
-		BBB525082B6648A200A65C62 /* SDHRManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SDHRManager.cpp; sourceTree = "<group>"; };
 		BBB5250A2B6648A200A65C62 /* camera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = camera.h; sourceTree = "<group>"; };
-		BBB5250B2B6648A200A65C62 /* MosaicMesh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MosaicMesh.cpp; sourceTree = "<group>"; };
 		BBB5250C2B6648A200A65C62 /* OpenGLHelper.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OpenGLHelper.cpp; sourceTree = "<group>"; };
-		BBB5250D2B6648A200A65C62 /* SDHRManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SDHRManager.h; sourceTree = "<group>"; };
-		BBB5250E2B6648A200A65C62 /* SDHRWindow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SDHRWindow.cpp; sourceTree = "<group>"; };
 		BBB5250F2B6648A200A65C62 /* extras */ = {isa = PBXFileReference; lastKnownFileType = folder; path = extras; sourceTree = "<group>"; };
 		BBB525102B6648A200A65C62 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
 		BBB525112B6648A200A65C62 /* imgui_memory_editor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = imgui_memory_editor.h; sourceTree = "<group>"; };
 		BBB525132B6648A200A65C62 /* glad */ = {isa = PBXFileReference; lastKnownFileType = folder; path = glad; sourceTree = "<group>"; };
 		BBB525142B6648A200A65C62 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		BBB525152B6648A200A65C62 /* ConcurrentQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ConcurrentQueue.h; sourceTree = "<group>"; };
-		BBB525162B6648A200A65C62 /* SDHRNetworking.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SDHRNetworking.cpp; sourceTree = "<group>"; };
 		BBB525192B6648A200A65C62 /* glm */ = {isa = PBXFileReference; lastKnownFileType = folder; path = glm; sourceTree = "<group>"; };
 		BBB5251A2B6648A200A65C62 /* PostProcessor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PostProcessor.cpp; sourceTree = "<group>"; };
 		BBB525282B664A7D00A65C62 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
@@ -246,6 +237,8 @@
 				BBBB65182E07022C00762387 /* A2WindowRGB.cpp */,
 				BB21A0022ECBD10000A10001 /* AppletiniUartTerminal.h */,
 				BB21A0002ECBD10000A10001 /* AppletiniUartTerminal.cpp */,
+				BB21A0042ECBD10000A10001 /* AppletiniNetworking.h */,
+				BB21A0032ECBD10000A10001 /* AppletiniNetworking.cpp */,
 				BBD102132B829BAE00360B33 /* assets */,
 				BB006F512C3C2E49008BFFAF /* Ayumi.h */,
 				BB006F4F2C3C2E49008BFFAF /* Ayumi.cpp */,
@@ -282,8 +275,6 @@
 				BBFA72362E634A3400605BA2 /* miniz.c */,
 				BB006F502C3C2E49008BFFAF /* MockingboardManager.h */,
 				BB006F522C3C2E49008BFFAF /* MockingboardManager.cpp */,
-				BBB524F92B6648A100A65C62 /* MosaicMesh.h */,
-				BBB5250B2B6648A200A65C62 /* MosaicMesh.cpp */,
 				BBB525072B6648A200A65C62 /* my_imgui_config.h */,
 				BBC48E172B71DA7D00D70DBD /* nlohmann */,
 				BBB524FA2B6648A100A65C62 /* OpenGLHelper.h */,
@@ -292,12 +283,6 @@
 				BBB5251A2B6648A200A65C62 /* PostProcessor.cpp */,
 				BBB524FE2B6648A100A65C62 /* ProjectConfig.xconfig */,
 				BBD1020E2B829B7C00360B33 /* README.md */,
-				BBB5250D2B6648A200A65C62 /* SDHRManager.h */,
-				BBB525082B6648A200A65C62 /* SDHRManager.cpp */,
-				BBB525012B6648A200A65C62 /* SDHRNetworking.h */,
-				BBB525162B6648A200A65C62 /* SDHRNetworking.cpp */,
-				BBB524FF2B6648A100A65C62 /* SDHRWindow.h */,
-				BBB5250E2B6648A200A65C62 /* SDHRWindow.cpp */,
 				BBB524F82B6648A100A65C62 /* shader.h */,
 				BBB525042B6648A200A65C62 /* shader.cpp */,
 				BBB525002B6648A200A65C62 /* shaders */,
@@ -431,15 +416,12 @@
 				BBD102082B7CF23A00360B33 /* CycleCounter.cpp in Sources */,
 				BBCF87082D935D72002E26CD /* BasicQuad.cpp in Sources */,
 				BBF6D2C12C358F5000E85E1E /* SoundManager.cpp in Sources */,
-				BBB525222B6648A200A65C62 /* SDHRWindow.cpp in Sources */,
 				BBC43F6B2B98CDE50035071D /* MemoryManager.cpp in Sources */,
-				BBB525202B6648A200A65C62 /* MosaicMesh.cpp in Sources */,
 				BBB525232B6648A200A65C62 /* main.cpp in Sources */,
 				BBBB65192E07022C00762387 /* A2WindowRGB.cpp in Sources */,
 				BB21A0012ECBD10000A10001 /* AppletiniUartTerminal.cpp in Sources */,
+				BB21A0052ECBD10000A10001 /* AppletiniNetworking.cpp in Sources */,
 				BBB5251D2B6648A200A65C62 /* A2VideoManager.cpp in Sources */,
-				BBB5251F2B6648A200A65C62 /* SDHRManager.cpp in Sources */,
-				BBB525242B6648A200A65C62 /* SDHRNetworking.cpp in Sources */,
 				BBE45C122D477211008D10A9 /* VidHdWindowBeam.cpp in Sources */,
 				BBB525212B6648A200A65C62 /* OpenGLHelper.cpp in Sources */,
 				BB3B32792E3778D700610E82 /* LogTextManager.cpp in Sources */,
