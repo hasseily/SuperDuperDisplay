@@ -547,7 +547,7 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			*tp++ = ((time_val.tm_hour / 10) << 4) + (time_val.tm_hour % 10);
 			*tp++ = (((time_val.tm_wday + 1) / 10) << 4) + ((time_val.tm_wday + 1) % 10);
 			*tp++ = ((time_val.tm_mday / 10) << 4) + (time_val.tm_mday % 10);
-			*tp++ = (((time_val.tm_mon + 1) / 10) << 4) + (time_val.tm_mon % 10);
+			*tp++ = (((time_val.tm_mon + 1) / 10) << 4) + ((time_val.tm_mon + 1) % 10);
 			*tp++ = (((time_val.tm_year % 100) / 10) << 4) + ((time_val.tm_year % 100) % 10);
 			printf("Setting time... ");
 			if (!tini_write((uint8_t *)set_time_buf, 16))
@@ -749,7 +749,7 @@ int usb_server_thread(std::atomic<bool> *shouldTerminateNetworking)
 			*tp++ = ((time_val.tm_hour / 10) << 4) + (time_val.tm_hour % 10);
 			*tp++ = (((time_val.tm_wday + 1) / 10) << 4) + ((time_val.tm_wday + 1) % 10);
 			*tp++ = ((time_val.tm_mday / 10) << 4) + (time_val.tm_mday % 10);
-			*tp++ = (((time_val.tm_mon + 1) / 10) << 4) + (time_val.tm_mon % 10);
+			*tp++ = (((time_val.tm_mon + 1) / 10) << 4) + ((time_val.tm_mon + 1) % 10);
 			*tp++ = (((time_val.tm_year % 100) / 10) << 4) + ((time_val.tm_year % 100) % 10);
 			printf("Setting time... ");
 			if (!tini_write((uint8_t *)set_time_buf, 16))
